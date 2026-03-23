@@ -367,7 +367,7 @@ describe('Conflict Detection', () => {
 ## Medium Priority Items
 
 ### M3: Merge & commit refactored create* scripts (22 files)
-**Status:** 📋 PENDING
+**Status:** ✅ COMPLETED (2026-03-23)
 **Priority:** Medium
 **Date Added:** 2026-03-23
 **Source:** Batch refactor session (Unit 1-5, create* scripts)

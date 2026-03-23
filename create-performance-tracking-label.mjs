@@ -1,10 +1,21 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 
+const USER_ID = 'me';
+
 async function createPerformanceTrackingLabel() {
   const gmail = createGmailClient();
 
   console.log('📊 CREATING PERFORMANCE TRACKING LABEL\n');
   console.log('═'.repeat(80) + '\n');
+
+  // Pre-fetch existing labels to avoid N+1 queries
+  const existingLabelsRes = await gmail.users.labels.list({
+    userId: USER_ID,
+    fields: 'labels(id,name)',
+  });
+  const existingLabelMap = new Map(
+    existingLabelsRes.data.labels.map(l => [l.name, l.id])
+  );
 
   // Step 1: Create Performance Tracking label
   console.log('1️⃣  CREATING LABEL: Performance Tracking\n');
@@ -13,7 +24,7 @@ async function createPerformanceTrackingLabel() {
 
   try {
     const response = await gmail.users.labels.create({
-      userId: 'me',
+      userId: USER_ID,
       requestBody: {
         name: 'Performance Tracking',
         labelListVisibility: 'labelShow',
@@ -29,11 +40,10 @@ async function createPerformanceTrackingLabel() {
   } catch (error) {
     if (error.message.includes('exists') || error.message.includes('conflicts')) {
       console.log('⚠️  Label already exists: Performance Tracking\n');
-      const labels = await gmail.users.labels.list({ userId: 'me' });
-      const existing = labels.data.labels.find(l => l.name === 'Performance Tracking');
-      if (existing) {
-        console.log(`   ID: ${existing.id}\n`);
-        perfLabelId = existing.id;
+      const existingId = existingLabelMap.get('Performance Tracking');
+      if (existingId) {
+        console.log(`   ID: ${existingId}\n`);
+        perfLabelId = existingId;
       }
     } else {
       console.error('❌ Error creating label:', error.message);
@@ -56,7 +66,7 @@ async function createPerformanceTrackingLabel() {
   for (const query of sentryPatterns) {
     try {
       const searchResult = await gmail.users.messages.list({
-        userId: 'me',
+        userId: USER_ID,
         q: query,
         maxResults: 100,
       });
@@ -68,7 +78,7 @@ async function createPerformanceTrackingLabel() {
 
       if (count > 0) {
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: messageIds,
             addLabelIds: [perfLabelId],
@@ -108,7 +118,7 @@ async function createPerformanceTrackingLabel() {
   for (const filter of filters) {
     try {
       const response = await gmail.users.settings.filters.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           criteria: filter.criteria,
           action: {

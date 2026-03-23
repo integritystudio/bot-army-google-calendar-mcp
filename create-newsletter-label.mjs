@@ -1,13 +1,26 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 
+const USER_ID = 'me';
+
 async function createNewsletterLabel() {
   const gmail = createGmailClient();
 
+  // Pre-fetch existing labels to avoid N+1 queries
+  const existingLabelsRes = await gmail.users.labels.list({
+    userId: USER_ID,
+    fields: 'labels(id,name,labelListVisibility,messagesTotal,threadsTotal)',
+  });
+  const existingLabelMap = new Map(
+    existingLabelsRes.data.labels.map(l => [l.name, l])
+  );
+
+  const labelName = 'Newsletters';
+
   try {
     const response = await gmail.users.labels.create({
-      userId: 'me',
+      userId: USER_ID,
       requestBody: {
-        name: 'Newsletters',
+        name: labelName,
         labelListVisibility: 'labelShow',
         messageListVisibility: 'show',
       },
@@ -24,10 +37,8 @@ async function createNewsletterLabel() {
     return response.data;
   } catch (error) {
     if (error.message.includes('exists') || error.message.includes('conflicts')) {
-      console.log('⚠️  Label "Newsletters" already exists\n');
-      // Fetch existing label details
-      const labels = await gmail.users.labels.list({ userId: 'me' });
-      const existing = labels.data.labels.find(l => l.name === 'Newsletters');
+      console.log(`⚠️  Label "${labelName}" already exists\n`);
+      const existing = existingLabelMap.get(labelName);
       if (existing) {
         console.log('Label Details:');
         console.log(`  Name: ${existing.name}`);

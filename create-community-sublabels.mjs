@@ -1,28 +1,87 @@
-import fs from 'fs';
-import path from 'path';
-import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
+import { createGmailClient } from './lib/gmail-client.mjs';
 
-const TOKEN_PATH = path.join(process.env.HOME, '.config/google-calendar-mcp/tokens-gmail.json');
+const USER_ID = 'me';
+
+async function createLabels(gmail, labelNames, labelIds, existingLabelMap) {
+  for (const labelName of labelNames) {
+    try {
+      const response = await gmail.users.labels.create({
+        userId: USER_ID,
+        requestBody: {
+          name: labelName,
+          labelListVisibility: 'labelShow',
+          messageListVisibility: 'show',
+        },
+      });
+
+      console.log(`✅ ${labelName.split('/').pop()}`);
+      labelIds[labelName] = response.data.id;
+    } catch (error) {
+      if (error.message.includes('exists')) {
+        const existingId = existingLabelMap.get(labelName);
+        if (existingId) {
+          console.log(`⚠️  Exists: ${labelName.split('/').pop()}`);
+          labelIds[labelName] = existingId;
+        }
+      } else {
+        console.error(`❌ Failed ${labelName}: ${error.message}`);
+      }
+    }
+  }
+}
+
+async function applyPatterns(gmail, patterns, labelIds) {
+  let totalLabeled = 0;
+
+  for (const pattern of patterns) {
+    try {
+      const searchResult = await gmail.users.messages.list({
+        userId: USER_ID,
+        q: pattern.query,
+        maxResults: 100,
+      });
+
+      if (!searchResult.data.messages) continue;
+
+      const messageIds = searchResult.data.messages.map(m => m.id);
+      const count = messageIds.length;
+
+      if (count > 0) {
+        const labelId = labelIds[pattern.label];
+        if (!labelId) {
+          console.error(`  ❌ No label ID resolved for ${pattern.label}, skipping`);
+          continue;
+        }
+
+        await gmail.users.messages.batchModify({
+          userId: USER_ID,
+          requestBody: {
+            ids: messageIds,
+            addLabelIds: [labelId],
+          },
+        });
+
+        console.log(`  ✅ ${pattern.label.split('/').pop()}: ${count} emails`);
+        totalLabeled += count;
+      }
+    } catch (error) {
+      console.error(`  ❌ Failed ${pattern.label}: ${error.message}`);
+    }
+  }
+
+  return totalLabeled;
+}
 
 async function createCommunitySubLabels() {
-  const tokenFileData = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf-8'));
-  const accountMode = process.env.ACCOUNT_MODE || 'normal';
-  const tokenData = tokenFileData[accountMode];
-
-  const credPath = process.env.GOOGLE_OAUTH_CREDENTIALS || './credentials.json';
-  const credData = JSON.parse(fs.readFileSync(credPath, 'utf-8'));
-  const oauth2Client = new OAuth2Client(
-    credData.installed.client_id,
-    credData.installed.client_secret,
-    credData.installed.redirect_uris[0]
-  );
-  oauth2Client.setCredentials(tokenData);
-
-  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+  const gmail = createGmailClient();
 
   console.log('📂 CREATING COMMUNITY EVENT SUB-LABELS\n');
   console.log('═'.repeat(80) + '\n');
+
+  const existingLabelsRes = await gmail.users.labels.list({ userId: USER_ID, fields: 'labels(id,name)' });
+  const existingLabelMap = new Map(
+    existingLabelsRes.data.labels.map(l => [l.name, l.id])
+  );
 
   // Step 1: Create sub-labels
   console.log('1️⃣  CREATING SUB-LABELS\n');
@@ -39,31 +98,7 @@ async function createCommunitySubLabels() {
 
   const labelIds = {};
 
-  for (const labelName of subLabels) {
-    try {
-      const response = await gmail.users.labels.create({
-        userId: 'me',
-        requestBody: {
-          name: labelName,
-          labelListVisibility: 'labelShow',
-          messageListVisibility: 'show',
-        },
-      });
-
-      console.log(`✅ ${labelName.split('/').pop()}`);
-      labelIds[labelName] = response.data.id;
-
-    } catch (error) {
-      if (error.message.includes('exists')) {
-        const labels = await gmail.users.labels.list({ userId: 'me' });
-        const existing = labels.data.labels.find(l => l.name === labelName);
-        if (existing) {
-          console.log(`⚠️  Exists: ${labelName.split('/').pop()}`);
-          labelIds[labelName] = existing.id;
-        }
-      }
-    }
-  }
+  await createLabels(gmail, subLabels, labelIds, existingLabelMap);
 
   console.log();
 
@@ -102,41 +137,7 @@ async function createCommunitySubLabels() {
     },
   ];
 
-  let totalLabeled = 0;
-
-  for (const pattern of communityPatterns) {
-    try {
-      // Extract keywords from query (remove "label:Label_4 AND" prefix)
-      const keywordQuery = pattern.query.replace(/^label:Label_4\s+AND\s+/, '');
-
-      const searchResult = await gmail.users.messages.list({
-        userId: 'me',
-        labelIds: ['Label_4'],
-        q: keywordQuery,
-        maxResults: 100,
-      });
-
-      if (!searchResult.data.messages) continue;
-
-      const messageIds = searchResult.data.messages.map(m => m.id);
-      const count = messageIds.length;
-
-      if (count > 0) {
-        await gmail.users.messages.batchModify({
-          userId: 'me',
-          requestBody: {
-            ids: messageIds,
-            addLabelIds: [labelIds[pattern.label]],
-          },
-        });
-
-        console.log(`  ✅ ${pattern.label.split('/').pop()}: ${count} emails`);
-        totalLabeled += count;
-      }
-    } catch (error) {
-      // Skip errors
-    }
-  }
+  const totalLabeled = await applyPatterns(gmail, communityPatterns, labelIds);
 
   console.log(`\n  📊 Total labeled: ${totalLabeled} emails\n`);
 
@@ -187,7 +188,7 @@ async function createCommunitySubLabels() {
   for (const filter of filters) {
     try {
       const response = await gmail.users.settings.filters.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           criteria: filter.criteria,
           action: {
@@ -199,8 +200,10 @@ async function createCommunitySubLabels() {
       console.log(`  ✅ ${filter.name}`);
       filtersCreated++;
     } catch (error) {
-      if (!error.message.includes('exists')) {
-        console.log(`  ⚠️  ${filter.name}`);
+      if (error.message.includes('exists')) {
+        console.log(`  ℹ️  Filter exists: ${filter.name}`);
+      } else {
+        console.error(`  ❌ Error: ${filter.name}: ${error.message}`);
       }
     }
   }

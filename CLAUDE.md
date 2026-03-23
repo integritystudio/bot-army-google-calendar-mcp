@@ -74,7 +74,11 @@ node archive-signoz-dmarc.mjs         # Monitoring/DMARC auto-archive
 | Services | Archive | FoundersCard, Link, Heroku, Zapier, Zillow |
 | Billing | Conditional | GW invoices, GC charges (rate-limit aware) |
 
+**Shared Utilities:**
+- `lib/gmail-client.mjs` - Authenticated Gmail client factory; use `createGmailClient()` in all scripts
+- `lib/date-based-filter.mjs` - Pure utility for date parsing (ISO, US, text, weekday patterns; no mutations)
+
 **Code Quality:**
-- **Refactor targets:** Extract OAuth to `lib/gmail-client.mjs` (use `homedir()` from 'os', token guard, try/catch); label constants to `lib/constants.mjs`; batch ops to `lib/gmail-batch.mjs`
-- **Performance:** Use `Promise.all` for concurrent fetches (see `summarize-remaining.mjs` pattern: parallel list + parallel get)
-- **Date Parsing:** `lib/date-based-filter.mjs` is a pure utility (ISO, US, text, weekday patterns; no mutations)
+- **Established patterns:** `summarize-remaining.mjs` and `describe-internal.mjs` use best practices (error handling, constants, helpers, parallel fetches)
+- **Performance:** Use `Promise.all` for concurrent list + detail fetches (not serial loops)
+- **Refactor targets:** label constants to `lib/constants.mjs`; batch ops to `lib/gmail-batch.mjs`

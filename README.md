@@ -198,6 +198,7 @@ Automated scripts for organizing and filtering large volumes of Gmail with focus
 - `organize-international-house.mjs` - Label and organize International House event emails
 
 **Utilities:**
+- `lib/gmail-client.mjs` - Authenticated Gmail API client factory. Reads tokens and credentials from environment paths. Use `createGmailClient()` to initialize in scripts.
 - `lib/date-based-filter.mjs` - Pure utility for date-based email classification: extracts dates (ISO, US format, text dates, weekday patterns), compares to today, classifies as past/future/unknown. Does not mutate input. Handles dates without year by inferring current or next year.
 
 ## Example Usage

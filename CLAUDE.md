@@ -153,3 +153,106 @@ EOF
 - Use project root for scripts that import npm packages
 - Or: Install packages globally (`npm install -g package-name`)
 - Or: Reference absolute paths to node_modules
+
+## Email Organization System
+
+### Overview
+A comprehensive email filtering and archiving system to manage high-volume inboxes by categorizing and protecting important items.
+
+### Core Pattern: Label + Conditional Archive
+- **Future Events**: Label "Events", keep in inbox
+- **Past Events**: Label "Events", archive from inbox
+- **Important Items**: Label "Keep Important", never archive (payments, rate limits, services)
+- **Routine Notifications**: Label category, archive to keep inbox clean
+
+### Key Scripts
+
+**Status & Management:**
+```bash
+node list-unread-emails.mjs
+# Shows all unread emails categorized by label/sender, summary counts
+# Categories: Sentry Alerts, Keep Important, Events, Monitoring, Product Updates, etc.
+```
+
+**Apply Filters:**
+```bash
+node apply-filters-to-unread.mjs
+# Applies created filters to current unread emails
+```
+
+**Batch Filter Creation:**
+```bash
+node create-remaining-filters.mjs
+# Creates filters for: Product Updates, Communities, Services & Alerts
+# Auto-applies to matching existing emails
+```
+
+**Conditional Filters:**
+```bash
+# Billing: regular emails archived, urgent (rate limit) emails protected
+node create-billing-filter.mjs
+node apply-billing-filter-to-unread.mjs
+
+# Events: future events stay, past events archive
+node filter-events-by-date.mjs
+
+# Monitoring: SigNoz alerts archived automatically
+node archive-signoz-dmarc.mjs
+```
+
+**Protection:**
+```bash
+# Prevent important items from being archived
+node protect-important-inbox.mjs
+# Labels: Cloudflare rate limits, Calendly refunds/support, Capital City Village, Investment Banking
+```
+
+### Categories & Organization
+
+**Protected (Keep Important):**
+- Cloudflare rate limits and DDoS alerts
+- Calendly refunds and support
+- Capital City Village services
+- Investment Banking meetings
+
+**Events (Future = Keep, Past = Archive):**
+- International House events
+- Meetup group meetups
+- Eventbrite event announcements
+- Calendly meeting reminders
+
+**Monitoring (Archive):**
+- SigNoz alerts (alertmanager@signoz.cloud)
+- DMARC authentication reports
+
+**Product Updates (Label + Archive):**
+- Google Workspace, Google Cloud, Google Analytics
+- HubSpot, Postman, Resend, Mixpanel, OpenAI, Yodlee
+- Adapty, DataHub, Storylane
+
+**Communities:**
+- Women Techmakers events
+
+**Services & Alerts:**
+- FoundersCard, Link, Heroku, Zillow, American Best, Zapier
+
+**Billing:**
+- Google Workspace invoices
+- Google Cloud charges (rate-limit aware)
+
+### Date Parsing (lib/date-based-filter.mjs)
+Recognizes multiple date formats in email content:
+- ISO: `2026-03-25`
+- US: `03/25/2026`
+- Text: `March 25, 2026`
+- Weekday patterns: `@ Mon, Mar 23`
+- Compares to current date for past/future classification
+
+### Workflow Example
+1. Run `list-unread-emails.mjs` to see current state
+2. Create filters: `node create-remaining-filters.mjs`
+3. Apply to existing emails: `node apply-filters-to-unread.mjs`
+4. Protect important items: `node protect-important-inbox.mjs`
+5. Archive routine notifications: `node archive-signoz-dmarc.mjs`
+6. Process events: `node filter-events-by-date.mjs`
+7. Verify results: `node list-unread-emails.mjs`

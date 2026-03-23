@@ -179,6 +179,37 @@ node check-gmail.mjs
 - Tokens expire after 7 days in test mode
 - Re-authenticate as needed with `node auth-gmail.mjs`
 
+### Email Organization & Filtering Scripts
+
+Automated scripts for organizing and filtering large volumes of Gmail:
+
+**Management Scripts:**
+- `list-unread-emails.mjs` - Categorize and summarize unread emails by label/sender patterns
+- `apply-filters-to-unread.mjs` - Apply existing filters to current unread emails
+- `create-remaining-filters.mjs` - Batch create filters for multiple categories (Product Updates, Communities, Services)
+
+**Specialized Filters:**
+- `create-billing-filter.mjs` - Smart billing filter with conditional rate-limit detection
+- `create-signoz-filter.mjs` - Archive SigNoz monitoring alerts automatically
+- `create-dmarc-filter.mjs` - Organize DMARC authentication reports
+- `create-eventbrite-filter.mjs` - Label and archive Eventbrite event emails
+- `create-meet-notes-filter.mjs` - Label Google Meet notes
+- `delete-sentry-filter.mjs` - Remove outdated filters
+
+**Archive Scripts:**
+- `archive-signoz-dmarc.mjs` - Batch archive monitoring and DMARC report emails
+- `archive-dmarc-emails.mjs` - Archive DMARC reports
+
+**Event Management:**
+- `filter-events-by-date.mjs` - Classify event emails as future (label + keep) or past (label + archive)
+- `organize-international-house.mjs` - Label and organize International House event emails
+
+**Protection:**
+- `protect-important-inbox.mjs` - Label critical items to prevent archiving (payments, rate limits, services)
+
+**Utilities:**
+- `lib/date-based-filter.mjs` - Shared utility for date-based email classification (handles ISO, US format, text dates)
+
 ## Example Usage
 
 Along with the normal capabilities you would expect for a calendar integration you can also do really dynamic, multi-step processes like:

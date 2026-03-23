@@ -172,10 +172,10 @@ node check-gmail.mjs
 
 Automated scripts for organizing and filtering large volumes of Gmail with focus on correctness and efficiency.
 
-**Management Scripts:**
+**Management Scripts:** (use shared `createGmailClient()` for OAuth, error handling, and multi-account support)
 - `list-unread-emails.mjs` - Categorize and summarize unread emails by label/sender patterns; clean fallback categorization
 - `summarize-remaining.mjs` - Summary of uncategorized/remaining unread emails (internal work, forums, misc); parallel fetching
-- `describe-internal.mjs` - Detailed breakdown of internal team emails with subjects and dates
+- `describe-internal.mjs` - Detailed breakdown of internal team emails with subjects and dates; hardcoded summary removed
 - `apply-filters-to-unread.mjs` - Apply existing filters to current unread emails
 - `create-remaining-filters.mjs` - Batch create filters for multiple categories (Product Updates, Communities, Services)
 
@@ -198,7 +198,11 @@ Automated scripts for organizing and filtering large volumes of Gmail with focus
 - `organize-international-house.mjs` - Label and organize International House event emails
 
 **Utilities:**
-- `lib/gmail-client.mjs` - Authenticated Gmail API client factory. Reads tokens and credentials from environment paths. Use `createGmailClient()` to initialize in scripts.
+- `lib/gmail-client.mjs` - Authenticated Gmail API client factory. Centralizes OAuth2 init, token validation, and multi-account support. Use in scripts:
+  ```js
+  import { createGmailClient } from './lib/gmail-client.mjs';
+  const gmail = createGmailClient(); // Uses ACCOUNT_MODE env var, throws on missing tokens
+  ```
 - `lib/date-based-filter.mjs` - Pure utility for date-based email classification: extracts dates (ISO, US format, text dates, weekday patterns), compares to today, classifies as past/future/unknown. Does not mutate input. Handles dates without year by inferring current or next year.
 
 ## Example Usage

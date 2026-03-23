@@ -7,6 +7,15 @@ async function createRemainingFilters() {
   console.log('🏷️  CREATING FILTERS FOR REMAINING CATEGORIES\n');
   console.log('═'.repeat(80) + '\n');
 
+  // Pre-fetch all labels once to avoid N+1 queries
+  const existingLabelsRes = await gmail.users.labels.list({
+    userId: USER_ID,
+    fields: 'labels(id,name)'
+  });
+  const existingLabelMap = new Map(
+    (existingLabelsRes.data.labels || []).map(l => [l.name, l.id])
+  );
+
   // Define filter configurations
   const filterConfigs = [
     {
@@ -56,12 +65,9 @@ async function createRemainingFilters() {
     console.log(`\n📌 ${categoryConfig.labelName.toUpperCase()}\n`);
 
     // Get or create label
-    let labelId;
-    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
-    const existingLabel = labelsResponse.data.labels.find(l => l.name === categoryConfig.labelName);
+    let labelId = existingLabelMap.get(categoryConfig.labelName);
 
-    if (existingLabel) {
-      labelId = existingLabel.id;
+    if (labelId) {
       console.log(`✅ Using existing label: ${categoryConfig.labelName}\n`);
     } else {
       const createLabelResponse = await gmail.users.labels.create({
@@ -73,6 +79,7 @@ async function createRemainingFilters() {
         }
       });
       labelId = createLabelResponse.data.id;
+      existingLabelMap.set(categoryConfig.labelName, labelId);
       console.log(`✅ Created label: ${categoryConfig.labelName}\n`);
     }
 
@@ -111,10 +118,9 @@ async function createRemainingFilters() {
   let emailsProcessed = 0;
 
   for (const categoryConfig of filterConfigs) {
-    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
-    const label = labelsResponse.data.labels.find(l => l.name === categoryConfig.labelName);
+    const labelId = existingLabelMap.get(categoryConfig.labelName);
 
-    if (!label) continue;
+    if (!labelId) continue;
 
     // Build combined query for all filters in this category
     const queries = categoryConfig.filters.map(f => `(${f.query})`).join(' OR ');
@@ -138,7 +144,7 @@ async function createRemainingFilters() {
           userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
-            addLabelIds: [label.id],
+            addLabelIds: [labelId],
             removeLabelIds: [GMAIL_INBOX]
           }
         });

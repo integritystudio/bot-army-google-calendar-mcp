@@ -390,7 +390,7 @@ Five different patterns for extracting display names and email addresses from RF
 ---
 
 ### M2: Extract label constants to lib/constants.mjs
-**Status:** 📋 PENDING
+**Status:** ✅ COMPLETED (2026-03-23)
 **Priority:** Medium
 **Date Added:** 2026-03-23
 **Source:** CLAUDE.md refactor targets, code review

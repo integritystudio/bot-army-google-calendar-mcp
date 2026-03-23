@@ -1,8 +1,4 @@
-import fs from 'fs';
-import path from 'path';
-import { homedir } from 'os';
-import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
+import { createGmailClient } from './lib/gmail-client.mjs';
 
 const MAX_RESULTS = 50;
 const PREVIEW_COUNT = 10;
@@ -13,26 +9,7 @@ const HEADER_DATE = 'Date';
 const USER_ID = 'me';
 
 try {
-  const TOKEN_PATH = path.join(homedir(), '.config/google-calendar-mcp/tokens-gmail.json');
-  const tokenFileData = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf-8'));
-  const accountMode = process.env.ACCOUNT_MODE || 'normal';
-  const tokenData = tokenFileData[accountMode];
-
-  if (!tokenData) {
-    console.error(`Error: No token found for account mode: ${accountMode}`);
-    process.exit(1);
-  }
-
-  const credPath = process.env.GOOGLE_OAUTH_CREDENTIALS || './credentials.json';
-  const credData = JSON.parse(fs.readFileSync(credPath, 'utf-8'));
-  const oauth2Client = new OAuth2Client(
-    credData.installed.client_id,
-    credData.installed.client_secret,
-    credData.installed.redirect_uris[0]
-  );
-  oauth2Client.setCredentials(tokenData);
-
-  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+  const gmail = createGmailClient();
 
   const getHeader = (headers, name) => headers.find(h => h.name === name)?.value;
 
@@ -91,14 +68,6 @@ try {
     }
   }
 
-  console.log('═'.repeat(80));
-  console.log('\nSUMMARY:\n');
-  console.log('Internal discussions are primarily:');
-  console.log('1. Calendar meeting responses (Accepted/Declined) from Chandra');
-  console.log('2. Project collaboration emails from Jordan Taylor (HubSpot)');
-  console.log('3. File shares and coordination from John Skelton');
-  console.log('4. Project discussions from other team members\n');
-  console.log('Recommendation: Keep unread for active coordination reference\n');
   console.log('═'.repeat(80) + '\n');
 } catch (err) {
   console.error('Error:', err.message);

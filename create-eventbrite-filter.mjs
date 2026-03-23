@@ -1,25 +1,9 @@
-import fs from 'fs';
-import path from 'path';
-import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
+import { createGmailClient } from './lib/gmail-client.mjs';
 
-const TOKEN_PATH = path.join(process.env.HOME, '.config/google-calendar-mcp/tokens-gmail.json');
+const USER_ID = 'me';
 
 async function createEventbriteFilter() {
-  const tokenFileData = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf-8'));
-  const accountMode = process.env.ACCOUNT_MODE || 'normal';
-  const tokenData = tokenFileData[accountMode];
-
-  const credPath = process.env.GOOGLE_OAUTH_CREDENTIALS || './credentials.json';
-  const credData = JSON.parse(fs.readFileSync(credPath, 'utf-8'));
-  const oauth2Client = new OAuth2Client(
-    credData.installed.client_id,
-    credData.installed.client_secret,
-    credData.installed.redirect_uris[0]
-  );
-  oauth2Client.setCredentials(tokenData);
-
-  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+  const gmail = createGmailClient();
 
   console.log('📧 SETTING UP EVENTBRITE FILTER\n');
   console.log('═'.repeat(80) + '\n');
@@ -27,7 +11,7 @@ async function createEventbriteFilter() {
   try {
     // Get or create Events label
     let eventsLabelId;
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
+    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
     const existingLabel = labelsResponse.data.labels.find(l => l.name === 'Events');
 
     if (existingLabel) {
@@ -35,7 +19,7 @@ async function createEventbriteFilter() {
       console.log('✅ Using existing label: Events\n');
     } else {
       const createLabelResponse = await gmail.users.labels.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           name: 'Events',
           labelListVisibility: 'labelShow',
@@ -48,7 +32,7 @@ async function createEventbriteFilter() {
 
     // Create filter for future emails
     await gmail.users.settings.filters.create({
-      userId: 'me',
+      userId: USER_ID,
       requestBody: {
         criteria: {
           query: 'from:noreply@reminder.eventbrite.com'
@@ -63,7 +47,7 @@ async function createEventbriteFilter() {
 
     // Apply to existing unread Eventbrite emails
     const searchResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: 'is:unread from:noreply@reminder.eventbrite.com'
     });
 
@@ -77,7 +61,7 @@ async function createEventbriteFilter() {
         const batch = messageIds.slice(i, Math.min(i + batchSize, messageIds.length));
 
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
             addLabelIds: [eventsLabelId],

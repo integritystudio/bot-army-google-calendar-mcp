@@ -1,25 +1,9 @@
-import fs from 'fs';
-import path from 'path';
-import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
+import { createGmailClient } from './lib/gmail-client.mjs';
 
-const TOKEN_PATH = path.join(process.env.HOME, '.config/google-calendar-mcp/tokens-gmail.json');
+const USER_ID = 'me';
 
 async function createBillingFilter() {
-  const tokenFileData = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf-8'));
-  const accountMode = process.env.ACCOUNT_MODE || 'normal';
-  const tokenData = tokenFileData[accountMode];
-
-  const credPath = process.env.GOOGLE_OAUTH_CREDENTIALS || './credentials.json';
-  const credData = JSON.parse(fs.readFileSync(credPath, 'utf-8'));
-  const oauth2Client = new OAuth2Client(
-    credData.installed.client_id,
-    credData.installed.client_secret,
-    credData.installed.redirect_uris[0]
-  );
-  oauth2Client.setCredentials(tokenData);
-
-  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+  const gmail = createGmailClient();
 
   console.log('💳 CREATING BILLING FILTER WITH SMART RULES\n');
   console.log('═'.repeat(80) + '\n');
@@ -27,7 +11,7 @@ async function createBillingFilter() {
   try {
     // Get or create labels
     let billingLabelId, keepImportantLabelId;
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
+    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
 
     // Find or create Billing label
     const billingLabel = labelsResponse.data.labels.find(l => l.name === 'Billing');
@@ -36,7 +20,7 @@ async function createBillingFilter() {
       console.log('✅ Using existing label: Billing\n');
     } else {
       const createBillingResponse = await gmail.users.labels.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           name: 'Billing',
           labelListVisibility: 'labelShow',
@@ -68,7 +52,7 @@ async function createBillingFilter() {
         : [billingLabelId];
 
       await gmail.users.settings.filters.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           criteria: {
             query: `subject:${billingKeywords} subject:"rate limit"`
@@ -88,7 +72,7 @@ async function createBillingFilter() {
     // Filter 2: Billing emails WITHOUT rate limit - archive
     try {
       await gmail.users.settings.filters.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           criteria: {
             query: `subject:${billingKeywords} -"rate limit"`
@@ -111,7 +95,7 @@ async function createBillingFilter() {
     // Apply to existing billing emails WITH rate limit
     const rateLimitQuery = `subject:${billingKeywords} subject:"rate limit"`;
     const rateLimitResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: rateLimitQuery,
       maxResults: 100
     });
@@ -126,7 +110,7 @@ async function createBillingFilter() {
       for (let i = 0; i < rateLimitIds.length; i += batchSize) {
         const batch = rateLimitIds.slice(i, Math.min(i + batchSize, rateLimitIds.length));
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
             addLabelIds: labelIds
@@ -139,7 +123,7 @@ async function createBillingFilter() {
     // Apply to existing billing emails WITHOUT rate limit
     const regularBillingQuery = `subject:${billingKeywords} -"rate limit"`;
     const regularBillingResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: regularBillingQuery,
       maxResults: 100
     });
@@ -150,7 +134,7 @@ async function createBillingFilter() {
       for (let i = 0; i < regularBillingIds.length; i += batchSize) {
         const batch = regularBillingIds.slice(i, Math.min(i + batchSize, regularBillingIds.length));
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
             addLabelIds: [billingLabelId],

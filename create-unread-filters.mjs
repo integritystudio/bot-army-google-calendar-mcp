@@ -1,28 +1,21 @@
-import fs from 'fs';
-import path from 'path';
-import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
+import { createGmailClient } from './lib/gmail-client.mjs';
 
-const TOKEN_PATH = path.join(process.env.HOME, '.config/google-calendar-mcp/tokens-gmail.json');
+const USER_ID = 'me';
 
 async function createFilters() {
-  const tokenFileData = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf-8'));
-  const accountMode = process.env.ACCOUNT_MODE || 'normal';
-  const tokenData = tokenFileData[accountMode];
-
-  const credPath = process.env.GOOGLE_OAUTH_CREDENTIALS || './credentials.json';
-  const credData = JSON.parse(fs.readFileSync(credPath, 'utf-8'));
-  const oauth2Client = new OAuth2Client(
-    credData.installed.client_id,
-    credData.installed.client_secret,
-    credData.installed.redirect_uris[0]
-  );
-  oauth2Client.setCredentials(tokenData);
-
-  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+  const gmail = createGmailClient();
 
   console.log('📧 CREATING AUTO-ARCHIVE FILTERS FOR UNREAD EMAILS\n');
   console.log('═'.repeat(80) + '\n');
+
+  // Pre-fetch all labels once to avoid N+1 queries
+  const existingLabelsRes = await gmail.users.labels.list({
+    userId: USER_ID,
+    fields: 'labels(id,name)'
+  });
+  const existingLabelMap = new Map(
+    (existingLabelsRes.data.labels || []).map(l => [l.name, l.id])
+  );
 
   // Define labels to create and filters
   const configs = [
@@ -74,9 +67,16 @@ async function createFilters() {
   const labelMap = {};
 
   for (const config of configs) {
+    // Check if label already exists in pre-fetched map
+    if (existingLabelMap.has(config.name)) {
+      labelMap[config.name] = existingLabelMap.get(config.name);
+      console.log(`  ℹ️  Label already exists: ${config.name}`);
+      continue;
+    }
+
     try {
       const labelResponse = await gmail.users.labels.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           name: config.name,
           labelListVisibility: 'labelShow',
@@ -84,20 +84,11 @@ async function createFilters() {
         }
       });
       labelMap[config.name] = labelResponse.data.id;
+      existingLabelMap.set(config.name, labelResponse.data.id);
       console.log(`  ✅ Created label: ${config.name}`);
     } catch (error) {
-      if (error.message.includes('Label name already exists')) {
-        // Get existing label
-        const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
-        const existingLabel = labelsResponse.data.labels.find(l => l.name === config.name);
-        if (existingLabel) {
-          labelMap[config.name] = existingLabel.id;
-          console.log(`  ℹ️  Label already exists: ${config.name}`);
-        }
-      } else {
-        console.log(`  ⚠️  Error creating label ${config.name}: ${error.message}`);
-        results.errors.push({ config: config.name, error: error.message });
-      }
+      console.log(`  ⚠️  Error creating label ${config.name}: ${error.message}`);
+      results.errors.push({ config: config.name, error: error.message });
     }
   }
 
@@ -114,7 +105,7 @@ async function createFilters() {
 
     try {
       await gmail.users.settings.filters.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           criteria: {
             query: config.query

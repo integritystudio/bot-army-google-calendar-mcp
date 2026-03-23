@@ -1,28 +1,18 @@
-import fs from 'fs';
-import path from 'path';
-import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
+import { createGmailClient } from './lib/gmail-client.mjs';
 
-const TOKEN_PATH = path.join(process.env.HOME, '.config/google-calendar-mcp/tokens-gmail.json');
+const USER_ID = 'me';
 
 async function createNewsletterTypeSubLabels() {
-  const tokenFileData = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf-8'));
-  const accountMode = process.env.ACCOUNT_MODE || 'normal';
-  const tokenData = tokenFileData[accountMode];
-
-  const credPath = process.env.GOOGLE_OAUTH_CREDENTIALS || './credentials.json';
-  const credData = JSON.parse(fs.readFileSync(credPath, 'utf-8'));
-  const oauth2Client = new OAuth2Client(
-    credData.installed.client_id,
-    credData.installed.client_secret,
-    credData.installed.redirect_uris[0]
-  );
-  oauth2Client.setCredentials(tokenData);
-
-  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+  const gmail = createGmailClient();
 
   console.log('📂 CREATING NEWSLETTER TYPE SUB-LABELS\n');
   console.log('═'.repeat(80) + '\n');
+
+  // Pre-fetch existing labels to avoid N+1 queries
+  const existingLabelsRes = await gmail.users.labels.list({ userId: USER_ID, fields: 'labels(id,name)' });
+  const existingLabelMap = new Map(
+    existingLabelsRes.data.labels.map(l => [l.name, l.id])
+  );
 
   // Step 1: Create both sub-labels
   console.log('1️⃣  CREATING LABELS\n');
@@ -33,7 +23,7 @@ async function createNewsletterTypeSubLabels() {
   for (const labelName of labelNames) {
     try {
       const response = await gmail.users.labels.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           name: labelName,
           labelListVisibility: 'labelShow',
@@ -48,11 +38,10 @@ async function createNewsletterTypeSubLabels() {
     } catch (error) {
       if (error.message.includes('exists') || error.message.includes('conflicts')) {
         console.log(`⚠️  Already exists: ${labelName}`);
-        const labels = await gmail.users.labels.list({ userId: 'me' });
-        const existing = labels.data.labels.find(l => l.name === labelName);
-        if (existing) {
-          console.log(`   ID: ${existing.id}\n`);
-          labelIds[labelName] = existing.id;
+        const existingId = existingLabelMap.get(labelName);
+        if (existingId) {
+          console.log(`   ID: ${existingId}\n`);
+          labelIds[labelName] = existingId;
         }
       } else {
         console.log(`❌ Error creating ${labelName}: ${error.message}\n`);
@@ -82,7 +71,7 @@ async function createNewsletterTypeSubLabels() {
   for (const query of companyPatterns) {
     try {
       const searchResult = await gmail.users.messages.list({
-        userId: 'me',
+        userId: USER_ID,
         q: query,
         maxResults: 100,
       });
@@ -94,7 +83,7 @@ async function createNewsletterTypeSubLabels() {
 
       if (count > 0) {
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: messageIds,
             addLabelIds: [labelIds['Newsletters/Company']],
@@ -123,7 +112,7 @@ async function createNewsletterTypeSubLabels() {
   for (const query of aggregatePatterns) {
     try {
       const searchResult = await gmail.users.messages.list({
-        userId: 'me',
+        userId: USER_ID,
         q: query,
         maxResults: 100,
       });
@@ -135,7 +124,7 @@ async function createNewsletterTypeSubLabels() {
 
       if (count > 0) {
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: messageIds,
             addLabelIds: [labelIds['Newsletters/News Aggregates']],
@@ -203,7 +192,7 @@ async function createNewsletterTypeSubLabels() {
         : labelIds['Newsletters/News Aggregates'];
 
       const response = await gmail.users.settings.filters.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           criteria: filter.criteria,
           action: {

@@ -1,29 +1,8 @@
-import { OAuth2Client } from 'google-auth-library';
-import { google } from 'googleapis';
-import fs from 'fs/promises';
-import path from 'path';
-import { homedir } from 'os';
+import { createGmailClient } from './lib/gmail-client.mjs';
 
 async function analyzeUnreadEmails() {
   try {
-    const credPath = path.join(process.cwd(), 'credentials.json');
-    const credFile = JSON.parse(await fs.readFile(credPath, 'utf-8'));
-    const cred = credFile.installed || credFile;
-
-    const tokenPath = path.join(homedir(), '.config/google-calendar-mcp/tokens-gmail.json');
-    const content = await fs.readFile(tokenPath, 'utf-8');
-    const multiAccountTokens = JSON.parse(content);
-    const tokens = multiAccountTokens['normal'];
-
-    const oauth2Client = new OAuth2Client(
-      cred.client_id,
-      cred.client_secret,
-      cred.redirect_uris[0]
-    );
-
-    oauth2Client.setCredentials(tokens);
-
-    const gmail = google.gmail({ version: "v1", auth: oauth2Client });
+    const gmail = createGmailClient();
 
     // Fetch unread messages
     const response = await gmail.users.messages.list({

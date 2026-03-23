@@ -1,0 +1,142 @@
+import fs from 'fs';
+import path from 'path';
+import { google } from 'googleapis';
+import { OAuth2Client } from 'google-auth-library';
+
+const TOKEN_PATH = path.join(process.env.HOME, '.config/google-calendar-mcp/tokens-gmail.json');
+
+async function analyzeCommunityEvents() {
+  const tokenFileData = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf-8'));
+  const accountMode = process.env.ACCOUNT_MODE || 'normal';
+  const tokenData = tokenFileData[accountMode];
+
+  const credPath = process.env.GOOGLE_OAUTH_CREDENTIALS || './credentials.json';
+  const credData = JSON.parse(fs.readFileSync(credPath, 'utf-8'));
+  const oauth2Client = new OAuth2Client(
+    credData.installed.client_id,
+    credData.installed.client_secret,
+    credData.installed.redirect_uris[0]
+  );
+  oauth2Client.setCredentials(tokenData);
+
+  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+
+  console.log('📊 ANALYZING COMMUNITY EVENT TYPES\n');
+  console.log('═'.repeat(80) + '\n');
+
+  try {
+    const labelId = 'Label_4'; // Events/Community
+    const messagesResult = await gmail.users.messages.list({
+      userId: 'me',
+      labelIds: [labelId],
+      maxResults: 100,
+    });
+
+    if (!messagesResult.data.messages) {
+      console.log('No community event emails found');
+      return;
+    }
+
+    console.log(`📧 Found ${messagesResult.data.messages.length} Community Event Emails\n`);
+    console.log('═'.repeat(80) + '\n');
+
+    // Fetch full message details
+    const messages = [];
+    for (const msgHeader of messagesResult.data.messages) {
+      try {
+        const msg = await gmail.users.messages.get({
+          userId: 'me',
+          id: msgHeader.id,
+          format: 'metadata',
+          metadataHeaders: ['Subject', 'From', 'Date'],
+        });
+
+        const headers = msg.data.payload.headers || [];
+        const subject = headers.find(h => h.name === 'Subject')?.value || '(no subject)';
+        const from = headers.find(h => h.name === 'From')?.value || '(unknown)';
+
+        messages.push({ subject, from });
+      } catch (error) {
+        // Skip
+      }
+    }
+
+    // Categorize by community event type
+    const eventTypes = {
+      'Spiritual/Wellness': [],
+      'Creative/Arts': [],
+      'Tech/Professional': [],
+      'Social/Recreation': [],
+      'Learning/Education': [],
+      'Networking/Community': [],
+      'Food/Dining': [],
+      'Other': [],
+    };
+
+    const typePatterns = {
+      'Spiritual/Wellness': /astrology|psychic|meditation|healing|yoga|zen|conscious|spiritual|energy|chakra|reiki|enlightenment/i,
+      'Creative/Arts': /art|drawing|creative|sketch|music|design|performance|creative|painting/i,
+      'Tech/Professional': /tech|coding|development|robotics|ai|computer|data|engineering/i,
+      'Social/Recreation': /game|night|party|gathering|social|fun|recreation|laugh|wine|trivia/i,
+      'Learning/Education': /workshop|class|course|training|learn|skill|development|masterclass/i,
+      'Networking/Community': /networking|community|group|meetup|connect|gathering|forum/i,
+      'Food/Dining': /lunch|dinner|food|restaurant|cafe|coffee|eat|brunch|feast/i,
+    };
+
+    for (const msg of messages) {
+      let categorized = false;
+      for (const [type, pattern] of Object.entries(typePatterns)) {
+        if (pattern.test(msg.subject)) {
+          eventTypes[type].push(msg.subject);
+          categorized = true;
+          break;
+        }
+      }
+      if (!categorized) {
+        eventTypes['Other'].push(msg.subject);
+      }
+    }
+
+    // Display results
+    console.log('📋 COMMUNITY EVENT CATEGORIES\n');
+
+    const sortedTypes = Object.entries(eventTypes)
+      .filter(([_, emails]) => emails.length > 0)
+      .sort((a, b) => b[1].length - a[1].length);
+
+    for (const [type, emails] of sortedTypes) {
+      const percentage = ((emails.length / messages.length) * 100).toFixed(0);
+      console.log(`${type.toUpperCase()}`);
+      console.log(`Count: ${emails.length} (${percentage}%)\n`);
+
+      const samples = [...new Set(emails)].slice(0, 4);
+      for (const subject of samples) {
+        const truncated = subject.length > 70
+          ? subject.substring(0, 70) + '...'
+          : subject;
+        console.log(`  • ${truncated}`);
+      }
+
+      if (samples.length < emails.length) {
+        console.log(`  ... and ${emails.length - samples.length} more`);
+      }
+      console.log();
+    }
+
+    console.log('═'.repeat(80) + '\n');
+    console.log('💡 RECOMMENDED SUB-LABELS:\n');
+
+    for (const [type, emails] of sortedTypes) {
+      if (emails.length > 0) {
+        console.log(`  • Events/Community/${type}`);
+      }
+    }
+    console.log();
+
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+    process.exit(1);
+  }
+}
+
+analyzeCommunityEvents();

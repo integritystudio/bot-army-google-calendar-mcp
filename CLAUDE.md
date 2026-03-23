@@ -186,6 +186,10 @@ A comprehensive email filtering and archiving system to manage high-volume inbox
 node list-unread-emails.mjs
 # Shows all unread emails categorized by label/sender, summary counts
 # Categories: Sentry Alerts, Keep Important, Events, Monitoring, Product Updates, etc.
+
+node summarize-remaining.mjs
+# Summary of uncategorized/remaining unread emails (internal work, forums, misc)
+# ACCOUNT_MODE=normal or test; uses tokens-gmail.json
 ```
 
 **Apply Filters:**
@@ -274,6 +278,6 @@ Recognizes multiple date formats in email content:
 ### Code Quality Notes
 - **Date Parsing**: `lib/date-based-filter.mjs` is a pure utility with no side effects (does not mutate input dates)
 - **Batch Operations**: Scripts use Gmail batch API for efficiency; consider extracting to `lib/gmail-batch.mjs` if more patterns emerge
-- **OAuth Setup**: All scripts currently duplicate OAuth initialization — future refactor should extract to `lib/gmail-client.mjs`
+- **OAuth Setup**: All scripts duplicate OAuth initialization — extract to `lib/gmail-client.mjs` (target pattern: `homedir()` from 'os', token guard with error on missing key, try/catch around file reads)
 - **Label Constants**: Magic strings ('INBOX', 'UNREAD', label names) should eventually move to `lib/constants.mjs`
-- **Performance**: `list-unread-emails.mjs` fetches messages serially; could use Promise.all for concurrency if 500+ messages are common
+- **Performance**: Use `Promise.all` for concurrent message fetches; see `summarize-remaining.mjs` for the established pattern (parallel list + parallel get)

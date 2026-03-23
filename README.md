@@ -174,6 +174,7 @@ Automated scripts for organizing and filtering large volumes of Gmail with focus
 
 **Management Scripts:**
 - `list-unread-emails.mjs` - Categorize and summarize unread emails by label/sender patterns; clean fallback categorization
+- `summarize-remaining.mjs` - Summary of uncategorized/remaining unread emails (internal work, forums, misc); parallel fetching
 - `apply-filters-to-unread.mjs` - Apply existing filters to current unread emails
 - `create-remaining-filters.mjs` - Batch create filters for multiple categories (Product Updates, Communities, Services)
 
@@ -305,11 +306,11 @@ The email organization system uses intelligent date parsing (`lib/date-based-fil
 ## Testing Status
 
 Run tests with `npm test`. Current test suite includes:
-- **Handler Tests**: Core functionality for create, get, list, search, update, and delete operations with type-safe assertions
+- **Handler Tests**: Core functionality for create, get, list, search, update, and delete operations; content assertions use narrower `{ type: 'text'; text: string }` type instead of `as any`
 - **Service Tests**: Conflict detection and event similarity analysis
 - **Schema Tests**: Tool schema validation and compatibility
 
-**Note**: Some integration tests were removed due to incomplete implementation (references to non-existent AuthenticationService and initializeApp exports). These should be re-implemented when the authentication service architecture is finalized.
+**Note**: Integration tests referencing non-existent `AuthenticationService` and `initializeApp` exports were removed. Re-implement when the authentication service architecture is finalized.
 
 ## Configuration
 

@@ -1,283 +1,79 @@
 # Google Calendar & Gmail MCP - Project Guidelines
 
-## Authentication Setup (Test Mode with Multiple Accounts)
+## Auth & Development
 
-### Current Configuration
-- OAuth app: `email-grep-service` (Google Cloud project)
-- Credentials file: `credentials.json` (has client_id, client_secret, redirect_uris)
-- Token storage: Uses `CALENDARMCP_TOKEN_PATH` environment variable for multi-account support
-- Account mode: Use `ACCOUNT_MODE=test` for test user accounts
-
-### Authenticating Both Accounts
-
-The TokenManager stores multiple accounts in a single tokens.json file using account keys ("normal" and "test" by default).
-
-**Account 1: Integrity Studio (test account)**
+**OAuth Setup** (test mode):
 ```bash
-export ACCOUNT_MODE=test
-export CALENDARMCP_TOKEN_PATH=~/.config/google-calendar-mcp/tokens.json
-npm run auth
-# Follow OAuth flow in browser for Integrity Studio account
+export ACCOUNT_MODE=test CALENDARMCP_TOKEN_PATH=~/.config/google-calendar-mcp/tokens.json
+npm run auth  # Creates tokens.json; repeat for multiple accounts
+npm run verify-tokens  # Verify auth status
 ```
 
-**Account 2: alyshialedlie@gmail.com (test account)**
+**Gmail Tokens:**
 ```bash
-export ACCOUNT_MODE=test
-export CALENDARMCP_TOKEN_PATH=~/.config/google-calendar-mcp/tokens.json
-npm run auth
-# Follow OAuth flow in browser for Gmail account
-# Both tokens stored in same file with different account keys
+node auth-gmail.mjs  # Creates tokens-gmail.json (separate from calendar)
+node check-gmail.mjs  # Quick unread count
 ```
 
-### Verify Both Accounts
+**Development:**
 ```bash
-export GOOGLE_OAUTH_CREDENTIALS=./credentials.json
-npm run verify-tokens
-# Shows both accounts, their expiry times, and validity status
+npm install | npm run build | npm run dev | npm test
 ```
 
-### Token Storage
-- All tokens stored in: `~/.config/google-calendar-mcp/tokens.json`
-- Default permission: 0600 (read/write owner only)
-- TokenManager automatically refreshes access tokens 5 minutes before expiry
-- Refresh tokens are rotated on each refresh cycle
+**Auth Details:**
+- Tokens stored in `~/.config/google-calendar-mcp/tokens.json` (calendar) and `tokens-gmail.json` (Gmail)
+- `ACCOUNT_MODE` selects which account; TokenManager auto-refreshes 5 min before expiry
+- Test tokens expire after 7 days; set env vars before `npm run auth` or in `claude_desktop_config.json`
+- Token files use 0600 permissions; TokenManager (src/auth/tokenManager.ts) handles multi-account lifecycle
 
-### Important Notes
-- Test mode tokens expire after 7 days (requires re-authentication)
-- ACCOUNT_MODE environment variable selects which account's tokens to use at runtime
-- Environment variables must be set before running `npm run auth` or starting the MCP server
-- For Claude Desktop integration, set env vars in `claude_desktop_config.json`
+**Test Status:**
+- ✅ Core handler tests (CreateEventHandler, GetEventHandler, GetCurrentTimeHandler)
+- ✅ Type-safe content assertions using `{ type: 'text'; text: string }` instead of `as any`
+- ⚠️ Integration tests removed (referenced non-existent AuthenticationService)
 
-## Development
+## Script Development
 
-```bash
-npm install          # Install dependencies
-npm run build        # Build TypeScript to JavaScript
-npm run dev          # Dev mode with file watching
-npm run lint         # Type-check with TypeScript
-npm test             # Run unit tests
-npm run test:integration  # Run integration tests
-```
+**Avoid bash heredocs with pipes** (causes "parse error near |'"):
+- Use Write tool or create `.mjs` files in project root instead of `/tmp`
+- `/tmp` scripts can't access `node_modules`; use project root for npm imports
+- If using heredoc, keep it simple (no pipes, special chars, or complex syntax)
 
-### Test Status
-- **Removed (outdated)**: Integration tests referencing non-existent AuthenticationService and initializeApp exports
-- **Fixed**: Type narrowing errors in handler tests (content[0] union type casting)
-- **Active**: Core handler tests (CreateEventHandler, GetEventHandler, GetCurrentTimeHandler) with type-safe content access
-
-## Token Management
-- TokenManager (src/auth/tokenManager.ts): Multi-account token lifecycle
-- AuthServer (src/auth/server.ts): OAuth 2.0 authorization code flow
-- getSecureTokenPath (src/auth/paths.js): Respects CALENDARMCP_TOKEN_PATH env var
-
-## Gmail OAuth Setup
-
-### Authenticating Gmail
-
-Gmail tokens are stored separately in `tokens-gmail.json` with full read/modify access:
-
-```bash
-node auth-gmail.mjs
-# Opens browser for OAuth flow
-# Tokens saved to: ~/.config/google-calendar-mcp/tokens-gmail.json
-```
-
-### Using Gmail Tools
-
-After authentication, five MCP tools available:
-
-**1. `gmail-search-messages`**
-- Search Gmail with queries: `is:unread`, `from:user@example.com`, `subject:hello`
-- Returns message count and details (subject, from, date, snippet)
-- Supports pagination with pageToken
-
-**2. `gmail-get-profile`**
-- Get profile info: email address, total messages, total threads
-- Quick account summary
-
-**3. `gmail-modify-messages`**
-- Actions: `markRead`, `markUnread`, `archive`, `delete`, `addLabel`, `removeLabel`
-- Batch operations: modify multiple messages at once
-- Requires `labelId` for label operations
-- Returns status of each operation
-
-**4. `gmail-create-label`**
-- Create new Gmail labels for organizing emails
-- Set visibility: `labelShow` (visible in label list) or `labelHide` (hidden)
-- Set message visibility: `show` (appears in message list) or `hide` (hidden)
-- Returns label ID for use with other tools
-
-**5. `gmail-create-filter`**
-- Create filters to auto-organize emails based on criteria
-- Criteria: from, to, subject, query, hasAttachment, excludeChats
-- Actions: auto-label, auto-archive, mark read/spam/trash, forward, etc.
-- Applies to all future matching emails
-
-### Quick Check Script
-
-```bash
-node check-gmail.mjs
-# Returns unread message count
-```
-
-### Token Storage
-- Gmail tokens: `~/.config/google-calendar-mcp/tokens-gmail.json`
-- Separate from calendar tokens (tokens.json)
-- Default permission: 0600 (secure)
-- Scopes: `gmail.readonly`, `gmail.modify`
-
-## Script Development Best Practices
-
-### Avoid Heredocs with Pipes
-⚠️ **Never use bash heredocs with pipe characters (`|`) — causes "parse error near |'" errors**
-
-❌ **Bad:**
-```bash
-cat > /tmp/script.mjs << 'EOF'
-# script content with pipes or complex syntax
-EOF
-```
-
-✅ **Good Options:**
-1. **Use Write tool for file creation:**
-   ```typescript
-   Write({file_path: "/tmp/script.mjs", content: "..."})
-   ```
-
-2. **Write project files instead of /tmp:**
-   - Create files in project root (e.g., `analyze-emails.mjs`)
-   - Commit to git if reusable
-   - Avoid /tmp for package dependencies
-
-3. **If using bash heredoc, keep it simple:**
-   - No pipes, special chars, or complex syntax
-   - Only plain text content
-   - Use node scripts in project root instead
-
-### Dependencies in Scripts
-- Scripts in `/tmp` cannot access `node_modules` from project
-- Use project root for scripts that import npm packages
-- Or: Install packages globally (`npm install -g package-name`)
-- Or: Reference absolute paths to node_modules
-
-### Code Quality Standards
-- Avoid dead variables and redundant state (use derived values instead)
-- Remove unnecessary comments that duplicate what code expresses
-- Extract repeated patterns into shared utilities (reduce copy-paste)
+**Code Quality:**
+- Avoid dead variables; use derived values instead
+- Remove comments that duplicate code (keep only non-obvious WHY)
+- Extract repeated patterns into shared utilities
 - Use named constants instead of magic strings
-- Don't mutate input parameters; create local copies if needed
-- Prefer direct operations over redundant existence checks (TOCTOU anti-pattern)
-- Array.slice() naturally clamps to bounds; `Math.min` is unnecessary
+- Don't mutate input params; create local copies
+- Prefer direct operations over redundant existence checks (TOCTOU)
+- Array.slice() naturally clamps; Math.min unnecessary
 
 ## Email Organization System
 
-### Overview
-A comprehensive email filtering and archiving system to manage high-volume inboxes by categorizing and protecting important items.
+Core pattern: Label → conditional archive (keep future events, important items, archive routine notifications).
 
-### Core Pattern: Label + Conditional Archive
-- **Future Events**: Label "Events", keep in inbox
-- **Past Events**: Label "Events", archive from inbox
-- **Important Items**: Label "Keep Important", never archive (payments, rate limits, services)
-- **Routine Notifications**: Label category, archive to keep inbox clean
-
-### Key Scripts
-
-**Status & Management:**
+**Key Scripts:**
 ```bash
-node list-unread-emails.mjs
-# Shows all unread emails categorized by label/sender, summary counts
-# Categories: Sentry Alerts, Keep Important, Events, Monitoring, Product Updates, etc.
-
-node summarize-remaining.mjs
-# Summary of uncategorized/remaining unread emails (internal work, forums, misc)
-# ACCOUNT_MODE=normal or test; uses tokens-gmail.json
+node list-unread-emails.mjs           # Summary by category/sender
+node summarize-remaining.mjs          # Remaining uncategorized (internal work, forums)
+node create-remaining-filters.mjs     # Create filters (Product Updates, Communities, Services)
+node apply-filters-to-unread.mjs      # Apply filters to current unread
+node protect-important-inbox.mjs      # Protect: Cloudflare alerts, Calendly, Capital City Village, Investment Banking
+node filter-events-by-date.mjs        # Events: future=keep, past=archive
+node archive-signoz-dmarc.mjs         # Monitoring/DMARC auto-archive
 ```
 
-**Apply Filters:**
-```bash
-node apply-filters-to-unread.mjs
-# Applies created filters to current unread emails
-```
+**Categories:**
+| Type | Treatment | Senders/Items |
+|------|-----------|---|
+| Protected | Never archive | Cloudflare rate limits, Calendly support, CCV services, IB meetings |
+| Events | Future keep, past archive | International House, Meetup, Eventbrite, Calendly reminders |
+| Monitoring | Archive | SigNoz alerts, DMARC reports |
+| Product Updates | Label + archive | Google Cloud/Workspace, HubSpot, OpenAI, Postman, Resend, Yodlee, Adapty, DataHub |
+| Communities | Keep | Women Techmakers |
+| Services | Archive | FoundersCard, Link, Heroku, Zapier, Zillow |
+| Billing | Conditional | GW invoices, GC charges (rate-limit aware) |
 
-**Batch Filter Creation:**
-```bash
-node create-remaining-filters.mjs
-# Creates filters for: Product Updates, Communities, Services & Alerts
-# Auto-applies to matching existing emails
-```
-
-**Conditional Filters:**
-```bash
-# Billing: regular emails archived, urgent (rate limit) emails protected
-node create-billing-filter.mjs
-node apply-billing-filter-to-unread.mjs
-
-# Events: future events stay, past events archive
-node filter-events-by-date.mjs
-
-# Monitoring: SigNoz alerts archived automatically
-node archive-signoz-dmarc.mjs
-```
-
-**Protection:**
-```bash
-# Prevent important items from being archived
-node protect-important-inbox.mjs
-# Labels: Cloudflare rate limits, Calendly refunds/support, Capital City Village, Investment Banking
-```
-
-### Categories & Organization
-
-**Protected (Keep Important):**
-- Cloudflare rate limits and DDoS alerts
-- Calendly refunds and support
-- Capital City Village services
-- Investment Banking meetings
-
-**Events (Future = Keep, Past = Archive):**
-- International House events
-- Meetup group meetups
-- Eventbrite event announcements
-- Calendly meeting reminders
-
-**Monitoring (Archive):**
-- SigNoz alerts (alertmanager@signoz.cloud)
-- DMARC authentication reports
-
-**Product Updates (Label + Archive):**
-- Google Workspace, Google Cloud, Google Analytics
-- HubSpot, Postman, Resend, Mixpanel, OpenAI, Yodlee
-- Adapty, DataHub, Storylane
-
-**Communities:**
-- Women Techmakers events
-
-**Services & Alerts:**
-- FoundersCard, Link, Heroku, Zillow, American Best, Zapier
-
-**Billing:**
-- Google Workspace invoices
-- Google Cloud charges (rate-limit aware)
-
-### Date Parsing (lib/date-based-filter.mjs)
-Recognizes multiple date formats in email content:
-- ISO: `2026-03-25`
-- US: `03/25/2026`
-- Text: `March 25, 2026`
-- Weekday patterns: `@ Mon, Mar 23`
-- Compares to current date for past/future classification
-
-### Workflow Example
-1. Run `list-unread-emails.mjs` to see current state
-2. Create filters: `node create-remaining-filters.mjs`
-3. Apply to existing emails: `node apply-filters-to-unread.mjs`
-4. Protect important items: `node protect-important-inbox.mjs`
-5. Archive routine notifications: `node archive-signoz-dmarc.mjs`
-6. Process events: `node mark-past-events-read.mjs`
-7. Verify results: `node list-unread-emails.mjs`
-
-### Code Quality Notes
-- **Date Parsing**: `lib/date-based-filter.mjs` is a pure utility with no side effects (does not mutate input dates)
-- **Batch Operations**: Scripts use Gmail batch API for efficiency; consider extracting to `lib/gmail-batch.mjs` if more patterns emerge
-- **OAuth Setup**: All scripts duplicate OAuth initialization — extract to `lib/gmail-client.mjs` (target pattern: `homedir()` from 'os', token guard with error on missing key, try/catch around file reads)
-- **Label Constants**: Magic strings ('INBOX', 'UNREAD', label names) should eventually move to `lib/constants.mjs`
-- **Performance**: Use `Promise.all` for concurrent message fetches; see `summarize-remaining.mjs` for the established pattern (parallel list + parallel get)
+**Code Quality:**
+- **Refactor targets:** Extract OAuth to `lib/gmail-client.mjs` (use `homedir()` from 'os', token guard, try/catch); label constants to `lib/constants.mjs`; batch ops to `lib/gmail-batch.mjs`
+- **Performance:** Use `Promise.all` for concurrent fetches (see `summarize-remaining.mjs` pattern: parallel list + parallel get)
+- **Date Parsing:** `lib/date-based-filter.mjs` is a pure utility (ISO, US, text, weekday patterns; no mutations)

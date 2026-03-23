@@ -91,7 +91,7 @@ describe('CreateEventHandler', () => {
       expect(mockCalendar.events.insert.mock.calls[0][0].requestBody.id).toBeUndefined();
 
       expect(result.content[0].type).toBe('text');
-      const textContent = result.content[0] as any;
+      const textContent = result.content[0] as { type: 'text'; text: string };
       expect(textContent.text).toContain('Event created successfully!');
       expect(textContent.text).toContain('Test Event');
     });
@@ -145,7 +145,7 @@ describe('CreateEventHandler', () => {
         })
       });
 
-      const textContent = result.content[0] as any;
+      const textContent = result.content[0] as { type: 'text'; text: string };
       expect(textContent.text).toContain('Event created successfully!');
     });
   });
@@ -182,7 +182,7 @@ describe('CreateEventHandler', () => {
         })
       });
 
-      const textContent = result.content[0] as any;
+      const textContent = result.content[0] as { type: 'text'; text: string };
       expect(textContent.text).toContain('Event created successfully!');
     });
 

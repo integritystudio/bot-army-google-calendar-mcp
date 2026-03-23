@@ -55,6 +55,7 @@ Core pattern: Label → conditional archive (keep future events, important items
 ```bash
 node list-unread-emails.mjs           # Summary by category/sender
 node summarize-remaining.mjs          # Remaining uncategorized (internal work, forums)
+node describe-internal.mjs            # Detailed breakdown of internal team emails (Chandra, Jordan, John, Alex)
 node create-remaining-filters.mjs     # Create filters (Product Updates, Communities, Services)
 node apply-filters-to-unread.mjs      # Apply filters to current unread
 node protect-important-inbox.mjs      # Protect: Cloudflare alerts, Calendly, Capital City Village, Investment Banking

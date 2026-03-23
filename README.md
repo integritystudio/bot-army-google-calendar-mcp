@@ -175,6 +175,7 @@ Automated scripts for organizing and filtering large volumes of Gmail with focus
 **Management Scripts:**
 - `list-unread-emails.mjs` - Categorize and summarize unread emails by label/sender patterns; clean fallback categorization
 - `summarize-remaining.mjs` - Summary of uncategorized/remaining unread emails (internal work, forums, misc); parallel fetching
+- `describe-internal.mjs` - Detailed breakdown of internal team emails with subjects and dates
 - `apply-filters-to-unread.mjs` - Apply existing filters to current unread emails
 - `create-remaining-filters.mjs` - Batch create filters for multiple categories (Product Updates, Communities, Services)
 

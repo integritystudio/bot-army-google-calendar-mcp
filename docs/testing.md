@@ -95,19 +95,6 @@ export OPENAI_MODEL="gpt-4o-mini"                   # Default
 - **OpenAI**: Only GPT-4+ and select GPT-3.5-turbo models support function calling.
 - If you see "tool not found" or "function not supported" errors, verify your model selection.
 
-### 3. Docker Integration Tests
-
-**Files:** `docker-integration.test.ts`
-
-**Requirements:**
-- Docker installed and running
-- Google OAuth credentials
-
-**What these tests do:**
-- ✅ Test containerized deployment
-- ✅ Validate HTTP transport mode
-- ✅ Test Docker environment configuration
-
 ### Running Specific Integration Test Types
 
 ```bash
@@ -216,12 +203,6 @@ npm run test:integration -- direct-integration.test.ts
   - OpenAI: Ensure using GPT-4+ or compatible GPT-3.5-turbo model
 - **"Maximum tokens exceeded"**: Some complex tests may hit token limits with verbose models
 - **Network timeouts**: LLM tests may take 2-5 minutes due to AI processing time
-
-**Docker Integration Errors:**
-- **"Docker not found"**: Ensure Docker is installed and running
-- **Port conflicts**: Docker tests use port 3000 - ensure it's available
-- **Build failures**: Check Docker build logs for missing dependencies
-- **"Cannot connect to Docker daemon"**: Start Docker Desktop or daemon
 
 ### Test Data Management
 

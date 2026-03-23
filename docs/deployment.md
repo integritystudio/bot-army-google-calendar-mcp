@@ -47,58 +47,6 @@ HOST=localhost              # Bind address
 TRANSPORT=http              # Transport mode
 ```
 
-## Docker Deployment
-
-### Using Docker Compose (Recommended)
-
-```bash
-# stdio mode  
-docker compose up -d server
-
-# HTTP mode
-docker compose --profile http up -d
-```
-
-See [Docker Guide](docker.md) for complete setup instructions.
-
-### Using Docker Run
-
-```bash
-# Create volume for token storage
-docker volume create mcp-tokens
-
-# stdio mode
-docker run -i \
-  -v ./gcp-oauth.keys.json:/usr/src/app/gcp-oauth.keys.json:ro \
-  -v mcp-tokens:/home/nodejs/.config/google-calendar-mcp \
-  -e TRANSPORT=stdio \
-  --name calendar-mcp \
-  google-calendar-mcp
-
-# HTTP mode
-docker run -d \
-  -p 3000:3000 \
-  -v ./gcp-oauth.keys.json:/usr/src/app/gcp-oauth.keys.json:ro \
-  -v mcp-tokens:/home/nodejs/.config/google-calendar-mcp \
-  -e TRANSPORT=http \
-  -e HOST=0.0.0.0 \
-  --name calendar-mcp \
-  google-calendar-mcp
-
-```
-
-### Building Custom Image
-
-Use the provided Dockerfile which includes proper user setup and token storage:
-
-```bash
-# Build image
-docker build -t google-calendar-mcp .
-
-# Run with authentication
-docker run -it google-calendar-mcp npm run auth
-```
-
 ## Cloud Deployment
 
 ### Google Cloud Run

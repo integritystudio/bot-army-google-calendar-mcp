@@ -77,17 +77,6 @@ npm run build
 
 Then add to Claude Desktop config using the local path or by specifying the path with the `GOOGLE_OAUTH_CREDENTIALS` environment variable.
 
-**Option 3: Docker Installation**
-
-```bash
-git clone https://github.com/nspady/google-calendar-mcp.git
-cd google-calendar-mcp
-cp /path/to/your/gcp-oauth.keys.json .
-docker compose up
-```
-
-See the [Docker deployment guide](docs/docker.md) for detailed configuration options including HTTP transport mode.
-
 ### First Run
 
 1. Start Claude Desktop
@@ -167,9 +156,9 @@ This will:
 2. Request Gmail access (read and modify permissions)
 3. Save tokens to `~/.config/google-calendar-mcp/tokens-gmail.json`
 
-**Alternative - Quick Check:**
+**Quick Check:**
 ```bash
-# Check unread message count without MCP
+# Check unread message count
 node check-gmail.mjs
 ```
 
@@ -308,8 +297,7 @@ The email organization system uses intelligent date parsing (`lib/date-based-fil
 
 - [Authentication Setup](docs/authentication.md) - Detailed Google Cloud setup
 - [Advanced Usage](docs/advanced-usage.md) - Multi-account, batch operations
-- [Deployment Guide](docs/deployment.md) - HTTP transport, remote access
-- [Docker Guide](docs/docker.md) - Docker deployment with stdio and HTTP modes
+- [Deployment Guide](docs/deployment.md) - Remote access and integration
 - [OAuth Verification](docs/oauth-verification.md) - Moving from test to production mode
 - [Architecture](docs/architecture.md) - Technical architecture overview
 - [Development](docs/development.md) - Contributing and testing

@@ -14,7 +14,7 @@ Welcome to the Google Calendar MCP Server documentation.
 
 ## Deployment
 
-- [Deployment Guide](deployment.md) - HTTP transport, Docker, cloud deployment
+- [Deployment Guide](deployment.md) - HTTP transport and cloud deployment
 
 ## Development
 

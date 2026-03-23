@@ -2,6 +2,7 @@ import { createGmailClient } from './lib/gmail-client.mjs';
 import { extractDisplayName } from './lib/email-utils.mjs';
 import {
   USER_ID,
+  LABEL_SENTRY,
   LABEL_KEEP_IMPORTANT,
   LABEL_EVENTS,
   LABEL_MONITORING,
@@ -64,8 +65,6 @@ async function listUnreadEmails() {
         labels: msgLabels
       });
     }
-
-    const LABEL_SENTRY = 'Sentry Alerts';
 
     // Categorize emails
     const categories = {

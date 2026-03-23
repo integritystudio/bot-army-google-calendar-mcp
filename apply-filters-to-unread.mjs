@@ -19,7 +19,7 @@ async function applyFiltersToUnread() {
   // Get all labels first
   const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
   const labelMap = {};
-  labelsResponse.data.labels.forEach(label => {
+  (labelsResponse.data.labels || []).forEach(label => {
     labelMap[label.name] = label.id;
   });
 

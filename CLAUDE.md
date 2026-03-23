@@ -59,6 +59,11 @@ npm test             # Run unit tests
 npm run test:integration  # Run integration tests
 ```
 
+### Test Status
+- **Removed (outdated)**: Integration tests referencing non-existent AuthenticationService and initializeApp exports
+- **Fixed**: Type narrowing errors in handler tests (content[0] union type casting)
+- **Active**: Core handler tests (CreateEventHandler, GetEventHandler, GetCurrentTimeHandler) with type-safe content access
+
 ## Token Management
 - TokenManager (src/auth/tokenManager.ts): Multi-account token lifecycle
 - AuthServer (src/auth/server.ts): OAuth 2.0 authorization code flow

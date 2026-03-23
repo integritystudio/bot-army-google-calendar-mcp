@@ -301,7 +301,15 @@ The email organization system uses intelligent date parsing (`lib/date-based-fil
 - [OAuth Verification](docs/oauth-verification.md) - Moving from test to production mode
 - [Architecture](docs/architecture.md) - Technical architecture overview
 - [Development](docs/development.md) - Contributing and testing
-- [Testing](docs/testing.md) - Unit and integration testing guide
+
+## Testing Status
+
+Run tests with `npm test`. Current test suite includes:
+- **Handler Tests**: Core functionality for create, get, list, search, update, and delete operations with type-safe assertions
+- **Service Tests**: Conflict detection and event similarity analysis
+- **Schema Tests**: Tool schema validation and compatibility
+
+**Note**: Some integration tests were removed due to incomplete implementation (references to non-existent AuthenticationService and initializeApp exports). These should be re-implemented when the authentication service architecture is finalized.
 
 ## Configuration
 

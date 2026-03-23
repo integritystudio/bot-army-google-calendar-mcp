@@ -67,8 +67,8 @@ describe('GetEventHandler', () => {
       });
 
       expect(result.content[0].type).toBe('text');
-      expect(result.content[0].text).toContain('Event Details:');
-      expect(result.content[0].text).toContain('Test Event');
+      expect((result.content[0] as any).text).toContain('Event Details:');
+      expect((result.content[0] as any).text).toContain('Test Event');
     });
 
     it('should retrieve an event with custom fields', async () => {
@@ -98,7 +98,7 @@ describe('GetEventHandler', () => {
         fields: 'description,colorId,attendees'
       });
 
-      expect(result.content[0].text).toContain('Event Details:');
+      expect((result.content[0] as any).text).toContain('Event Details:');
     });
 
     it('should handle event not found', async () => {
@@ -113,7 +113,7 @@ describe('GetEventHandler', () => {
 
       const result = await handler.runTool(args, mockOAuth2Client);
 
-      expect(result.content[0].text).toBe(
+      expect((result.content[0] as any).text).toBe(
         "Event with ID 'nonexistent' not found in calendar 'primary'."
       );
     });
@@ -146,7 +146,7 @@ describe('GetEventHandler', () => {
 
       const result = await handler.runTool(args, mockOAuth2Client);
 
-      expect(result.content[0].text).toBe(
+      expect((result.content[0] as any).text).toBe(
         "Event with ID 'event123' not found in calendar 'primary'."
       );
     });

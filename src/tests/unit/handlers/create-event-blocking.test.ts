@@ -61,7 +61,7 @@ describe('CreateEventHandler Blocking Logic', () => {
     };
 
     const result = await handler.runTool(args, mockOAuth2Client);
-    const response = result.content[0].text;
+    const response = (result.content[0] as any).text;
 
     // Verify the response format - now includes similarity percentage
     expect(response).toContain('⚠️ DUPLICATE EVENT DETECTED (100% similar)!');

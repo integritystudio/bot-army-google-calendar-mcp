@@ -4,7 +4,11 @@ import http from 'http';
 import { URL } from 'url';
 import open from 'open';
 import { loadCredentials } from './client.js';
-import { getAccountMode } from './utils.js';
+import { getAccountMode, isNodeError } from './utils.js';
+
+const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
+const PORT_RANGE = { start: 3500, end: 3505 };
+const AUTH_SERVER_TIMEOUT_MS = 10000;
 
 export class AuthServer {
   private baseOAuth2Client: OAuth2Client; // Used by TokenManager for validation/refresh
@@ -18,7 +22,7 @@ export class AuthServer {
   constructor(oauth2Client: OAuth2Client) {
     this.baseOAuth2Client = oauth2Client;
     this.tokenManager = new TokenManager(oauth2Client);
-    this.portRange = { start: 3500, end: 3505 };
+    this.portRange = PORT_RANGE;
   }
 
   private createServer(): http.Server {
@@ -26,17 +30,15 @@ export class AuthServer {
       const url = new URL(req.url || '/', `http://${req.headers.host}`);
       
       if (url.pathname === '/') {
-        // Root route - show auth link
         const clientForUrl = this.flowOAuth2Client || this.baseOAuth2Client;
-        const scopes = ['https://www.googleapis.com/auth/calendar'];
         const authUrl = clientForUrl.generateAuthUrl({
           access_type: 'offline',
-          scope: scopes,
+          scope: [CALENDAR_SCOPE],
           prompt: 'consent'
         });
-        
+
         const accountMode = getAccountMode();
-        
+
         res.writeHead(200, { 'Content-Type': 'text/html' });
         res.end(`
           <h1>Google Calendar Authentication</h1>
@@ -67,7 +69,7 @@ export class AuthServer {
 
           const tokenPath = this.tokenManager.getTokenPath();
           const accountMode = this.tokenManager.getAccountMode();
-          
+
           res.writeHead(200, { 'Content-Type': 'text/html' });
           res.end(`
             <!DOCTYPE html>
@@ -76,26 +78,13 @@ export class AuthServer {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Authentication Successful</title>
-                <style>
-                    body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f4f4f4; margin: 0; }
-                    .container { text-align: center; padding: 2em; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-                    h1 { color: #4CAF50; }
-                    p { color: #333; margin-bottom: 0.5em; }
-                    code { background-color: #eee; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em; }
-                    .account-mode { background-color: #e3f2fd; padding: 1em; border-radius: 5px; margin: 1em 0; }
-                </style>
             </head>
             <body>
-                <div class="container">
-                    <h1>Authentication Successful!</h1>
-                    <div class="account-mode">
-                        <p><strong>Account Mode:</strong> <code>${accountMode}</code></p>
-                        <p>Your authentication tokens have been saved for the <strong>${accountMode}</strong> account.</p>
-                    </div>
-                    <p>Tokens saved to:</p>
-                    <p><code>${tokenPath}</code></p>
-                    <p>You can now close this browser window.</p>
-                </div>
+                <h1>Authentication Successful!</h1>
+                <p><strong>Account Mode:</strong> ${accountMode}</p>
+                <p>Your authentication tokens have been saved for the <strong>${accountMode}</strong> account.</p>
+                <p>Tokens saved to: ${tokenPath}</p>
+                <p>You can now close this browser window.</p>
             </body>
             </html>
           `);
@@ -112,20 +101,12 @@ export class AuthServer {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Authentication Failed</title>
-                <style>
-                    body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f4f4f4; margin: 0; }
-                    .container { text-align: center; padding: 2em; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-                    h1 { color: #F44336; }
-                    p { color: #333; }
-                </style>
             </head>
             <body>
-                <div class="container">
-                    <h1>Authentication Failed</h1>
-                    <p>An error occurred during authentication:</p>
-                    <p><code>${message}</code></p>
-                    <p>Please try again or check the server logs.</p>
-                </div>
+                <h1>Authentication Failed</h1>
+                <p>An error occurred during authentication:</p>
+                <p>${message}</p>
+                <p>Please try again or check the server logs.</p>
             </body>
             </html>
           `);
@@ -149,13 +130,12 @@ export class AuthServer {
   }
 
   async start(openBrowser = true): Promise<boolean> {
-    // Add timeout wrapper to prevent hanging
     return Promise.race([
       this.startWithTimeout(openBrowser),
       new Promise<boolean>((_, reject) => {
-        setTimeout(() => reject(new Error('Auth server start timed out after 10 seconds')), 10000);
+        setTimeout(() => reject(new Error('Auth server start timed out')), AUTH_SERVER_TIMEOUT_MS);
       })
-    ]).catch(() => false); // Return false on timeout instead of throwing
+    ]).catch(() => false);
   }
 
   private async startWithTimeout(openBrowser = true): Promise<boolean> {
@@ -186,10 +166,9 @@ export class AuthServer {
         return false;
     }
 
-    // Generate Auth URL using the newly created flow client
     const authorizeUrl = this.flowOAuth2Client.generateAuthUrl({
       access_type: 'offline',
-      scope: ['https://www.googleapis.com/auth/calendar'],
+      scope: [CALENDAR_SCOPE],
       prompt: 'consent'
     });
     
@@ -217,30 +196,25 @@ export class AuthServer {
         await new Promise<void>((resolve, reject) => {
           const testServer = this.createServer();
           testServer.listen(port, () => {
-            this.server = testServer; // Assign to class property *only* if successful
+            this.server = testServer;
             resolve();
           });
           testServer.on('error', (err: NodeJS.ErrnoException) => {
             if (err.code === 'EADDRINUSE') {
-              // Port is in use, close the test server and reject
-              testServer.close(() => reject(err)); 
+              testServer.close(() => reject(err));
             } else {
-              // Other error, reject
               reject(err);
             }
           });
         });
-        return port; // Port successfully bound
+        return port;
       } catch (error: unknown) {
-        // Check if it's EADDRINUSE, otherwise rethrow or handle
-        if (!(error instanceof Error && 'code' in error && error.code === 'EADDRINUSE')) {
-            // An unexpected error occurred during server start
-            return null;
+        if (!isNodeError(error, 'EADDRINUSE')) {
+          return null;
         }
-        // EADDRINUSE occurred, loop continues
       }
     }
-    return null; // No port found
+    return null;
   }
 
   public getRunningPort(): number | null {

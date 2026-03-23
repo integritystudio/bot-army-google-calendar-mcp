@@ -1,6 +1,6 @@
 import { OAuth2Client } from 'google-auth-library';
 import * as fs from 'fs/promises';
-import { getKeysFilePath, generateCredentialsErrorMessage, OAuthCredentials } from './utils.js';
+import { getKeysFilePath, generateCredentialsErrorMessage, OAuthCredentials, toErrorMessage } from './utils.js';
 
 async function loadCredentialsFromFile(): Promise<OAuthCredentials> {
   const keysContent = await fs.readFile(getKeysFilePath(), "utf-8");
@@ -23,45 +23,36 @@ async function loadCredentialsFromFile(): Promise<OAuthCredentials> {
 }
 
 async function loadCredentialsWithFallback(): Promise<OAuthCredentials> {
-  // Load credentials from file (CLI param, env var, or default path)
   try {
     return await loadCredentialsFromFile();
   } catch (fileError) {
-    // Generate helpful error message
     const errorMessage = generateCredentialsErrorMessage();
-    throw new Error(`${errorMessage}\n\nOriginal error: ${fileError instanceof Error ? fileError.message : fileError}`);
+    throw new Error(`${errorMessage}\n\nOriginal error: ${toErrorMessage(fileError)}`);
   }
 }
 
 export async function initializeOAuth2Client(): Promise<OAuth2Client> {
-  // Always use real OAuth credentials - no mocking.
-  // Unit tests should mock at the handler level, integration tests need real credentials.
   try {
     const credentials = await loadCredentialsWithFallback();
-    
-    // Use the first redirect URI as the default for the base client
+
     return new OAuth2Client({
       clientId: credentials.client_id,
       clientSecret: credentials.client_secret,
       redirectUri: credentials.redirect_uris[0],
     });
   } catch (error) {
-    throw new Error(`Error loading OAuth keys: ${error instanceof Error ? error.message : error}`);
+    throw new Error(`Error loading OAuth keys: ${toErrorMessage(error)}`);
   }
 }
 
 export async function loadCredentials(): Promise<{ client_id: string; client_secret: string }> {
   try {
     const credentials = await loadCredentialsWithFallback();
-    
-    if (!credentials.client_id || !credentials.client_secret) {
-        throw new Error('Client ID or Client Secret missing in credentials.');
-    }
     return {
       client_id: credentials.client_id,
       client_secret: credentials.client_secret
     };
   } catch (error) {
-    throw new Error(`Error loading credentials: ${error instanceof Error ? error.message : error}`);
+    throw new Error(`Error loading credentials: ${toErrorMessage(error)}`);
   }
 }

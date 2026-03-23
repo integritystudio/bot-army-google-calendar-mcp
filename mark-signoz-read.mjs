@@ -10,6 +10,10 @@ async function markSignozRead() {
   const accountMode = process.env.ACCOUNT_MODE || 'normal';
   const tokenData = tokenFileData[accountMode];
 
+  if (!tokenData) {
+    throw new Error(`Token data not found for account mode: ${accountMode}`);
+  }
+
   const credPath = process.env.GOOGLE_OAUTH_CREDENTIALS || './credentials.json';
   const credData = JSON.parse(fs.readFileSync(credPath, 'utf-8'));
   const oauth2Client = new OAuth2Client(
@@ -45,7 +49,7 @@ async function markSignozRead() {
     const batchSize = 50;
 
     for (let i = 0; i < messageIds.length; i += batchSize) {
-      const batch = messageIds.slice(i, i + batchSize);
+      const batch = messageIds.slice(i, i + batchSize).map(m => m.id);
 
       await gmail.users.messages.batchModify({
         userId: 'me',
@@ -61,7 +65,7 @@ async function markSignozRead() {
 
     console.log('\n' + '═'.repeat(80));
     console.log('COMPLETE\n');
-    console.log(`✅ SigNoz emails marked as read: ${messageIds.length}\n`);
+    console.log(`✅ SigNoz emails processed: ${messageIds.length}\n`);
     console.log('═'.repeat(80) + '\n');
 
   } catch (error) {

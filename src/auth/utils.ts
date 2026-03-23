@@ -1,5 +1,4 @@
 import * as path from 'path';
-import * as os from 'os';
 import { fileURLToPath } from 'url';
 import { getSecureTokenPath as getSharedSecureTokenPath, getLegacyTokenPath as getSharedLegacyTokenPath, getAccountMode as getSharedAccountMode } from './paths.js';
 

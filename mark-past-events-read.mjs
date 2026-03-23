@@ -11,6 +11,10 @@ async function markPastEventsRead() {
   const accountMode = process.env.ACCOUNT_MODE || 'normal';
   const tokenData = tokenFileData[accountMode];
 
+  if (!tokenData) {
+    throw new Error(`Token data not found for account mode: ${accountMode}`);
+  }
+
   const credPath = process.env.GOOGLE_OAUTH_CREDENTIALS || './credentials.json';
   const credData = JSON.parse(fs.readFileSync(credPath, 'utf-8'));
   const oauth2Client = new OAuth2Client(
@@ -73,7 +77,7 @@ async function markPastEventsRead() {
       }
     }
 
-    console.log(`Identified ${pastCount} past events\n`);
+    console.log(`Identified ${pastIds.length} past events\n`);
 
     if (pastIds.length === 0) {
       console.log('✅ No past events found\n');

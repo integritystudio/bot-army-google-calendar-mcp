@@ -48,6 +48,9 @@ export async function initializeOAuth2Client(): Promise<OAuth2Client> {
 export async function loadCredentials(): Promise<{ client_id: string; client_secret: string }> {
   try {
     const credentials = await loadCredentialsWithFallback();
+    if (!credentials.client_id || !credentials.client_secret) {
+      throw new Error('Client ID or Client Secret missing in credentials.');
+    }
     return {
       client_id: credentials.client_id,
       client_secret: credentials.client_secret

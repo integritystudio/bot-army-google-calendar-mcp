@@ -10,6 +10,10 @@ async function markArchivedAsRead() {
   const accountMode = process.env.ACCOUNT_MODE || 'normal';
   const tokenData = tokenFileData[accountMode];
 
+  if (!tokenData) {
+    throw new Error(`Token data not found for account mode: ${accountMode}`);
+  }
+
   const credPath = process.env.GOOGLE_OAUTH_CREDENTIALS || './credentials.json';
   const credData = JSON.parse(fs.readFileSync(credPath, 'utf-8'));
   const oauth2Client = new OAuth2Client(
@@ -38,6 +42,10 @@ async function markArchivedAsRead() {
     // Get all labels
     const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
     const labels = labelsResponse.data.labels || [];
+    if (labels.length === 0) {
+      console.log('No labels found\n');
+      return;
+    }
     const labelMap = {};
     labels.forEach(l => { labelMap[l.name] = l.id; });
 
@@ -46,7 +54,7 @@ async function markArchivedAsRead() {
       if (!labelId) continue;
 
       // Find unread emails with this label (not in INBOX - archived)
-      const searchQuery = `label:${labelId} is:unread -label:INBOX`;
+      const searchQuery = `label:"${category}" is:unread -label:INBOX`;
       const searchResponse = await gmail.users.messages.list({
         userId: 'me',
         q: searchQuery,
@@ -61,12 +69,12 @@ async function markArchivedAsRead() {
       // Mark as read in batches
       const batchSize = 50;
       for (let i = 0; i < messageIds.length; i += batchSize) {
-        const batch = messageIds.slice(i, Math.min(i + batchSize, messageIds.length));
+        const batch = messageIds.slice(i, i + batchSize).map(m => m.id);
 
         await gmail.users.messages.batchModify({
           userId: 'me',
           requestBody: {
-            ids: batch.map(m => m.id),
+            ids: batch,
             removeLabelIds: ['UNREAD']
           }
         });

@@ -10,6 +10,8 @@ interface MultiAccountTokens {
   test?: Credentials;
 }
 
+const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
+
 export class TokenManager {
   private oauth2Client: OAuth2Client;
   private tokenPath: string;
@@ -38,7 +40,8 @@ export class TokenManager {
     try {
       await mkdir(dirname(this.tokenPath), { recursive: true });
     } catch (error) {
-      process.stderr.write(`Failed to create token directory: ${error}\n`);
+      process.stderr.write(`Failed to create token directory: ${toErrorMessage(error)}\n`);
+      throw error;
     }
   }
 
@@ -143,19 +146,18 @@ export class TokenManager {
       process.stderr.write(`Loaded tokens for ${this.accountMode} account\n`);
       return true;
     } catch (error: unknown) {
-      if (error instanceof Error && error.message.includes('ENOENT')) {
+      if (isNodeError(error, 'ENOENT')) {
         const migrated = await this.migrateLegacyTokens();
         if (migrated) {
           return this.loadSavedTokens();
         }
       }
-      process.stderr.write(`Error loading tokens for ${this.accountMode} account: ${error instanceof Error ? error.message : String(error)}\n`);
+      process.stderr.write(`Error loading tokens for ${this.accountMode} account: ${toErrorMessage(error)}\n`);
       return false;
     }
   }
 
   async refreshTokensIfNeeded(): Promise<boolean> {
-    const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
     const expiryDate = this.oauth2Client.credentials.expiry_date;
     const isExpired = expiryDate
       ? Date.now() >= expiryDate - TOKEN_REFRESH_BUFFER_MS
@@ -197,7 +199,10 @@ export class TokenManager {
     const modeToValidate = accountMode || this.accountMode;
 
     if (modeToValidate !== this.accountMode) {
-      return this.switchAccount(modeToValidate);
+      if (!(await this.switchAccount(modeToValidate))) {
+        return false;
+      }
+      return this.refreshTokensIfNeeded();
     }
 
     if (!this.oauth2Client.credentials || !this.oauth2Client.credentials.access_token) {

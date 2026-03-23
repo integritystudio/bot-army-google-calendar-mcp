@@ -93,6 +93,8 @@ export class AuthServer {
           const message = error instanceof Error ? error.message : 'Unknown error';
           process.stderr.write(`✗ Token save failed: ${message}\n`);
 
+          const escapedMessage = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+
           res.writeHead(500, { 'Content-Type': 'text/html' });
           res.end(`
             <!DOCTYPE html>
@@ -105,7 +107,7 @@ export class AuthServer {
             <body>
                 <h1>Authentication Failed</h1>
                 <p>An error occurred during authentication:</p>
-                <p>${message}</p>
+                <p>${escapedMessage}</p>
                 <p>Please try again or check the server logs.</p>
             </body>
             </html>

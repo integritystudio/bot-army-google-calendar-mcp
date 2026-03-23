@@ -39,46 +39,46 @@ async function markAllLabeledAsRead() {
 
   let totalMarked = 0;
 
-for (const [name, id] of Object.entries(labels)) {
-  try {
-    const searchResponse = await gmail.users.messages.list({
-      userId: 'me',
-      q: `label:${id} is:unread`,
-      maxResults: 500
-    });
-
-    const labeledUnread = searchResponse.data.messages || [];
-
-    if (labeledUnread.length === 0) {
-      console.log(`${name}: 0 unread\n`);
-      continue;
-    }
-
-    console.log(`${name}: ${labeledUnread.length} unread`);
-
-    // Mark as read in batches
-    const batchSize = 50;
-    for (let i = 0; i < labeledUnread.length; i += batchSize) {
-      const batch = labeledUnread.slice(i, i + batchSize).map(m => m.id);
-
-      await gmail.users.messages.batchModify({
+  for (const [name, id] of Object.entries(labels)) {
+    try {
+      const searchResponse = await gmail.users.messages.list({
         userId: 'me',
-        requestBody: {
-          ids: batch,
-          removeLabelIds: ['UNREAD']
-        }
+        q: `label:${id} is:unread`,
+        maxResults: 500
       });
 
-      totalMarked += batch.length;
-      const processed = Math.min(i + batchSize, labeledUnread.length);
-      console.log(`  ✅ Marked ${processed}/${labeledUnread.length} as read`);
-    }
+      const labeledUnread = searchResponse.data.messages || [];
 
-    console.log();
-  } catch (e) {
-    console.error(`Error processing ${name}:`, e.message);
+      if (labeledUnread.length === 0) {
+        console.log(`${name}: 0 unread\n`);
+        continue;
+      }
+
+      console.log(`${name}: ${labeledUnread.length} unread`);
+
+      // Mark as read in batches
+      const batchSize = 50;
+      for (let i = 0; i < labeledUnread.length; i += batchSize) {
+        const batch = labeledUnread.slice(i, i + batchSize).map(m => m.id);
+
+        await gmail.users.messages.batchModify({
+          userId: 'me',
+          requestBody: {
+            ids: batch,
+            removeLabelIds: ['UNREAD']
+          }
+        });
+
+        totalMarked += batch.length;
+        const processed = Math.min(i + batchSize, labeledUnread.length);
+        console.log(`  ✅ Marked ${processed}/${labeledUnread.length} as read`);
+      }
+
+      console.log();
+    } catch (e) {
+      console.error(`Error processing ${name}:`, e.message);
+    }
   }
-}
 
   console.log('═'.repeat(80));
   console.log('COMPLETE\n');

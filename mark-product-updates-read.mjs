@@ -10,6 +10,10 @@ async function markProductUpdatesRead() {
   const accountMode = process.env.ACCOUNT_MODE || 'normal';
   const tokenData = tokenFileData[accountMode];
 
+  if (!tokenData) {
+    throw new Error(`Token data not found for account mode: ${accountMode}`);
+  }
+
   const credPath = process.env.GOOGLE_OAUTH_CREDENTIALS || './credentials.json';
   const credData = JSON.parse(fs.readFileSync(credPath, 'utf-8'));
   const oauth2Client = new OAuth2Client(
@@ -27,7 +31,7 @@ async function markProductUpdatesRead() {
   try {
     // Get Product Updates label
     const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
-    const productLabel = labelsResponse.data.labels.find(l => l.name === 'Product Updates');
+    const productLabel = (labelsResponse.data.labels || []).find(l => l.name === 'Product Updates');
 
     if (!productLabel) {
       console.log('Product Updates label not found\n');
@@ -35,7 +39,7 @@ async function markProductUpdatesRead() {
     }
 
     // Find all emails with Product Updates label
-    const searchQuery = `label:${productLabel.id}`;
+    const searchQuery = `label:"${productLabel.name}"`;
     const searchResponse = await gmail.users.messages.list({
       userId: 'me',
       q: searchQuery,
@@ -52,20 +56,18 @@ async function markProductUpdatesRead() {
 
     // Mark all as read in batches
     const batchSize = 50;
-    let markedCount = 0;
 
     for (let i = 0; i < messageIds.length; i += batchSize) {
-      const batch = messageIds.slice(i, Math.min(i + batchSize, messageIds.length));
+      const batch = messageIds.slice(i, i + batchSize).map(m => m.id);
 
       await gmail.users.messages.batchModify({
         userId: 'me',
         requestBody: {
-          ids: batch.map(m => m.id),
+          ids: batch,
           removeLabelIds: ['UNREAD']
         }
       });
 
-      markedCount += batch.length;
       const processed = Math.min(i + batchSize, messageIds.length);
       console.log(`  ✅ Marked ${processed}/${messageIds.length} as read`);
     }

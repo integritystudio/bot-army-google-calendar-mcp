@@ -154,6 +154,15 @@ EOF
 - Or: Install packages globally (`npm install -g package-name`)
 - Or: Reference absolute paths to node_modules
 
+### Code Quality Standards
+- Avoid dead variables and redundant state (use derived values instead)
+- Remove unnecessary comments that duplicate what code expresses
+- Extract repeated patterns into shared utilities (reduce copy-paste)
+- Use named constants instead of magic strings
+- Don't mutate input parameters; create local copies if needed
+- Prefer direct operations over redundant existence checks (TOCTOU anti-pattern)
+- Array.slice() naturally clamps to bounds; `Math.min` is unnecessary
+
 ## Email Organization System
 
 ### Overview
@@ -254,5 +263,12 @@ Recognizes multiple date formats in email content:
 3. Apply to existing emails: `node apply-filters-to-unread.mjs`
 4. Protect important items: `node protect-important-inbox.mjs`
 5. Archive routine notifications: `node archive-signoz-dmarc.mjs`
-6. Process events: `node filter-events-by-date.mjs`
+6. Process events: `node mark-past-events-read.mjs`
 7. Verify results: `node list-unread-emails.mjs`
+
+### Code Quality Notes
+- **Date Parsing**: `lib/date-based-filter.mjs` is a pure utility with no side effects (does not mutate input dates)
+- **Batch Operations**: Scripts use Gmail batch API for efficiency; consider extracting to `lib/gmail-batch.mjs` if more patterns emerge
+- **OAuth Setup**: All scripts currently duplicate OAuth initialization — future refactor should extract to `lib/gmail-client.mjs`
+- **Label Constants**: Magic strings ('INBOX', 'UNREAD', label names) should eventually move to `lib/constants.mjs`
+- **Performance**: `list-unread-emails.mjs` fetches messages serially; could use Promise.all for concurrency if 500+ messages are common

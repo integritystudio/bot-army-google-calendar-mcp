@@ -181,10 +181,10 @@ node check-gmail.mjs
 
 ### Email Organization & Filtering Scripts
 
-Automated scripts for organizing and filtering large volumes of Gmail:
+Automated scripts for organizing and filtering large volumes of Gmail with focus on correctness and efficiency.
 
 **Management Scripts:**
-- `list-unread-emails.mjs` - Categorize and summarize unread emails by label/sender patterns
+- `list-unread-emails.mjs` - Categorize and summarize unread emails by label/sender patterns; clean fallback categorization
 - `apply-filters-to-unread.mjs` - Apply existing filters to current unread emails
 - `create-remaining-filters.mjs` - Batch create filters for multiple categories (Product Updates, Communities, Services)
 
@@ -196,19 +196,18 @@ Automated scripts for organizing and filtering large volumes of Gmail:
 - `create-meet-notes-filter.mjs` - Label Google Meet notes
 - `delete-sentry-filter.mjs` - Remove outdated filters
 
-**Archive Scripts:**
-- `archive-signoz-dmarc.mjs` - Batch archive monitoring and DMARC report emails
-- `archive-dmarc-emails.mjs` - Archive DMARC reports
+**Archive & Processing Scripts:**
+- `archive-signoz-dmarc.mjs` - Batch archive monitoring and DMARC report emails using Gmail batch API
+- `mark-signoz-read.mjs` - Mark SigNoz alerts as read in bulk
+- `mark-past-events-read.mjs` - Classify event emails by date and mark past events as read
+- `protect-important-inbox.mjs` - Label critical items to prevent archiving (payments, rate limits, services)
 
 **Event Management:**
 - `filter-events-by-date.mjs` - Classify event emails as future (label + keep) or past (label + archive)
 - `organize-international-house.mjs` - Label and organize International House event emails
 
-**Protection:**
-- `protect-important-inbox.mjs` - Label critical items to prevent archiving (payments, rate limits, services)
-
 **Utilities:**
-- `lib/date-based-filter.mjs` - Shared utility for date-based email classification (handles ISO, US format, text dates)
+- `lib/date-based-filter.mjs` - Pure utility for date-based email classification: extracts dates (ISO, US format, text dates, weekday patterns), compares to today, classifies as past/future/unknown. Does not mutate input. Handles dates without year by inferring current or next year.
 
 ## Example Usage
 
@@ -260,6 +259,27 @@ Along with the normal capabilities you would expect for a calendar integration y
    ```
    Delete these 5 spam messages (provide IDs).
    ```
+
+## Date Parsing
+
+The email organization system uses intelligent date parsing (`lib/date-based-filter.mjs`) to classify event emails:
+
+**Supported Formats:**
+- ISO 8601: `2026-03-25`, `2026/03/25`
+- US format: `03/25/2026`, `3/25/2026`
+- Text format: `March 25, 2026`, `March 25` (infers year)
+- Weekday patterns: `@ Mon, Mar 23`, `@ Friday Mar 22`
+- Returns `null` for unparseable dates
+
+**Classification:**
+- Past events (date < today): archive from inbox, keep label
+- Future events (date ≥ today): label and keep in inbox
+- Unknown: marked for manual review
+
+**Implementation Notes:**
+- Pure function: does not mutate input dates
+- Handles missing years by inferring current or next year
+- Used by `mark-past-events-read.mjs` to auto-archive old events
 
 ## Available Tools
 

@@ -26,17 +26,8 @@ async function markPastEventsRead() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get Events label
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
-    const eventsLabel = labelsResponse.data.labels.find(l => l.name === 'Events');
-
-    if (!eventsLabel) {
-      console.log('Events label not found\n');
-      return;
-    }
-
     // Find all unread emails with Events label
-    const searchQuery = `label:${eventsLabel.id} is:unread`;
+    const searchQuery = 'label:Events is:unread';
     const searchResponse = await gmail.users.messages.list({
       userId: 'me',
       q: searchQuery,

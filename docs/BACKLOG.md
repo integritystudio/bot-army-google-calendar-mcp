@@ -364,6 +364,137 @@ describe('Conflict Detection', () => {
 
 ---
 
+## Medium Priority Items
+
+### M1: Extract email parsing helpers to lib/email-utils.mjs
+**Status:** ✅ COMPLETED (2026-03-23)
+**Priority:** Medium
+**Date Added:** 2026-03-23
+**Source:** Code review session (simplify on root scripts)
+
+Five different patterns for extracting display names and email addresses from RFC 5322 headers are scattered across 78+ .mjs scripts:
+- `from.match(/([^<]+)/)` (regex, display name, describe-internal.mjs:61)
+- `from.split('<')[0].trim()` (split, display name, summarize-remaining.mjs:65)
+- `from.match(/([^<]+)/)` with no optional chaining (crashes on falsy, list-unread-emails.mjs:131)
+- `from.match(/<(.+?)>)` (regex, email address, analyze-remaining-invitations.mjs:86)
+- Raw `substring()` without parsing (check_emails.mjs:177)
+
+**Action:** Create `lib/email-utils.mjs` with:
+- `extractDisplayName(from: string): string` — uses `.split('<')[0].trim() || from` pattern
+- `extractEmailAddress(from: string): string` — uses `.match(/<(.+?)>)` pattern
+- Export from all scripts that currently use inline parsing
+
+**Refactored Scripts:** Already use `getHeader()` helper; can extend for `fromName` extraction
+**Unrefactored Scripts:** 70+ scripts still need standardization
+
+---
+
+### M2: Extract label constants to lib/constants.mjs
+**Status:** 📋 PENDING
+**Priority:** Medium
+**Date Added:** 2026-03-23
+**Source:** CLAUDE.md refactor targets, code review
+
+Gmail label names, filter queries, and category definitions are hardcoded in 40+ scripts:
+- `'from:chandra@integritystudio.ai is:unread'` (query string, repeated in multiple scripts)
+- `'Product Updates'`, `'Communities'`, `'Services'` (label names, duplicated)
+- `MAX_RESULTS = 50`, `SUBJECT_MAX_LENGTH = 60` (already done in describe-internal, list-unread-emails, summarize-remaining)
+
+**Action:** Create `lib/constants.mjs` with exports:
+- Query templates and label names
+- Category definitions with filter rules
+- Max results and display constants
+- Update 40+ scripts to use centralized constants
+
+**Already Done:** Named constants in describe-internal.mjs, list-unread-emails.mjs, summarize-remaining.mjs
+
+---
+
+## Low Priority Items
+
+### L1: Apply createGmailClient() to remaining 70+ root scripts
+**Status:** 📋 PENDING
+**Priority:** Low
+**Date Added:** 2026-03-23
+**Source:** OAuth refactoring session (commit fd7b849)
+
+OAuth2 initialization code still duplicated across 70+ root .mjs scripts. Already extracted to `lib/gmail-client.mjs` and applied to 5 scripts (apply-filters-to-unread, create-remaining-filters, describe-internal, list-unread-emails, summarize-remaining).
+
+**Action:** Bulk refactor remaining scripts to replace 18-line OAuth block with:
+```js
+import { createGmailClient } from './lib/gmail-client.mjs';
+const gmail = createGmailClient();
+```
+
+**Scripts to Update:** analyze-*, create-*, label-*, organize-*, mark-*, etc. (~70 files)
+
+---
+
+### L2: Batch filter operations to lib/gmail-batch.mjs
+**Status:** 📋 PENDING
+**Priority:** Low
+**Date Added:** 2026-03-23
+**Source:** CLAUDE.md refactor targets, code quality review
+
+Filter creation patterns repeated in create-*-filter.mjs scripts. Would benefit from batch utility using Gmail batch API.
+
+**Action:** Create `lib/gmail-batch.mjs` with:
+- `batchCreateFilters(filters: FilterDefinition[]): Promise<CreateFilterResponse[]>`
+- Batch up to 100 filters per API call
+- Error handling and rollback logic
+- Use in create-remaining-filters.mjs, create-all-sublabels.mjs, etc.
+
+**Current Approach:** Sequential filter creation (slow)
+**Benefit:** 10-100x speedup for bulk filter operations
+
+---
+
+### L3: TOCTOU risk in token file handling
+**Status:** 📋 LOW-RISK
+**Priority:** Low
+**Date Added:** 2026-03-23
+**Source:** Efficiency review (session simplify)
+
+`lib/gmail-client.mjs` reads token file (line 22) then credentials file (line 30) sequentially. Between reads, files could change, creating inconsistent state.
+
+**Current Risk:** Very low for local dev use. Would only matter if:
+- Token file replaced between reads during script execution
+- Credentials.json modified during script run
+- Running multiple instances in parallel
+
+**Action:** Optional optimization (not urgent):
+- Read both files with single Promise.all if performance critical
+- Or add checksum/timestamp validation
+- Document that scripts expect static token/credential files during execution
+
+---
+
+### L4: process.exit(1) in catch blocks reduces testability
+**Status:** 📋 NOTE
+**Priority:** Low
+**Date Added:** 2026-03-23
+**Source:** Code quality review (summarize-remaining.mjs:93)
+
+`catch` block calls `process.exit(1)`, which terminates any importing test process. This prevents unit testing these modules.
+
+**Current Impact:** Low—these are one-off CLI scripts, not library modules. Never imported by other code.
+
+**Action:** Optional (if module becomes reusable):
+- Throw error instead of `process.exit(1)` in library modules
+- Keep `process.exit(1)` at script entry point (IIFE wrapper)
+- Allows future reuse in tests or other scripts
+
+**Example:**
+```js
+async function main() { ... }
+main().catch(err => {
+  console.error('Error:', err.message);
+  process.exit(1);
+});
+```
+
+---
+
 ## Completed Items
 
 ### Gmail OAuth Integration

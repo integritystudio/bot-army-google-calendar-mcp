@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID } from './lib/constants.mjs';
 
 const MAX_RESULTS = 50;
 const PREVIEW_COUNT = 10;
@@ -6,7 +7,6 @@ const SUBJECT_MAX_LENGTH = 65;
 const HEADER_SUBJECT = 'Subject';
 const HEADER_FROM = 'From';
 const HEADER_DATE = 'Date';
-const USER_ID = 'me';
 
 try {
   const gmail = createGmailClient();

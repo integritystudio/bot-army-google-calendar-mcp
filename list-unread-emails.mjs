@@ -1,5 +1,15 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { extractDisplayName } from './lib/email-utils.mjs';
+import {
+  USER_ID,
+  LABEL_KEEP_IMPORTANT,
+  LABEL_EVENTS,
+  LABEL_MONITORING,
+  LABEL_PRODUCT_UPDATES,
+  LABEL_COMMUNITIES,
+  LABEL_SERVICES,
+  LABEL_BILLING
+} from './lib/constants.mjs';
 
 async function listUnreadEmails() {
   const gmail = createGmailClient();
@@ -10,7 +20,7 @@ async function listUnreadEmails() {
   try {
     // Get all unread messages
     const searchResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: 'is:unread',
       maxResults: 500
     });
@@ -24,7 +34,7 @@ async function listUnreadEmails() {
     }
 
     // Get all labels first
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
+    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
     const labels = labelsResponse.data.labels || [];
     const labelMap = {};
     labels.forEach(l => { labelMap[l.id] = l.name; });
@@ -33,7 +43,7 @@ async function listUnreadEmails() {
     const emails = [];
     for (const msg of messageIds) {
       const fullMsg = await gmail.users.messages.get({
-        userId: 'me',
+        userId: USER_ID,
         id: msg.id,
         format: 'metadata',
         metadataHeaders: ['Subject', 'From', 'Date']
@@ -55,16 +65,18 @@ async function listUnreadEmails() {
       });
     }
 
+    const LABEL_SENTRY = 'Sentry Alerts';
+
     // Categorize emails
     const categories = {
-      'Sentry Alerts': [],
-      'Keep Important': [],
-      'Events': [],
-      'Monitoring': [],
-      'Product Updates': [],
-      'Communities': [],
-      'Services & Alerts': [],
-      'Billing': [],
+      [LABEL_SENTRY]: [],
+      [LABEL_KEEP_IMPORTANT]: [],
+      [LABEL_EVENTS]: [],
+      [LABEL_MONITORING]: [],
+      [LABEL_PRODUCT_UPDATES]: [],
+      [LABEL_COMMUNITIES]: [],
+      [LABEL_SERVICES]: [],
+      [LABEL_BILLING]: [],
       'Other': []
     };
 
@@ -72,33 +84,33 @@ async function listUnreadEmails() {
       let categorized = false;
 
       // Check labels first
-      if (email.labels.includes('Keep Important')) {
-        categories['Keep Important'].push(email);
+      if (email.labels.includes(LABEL_KEEP_IMPORTANT)) {
+        categories[LABEL_KEEP_IMPORTANT].push(email);
         categorized = true;
-      } else if (email.labels.includes('Events')) {
-        categories['Events'].push(email);
+      } else if (email.labels.includes(LABEL_EVENTS)) {
+        categories[LABEL_EVENTS].push(email);
         categorized = true;
-      } else if (email.labels.includes('Monitoring')) {
-        categories['Monitoring'].push(email);
+      } else if (email.labels.includes(LABEL_MONITORING)) {
+        categories[LABEL_MONITORING].push(email);
         categorized = true;
-      } else if (email.labels.includes('Product Updates')) {
-        categories['Product Updates'].push(email);
+      } else if (email.labels.includes(LABEL_PRODUCT_UPDATES)) {
+        categories[LABEL_PRODUCT_UPDATES].push(email);
         categorized = true;
-      } else if (email.labels.includes('Communities')) {
-        categories['Communities'].push(email);
+      } else if (email.labels.includes(LABEL_COMMUNITIES)) {
+        categories[LABEL_COMMUNITIES].push(email);
         categorized = true;
-      } else if (email.labels.includes('Services & Alerts')) {
-        categories['Services & Alerts'].push(email);
+      } else if (email.labels.includes(LABEL_SERVICES)) {
+        categories[LABEL_SERVICES].push(email);
         categorized = true;
-      } else if (email.labels.includes('Billing')) {
-        categories['Billing'].push(email);
+      } else if (email.labels.includes(LABEL_BILLING)) {
+        categories[LABEL_BILLING].push(email);
         categorized = true;
       }
 
       // Fallback: categorize by sender/subject
       if (!categorized) {
         if (email.from.includes('sentry')) {
-          categories['Sentry Alerts'].push(email);
+          categories[LABEL_SENTRY].push(email);
         } else {
           categories['Other'].push(email);
         }

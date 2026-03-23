@@ -1,4 +1,14 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import {
+  USER_ID,
+  GMAIL_INBOX,
+  LABEL_PRODUCT_UPDATES,
+  LABEL_MEETUP_EVENTS,
+  LABEL_COMMUNITY_EVENTS,
+  LABEL_CALENDLY_NOTIFICATIONS,
+  LABEL_LINKEDIN_UPDATES,
+  LABEL_DMARC_REPORTS
+} from './lib/constants.mjs';
 
 async function applyFiltersToUnread() {
   const gmail = createGmailClient();
@@ -7,7 +17,7 @@ async function applyFiltersToUnread() {
   console.log('═'.repeat(80) + '\n');
 
   // Get all labels first
-  const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
+  const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
   const labelMap = {};
   labelsResponse.data.labels.forEach(label => {
     labelMap[label.name] = label.id;
@@ -15,27 +25,27 @@ async function applyFiltersToUnread() {
 
   const filterConfigs = [
     {
-      name: 'Meetup Events',
+      name: LABEL_MEETUP_EVENTS,
       query: 'is:unread from:info@email.meetup.com'
     },
     {
-      name: 'Community Events',
+      name: LABEL_COMMUNITY_EVENTS,
       query: 'is:unread from:("ATX - Awkwardly Zen" OR "Austin Cafe Drawing Group" OR "Austin Robotics & AI")'
     },
     {
-      name: 'Product Updates',
+      name: LABEL_PRODUCT_UPDATES,
       query: 'is:unread from:(noreply@email.openai.com OR no-reply@email.claude.com OR googlecloud@google.com OR "AlphaSignal" OR lukak@storylane.io)'
     },
     {
-      name: 'Calendly Notifications',
+      name: LABEL_CALENDLY_NOTIFICATIONS,
       query: 'is:unread from:teamcalendly@send.calendly.com'
     },
     {
-      name: 'LinkedIn Updates',
+      name: LABEL_LINKEDIN_UPDATES,
       query: 'is:unread from:updates-noreply@linkedin.com'
     },
     {
-      name: 'DMARC Reports',
+      name: LABEL_DMARC_REPORTS,
       query: 'is:unread subject:DMARC'
     }
   ];
@@ -52,7 +62,7 @@ async function applyFiltersToUnread() {
     try {
       // Search for matching unread emails
       const searchResponse = await gmail.users.messages.list({
-        userId: 'me',
+        userId: USER_ID,
         q: config.query,
         maxResults: 500
       });
@@ -71,11 +81,11 @@ async function applyFiltersToUnread() {
         const batch = messageIds.slice(i, Math.min(i + batchSize, messageIds.length));
 
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
             addLabelIds: [labelId],
-            removeLabelIds: ['INBOX']
+            removeLabelIds: [GMAIL_INBOX]
           }
         });
 

@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_INBOX, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES } from './lib/constants.mjs';
 
 async function createRemainingFilters() {
   const gmail = createGmailClient();
@@ -9,7 +10,7 @@ async function createRemainingFilters() {
   // Define filter configurations
   const filterConfigs = [
     {
-      labelName: 'Product Updates',
+      labelName: LABEL_PRODUCT_UPDATES,
       description: 'Product updates from SaaS platforms',
       filters: [
         { query: 'from:workspace-noreply@google.com', name: 'Google Workspace' },
@@ -28,14 +29,14 @@ async function createRemainingFilters() {
       ]
     },
     {
-      labelName: 'Communities',
+      labelName: LABEL_COMMUNITIES,
       description: 'Community and group emails',
       filters: [
         { query: 'from:wtm@technovation.org', name: 'Women Techmakers' }
       ]
     },
     {
-      labelName: 'Services & Alerts',
+      labelName: LABEL_SERVICES,
       description: 'Service notifications and alerts',
       filters: [
         { query: 'from:memberservices@founderscard.com', name: 'FoundersCard' },
@@ -56,7 +57,7 @@ async function createRemainingFilters() {
 
     // Get or create label
     let labelId;
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
+    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
     const existingLabel = labelsResponse.data.labels.find(l => l.name === categoryConfig.labelName);
 
     if (existingLabel) {
@@ -64,7 +65,7 @@ async function createRemainingFilters() {
       console.log(`✅ Using existing label: ${categoryConfig.labelName}\n`);
     } else {
       const createLabelResponse = await gmail.users.labels.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           name: categoryConfig.labelName,
           labelListVisibility: 'labelShow',
@@ -79,14 +80,14 @@ async function createRemainingFilters() {
     for (const filter of categoryConfig.filters) {
       try {
         await gmail.users.settings.filters.create({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             criteria: {
               query: filter.query
             },
             action: {
               addLabelIds: [labelId],
-              removeLabelIds: ['INBOX']
+              removeLabelIds: [GMAIL_INBOX]
             }
           }
         });
@@ -110,7 +111,7 @@ async function createRemainingFilters() {
   let emailsProcessed = 0;
 
   for (const categoryConfig of filterConfigs) {
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
+    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
     const label = labelsResponse.data.labels.find(l => l.name === categoryConfig.labelName);
 
     if (!label) continue;
@@ -119,7 +120,7 @@ async function createRemainingFilters() {
     const queries = categoryConfig.filters.map(f => `(${f.query})`).join(' OR ');
 
     const searchResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: queries,
       maxResults: 100
     });
@@ -134,11 +135,11 @@ async function createRemainingFilters() {
         const batch = messageIds.slice(i, Math.min(i + batchSize, messageIds.length));
 
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
             addLabelIds: [label.id],
-            removeLabelIds: ['INBOX']
+            removeLabelIds: [GMAIL_INBOX]
           }
         });
 

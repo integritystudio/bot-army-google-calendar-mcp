@@ -82,3 +82,11 @@ node archive-signoz-dmarc.mjs         # Monitoring/DMARC auto-archive
 - **Established patterns:** Refactored scripts use best practices (error handling, named constants, getHeader() helpers, parallel `Promise.all` for list + detail fetches)
 - **Performance:** Use `Promise.all` for concurrent list + detail fetches (not serial loops)
 - **Remaining refactor targets:** Extract label constants to `lib/constants.mjs`; batch filter ops to `lib/gmail-batch.mjs`; apply `createGmailClient()` to remaining 70+ root scripts
+
+## Backlog & Roadmap
+
+See [`docs/BACKLOG.md`](docs/BACKLOG.md) for detailed planning of:
+- **High Priority:** Test architecture refactor for conflict detection (40-64 hours, blocked pending design discussion)
+- **Medium Priority:** Email parsing helpers (M1), label constants extraction (M2)
+- **Low Priority:** Bulk script refactoring (L1-L4), batch operations, testability improvements
+- **Completed:** Gmail OAuth integration, test SDK compatibility fixes, documentation updates

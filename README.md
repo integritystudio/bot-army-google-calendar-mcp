@@ -308,6 +308,21 @@ The email organization system uses intelligent date parsing (`lib/date-based-fil
 - [OAuth Verification](docs/oauth-verification.md) - Moving from test to production mode
 - [Architecture](docs/architecture.md) - Technical architecture overview
 - [Development](docs/development.md) - Contributing and testing
+- [Backlog & Roadmap](docs/BACKLOG.md) - Future work, refactoring targets, design decisions
+
+## Development
+
+**Project Guidelines:**
+- See [`CLAUDE.md`](CLAUDE.md) for code quality standards, script patterns, and refactoring guidelines
+- OAuth extraction pattern: use `createGmailClient()` from `lib/gmail-client.mjs`
+- Established patterns: error handling with try/catch, named constants, parallel API fetches with `Promise.all`
+- TypeScript, ES modules, 2-space indent, no magic strings
+
+**Future Roadmap:**
+- See [`docs/BACKLOG.md`](docs/BACKLOG.md) for detailed backlog, refactoring targets (M1-L4), and completed items
+- High-priority test architecture refactor for conflict detection (blocked pending design discussion)
+- Medium-priority: Email parsing helpers, label constants extraction
+- Low-priority: Bulk script refactoring, batch operations, testability improvements
 
 ## Testing Status
 

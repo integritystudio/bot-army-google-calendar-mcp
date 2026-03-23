@@ -1,84 +1,106 @@
 import fs from 'fs';
 import path from 'path';
+import { homedir } from 'os';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 
-const TOKEN_PATH = path.join(process.env.HOME, '.config/google-calendar-mcp/tokens-gmail.json');
-const tokenFileData = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf-8'));
-const accountMode = process.env.ACCOUNT_MODE || 'normal';
-const tokenData = tokenFileData[accountMode];
+const MAX_RESULTS = 50;
+const PREVIEW_COUNT = 10;
+const SUBJECT_MAX_LENGTH = 65;
+const HEADER_SUBJECT = 'Subject';
+const HEADER_FROM = 'From';
+const HEADER_DATE = 'Date';
+const USER_ID = 'me';
 
-const credPath = process.env.GOOGLE_OAUTH_CREDENTIALS || './credentials.json';
-const credData = JSON.parse(fs.readFileSync(credPath, 'utf-8'));
-const oauth2Client = new OAuth2Client(
-  credData.installed.client_id,
-  credData.installed.client_secret,
-  credData.installed.redirect_uris[0]
-);
-oauth2Client.setCredentials(tokenData);
+try {
+  const TOKEN_PATH = path.join(homedir(), '.config/google-calendar-mcp/tokens-gmail.json');
+  const tokenFileData = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf-8'));
+  const accountMode = process.env.ACCOUNT_MODE || 'normal';
+  const tokenData = tokenFileData[accountMode];
 
-const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+  if (!tokenData) {
+    console.error(`Error: No token found for account mode: ${accountMode}`);
+    process.exit(1);
+  }
 
-console.log('📋 INTERNAL DISCUSSIONS - DETAILED BREAKDOWN\n');
-console.log('═'.repeat(80) + '\n');
+  const credPath = process.env.GOOGLE_OAUTH_CREDENTIALS || './credentials.json';
+  const credData = JSON.parse(fs.readFileSync(credPath, 'utf-8'));
+  const oauth2Client = new OAuth2Client(
+    credData.installed.client_id,
+    credData.installed.client_secret,
+    credData.installed.redirect_uris[0]
+  );
+  oauth2Client.setCredentials(tokenData);
 
-// Get all unread emails from internal team
-const internalQueries = [
-  { person: 'Chandra Srivastava', q: 'from:chandra@integritystudio.ai is:unread' },
-  { person: 'Jordan Taylor', q: 'from:jordan' },
-  { person: 'John Skelton', q: 'from:john@integritystudio.ai is:unread' },
-  { person: 'Alex', q: 'from:alex@integritystudio.ai is:unread' }
-];
+  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-for (const query of internalQueries) {
-  const resp = await gmail.users.messages.list({
-    userId: 'me',
-    q: query.q,
-    maxResults: 50
-  });
+  const getHeader = (headers, name) => headers.find(h => h.name === name)?.value;
 
-  const messages = resp.data.messages || [];
-  if (messages.length === 0) continue;
+  console.log('📋 INTERNAL DISCUSSIONS - DETAILED BREAKDOWN\n');
+  console.log('═'.repeat(80) + '\n');
 
-  console.log(`${query.person}: ${messages.length} emails\n`);
+  const internalQueries = [
+    { person: 'Chandra Srivastava', q: 'from:chandra@integritystudio.ai is:unread' },
+    { person: 'Jordan Taylor', q: 'from:jordan is:unread' },
+    { person: 'John Skelton', q: 'from:john@integritystudio.ai is:unread' },
+    { person: 'Alex', q: 'from:alex@integritystudio.ai is:unread' }
+  ];
 
-  // Get details for all messages
-  const details = [];
-  for (const msg of messages.slice(0, 10)) {
-    const fullMsg = await gmail.users.messages.get({
-      userId: 'me',
-      id: msg.id,
-      format: 'metadata',
-      metadataHeaders: ['Subject', 'From', 'Date']
+  const listResponses = await Promise.all(
+    internalQueries.map(query =>
+      gmail.users.messages.list({
+        userId: USER_ID,
+        q: query.q,
+        maxResults: MAX_RESULTS
+      })
+    )
+  );
+
+  for (let i = 0; i < internalQueries.length; i++) {
+    const query = internalQueries[i];
+    const resp = listResponses[i];
+    const messages = resp.data.messages || [];
+
+    if (messages.length === 0) continue;
+
+    console.log(`${query.person}: ${messages.length} emails\n`);
+
+    const details = await Promise.all(
+      messages.slice(0, PREVIEW_COUNT).map(msg =>
+        gmail.users.messages.get({
+          userId: USER_ID,
+          id: msg.id,
+          format: 'metadata',
+          metadataHeaders: [HEADER_SUBJECT, HEADER_FROM, HEADER_DATE]
+        })
+      )
+    );
+
+    details.forEach(fullMsg => {
+      const headers = fullMsg.data.payload?.headers || [];
+      const subject = getHeader(headers, HEADER_SUBJECT) ?? '(no subject)';
+      const dateStr = getHeader(headers, HEADER_DATE) ?? '';
+      const emailDate = new Date(dateStr).toLocaleDateString();
+
+      console.log(`  • ${subject.substring(0, SUBJECT_MAX_LENGTH)}`);
+      console.log(`    ${emailDate}\n`);
     });
 
-    const headers = fullMsg.data.payload?.headers || [];
-    const subject = headers.find(h => h.name === 'Subject')?.value || '(no subject)';
-    const from = headers.find(h => h.name === 'From')?.value || '';
-    const date = headers.find(h => h.name === 'Date')?.value || '';
-
-    const emailDate = new Date(date);
-    const fromName = from.match(/([^<]+)/)?.[0]?.trim() || from;
-
-    details.push({ subject, fromName, date: emailDate.toLocaleDateString() });
+    if (messages.length > PREVIEW_COUNT) {
+      console.log(`  ... and ${messages.length - PREVIEW_COUNT} more\n`);
+    }
   }
 
-  details.forEach(d => {
-    console.log(`  • ${d.subject.substring(0, 65)}`);
-    console.log(`    ${d.date}\n`);
-  });
-
-  if (messages.length > 10) {
-    console.log(`  ... and ${messages.length - 10} more\n`);
-  }
+  console.log('═'.repeat(80));
+  console.log('\nSUMMARY:\n');
+  console.log('Internal discussions are primarily:');
+  console.log('1. Calendar meeting responses (Accepted/Declined) from Chandra');
+  console.log('2. Project collaboration emails from Jordan Taylor (HubSpot)');
+  console.log('3. File shares and coordination from John Skelton');
+  console.log('4. Project discussions from other team members\n');
+  console.log('Recommendation: Keep unread for active coordination reference\n');
+  console.log('═'.repeat(80) + '\n');
+} catch (err) {
+  console.error('Error:', err.message);
+  process.exit(1);
 }
-
-console.log('═'.repeat(80));
-console.log('\nSUMMARY:\n');
-console.log('Internal discussions are primarily:');
-console.log('1. Calendar meeting responses (Accepted/Declined) from Chandra');
-console.log('2. Project collaboration emails from Jordan Taylor (HubSpot)');
-console.log('3. File shares and coordination from John Skelton');
-console.log('4. Project discussions from other team members\n');
-console.log('Recommendation: Keep unread for active coordination reference\n');
-console.log('═'.repeat(80) + '\n');

@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
+import { extractEmailAddress } from './lib/email-utils.mjs';
 
 const TOKEN_PATH = path.join(process.env.HOME, '.config/google-calendar-mcp/tokens-gmail.json');
 
@@ -133,7 +134,7 @@ async function analyzeEventsDetailed() {
       console.log('\n  Primary senders:\n');
       const senders = {};
       for (const msg of messages) {
-        const senderEmail = msg.from.match(/<(.+?)>/)?.[1] || msg.from;
+        const senderEmail = extractEmailAddress(msg.from);
         senders[senderEmail] = (senders[senderEmail] || 0) + 1;
       }
 

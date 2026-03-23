@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { extractDisplayName } from './lib/email-utils.mjs';
 
 async function listUnreadEmails() {
   const gmail = createGmailClient();
@@ -110,8 +111,7 @@ async function listUnreadEmails() {
         console.log(`\n${category} (${items.length}):`);
         console.log('─'.repeat(80));
         items.slice(0, 5).forEach(email => {
-          const fromMatch = email.from.match(/([^<]+)/) || ['Unknown'];
-          const sender = fromMatch[0].trim();
+          const sender = extractDisplayName(email.from);
           console.log(`  • ${email.subject.substring(0, 60)}`);
           console.log(`    From: ${sender.substring(0, 50)}`);
         });

@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { extractDisplayName } from './lib/email-utils.mjs';
 
 const MAX_RESULTS = 20;
 const INTERNAL_PREVIEW_COUNT = 2;
@@ -39,7 +40,7 @@ try {
       const headers = msg.data.payload?.headers || [];
       const subject = getHeader(headers, HEADER_SUBJECT) ?? '(no subject)';
       const from = getHeader(headers, HEADER_FROM) ?? '';
-      const fromName = from.split('<')[0].trim() || from;
+      const fromName = extractDisplayName(from);
 
       console.log(`  • ${subject.substring(0, SUBJECT_MAX_LENGTH)}`);
       console.log(`    From: ${fromName}\n`);

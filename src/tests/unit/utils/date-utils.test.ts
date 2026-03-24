@@ -19,6 +19,15 @@ import {
   buildUntilClause,
   isRRuleString,
   extractAndPreserveNonRRuleRecurrence,
+  DATETIME_FORMATS,
+  DATETIME_ERRORS,
+  isValidISODateTime,
+  isValidISODate,
+  isTimeZoneAware,
+  isTimeZoneNaive,
+  isAllDayEvent,
+  parseDateTimeString,
+  parseBasicDateTime,
 } from '../../../utils/date-utils.js';
 
 describe('date-utils', () => {
@@ -438,6 +447,223 @@ describe('date-utils', () => {
         'RRULE:FREQ=MONTHLY;BYMONTHDAY=15',
       ]);
       expect(result.otherRules).toEqual(['EXDATE:20240615T100000Z']);
+    });
+  });
+
+  describe('DATETIME_FORMATS patterns', () => {
+    it('should have all required format patterns', () => {
+      expect(DATETIME_FORMATS.ISO_DATETIME_TZ_AWARE).toBeInstanceOf(RegExp);
+      expect(DATETIME_FORMATS.ISO_DATETIME_TZ_NAIVE).toBeInstanceOf(RegExp);
+      expect(DATETIME_FORMATS.ISO_DATE_ONLY).toBeInstanceOf(RegExp);
+      expect(DATETIME_FORMATS.ISO_BASIC_DATETIME).toBeInstanceOf(RegExp);
+      expect(DATETIME_FORMATS.ISO_COMPONENTS).toBeInstanceOf(RegExp);
+      expect(DATETIME_FORMATS.ISO_DATE_COMPONENTS).toBeInstanceOf(RegExp);
+      expect(DATETIME_FORMATS.BASIC_DATETIME_COMPONENTS).toBeInstanceOf(RegExp);
+    });
+
+    it('should match timezone-aware datetime', () => {
+      expect(DATETIME_FORMATS.ISO_DATETIME_TZ_AWARE.test('2024-06-15T10:00:00Z')).toBe(true);
+      expect(DATETIME_FORMATS.ISO_DATETIME_TZ_AWARE.test('2024-06-15T10:00:00+05:30')).toBe(true);
+      expect(DATETIME_FORMATS.ISO_DATETIME_TZ_AWARE.test('2024-06-15T10:00:00-07:00')).toBe(true);
+    });
+
+    it('should match timezone-naive datetime', () => {
+      expect(DATETIME_FORMATS.ISO_DATETIME_TZ_NAIVE.test('2024-06-15T10:00:00')).toBe(true);
+      expect(DATETIME_FORMATS.ISO_DATETIME_TZ_NAIVE.test('2024-06-15T10:00:00Z')).toBe(false);
+    });
+
+    it('should match date-only format', () => {
+      expect(DATETIME_FORMATS.ISO_DATE_ONLY.test('2024-06-15')).toBe(true);
+      expect(DATETIME_FORMATS.ISO_DATE_ONLY.test('2024-06-15T10:00:00')).toBe(false);
+    });
+
+    it('should match basic datetime format', () => {
+      expect(DATETIME_FORMATS.ISO_BASIC_DATETIME.test('20240615T100000Z')).toBe(true);
+      expect(DATETIME_FORMATS.ISO_BASIC_DATETIME.test('2024-06-15T10:00:00Z')).toBe(false);
+    });
+  });
+
+  describe('DATETIME_ERRORS constants', () => {
+    it('should have all error messages', () => {
+      expect(DATETIME_ERRORS.INVALID_FORMAT).toBeDefined();
+      expect(DATETIME_ERRORS.INVALID_TIMEZONE).toBeDefined();
+      expect(DATETIME_ERRORS.INVALID_DATE).toBeDefined();
+      expect(DATETIME_ERRORS.AMBIGUOUS_TIME).toBeDefined();
+    });
+  });
+
+  describe('isValidISODateTime', () => {
+    it('should validate timezone-aware datetime', () => {
+      expect(isValidISODateTime('2024-06-15T10:00:00Z')).toBe(true);
+      expect(isValidISODateTime('2024-06-15T10:00:00+05:30')).toBe(true);
+      expect(isValidISODateTime('2024-06-15T10:00:00-07:00')).toBe(true);
+    });
+
+    it('should validate timezone-naive datetime', () => {
+      expect(isValidISODateTime('2024-06-15T10:00:00')).toBe(true);
+    });
+
+    it('should reject invalid formats', () => {
+      expect(isValidISODateTime('2024-06-15')).toBe(false);
+      expect(isValidISODateTime('20240615T100000Z')).toBe(false);
+      expect(isValidISODateTime('invalid')).toBe(false);
+    });
+  });
+
+  describe('isValidISODate', () => {
+    it('should validate ISO 8601 date format', () => {
+      expect(isValidISODate('2024-06-15')).toBe(true);
+      expect(isValidISODate('2024-01-01')).toBe(true);
+      expect(isValidISODate('2024-12-31')).toBe(true);
+    });
+
+    it('should reject datetime strings', () => {
+      expect(isValidISODate('2024-06-15T10:00:00')).toBe(false);
+      expect(isValidISODate('2024-06-15T10:00:00Z')).toBe(false);
+    });
+
+    it('should reject malformed dates', () => {
+      expect(isValidISODate('2024/06/15')).toBe(false);
+      expect(isValidISODate('06-15-2024')).toBe(false);
+      expect(isValidISODate('invalid')).toBe(false);
+    });
+
+    it('should validate format only, not semantic correctness', () => {
+      // These match the format pattern but have invalid date values
+      // Semantic validation happens in parsing functions
+      expect(isValidISODate('2024-13-01')).toBe(true);
+      expect(isValidISODate('2024-06-32')).toBe(true);
+    });
+  });
+
+  describe('isTimeZoneAware', () => {
+    it('should detect timezone-aware datetimes', () => {
+      expect(isTimeZoneAware('2024-06-15T10:00:00Z')).toBe(true);
+      expect(isTimeZoneAware('2024-06-15T10:00:00+05:30')).toBe(true);
+      expect(isTimeZoneAware('2024-06-15T10:00:00-07:00')).toBe(true);
+    });
+
+    it('should not detect timezone-naive datetimes', () => {
+      expect(isTimeZoneAware('2024-06-15T10:00:00')).toBe(false);
+    });
+  });
+
+  describe('isTimeZoneNaive', () => {
+    it('should detect timezone-naive datetimes', () => {
+      expect(isTimeZoneNaive('2024-06-15T10:00:00')).toBe(true);
+    });
+
+    it('should not detect timezone-aware datetimes', () => {
+      expect(isTimeZoneNaive('2024-06-15T10:00:00Z')).toBe(false);
+      expect(isTimeZoneNaive('2024-06-15T10:00:00+05:30')).toBe(false);
+    });
+  });
+
+  describe('isAllDayEvent', () => {
+    it('should detect all-day events', () => {
+      expect(isAllDayEvent('2024-06-15')).toBe(true);
+      expect(isAllDayEvent('2024-01-01')).toBe(true);
+    });
+
+    it('should not detect timed events', () => {
+      expect(isAllDayEvent('2024-06-15T10:00:00')).toBe(false);
+      expect(isAllDayEvent('2024-06-15T10:00:00Z')).toBe(false);
+    });
+  });
+
+  describe('parseDateTimeString', () => {
+    it('should parse timezone-aware datetime with Z', () => {
+      const result = parseDateTimeString('2024-06-15T10:00:00Z');
+
+      expect(result).toEqual({
+        year: 2024,
+        month: 6,
+        day: 15,
+        hour: 10,
+        minute: 0,
+        second: 0,
+        timezone: 'Z',
+      });
+    });
+
+    it('should parse timezone-aware datetime with positive offset', () => {
+      const result = parseDateTimeString('2024-06-15T10:00:00+05:30');
+
+      expect(result).toEqual({
+        year: 2024,
+        month: 6,
+        day: 15,
+        hour: 10,
+        minute: 0,
+        second: 0,
+        timezone: '+05:30',
+      });
+    });
+
+    it('should parse timezone-aware datetime with negative offset', () => {
+      const result = parseDateTimeString('2024-06-15T10:00:00-07:00');
+
+      expect(result).toEqual({
+        year: 2024,
+        month: 6,
+        day: 15,
+        hour: 10,
+        minute: 0,
+        second: 0,
+        timezone: '-07:00',
+      });
+    });
+
+    it('should parse timezone-naive datetime', () => {
+      const result = parseDateTimeString('2024-06-15T10:00:00');
+
+      expect(result).toEqual({
+        year: 2024,
+        month: 6,
+        day: 15,
+        hour: 10,
+        minute: 0,
+        second: 0,
+        timezone: undefined,
+      });
+    });
+
+    it('should reject invalid format', () => {
+      expect(() => parseDateTimeString('2024-06-15')).toThrow();
+      expect(() => parseDateTimeString('invalid')).toThrow();
+    });
+
+    it('should reject invalid date values', () => {
+      expect(() => parseDateTimeString('2024-13-01T10:00:00Z')).toThrow();
+      expect(() => parseDateTimeString('2024-06-32T10:00:00Z')).toThrow();
+      expect(() => parseDateTimeString('2024-06-15T25:00:00Z')).toThrow();
+    });
+  });
+
+  describe('parseBasicDateTime', () => {
+    it('should parse basic format datetime', () => {
+      const result = parseBasicDateTime('20240615T100000Z');
+
+      expect(result).toEqual({
+        year: 2024,
+        month: 6,
+        day: 15,
+        hour: 10,
+        minute: 0,
+        second: 0,
+        timezone: 'Z',
+      });
+    });
+
+    it('should reject non-basic format', () => {
+      expect(() => parseBasicDateTime('2024-06-15T10:00:00Z')).toThrow();
+      expect(() => parseBasicDateTime('20240615T100000')).toThrow();
+    });
+
+    it('should reject invalid date values', () => {
+      expect(() => parseBasicDateTime('20241301T100000Z')).toThrow();
+      expect(() => parseBasicDateTime('20240632T100000Z')).toThrow();
+      expect(() => parseBasicDateTime('20240615T250000Z')).toThrow();
     });
   });
 });

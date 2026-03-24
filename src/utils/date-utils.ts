@@ -211,3 +211,177 @@ export function extractAndPreserveNonRRuleRecurrence(recurrence: string[]): {
 
   return { rrules, otherRules };
 }
+
+/**
+ * ISO 8601 datetime format validation patterns.
+ * Used to validate and parse datetime strings in various formats.
+ */
+export const DATETIME_FORMATS = {
+  /** ISO 8601 datetime with timezone info (Z or ±HH:MM) */
+  ISO_DATETIME_TZ_AWARE: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/,
+  /** ISO 8601 datetime without timezone (naive) */
+  ISO_DATETIME_TZ_NAIVE: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/,
+  /** ISO 8601 date only (all-day events) */
+  ISO_DATE_ONLY: /^\d{4}-\d{2}-\d{2}$/,
+  /** Basic ISO datetime format used in RRULE UNTIL clauses */
+  ISO_BASIC_DATETIME: /^\d{8}T\d{6}Z$/,
+  /** Parse ISO 8601 datetime components */
+  ISO_COMPONENTS: /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/,
+  /** Parse ISO 8601 date components */
+  ISO_DATE_COMPONENTS: /^(\d{4})-(\d{2})-(\d{2})$/,
+  /** Parse basic format datetime components */
+  BASIC_DATETIME_COMPONENTS: /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/,
+} as const;
+
+/**
+ * Error messages for datetime validation failures.
+ */
+export const DATETIME_ERRORS = {
+  INVALID_FORMAT: 'Invalid ISO 8601 datetime format',
+  INVALID_TIMEZONE: 'Invalid timezone designator (must be Z or ±HH:MM)',
+  INVALID_DATE: 'Invalid date values',
+  AMBIGUOUS_TIME: 'Timezone-naive datetime requires fallback timezone',
+} as const;
+
+/**
+ * Components parsed from an ISO 8601 datetime string.
+ */
+export interface DateTimeComponents {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+  timezone?: string; // 'Z', '+HH:MM', or '-HH:MM'
+}
+
+/**
+ * Check if a datetime string is in valid ISO 8601 format with or without timezone.
+ * @param datetime Datetime string to validate
+ * @returns true if valid ISO 8601 datetime
+ */
+export function isValidISODateTime(datetime: string): boolean {
+  return DATETIME_FORMATS.ISO_DATETIME_TZ_AWARE.test(datetime) ||
+    DATETIME_FORMATS.ISO_DATETIME_TZ_NAIVE.test(datetime);
+}
+
+/**
+ * Check if a date string is in valid ISO 8601 date format (YYYY-MM-DD).
+ * @param date Date string to validate
+ * @returns true if valid ISO 8601 date
+ */
+export function isValidISODate(date: string): boolean {
+  return DATETIME_FORMATS.ISO_DATE_ONLY.test(date);
+}
+
+/**
+ * Check if a datetime string includes timezone information.
+ * @param datetime Datetime string to check
+ * @returns true if has timezone (Z or ±HH:MM), false if timezone-naive
+ */
+export function isTimeZoneAware(datetime: string): boolean {
+  return DATETIME_FORMATS.ISO_DATETIME_TZ_AWARE.test(datetime);
+}
+
+/**
+ * Check if a datetime string is timezone-naive (no timezone designator).
+ * @param datetime Datetime string to check
+ * @returns true if timezone-naive, false if has timezone info
+ */
+export function isTimeZoneNaive(datetime: string): boolean {
+  return DATETIME_FORMATS.ISO_DATETIME_TZ_NAIVE.test(datetime);
+}
+
+/**
+ * Check if a datetime string represents an all-day event (date only, no time).
+ * @param datetime Datetime or date string to check
+ * @returns true if date-only format (all-day event)
+ */
+export function isAllDayEvent(datetime: string): boolean {
+  return DATETIME_FORMATS.ISO_DATE_ONLY.test(datetime) && !datetime.includes('T');
+}
+
+/**
+ * Parse an ISO 8601 datetime string into components.
+ * Supports both timezone-aware and timezone-naive formats.
+ * @param datetime ISO 8601 datetime string
+ * @returns Parsed date/time components
+ * @throws Error if datetime format is invalid
+ */
+export function parseDateTimeString(datetime: string): DateTimeComponents {
+  if (!isValidISODateTime(datetime)) {
+    throw new Error(`${DATETIME_ERRORS.INVALID_FORMAT}: ${datetime}`);
+  }
+
+  // Extract timezone if present
+  let timezone: string | undefined;
+  let dateTimeWithoutTZ = datetime;
+
+  if (datetime.endsWith('Z')) {
+    timezone = 'Z';
+    dateTimeWithoutTZ = datetime.slice(0, -1);
+  } else {
+    const tzMatch = datetime.match(/([+-]\d{2}:\d{2})$/);
+    if (tzMatch) {
+      timezone = tzMatch[1];
+      dateTimeWithoutTZ = datetime.slice(0, -timezone.length);
+    }
+  }
+
+  // Parse the datetime components
+  const match = dateTimeWithoutTZ.match(DATETIME_FORMATS.ISO_COMPONENTS);
+  if (!match) {
+    throw new Error(`${DATETIME_ERRORS.INVALID_FORMAT}: ${datetime}`);
+  }
+
+  const [, yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr] = match;
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
+  const hour = parseInt(hourStr, 10);
+  const minute = parseInt(minuteStr, 10);
+  const second = parseInt(secondStr, 10);
+
+  // Validate date ranges
+  if (month < 1 || month > 12 || day < 1 || day > 31 ||
+    hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) {
+    throw new Error(`${DATETIME_ERRORS.INVALID_DATE}: ${datetime}`);
+  }
+
+  return { year, month, day, hour, minute, second, timezone };
+}
+
+/**
+ * Parse a basic format datetime string (used in RRULE UNTIL clauses).
+ * Format: YYYYMMDDTHHMMSSZ
+ * @param basicFormat Basic format datetime string
+ * @returns Parsed date/time components
+ * @throws Error if format is invalid
+ */
+export function parseBasicDateTime(basicFormat: string): DateTimeComponents {
+  if (!DATETIME_FORMATS.ISO_BASIC_DATETIME.test(basicFormat)) {
+    throw new Error(`${DATETIME_ERRORS.INVALID_FORMAT}: ${basicFormat}`);
+  }
+
+  const match = basicFormat.match(DATETIME_FORMATS.BASIC_DATETIME_COMPONENTS);
+  if (!match) {
+    throw new Error(`${DATETIME_ERRORS.INVALID_FORMAT}: ${basicFormat}`);
+  }
+
+  const [, yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr] = match;
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
+  const hour = parseInt(hourStr, 10);
+  const minute = parseInt(minuteStr, 10);
+  const second = parseInt(secondStr, 10);
+
+  // Validate date ranges
+  if (month < 1 || month > 12 || day < 1 || day > 31 ||
+    hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) {
+    throw new Error(`${DATETIME_ERRORS.INVALID_DATE}: ${basicFormat}`);
+  }
+
+  return { year, month, day, hour, minute, second, timezone: 'Z' };
+}

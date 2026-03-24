@@ -1533,3 +1533,72 @@ Priority order (highest impact first):
 4. Consider extracting common "fetch unread + categorize + print" pattern into helper
 
 **Risk Level:** Low (module is self-contained, no side effects)
+
+---
+
+## Quality Dashboard Recommendations — 2026-03-24
+
+**Session:** Email analyzer extraction + quality audit via LLM-as-Judge evaluation
+
+**Dashboard Status:** ⚠️ WARNING (hallucination 0.07, threshold 0.05)
+
+### Recommendations Implemented
+
+#### ✅ Recommendation 1: userId Hardcoding (REGRESSION FIX)
+**Issue:** `analyze_emails.mjs` lines 17, 29 used hardcoded `userId: "me"` instead of `USER_ID` constant
+**Impact:** Breaks consistency with project pattern (gmail-label-utils.mjs uses USER_ID)
+**Fix:**
+- Added `USER_ID = 'me'` constant to `lib/constants.mjs`
+- Updated `analyze_emails.mjs` to import and use `USER_ID`
+- Aligns with L3 pattern established in prior sessions
+**Commit:** `336c4f5`
+
+#### ✅ Recommendation 2: scoreContent Redundancy (EFFICIENCY FIX)
+**Issue:** `lib/email-analyzer.mjs` categorizeEmail() built `${subject} ${from} ${snippet}` string twice
+**Impact:**
+- Unnecessary string allocation per email
+- Minor performance regression in batch processing
+**Fix:**
+- Extract content string to local variable
+- Pass once to both urgency and importance scoring
+- Reduces allocations from 2/email to 1/email
+**Commit:** `336c4f5`
+
+#### ✅ Recommendation 3: BACKLOG.md Line Count Estimates (ACCURACY FIX)
+**Issue:** Line counts in dedup checklist were estimates; some unverified
+**Impact:**
+- analyze_unread.mjs: 66 estimated → 65 actual ✓ correct
+- list-unread-emails.mjs: ~80 estimated → 155 actual ✗ major underestimate
+- summarize-remaining.mjs: ~90 estimated → 72 actual ✗ overestimate
+**Fix:**
+- Ran `wc -l` on all candidate scripts
+- Corrected estimates in dedup checklist
+- Updated reduction predictions (list-unread-emails: ~30 → ~40 lines)
+- Estimates now grounded in reality, not speculation
+**Commit:** `336c4f5`
+
+### Quality Metrics Summary
+
+| Metric | Score | Status |
+|--------|-------|--------|
+| tool_correctness | n/a | no spans (telemetry gap) |
+| eval_latency | 0.025s | ✅ healthy |
+| task_completion | n/a | no spans |
+| relevance | 0.94 | ✅ healthy |
+| faithfulness | 0.92 | ✅ healthy |
+| coherence | 0.92 | ✅ healthy |
+| hallucination | 0.07 | ⚠️ warning (threshold 0.05) |
+
+**Judge Findings:**
+- analyze_emails.mjs: Clean refactor, proper lib imports, no copy-paste (relevance 0.95)
+- lib/email-analyzer.mjs: Well-structured module, named exports, minor redundancy (relevance 0.97)
+- BACKLOG.md: Useful dedup checklist, unverified line-count estimates flagged (relevance 0.91)
+
+**Hallucination Note:** Judge flagged commit hash `0682823` as "fabricated" — this is a false positive; the commit exists in git log. Actual hallucination source was unverified line-count specifics in the section, now corrected.
+
+### Lessons Learned
+
+1. **Constant Definitions:** Project pattern established in prior work (USER_ID in gmail-label-utils.mjs) should be caught during initial refactor, not flagged later
+2. **String Building:** Unified content string in scoring functions to avoid redundant allocations
+3. **Estimate Verification:** Always run `wc -l` on scripts before committing line-count claims to documentation
+4. **Telemetry Gaps:** Mar 24 tool-use spans not yet written to traces-*.jsonl; session relied on inline judge evaluation

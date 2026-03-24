@@ -1616,3 +1616,67 @@ function filterNullUndefined(obj: Record<string, any>): Record<string, any> {
 
 ---
 
+
+## Test Infrastructure: Consolidate Handler Test Patterns
+
+**Status:** Pending
+**Discovery:** Simplification of `BatchListEvents.test.ts` revealed repeated patterns across all handler tests
+
+**Scope:**
+1. **Extract shared test constants (TIME_MIN, TIME_MAX)**
+   - Currently hardcoded in ~15+ test files
+   - Standardize to single location: `src/tests/unit/helpers/test-constants.ts`
+   - Example: `TIME_MIN = '2024-01-01T00:00:00Z'`, `TIME_MAX = '2024-01-31T23:59:59Z'`
+
+2. **Extract sortByStartTime comparator as shared utility**
+   - Pattern: `(a, b) => (a.start?.dateTime || a.start?.date || '').localeCompare(...)`
+   - Appears in: `EventSortingAndFormatting` describe blocks across test files
+   - Create: `src/tests/unit/helpers/event-sorting.ts` with exported `sortByStartTime`
+   - Apply to: `ListEventsHandler.test.ts`, `SearchEventsHandler.test.ts`, `BatchListEvents.test.ts`
+
+3. **Ensure makeCalendarMock() used everywhere**
+   - Already exists in `src/tests/unit/helpers/factories.ts` (lines 393–414)
+   - Applied in: `BatchListEvents.test.ts` ✅
+   - Needs audit in: `ListEventsHandler.test.ts`, `SearchEventsHandler.test.ts`, others
+   - Replace manual `{ events: { list: vi.fn() }, calendarList: { get: vi.fn() } }` construction
+
+**Affected Files:**
+- `src/tests/unit/handlers/ListEventsHandler.test.ts` — Move to shared constants and factories
+- `src/tests/unit/handlers/SearchEventsHandler.test.ts` — Move to shared constants and factories
+- `src/tests/unit/handlers/BatchListEvents.test.ts` — ✅ Already refactored
+- Any other handler test with inline time strings or event mocks
+
+**Example Refactoring:**
+```typescript
+// Before (current pattern in multiple files):
+const TIME_MIN = '2024-01-01T00:00:00Z';
+const sortByStartTime = (a, b) => (a.start?.dateTime || a.start?.date || '').localeCompare(...);
+mockCalendarApi = { events: { list: vi.fn() }, calendarList: { get: vi.fn() } };
+
+// After (consolidated):
+import { TIME_MIN, TIME_MAX } from '../helpers/test-constants.js';
+import { sortByStartTime } from '../helpers/event-sorting.js';
+import { makeCalendarMock } from '../helpers/factories.js';
+
+mockCalendarApi = makeCalendarMock();
+const sorted = events.sort(sortByStartTime);
+```
+
+**Benefits:**
+- **DRY:** Single source of truth for constants and utilities
+- **Maintainability:** Change date formats in one place; affects all tests
+- **Consistency:** All handler tests follow identical setup pattern
+- **Discoverability:** New test authors find helpers in factories/constants
+- **Type Safety:** Factory returns typed mocks instead of `any`
+
+**Metrics to Achieve:**
+- Reduce duplication of `TIME_*` constants in test files
+- Remove 3+ inline sort comparators; replace with import
+- Standardize `beforeEach` mock setup across all handler test files
+
+**Test Validation:**
+- All existing tests continue to pass
+- No behavior changes — only refactoring of test infrastructure
+- Lint/type checking confirms imports resolve
+
+---

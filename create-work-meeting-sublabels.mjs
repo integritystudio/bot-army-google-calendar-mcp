@@ -2,77 +2,8 @@ import { createGmailClient } from './lib/gmail-client.mjs';
 
 
 import { USER_ID } from './lib/constants.mjs';
-async function createLabels(gmail, labelNames, labelIds, existingLabelMap) {
-  for (const labelName of labelNames) {
-    try {
-      const response = await gmail.users.labels.create({
-        userId: USER_ID,
-        requestBody: {
-          name: labelName,
-          labelListVisibility: 'labelShow',
-          messageListVisibility: 'show',
-        },
-      });
+import { createLabels, applyPatterns } from './lib/gmail-label-utils.mjs';
 
-      console.log(`✅ Created: ${labelName}`);
-      console.log(`   ID: ${response.data.id}\n`);
-      labelIds[labelName] = response.data.id;
-    } catch (error) {
-      if (error.message.includes('exists') || error.message.includes('conflicts')) {
-        console.log(`⚠️  Already exists: ${labelName}`);
-        const existingId = existingLabelMap.get(labelName);
-        if (existingId) {
-          console.log(`   ID: ${existingId}\n`);
-          labelIds[labelName] = existingId;
-        }
-      } else {
-        console.error(`❌ Error: ${labelName}: ${error.message}\n`);
-      }
-    }
-  }
-}
-
-async function applyPatterns(gmail, patterns, labelIds) {
-  let totalLabeled = 0;
-
-  for (const pattern of patterns) {
-    try {
-      const searchResult = await gmail.users.messages.list({
-        userId: USER_ID,
-        q: pattern.query,
-        maxResults: 100,
-      });
-
-      if (!searchResult.data.messages) continue;
-
-      const messageIds = searchResult.data.messages.map(m => m.id);
-      const count = messageIds.length;
-
-      if (count > 0) {
-        const labelId = labelIds[pattern.label];
-        if (!labelId) {
-          console.error(`  ❌ No label ID resolved for ${pattern.label}, skipping`);
-          continue;
-        }
-
-        await gmail.users.messages.batchModify({
-          userId: USER_ID,
-          requestBody: {
-            ids: messageIds,
-            addLabelIds: [labelId],
-          },
-        });
-
-        console.log(`  ✅ ${pattern.label}: ${count} emails`);
-        totalLabeled += count;
-      }
-    } catch (error) {
-      console.error(`  ❌ Failed ${pattern.label}: ${error.message}`);
-    }
-  }
-
-  return totalLabeled;
-}
 
 async function createWorkMeetingSubLabels() {
   const gmail = createGmailClient();

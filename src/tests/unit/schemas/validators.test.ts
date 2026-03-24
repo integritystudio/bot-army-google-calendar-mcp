@@ -219,10 +219,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
 
   describe('Complex Scenarios', () => {
     it('should validate complete update with all fields', () => {
-      const args = {
-        calendarId: 'primary',
-        eventId: 'event123',
-        timeZone: 'America/Los_Angeles',
+      const args = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
         modificationScope: 'thisAndFollowing',
         futureStartDate: makeFutureDateString(60), // 60 days from now
         summary: 'Updated Meeting',
@@ -243,34 +240,28 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
           ]
         },
         recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO']
-      };
+      });
 
       const result = UpdateEventArgumentsSchema.parse(args);
       expect(result).toMatchObject(args);
     });
 
     it('should not require conditional fields for "all" scope', () => {
-      const args = {
-        calendarId: 'primary',
-        eventId: 'event123',
-        timeZone: 'America/Los_Angeles',
+      const args = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
         modificationScope: 'all',
         summary: 'Updated Meeting'
         // no originalStartTime or futureStartDate required
-      };
+      });
 
       expect(() => UpdateEventArgumentsSchema.parse(args)).not.toThrow();
     });
 
     it('should allow optional conditional fields when not required', () => {
-      const args = {
-        calendarId: 'primary',
-        eventId: 'event123',
-        timeZone: 'America/Los_Angeles',
+      const args = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
         modificationScope: 'all',
         originalStartTime: '2024-06-15T10:00:00', // optional for 'all' scope
         summary: 'Updated Meeting'
-      };
+      });
 
       const result = UpdateEventArgumentsSchema.parse(args);
       expect(result.originalStartTime).toBe('2024-06-15T10:00:00');
@@ -280,13 +271,10 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
   describe('Backward Compatibility', () => {
     it('should maintain compatibility with existing update calls', () => {
       // Existing call format without new parameters
-      const legacyArgs = {
-        calendarId: 'primary',
-        eventId: 'event123',
-        timeZone: 'America/Los_Angeles',
+      const legacyArgs = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
         summary: 'Updated Meeting',
         location: 'Conference Room A'
-      };
+      });
 
       const result = UpdateEventArgumentsSchema.parse(legacyArgs);
       expect(result.modificationScope).toBeUndefined(); // optional with no default

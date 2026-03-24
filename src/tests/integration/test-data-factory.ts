@@ -144,7 +144,7 @@ export class TestDataFactory {
 
   static createColoredEvent(colorId: string, overrides: Partial<TestEvent> = {}): TestEvent {
     return this.createSingleEvent({
-      summary: `Test Event - Color ${colorId}`,
+      summary: `${TEST_EVENT_DEFAULTS.COLORED_EVENT_SUMMARY_PREFIX}${colorId}`,
       colorId,
       ...overrides
     });
@@ -153,27 +153,27 @@ export class TestDataFactory {
   // Time range generators
   static getTimeRanges() {
     const now = new Date();
-    
+
     return {
       // Past week
       pastWeek: {
-        timeMin: formatRFC3339(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)),
+        timeMin: formatRFC3339(new Date(now.getTime() - TIME_DURATIONS.WEEK)),
         timeMax: formatRFC3339(now)
       },
       // Next week
       nextWeek: {
         timeMin: formatRFC3339(now),
-        timeMax: formatRFC3339(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000))
+        timeMax: formatRFC3339(new Date(now.getTime() + TIME_DURATIONS.WEEK))
       },
       // Next month
       nextMonth: {
         timeMin: formatRFC3339(now),
-        timeMax: formatRFC3339(new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000))
+        timeMax: formatRFC3339(new Date(now.getTime() + TIME_DURATIONS.MONTH))
       },
       // Large range (3 months)
       threeMonths: {
         timeMin: formatRFC3339(now),
-        timeMax: formatRFC3339(new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000))
+        timeMax: formatRFC3339(new Date(now.getTime() + TIME_DURATIONS.QUARTER))
       }
     };
   }

@@ -201,7 +201,7 @@ export class UpdateEventHandler extends BaseToolHandler {
             ...helpers.cleanEventForDuplication(eventData),
             ...requestBody,
             start: createTimeObject(args.start || args.futureStartDate, effectiveTimeZone),
-            end: createTimeObject(endTime, effectiveTimeZone)
+            end: createTimeObject(endTime!, effectiveTimeZone)
         };
 
         const response = await calendar.events.insert({

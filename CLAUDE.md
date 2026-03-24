@@ -33,6 +33,9 @@ npm install | npm run build | npm run dev | npm test
 
 ## Script Development
 
+**Code Quality Tooling:**
+- `node scripts/check-duplicates.mjs [dir] [minLines]` — Detect repeated code blocks (default 8 lines). Useful: `node scripts/check-duplicates.mjs src 6` to find consolidation opportunities.
+
 **Avoid bash heredocs with pipes** (causes "parse error near |'"):
 - Use Write tool or create `.mjs` files in project root instead of `/tmp`
 - `/tmp` scripts can't access `node_modules`; use project root for npm imports

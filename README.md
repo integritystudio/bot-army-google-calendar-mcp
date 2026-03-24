@@ -318,6 +318,10 @@ The email organization system uses intelligent date parsing (`lib/date-based-fil
 - Established patterns: error handling with try/catch, named constants, parallel API fetches with `Promise.all`
 - TypeScript, ES modules, 2-space indent, no magic strings
 
+**Code Quality Tools:**
+- Detect duplicated code blocks: `node scripts/check-duplicates.mjs src 6` (reports suspicious file pairs, overlapping logic)
+- Consolidated: `GmailCreateHandler.ts` unifies filter and label creation logic (single source of truth)
+
 **Future Roadmap:**
 - See [`docs/BACKLOG.md`](docs/BACKLOG.md) for detailed backlog, refactoring targets (M1-L4), and completed items
 - High-priority test architecture refactor for conflict detection (blocked pending design discussion)

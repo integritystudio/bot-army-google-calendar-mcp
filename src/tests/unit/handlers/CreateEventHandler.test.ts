@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
 import { OAuth2Client } from 'google-auth-library';
-import { makeEvent } from '../helpers/index.js';
+import { makeEvent, getTextContent } from '../helpers/index.js';
 
 // Mock the googleapis module
 vi.mock('googleapis', () => ({
@@ -89,9 +89,9 @@ describe('CreateEventHandler', () => {
       expect(mockCalendar.events.insert.mock.calls[0][0].requestBody.id).toBeUndefined();
 
       expect(result.content[0].type).toBe('text');
-      const textContent = result.content[0] as { type: 'text'; text: string };
-      expect(textContent.text).toContain('Event created successfully!');
-      expect(textContent.text).toContain('Test Event');
+      const textContent = getTextContent(result);
+      expect(textContent).toContain('Event created successfully!');
+      expect(textContent).toContain('Test Event');
     });
 
     it('should create event with all basic optional fields', async () => {
@@ -141,8 +141,8 @@ describe('CreateEventHandler', () => {
         })
       });
 
-      const textContent = result.content[0] as { type: 'text'; text: string };
-      expect(textContent.text).toContain('Event created successfully!');
+      const textContent = getTextContent(result);
+      expect(textContent).toContain('Event created successfully!');
     });
   });
 
@@ -175,8 +175,8 @@ describe('CreateEventHandler', () => {
         })
       });
 
-      const textContent = result.content[0] as { type: 'text'; text: string };
-      expect(textContent.text).toContain('Event created successfully!');
+      const textContent = getTextContent(result);
+      expect(textContent).toContain('Event created successfully!');
     });
 
     it('should validate event ID before making API call', async () => {

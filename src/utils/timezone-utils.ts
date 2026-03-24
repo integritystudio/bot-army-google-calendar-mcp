@@ -86,11 +86,10 @@ export function getTimezoneOffsetMinutes(timeZone: string): number {
 
 /**
  * Format a timezone offset as a string.
- * @param date Date to calculate offset from (optional, uses current date)
  * @param timeZone IANA timezone identifier
  * @returns Offset string: 'Z' for UTC, '+HH:MM' or '-HH:MM' for other timezones
  */
-export function getTimezoneOffsetString(date: Date = new Date(), timeZone: string): string {
+export function getTimezoneOffsetString(timeZone: string): string {
   try {
     const offsetMinutes = getTimezoneOffsetMinutes(timeZone);
 
@@ -119,7 +118,7 @@ export function formatDateInTimeZone(date: Date, timeZone: string): {
   humanReadable: string;
   offset: string;
 } {
-  const offset = getTimezoneOffsetString(date, timeZone);
+  const offset = getTimezoneOffsetString(timeZone);
   // Remove Z suffix from RFC3339 format and add timezone offset
   const isoString = formatRFC3339(date).slice(0, -1);
   const rfc3339 = isoString + offset;

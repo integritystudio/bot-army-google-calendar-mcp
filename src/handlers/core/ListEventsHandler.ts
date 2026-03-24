@@ -4,7 +4,7 @@ import { BaseToolHandler } from "./BaseToolHandler.js";
 import { calendar_v3 } from 'googleapis';
 import { formatEventWithDetails } from "../utils.js";
 import { BatchRequestHandler } from "./BatchRequestHandler.js";
-import { convertToRFC3339 } from "../utils/datetime.js";
+import { convertToRFC3339 } from "../../utils/timezone-utils.js";
 import { buildListFieldMask } from "../../utils/field-mask-builder.js";
 
 // Extended event type to include calendar ID for tracking source

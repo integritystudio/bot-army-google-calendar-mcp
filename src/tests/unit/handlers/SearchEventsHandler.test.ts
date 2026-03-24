@@ -25,7 +25,7 @@ vi.mock('../../../utils/field-mask-builder.js', () => ({
   })
 }));
 
-vi.mock('../../../handlers/utils/datetime.js', () => ({
+vi.mock('../../../utils/timezone-utils.js', () => ({
   convertToRFC3339: vi.fn((dateString, timezone) => {
     if (dateString.includes('Z') || dateString.includes('+') || dateString.includes('-')) {
       return dateString;
@@ -140,7 +140,7 @@ describe('SearchEventsHandler', () => {
     });
 
     it('should use provided timeZone for conversion', async () => {
-      const { convertToRFC3339 } = await import('../../../handlers/utils/datetime.js');
+      const { convertToRFC3339 } = await import('../../../utils/timezone-utils.js');
 
       await handler.runTool({ ...BASE_ARGS, timeZone: 'Asia/Tokyo' }, mockOAuth2Client);
 

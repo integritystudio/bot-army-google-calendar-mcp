@@ -1,7 +1,7 @@
 import { calendar_v3 } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { CreateEventInput, UpdateEventInput } from '../../tools/registry.js';
-import { createTimeObject } from '../utils/datetime.js';
+import { createTimeObject } from '../../utils/timezone-utils.js';
 import { ConflictDetectionService } from '../../services/conflict-detection/index.js';
 import { CONFLICT_DETECTION_CONFIG } from '../../services/conflict-detection/config.js';
 

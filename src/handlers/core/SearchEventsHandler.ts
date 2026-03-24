@@ -4,7 +4,7 @@ import { SearchEventsInput } from "../../tools/registry.js";
 import { BaseToolHandler } from "./BaseToolHandler.js";
 import { calendar_v3 } from 'googleapis';
 import { formatEventWithDetails } from "../utils.js";
-import { convertToRFC3339 } from "../utils/datetime.js";
+import { convertToRFC3339 } from "../../utils/timezone-utils.js";
 import { buildListFieldMask } from "../../utils/field-mask-builder.js";
 
 export class SearchEventsHandler extends BaseToolHandler {

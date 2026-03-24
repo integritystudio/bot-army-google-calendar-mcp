@@ -84,23 +84,23 @@ describe('Timezone Utilities', () => {
 
   describe('getTimezoneOffsetString', () => {
     it('should return Z for UTC', () => {
-      expect(getTimezoneOffsetString(new Date(), 'UTC')).toBe('Z');
+      expect(getTimezoneOffsetString('UTC')).toBe('Z');
     });
 
     it('should return formatted offset string for non-UTC timezones', () => {
-      const offset = getTimezoneOffsetString(new Date(), 'Asia/Tokyo');
+      const offset = getTimezoneOffsetString('Asia/Tokyo');
       expect(offset).toMatch(/^[+-]\d{2}:\d{2}$/);
       expect(offset).toBe('+09:00');
     });
 
     it('should return negative offset for west of UTC', () => {
-      const offset = getTimezoneOffsetString(new Date(), 'America/New_York');
+      const offset = getTimezoneOffsetString('America/New_York');
       expect(offset).toMatch(/^-\d{2}:\d{2}$/);
     });
 
     it('should fall back to Z on error', () => {
       // This tests the error handling
-      expect(typeof getTimezoneOffsetString(new Date(), 'UTC')).toBe('string');
+      expect(typeof getTimezoneOffsetString('UTC')).toBe('string');
     });
   });
 

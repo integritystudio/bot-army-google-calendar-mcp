@@ -2,8 +2,7 @@
  * @jest-environment node
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { OAuth2Client } from 'google-auth-library';
-import { getTextContent, makeCalendarMock, makeEvent, makeEventWithCalendarId } from '../helpers/index.js';
+import { getTextContent, makeEvent, makeEventWithCalendarId, setupListEventsHandler } from '../helpers/index.js';
 import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
 // Import the types and schemas we're testing
 import { ToolSchemas } from '../../../tools/registry.js';
@@ -107,16 +106,15 @@ describe('Batch List Events Functionality', () => {
   });
 
   describe('Single Calendar Events (Existing Functionality)', () => {
-    let mockOAuth2Client: OAuth2Client;
+    let mockOAuth2Client: any;
     let listEventsHandler: ListEventsHandler;
     let mockCalendarApi: any;
 
     beforeEach(() => {
-      vi.clearAllMocks();
-      mockOAuth2Client = new OAuth2Client();
-      mockCalendarApi = makeCalendarMock();
-      listEventsHandler = new ListEventsHandler();
-      vi.spyOn(listEventsHandler as any, 'getCalendar').mockReturnValue(mockCalendarApi);
+      const setup = setupListEventsHandler();
+      mockOAuth2Client = setup.mockOAuth2Client;
+      listEventsHandler = setup.handler;
+      mockCalendarApi = setup.mockCalendarApi;
     });
 
     it('should handle single calendar ID as string', async () => {
@@ -182,7 +180,7 @@ describe('Batch List Events Functionality', () => {
           headers: {},
           body: {
             items: [
-              makeEvent('work1', { summary: 'Work Meeting', start: { dateTime: '2024-01-15T09:00:00Z' }, end: { dateTime: '2024-01-15T10:00:00Z' } })
+              makeEvent({ id: 'work1', summary: 'Work Meeting', start: { dateTime: '2024-01-15T09:00:00Z' }, end: { dateTime: '2024-01-15T10:00:00Z' } })
             ]
           }
         },
@@ -191,7 +189,7 @@ describe('Batch List Events Functionality', () => {
           headers: {},
           body: {
             items: [
-              makeEvent('personal1', { summary: 'Gym', start: { dateTime: '2024-01-15T18:00:00Z' }, end: { dateTime: '2024-01-15T19:00:00Z' } })
+              makeEvent({ id: 'personal1', summary: 'Gym', start: { dateTime: '2024-01-15T18:00:00Z' }, end: { dateTime: '2024-01-15T19:00:00Z' } })
             ]
           }
         }
@@ -219,7 +217,7 @@ describe('Batch List Events Functionality', () => {
           headers: {},
           body: {
             items: [
-              makeEvent('event1', { summary: 'Success Event', start: { dateTime: '2024-01-15T09:00:00Z' }, end: { dateTime: '2024-01-15T10:00:00Z' } })
+              makeEvent({ id: 'event1', summary: 'Success Event', start: { dateTime: '2024-01-15T09:00:00Z' }, end: { dateTime: '2024-01-15T10:00:00Z' } })
             ]
           }
         },
@@ -325,8 +323,8 @@ describe('Batch List Events Functionality', () => {
 
     it('should handle date-only events in sorting', () => {
       const events = [
-        makeEvent('all-day', { summary: 'All Day Event', start: { date: '2024-01-15' }, end: { date: '2024-01-16' } }),
-        makeEvent('timed', { summary: 'Timed Event', start: { dateTime: '2024-01-15T09:00:00Z' }, end: { dateTime: '2024-01-15T10:00:00Z' } })
+        makeEvent({ id: 'all-day', summary: 'All Day Event', start: { date: '2024-01-15' }, end: { date: '2024-01-16' } }),
+        makeEvent({ id: 'timed', summary: 'Timed Event', start: { dateTime: '2024-01-15T09:00:00Z' }, end: { dateTime: '2024-01-15T10:00:00Z' } })
       ];
 
       const sortedEvents = events.sort(sortByStartTime);
@@ -338,16 +336,15 @@ describe('Batch List Events Functionality', () => {
   });
 
   describe('Error Handling', () => {
-    let mockOAuth2Client: OAuth2Client;
+    let mockOAuth2Client: any;
     let listEventsHandler: ListEventsHandler;
     let mockCalendarApi: any;
 
     beforeEach(() => {
-      vi.clearAllMocks();
-      mockOAuth2Client = new OAuth2Client();
-      mockCalendarApi = makeCalendarMock();
-      listEventsHandler = new ListEventsHandler();
-      vi.spyOn(listEventsHandler as any, 'getCalendar').mockReturnValue(mockCalendarApi);
+      const setup = setupListEventsHandler();
+      mockOAuth2Client = setup.mockOAuth2Client;
+      listEventsHandler = setup.handler;
+      mockCalendarApi = setup.mockCalendarApi;
     });
 
     it('should handle authentication errors', async () => {
@@ -370,16 +367,15 @@ describe('Batch List Events Functionality', () => {
   });
 
   describe('Integration Scenarios', () => {
-    let mockOAuth2Client: OAuth2Client;
+    let mockOAuth2Client: any;
     let listEventsHandler: ListEventsHandler;
     let mockCalendarApi: any;
 
     beforeEach(() => {
-      vi.clearAllMocks();
-      mockOAuth2Client = new OAuth2Client();
-      mockCalendarApi = makeCalendarMock();
-      listEventsHandler = new ListEventsHandler();
-      vi.spyOn(listEventsHandler as any, 'getCalendar').mockReturnValue(mockCalendarApi);
+      const setup = setupListEventsHandler();
+      mockOAuth2Client = setup.mockOAuth2Client;
+      listEventsHandler = setup.handler;
+      mockCalendarApi = setup.mockCalendarApi;
     });
 
     it('should handle maximum allowed calendars (50)', () => {

@@ -13,12 +13,7 @@ export class SearchEventsHandler extends BaseToolHandler {
         const events = await this.searchEvents(oauth2Client, validArgs);
         
         if (events.length === 0) {
-            return {
-                content: [{
-                    type: "text",
-                    text: "No events found matching your search criteria."
-                }]
-            };
+            return this.textResult("No events found matching your search criteria.");
         }
         
         let text = `Found ${events.length} event(s) matching your search:\n\n`;
@@ -28,12 +23,7 @@ export class SearchEventsHandler extends BaseToolHandler {
             text += `${index + 1}. ${eventDetails}\n\n`;
         });
         
-        return {
-            content: [{
-                type: "text",
-                text: text.trim()
-            }]
-        };
+        return this.textResult(text.trim());
     }
 
     private async searchEvents(

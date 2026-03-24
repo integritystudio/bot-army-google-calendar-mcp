@@ -88,6 +88,12 @@ export abstract class BaseToolHandler {
         };
     }
 
+    protected textResult(text: string): CallToolResult {
+        return {
+            content: [{ type: 'text', text }],
+        };
+    }
+
     protected async withTimeout<T>(promise: Promise<T>, timeoutMs: number = 30000): Promise<T> {
         const timeoutPromise = new Promise<never>((_, reject) => {
             setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs);

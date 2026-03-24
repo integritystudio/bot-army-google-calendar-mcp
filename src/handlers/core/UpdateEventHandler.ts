@@ -54,12 +54,7 @@ export class UpdateEventHandler extends BaseToolHandler {
         const event = await this.updateEventWithScope(oauth2Client, validArgs);
         const text = createEventResponseWithConflicts(event, validArgs.calendarId, conflicts ?? undefined, "updated");
 
-        return {
-            content: [{
-                type: "text",
-                text: text
-            }]
-        };
+        return this.textResult(text);
     }
 
     private async updateEventWithScope(

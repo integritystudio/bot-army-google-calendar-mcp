@@ -57,23 +57,13 @@ export class CreateEventHandler extends BaseToolHandler {
             const cleanedDetails = duplicateDetails.replace('⚠️ POTENTIAL DUPLICATES DETECTED:', '').trim();
             const similarityPercentage = Math.round(exactDuplicate.event.similarity * 100);
 
-            return {
-                content: [{
-                    type: "text",
-                    text: `⚠️ DUPLICATE EVENT DETECTED (${similarityPercentage}% similar)!\n\n${cleanedDetails}\n\nThis event appears to be a duplicate. To create anyway, set allowDuplicates to true.`
-                }]
-            };
+            return this.textResult(`⚠️ DUPLICATE EVENT DETECTED (${similarityPercentage}% similar)!\n\n${cleanedDetails}\n\nThis event appears to be a duplicate. To create anyway, set allowDuplicates to true.`);
         }
 
         const event = await this.createEvent(oauth2Client, validArgs);
         const text = createEventResponseWithConflicts(event, validArgs.calendarId, conflicts, "created");
 
-        return {
-            content: [{
-                type: "text",
-                text: text
-            }]
-        };
+        return this.textResult(text);
     }
 
     private async createEvent(

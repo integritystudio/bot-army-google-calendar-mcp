@@ -44,12 +44,7 @@ export class ListEventsHandler extends BaseToolHandler {
         });
         
         if (allEvents.length === 0) {
-            return {
-                content: [{
-                    type: "text",
-                    text: `No events found in ${calendarIds.length} calendar(s).`
-                }]
-            };
+            return this.textResult(`No events found in ${calendarIds.length} calendar(s).`);
         }
         
         let text = calendarIds.length === 1 
@@ -76,12 +71,7 @@ export class ListEventsHandler extends BaseToolHandler {
             }
         }
         
-        return {
-            content: [{
-                type: "text",
-                text: text.trim()
-            }]
-        };
+        return this.textResult(text.trim());
     }
 
     private async fetchEvents(

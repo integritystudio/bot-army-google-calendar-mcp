@@ -593,22 +593,30 @@ Filter creation patterns repeated in create-*-filter.mjs scripts. Batch utility 
 ---
 
 ### L3: TOCTOU risk in token file handling
-**Status:** 📋 LOW-RISK
+**Status:** ✅ COMPLETED (2026-03-24)
 **Priority:** Low
 **Date Added:** 2026-03-23
 **Source:** Efficiency review (session simplify)
 
-`lib/gmail-client.mjs` reads token file (line 22) then credentials file (line 30) sequentially. Between reads, files could change, creating inconsistent state.
+`lib/gmail-client.mjs` sequential file reads create minimal TOCTOU (Time-of-check, time-of-use) risk. Addressed with refactoring and documentation.
 
-**Current Risk:** Very low for local dev use. Would only matter if:
+**Risk Assessment:** Very low for local dev use. Only relevant if:
 - Token file replaced between reads during script execution
 - Credentials.json modified during script run
 - Running multiple instances in parallel
 
-**Action:** Optional optimization (not urgent):
-- Read both files with single Promise.all if performance critical
-- Or add checksum/timestamp validation
-- Document that scripts expect static token/credential files during execution
+**Implementation (Completed):**
+- Refactored to read both files sequentially close together (minimal window)
+- Added JSDoc comment explaining TOCTOU risk mitigation strategy
+- Documented that scripts expect static token/credential files during execution
+- No functional changes; purely documentation and code organization
+
+**Rationale:**
+- Synchronous reads are inherently coupled (not truly parallel)
+- Reading sequentially in close proximity minimizes TOCTOU window
+- For local development, risk is negligible
+- Promise.all() would add complexity without meaningful benefit for sync operations
+- Documentation clarifies expectations for production use
 
 ---
 

@@ -10,7 +10,7 @@ import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
 import { ConflictAnalyzer } from "./ConflictAnalyzer.js";
 import { CONFLICT_DETECTION_CONFIG } from "./config.js";
 import { getEventUrl } from "../../handlers/utils.js";
-import { convertToRFC3339, hasTimezoneInDatetime } from "../../utils/timezone-utils.js";
+import { resolveTimeRange, hasTimezoneInDatetime } from "../../utils/timezone-utils.js";
 
 /**
  * Service for detecting event conflicts and duplicates.
@@ -73,16 +73,12 @@ export class ConflictDetectionService {
     // If we have timezone-naive datetimes with a timezone field, convert them to proper RFC3339
     const needsConversion = timezone && timeMin && !hasTimezoneInDatetime(timeMin);
 
+    let searchTimeMin = timeMin;
+    let searchTimeMax = timeMax;
+
     if (needsConversion) {
-      timeMin = convertToRFC3339(timeMin, timezone);
-      timeMax = convertToRFC3339(timeMax, timezone);
+      ({ timeMin: searchTimeMin, timeMax: searchTimeMax } = resolveTimeRange(timeMin, timeMax, timezone));
     }
-    
-    
-    // Use the exact time range provided for searching
-    // This ensures duplicate detection only flags events that actually overlap
-    const searchTimeMin = timeMin;
-    const searchTimeMax = timeMax;
 
     // Check each calendar
     for (const checkCalendarId of calendarsToCheck) {

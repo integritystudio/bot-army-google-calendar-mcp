@@ -141,7 +141,7 @@ export class AuthServer {
   }
 
   private async startWithTimeout(openBrowser = true): Promise<boolean> {
-    if (await this.tokenManager.validateTokens()) {
+    if (await this.tokenManager.isAuthenticated()) {
       this.authCompletedSuccessfully = true;
       return true;
     }

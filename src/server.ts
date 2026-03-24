@@ -58,8 +58,7 @@ export class GoogleCalendarMcpServer {
     
     if (this.config.transport.type === 'stdio') {
       // For stdio mode, ensure authentication before starting server
-      const hasValidTokens = await this.tokenManager.validateTokens(accountMode);
-      if (!hasValidTokens) {
+      if (!(await this.tokenManager.isAuthenticated())) {
         // Ensure we're using the correct account mode (don't override it)
         const authSuccess = await this.authServer.start(true); // openBrowser = true
         if (!authSuccess) {
@@ -72,8 +71,7 @@ export class GoogleCalendarMcpServer {
       }
     } else {
       // For HTTP mode, check for tokens but don't block startup
-      const hasValidTokens = await this.tokenManager.validateTokens(accountMode);
-      if (!hasValidTokens) {
+      if (!(await this.tokenManager.isAuthenticated())) {
         process.stderr.write(`⚠️  No valid ${accountMode} user authentication tokens found.\n`);
         process.stderr.write('Visit the server URL in your browser to authenticate, or run "npm run auth" separately.\n');
       } else {

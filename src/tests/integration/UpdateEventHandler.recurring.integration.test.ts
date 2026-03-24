@@ -29,9 +29,9 @@ describe('UpdateEventHandler - Recurring Events (Real API Integration)', () => {
     // Load real credentials from Doppler
     oauth2Client = await initializeOAuth2Client();
     const tokenManager = new TokenManager(oauth2Client);
-    const hasValidTokens = await tokenManager.validateTokens();
+    const isAuth = await tokenManager.isAuthenticated();
 
-    if (!hasValidTokens) {
+    if (!isAuth) {
       throw new Error(
         'No valid tokens found. Run: npm run auth\n' +
         'For integration tests with Doppler: doppler run -- npm run test:integration'

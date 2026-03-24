@@ -50,8 +50,8 @@ async function verifyAndRefreshTokens() {
       console.log('✓ Tokens are valid\n');
 
       // Check expiry time
-      const credentials = oauth2Client.credentials;
-      if (credentials.expiry_date) {
+      const credentials = tokenManager.getCredentials();
+      if (credentials?.expiry_date) {
         const expiresIn = Math.floor((credentials.expiry_date - Date.now()) / 1000);
         const hours = Math.floor(expiresIn / 3600);
         const minutes = Math.floor((expiresIn % 3600) / 60);

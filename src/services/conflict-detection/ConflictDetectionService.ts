@@ -10,7 +10,7 @@ import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
 import { ConflictAnalyzer } from "./ConflictAnalyzer.js";
 import { CONFLICT_DETECTION_CONFIG } from "./config.js";
 import { getEventUrl } from "../../handlers/utils.js";
-import { convertToRFC3339 } from "../../handlers/utils/datetime.js";
+import { convertToRFC3339 } from "../../utils/timezone-utils.js";
 
 /**
  * Service for detecting event conflicts and duplicates.

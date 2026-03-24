@@ -117,6 +117,47 @@ Gmail label names, filter queries, and category definitions are hardcoded in 40+
 
 ## Low Priority Items
 
+### L7: Audit extracted test helpers for additional consolidation opportunities
+**Status:** 📋 PENDING REVIEW
+**Priority:** Low
+**Date Added:** 2026-03-24
+**Source:** Test infrastructure refactoring session
+
+Three test helper modules were created to consolidate repeated test code. These should be audited for opportunities to eliminate remaining copy-paste patterns.
+
+**Created Helpers:**
+1. **handler-setup.ts** - Consolidates handler initialization patterns
+   - `setupListEventsHandler()` factory
+   - Eliminates beforeEach boilerplate for ListEventsHandler tests
+   - Used in: BatchListEvents.test.ts (3 describe blocks)
+   - **Opportunity:** Check if SearchEventsHandler tests can use similar pattern
+
+2. **event-test-data.ts** - Factory functions for test event creation
+   - `createTestEventWithDateTime()`, `createCompleteTestEvent()`, `createCreateEventArgs()`, etc.
+   - Already exports comprehensive factories
+   - **Opportunity:** Audit CreateEventHandler.test.ts for hardcoded event objects that could use these factories
+
+3. **integration-test-helpers.ts** - Integration test event lifecycle helpers
+   - `createAndVerifyEvent()`, `updateAndVerifyEvent()`
+   - `createNonOverlappingEventPair()`, `createOverlappingEventPair()`
+   - **Opportunity:** Check claude-mcp-integration.test.ts and UpdateEventHandler.recurring.integration.test.ts for similar patterns
+
+**Remaining Duplicate Detection Results:**
+- Duplicate detection still shows 50+ repeated blocks in unit tests
+- Many are test assertion patterns (inherently similar) but some may be consolidatable
+- CreateEventHandler.test.ts has repeated event object definitions (#34-50) — could potentially use createCompleteTestEvent + overrides
+- date-utils.test.ts has repeated expected value patterns (#6-7) — could extract test data constants
+
+**Action Items:**
+1. Audit CreateEventHandler.test.ts for opportunities to use event-test-data factories
+2. Check if date-utils.test.ts expected values can be consolidated into constants
+3. Verify claude-mcp-integration.test.ts and UpdateEventHandler.recurring.integration.test.ts don't have patterns matching integration-test-helpers
+4. Consider extracting common assertion patterns into assertion helpers (e.g., `expectEventCreatedSuccessfully()`)
+
+**Estimated Effort:** 2-3 hours for audit + implementation
+
+---
+
 ### L5: Extract createLabels() and applyPatterns() helpers to lib/gmail-label-utils.mjs
 **Status:** ✅ COMPLETED (2026-03-24)
 **Priority:** Low

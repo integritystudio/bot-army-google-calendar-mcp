@@ -185,43 +185,34 @@ describe('Conflict Detection Integration (MCP Protocol)', () => {
   describe('Duplicate Detection', () => {
     it('should handle creation of similar events', async () => {
       const now = new Date();
-      const start = new Date(now.getTime() + 5 * ONE_HOUR_MS); // 5 hours from now
+      const start = new Date(now.getTime() + 5 * ONE_HOUR_MS);
       const end = new Date(start.getTime() + ONE_HOUR_MS);
 
-      // Create first event
-      const result1 = await mcpClient.callTool({
-        name: 'create-event',
-        arguments: {
-          calendarId: TEST_CALENDAR_ID,
-          summary: 'Duplicate Test Event',
-          start: TestDataFactory.formatDateTimeRFC3339(start),
-          end: TestDataFactory.formatDateTimeRFC3339(end),
-          timeZone: 'UTC'
-        }
-      });
+      const { eventId: eventId1 } = await createAndVerifyEvent(
+        mcpClient,
+        TEST_CALENDAR_ID,
+        'Duplicate Test Event',
+        start,
+        end,
+        createdEventIds
+      );
 
-      const eventId1 = extractEventId(result1);
-      createdEventIds.push(eventId1);
       expect(eventId1).toBeTruthy();
 
       // Create second event with same summary and similar time
       const FIVE_MIN_MS = 5 * 60 * 1000;
-      const start2 = new Date(start.getTime() + FIVE_MIN_MS); // 5 min later
+      const start2 = new Date(start.getTime() + FIVE_MIN_MS);
       const end2 = new Date(end.getTime() + FIVE_MIN_MS);
 
-      const result2 = await mcpClient.callTool({
-        name: 'create-event',
-        arguments: {
-          calendarId: TEST_CALENDAR_ID,
-          summary: 'Duplicate Test Event',
-          start: TestDataFactory.formatDateTimeRFC3339(start2),
-          end: TestDataFactory.formatDateTimeRFC3339(end2),
-          timeZone: 'UTC'
-        }
-      });
+      const { eventId: eventId2 } = await createAndVerifyEvent(
+        mcpClient,
+        TEST_CALENDAR_ID,
+        'Duplicate Test Event',
+        start2,
+        end2,
+        createdEventIds
+      );
 
-      const eventId2 = extractEventId(result2);
-      createdEventIds.push(eventId2);
       expect(eventId2).toBeTruthy();
       // Both events created successfully (duplicates not blocked, just detected)
       expect(eventId1).not.toBe(eventId2);
@@ -243,29 +234,23 @@ describe('Conflict Detection Integration (MCP Protocol)', () => {
         }
       });
 
-      const eventId1 = extractEventId(result1);
-      createdEventIds.push(eventId1);
+      const id = TestDataFactory.extractEventIdFromResponse(result1);
+      if (id) createdEventIds.push(id);
 
       // Create single event that might overlap with one recurrence
       const now = new Date();
-      const overlapStart = new Date(now.getTime() + ONE_DAY_MS); // tomorrow (when recurring starts)
-      overlapStart.setUTCHours(11, 0, 0, 0); // 11 AM UTC (overlaps with 10-11 AM recurring)
+      const overlapStart = new Date(now.getTime() + ONE_DAY_MS);
+      overlapStart.setUTCHours(11, 0, 0, 0);
 
-      const result2 = await mcpClient.callTool({
-        name: 'create-event',
-        arguments: {
-          calendarId: TEST_CALENDAR_ID,
-          summary: 'Overlaps Recurring Instance',
-          start: TestDataFactory.formatDateTimeRFC3339(overlapStart),
-          end: TestDataFactory.formatDateTimeRFC3339(
-            new Date(overlapStart.getTime() + ONE_HOUR_MS)
-          ),
-          timeZone: 'UTC'
-        }
-      });
+      const { eventId: eventId2 } = await createAndVerifyEvent(
+        mcpClient,
+        TEST_CALENDAR_ID,
+        'Overlaps Recurring Instance',
+        overlapStart,
+        new Date(overlapStart.getTime() + ONE_HOUR_MS),
+        createdEventIds
+      );
 
-      const eventId2 = extractEventId(result2);
-      createdEventIds.push(eventId2);
       expect(eventId2).toBeTruthy();
     });
   });

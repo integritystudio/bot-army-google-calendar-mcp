@@ -6,6 +6,7 @@ import { formatEventWithDetails } from "../utils.js";
 import { BatchRequestHandler } from "./BatchRequestHandler.js";
 import { convertToRFC3339 } from "../../utils/timezone-utils.js";
 import { buildListFieldMask } from "../../utils/field-mask-builder.js";
+import { processBatchResponses } from "./batchUtils.js";
 
 // Extended event type to include calendar ID for tracking source
 interface ExtendedEvent extends calendar_v3.Schema$Event {
@@ -95,6 +96,22 @@ export class ListEventsHandler extends BaseToolHandler {
         return this.fetchMultipleCalendarEvents(client, calendarIds, options);
     }
 
+    // Resolve timeMin/timeMax to RFC3339, using options.timeZone or calendar default timezone
+    private async resolveTimeRange(
+        client: OAuth2Client,
+        calendarId: string,
+        options: { timeMin?: string; timeMax?: string; timeZone?: string }
+    ): Promise<{ timeMin?: string; timeMax?: string }> {
+        let timeMin = options.timeMin;
+        let timeMax = options.timeMax;
+        if (timeMin || timeMax) {
+            const timezone = options.timeZone || await this.getCalendarTimezone(client, calendarId);
+            timeMin = timeMin ? convertToRFC3339(timeMin, timezone) : undefined;
+            timeMax = timeMax ? convertToRFC3339(timeMax, timezone) : undefined;
+        }
+        return { timeMin, timeMax };
+    }
+
     private async fetchSingleCalendarEvents(
         client: OAuth2Client,
         calendarId: string,
@@ -102,19 +119,8 @@ export class ListEventsHandler extends BaseToolHandler {
     ): Promise<ExtendedEvent[]> {
         try {
             const calendar = this.getCalendar(client);
-            
-            // Determine timezone with correct precedence:
-            // 1. Explicit timeZone parameter (highest priority)  
-            // 2. Calendar's default timezone (fallback)
-            // Note: convertToRFC3339 will still respect timezone in datetime string as ultimate override
-            let timeMin = options.timeMin;
-            let timeMax = options.timeMax;
-            
-            if (timeMin || timeMax) {
-                const timezone = options.timeZone || await this.getCalendarTimezone(client, calendarId);
-                timeMin = timeMin ? convertToRFC3339(timeMin, timezone) : undefined;
-                timeMax = timeMax ? convertToRFC3339(timeMax, timezone) : undefined;
-            }
+
+            const { timeMin, timeMax } = await this.resolveTimeRange(client, calendarId, options);
             
             const fieldMask = buildListFieldMask(options.fields);
             
@@ -145,36 +151,25 @@ export class ListEventsHandler extends BaseToolHandler {
         options: { timeMin?: string; timeMax?: string; timeZone?: string; fields?: string[]; privateExtendedProperty?: string[]; sharedExtendedProperty?: string[] }
     ): Promise<ExtendedEvent[]> {
         const batchHandler = new BatchRequestHandler(client);
-        
+
         const requests = await Promise.all(calendarIds.map(async (calendarId) => ({
             method: "GET" as const,
             path: await this.buildEventsPath(client, calendarId, options)
         })));
-        
+
         const responses = await batchHandler.executeBatch(requests);
-        
-        const { events, errors } = this.processBatchResponses(responses, calendarIds);
-        
-        if (errors.length > 0) {
-            process.stderr.write(`Some calendars had errors: ${errors.map(e => `${e.calendarId}: ${e.error}`).join(', ')}\n`);
+
+        const result = processBatchResponses(responses, calendarIds, { includeErrors: true });
+
+        if (result.errors.length > 0) {
+            process.stderr.write(`Some calendars had errors: ${result.errors.map(e => `${e.calendarId}: ${e.error}`).join(', ')}\n`);
         }
-        
-        return this.sortEventsByStartTime(events);
+
+        return this.sortEventsByStartTime(result.events);
     }
 
     private async buildEventsPath(client: OAuth2Client, calendarId: string, options: { timeMin?: string; timeMax?: string; timeZone?: string; fields?: string[]; privateExtendedProperty?: string[]; sharedExtendedProperty?: string[] }): Promise<string> {
-        // Determine timezone with correct precedence:
-        // 1. Explicit timeZone parameter (highest priority)
-        // 2. Calendar's default timezone (fallback)
-        // Note: convertToRFC3339 will still respect timezone in datetime string as ultimate override
-        let timeMin = options.timeMin;
-        let timeMax = options.timeMax;
-        
-        if (timeMin || timeMax) {
-            const timezone = options.timeZone || await this.getCalendarTimezone(client, calendarId);
-            timeMin = timeMin ? convertToRFC3339(timeMin, timezone) : undefined;
-            timeMax = timeMax ? convertToRFC3339(timeMax, timezone) : undefined;
-        }
+        const { timeMin, timeMax } = await this.resolveTimeRange(client, calendarId, options);
         
         const fieldMask = buildListFieldMask(options.fields);
         
@@ -193,33 +188,6 @@ export class ListEventsHandler extends BaseToolHandler {
         }
         
         return `/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params.toString()}`;
-    }
-
-    private processBatchResponses(
-        responses: any[], 
-        calendarIds: string[]
-    ): { events: ExtendedEvent[]; errors: Array<{ calendarId: string; error: string }> } {
-        const events: ExtendedEvent[] = [];
-        const errors: Array<{ calendarId: string; error: string }> = [];
-        
-        responses.forEach((response, index) => {
-            const calendarId = calendarIds[index];
-            
-            if (response.statusCode === 200 && response.body?.items) {
-                const calendarEvents: ExtendedEvent[] = response.body.items.map((event: any) => ({
-                    ...event,
-                    calendarId
-                }));
-                events.push(...calendarEvents);
-            } else {
-                const errorMessage = response.body?.error?.message || 
-                                   response.body?.message || 
-                                   `HTTP ${response.statusCode}`;
-                errors.push({ calendarId, error: errorMessage });
-            }
-        });
-        
-        return { events, errors };
     }
 
     private sortEventsByStartTime(events: ExtendedEvent[]): ExtendedEvent[] {

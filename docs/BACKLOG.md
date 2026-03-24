@@ -1,13 +1,30 @@
 # Project Backlog
 
-**Last Updated:** 2026-03-24 (Ralph Loop Iteration 2)
+**Last Updated:** 2026-03-24 (Ralph Loop Iteration 2 - Final)
 
 ## Status Summary
-- **Completed This Iteration:** 3 items (2026-03-24)
-- **Total Completed:** 15 items (8 from 3/23, 7 from 3/24)
+- **Completed This Iteration:** 4 items (2026-03-24, ~2.25 hours)
+- **Total Completed:** 16 items (8 from 3/23, 8 from 3/24)
 - **Blocked:** 2 High-priority items (require design discussion)
-- **Remaining:** 5 Low-priority items (L2-L6)
+- **Remaining:** 4 Low-priority items (L3-L6, non-critical)
 - **Tests Passing:** 494/494 ✅ (30 new parametrized tests)
+
+## Iteration 2 Achievements (2026-03-24)
+1. **Sequential API Calls Optimization** (Medium, 1h)
+   - Eliminate redundant calendar.events.get() in updateFutureInstances
+   - ~500ms latency reduction per operation
+
+2. **Loop Isolation Anti-patterns** (Medium, 0.5h)
+   - Convert 3 for-of loops to it.each() parametrized tests
+   - Test count: 25 → 30 (+8 individual cases)
+
+3. **USER_ID Constant Standardization** (Medium decision, 0.25h)
+   - Remove from shared constants, standardize to local approach
+   - Align Units 1-5 to consistent pattern
+
+4. **Batch Filter Operations Utility** (Low, 0.5h)
+   - Create lib/gmail-batch.mjs for efficient bulk filter creation
+   - 10-100x potential speedup, parallel processing, error isolation
 
 ---
 

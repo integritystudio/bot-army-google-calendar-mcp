@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   TIME_DURATIONS,
   addDays,
@@ -30,101 +30,87 @@ import {
   parseBasicDateTime,
 } from '../../../utils/date-utils.js';
 
-describe('date-utils', () => {
-  let now: Date;
+const BASE_DATE = new Date('2024-06-15T10:00:00Z');
+const BASE_DATE_WITH_MS = new Date('2024-06-15T10:00:00.123Z');
+const TIMING_TOLERANCE_MS = 1000;
+const TIMING_VARIANCE_RATIO = 0.05;
 
-  beforeEach(() => {
-    now = new Date();
-  });
+describe('date-utils', () => {
 
   describe('TIME_DURATIONS constants', () => {
     it('should define correct time duration values in milliseconds', () => {
       expect(TIME_DURATIONS.HOUR).toBe(1000 * 60 * 60);
-      expect(TIME_DURATIONS.DAY).toBe(1000 * 60 * 60 * 24);
+      expect(TIME_DURATIONS.DAY).toBe(86400000);
       expect(TIME_DURATIONS.WEEK).toBe(1000 * 60 * 60 * 24 * 7);
       expect(TIME_DURATIONS.MONTH).toBe(1000 * 60 * 60 * 24 * 30);
-    });
-
-    it('should have 86400000 milliseconds per day', () => {
-      expect(TIME_DURATIONS.DAY).toBe(86400000);
     });
   });
 
   describe('addDays', () => {
     it('should add positive days to a date', () => {
-      const date = new Date('2024-06-15T10:00:00Z');
-      const result = addDays(date, 5);
+      const result = addDays(BASE_DATE, 5);
 
       expect(result.getDate()).toBe(20);
-      expect(result.getMonth()).toBe(5); // June is month 5
+      expect(result.getMonth()).toBe(5);
       expect(result.getFullYear()).toBe(2024);
     });
 
     it('should subtract days when given negative number', () => {
-      const date = new Date('2024-06-15T10:00:00Z');
-      const result = addDays(date, -5);
+      const result = addDays(BASE_DATE, -5);
 
       expect(result.getDate()).toBe(10);
     });
 
     it('should not modify the original date', () => {
-      const original = new Date('2024-06-15T10:00:00Z');
-      const originalTime = original.getTime();
-      addDays(original, 5);
+      const originalTime = BASE_DATE.getTime();
+      addDays(BASE_DATE, 5);
 
-      expect(original.getTime()).toBe(originalTime);
+      expect(BASE_DATE.getTime()).toBe(originalTime);
     });
   });
 
   describe('addMilliseconds', () => {
     it('should add milliseconds to a date', () => {
-      const date = new Date('2024-06-15T10:00:00Z');
-      const result = addMilliseconds(date, 5000);
+      const result = addMilliseconds(BASE_DATE, 5000);
 
-      expect(result.getTime()).toBe(date.getTime() + 5000);
+      expect(result.getTime()).toBe(BASE_DATE.getTime() + 5000);
     });
 
     it('should subtract milliseconds with negative values', () => {
-      const date = new Date('2024-06-15T10:00:00Z');
-      const result = addMilliseconds(date, -5000);
+      const result = addMilliseconds(BASE_DATE, -5000);
 
-      expect(result.getTime()).toBe(date.getTime() - 5000);
+      expect(result.getTime()).toBe(BASE_DATE.getTime() - 5000);
     });
 
     it('should not modify the original date', () => {
-      const original = new Date('2024-06-15T10:00:00Z');
-      const originalTime = original.getTime();
-      addMilliseconds(original, 5000);
+      const originalTime = BASE_DATE.getTime();
+      addMilliseconds(BASE_DATE, 5000);
 
-      expect(original.getTime()).toBe(originalTime);
+      expect(BASE_DATE.getTime()).toBe(originalTime);
     });
   });
 
   describe('durationMs', () => {
     it('should calculate positive duration between two dates', () => {
-      const from = new Date('2024-06-15T10:00:00Z');
       const to = new Date('2024-06-15T11:00:00Z');
 
-      expect(durationMs(from, to)).toBe(1000 * 60 * 60);
+      expect(durationMs(BASE_DATE, to)).toBe(1000 * 60 * 60);
     });
 
     it('should return negative duration if from is after to', () => {
       const from = new Date('2024-06-15T11:00:00Z');
-      const to = new Date('2024-06-15T10:00:00Z');
 
-      expect(durationMs(from, to)).toBe(-(1000 * 60 * 60));
+      expect(durationMs(from, BASE_DATE)).toBe(-(1000 * 60 * 60));
     });
 
     it('should return 0 for same date', () => {
-      const date = new Date('2024-06-15T10:00:00Z');
-      expect(durationMs(date, date)).toBe(0);
+      expect(durationMs(BASE_DATE, BASE_DATE)).toBe(0);
     });
   });
 
   describe('formatBasicDateTime', () => {
     it('should format date in basic ISO 8601 format with Z suffix', () => {
-      const date = new Date('2024-06-15T10:00:00.123Z');
-      expect(formatBasicDateTime(date)).toBe('20240615T100000Z');
+      expect(formatBasicDateTime(BASE_DATE_WITH_MS)).toBe('20240615T100000Z');
     });
 
     it('should remove colons and dashes from ISO string', () => {
@@ -135,13 +121,11 @@ describe('date-utils', () => {
 
   describe('formatISODateTime', () => {
     it('should format date as ISO datetime without milliseconds', () => {
-      const date = new Date('2024-06-15T10:00:00.123Z');
-      expect(formatISODateTime(date)).toBe('2024-06-15T10:00:00');
+      expect(formatISODateTime(BASE_DATE_WITH_MS)).toBe('2024-06-15T10:00:00');
     });
 
     it('should not include timezone designator', () => {
-      const date = new Date('2024-06-15T10:00:00Z');
-      const result = formatISODateTime(date);
+      const result = formatISODateTime(BASE_DATE);
 
       expect(result).not.toContain('Z');
       expect(result).not.toContain('+');
@@ -151,25 +135,24 @@ describe('date-utils', () => {
 
   describe('formatTZNaiveDateTime', () => {
     it('should format date as timezone-naive ISO datetime', () => {
-      const date = new Date('2024-06-15T10:00:00.123Z');
-      expect(formatTZNaiveDateTime(date)).toBe('2024-06-15T10:00:00');
+      expect(formatTZNaiveDateTime(BASE_DATE_WITH_MS)).toBe('2024-06-15T10:00:00');
     });
 
-    it('should alias to formatISODateTime', () => {
-      const date = new Date('2024-06-15T10:00:00.999Z');
-      expect(formatTZNaiveDateTime(date)).toBe(formatISODateTime(date));
+    it('should not include timezone designator', () => {
+      const result = formatTZNaiveDateTime(BASE_DATE);
+
+      expect(result).not.toContain('Z');
+      expect(result).not.toContain('+');
     });
   });
 
   describe('formatRFC3339', () => {
     it('should format date with Z suffix', () => {
-      const date = new Date('2024-06-15T10:00:00.123Z');
-      expect(formatRFC3339(date)).toBe('2024-06-15T10:00:00Z');
+      expect(formatRFC3339(BASE_DATE_WITH_MS)).toBe('2024-06-15T10:00:00Z');
     });
 
     it('should always end with Z', () => {
-      const date = new Date();
-      const result = formatRFC3339(date);
+      const result = formatRFC3339(BASE_DATE);
 
       expect(result.endsWith('Z')).toBe(true);
     });
@@ -177,16 +160,18 @@ describe('date-utils', () => {
 
   describe('getFutureDate', () => {
     it('should return a future date', () => {
+      const now = new Date();
       const future = getFutureDate(30);
       expect(future.getTime()).toBeGreaterThan(now.getTime());
     });
 
     it('should return date 30 days in future by default', () => {
+      const now = new Date();
       const future = getFutureDate(30);
       const duration = future.getTime() - now.getTime();
 
-      expect(duration).toBeGreaterThanOrEqual(TIME_DURATIONS.DAY * 30 - 1000);
-      expect(duration).toBeLessThanOrEqual(TIME_DURATIONS.DAY * 30 + 1000);
+      expect(duration).toBeGreaterThanOrEqual(TIME_DURATIONS.DAY * 30 - TIMING_TOLERANCE_MS);
+      expect(duration).toBeLessThanOrEqual(TIME_DURATIONS.DAY * 30 + TIMING_TOLERANCE_MS);
     });
   });
 
@@ -201,14 +186,13 @@ describe('date-utils', () => {
     });
 
     it('should return date approximately 30 days in past', () => {
+      const before = new Date();
       const past = getPastDate(30);
-      const checkTime = new Date();
 
-      const duration = checkTime.getTime() - past.getTime();
+      const duration = before.getTime() - past.getTime();
       const expectedDuration = TIME_DURATIONS.DAY * 30;
+      const variance = expectedDuration * TIMING_VARIANCE_RATIO;
 
-      // Allow ±5% variance for execution timing and date calculations
-      const variance = expectedDuration * 0.05;
       expect(duration).toBeGreaterThanOrEqual(expectedDuration - variance);
       expect(duration).toBeLessThanOrEqual(expectedDuration + variance);
     });
@@ -216,6 +200,7 @@ describe('date-utils', () => {
 
   describe('isFutureDate', () => {
     it('should return true for future date string', () => {
+      const now = new Date();
       const futureDate = addDays(now, 10);
       const dateString = futureDate.toISOString();
 
@@ -223,6 +208,7 @@ describe('date-utils', () => {
     });
 
     it('should return false for past date string', () => {
+      const now = new Date();
       const pastDate = addDays(now, -10);
       const dateString = pastDate.toISOString();
 
@@ -232,6 +218,7 @@ describe('date-utils', () => {
 
   describe('isPastDate', () => {
     it('should return true for past date string', () => {
+      const now = new Date();
       const pastDate = addDays(now, -10);
       const dateString = pastDate.toISOString();
 
@@ -239,6 +226,7 @@ describe('date-utils', () => {
     });
 
     it('should return false for future date string', () => {
+      const now = new Date();
       const futureDate = addDays(now, 10);
       const dateString = futureDate.toISOString();
 
@@ -248,10 +236,9 @@ describe('date-utils', () => {
 
   describe('oneDayBefore', () => {
     it('should subtract exactly one day from a date', () => {
-      const date = new Date('2024-06-15T10:00:00Z');
-      const result = oneDayBefore(date);
+      const result = oneDayBefore(BASE_DATE);
 
-      const duration = date.getTime() - result.getTime();
+      const duration = BASE_DATE.getTime() - result.getTime();
       expect(duration).toBe(TIME_DURATIONS.DAY);
     });
 
@@ -260,7 +247,7 @@ describe('date-utils', () => {
       const result = oneDayBefore(date);
 
       expect(result.getDate()).toBe(31);
-      expect(result.getMonth()).toBe(4); // May
+      expect(result.getMonth()).toBe(4);
     });
 
     it('should handle year boundaries', () => {
@@ -268,24 +255,21 @@ describe('date-utils', () => {
       const result = oneDayBefore(date);
 
       expect(result.getDate()).toBe(31);
-      expect(result.getMonth()).toBe(11); // December
+      expect(result.getMonth()).toBe(11);
       expect(result.getFullYear()).toBe(2023);
     });
   });
 
   describe('getOneDayBeforeFormatted', () => {
     it('should return one day before in basic format', () => {
-      const date = new Date('2024-06-15T10:00:00Z');
-      const result = getOneDayBeforeFormatted(date);
+      const result = getOneDayBeforeFormatted(BASE_DATE);
 
       expect(result).toBe('20240614T100000Z');
     });
 
     it('should combine oneDayBefore and formatBasicDateTime', () => {
-      const date = new Date('2024-06-15T10:00:00Z');
-
-      expect(getOneDayBeforeFormatted(date))
-        .toBe(formatBasicDateTime(oneDayBefore(date)));
+      expect(getOneDayBeforeFormatted(BASE_DATE))
+        .toBe(formatBasicDateTime(oneDayBefore(BASE_DATE)));
     });
   });
 
@@ -347,24 +331,11 @@ describe('date-utils', () => {
   });
 
   describe('buildUntilClause', () => {
-    it('should build UNTIL clause with basic format', () => {
-      const date = new Date('2024-06-15T10:00:00Z');
-      const result = buildUntilClause(date);
+    it('should build UNTIL clause with semicolon prefix and basic ISO format', () => {
+      const result = buildUntilClause(BASE_DATE);
 
       expect(result).toBe(';UNTIL=20240615T100000Z');
-    });
-
-    it('should include semicolon prefix', () => {
-      const date = new Date('2024-06-15T10:00:00Z');
-      const result = buildUntilClause(date);
-
       expect(result.startsWith(';UNTIL=')).toBe(true);
-    });
-
-    it('should format date in basic ISO format', () => {
-      const date = new Date('2024-06-15T10:00:00Z');
-      const result = buildUntilClause(date);
-
       expect(result).toMatch(/^\;UNTIL=\d{8}T\d{6}Z$/);
     });
   });
@@ -572,8 +543,12 @@ describe('date-utils', () => {
   });
 
   describe('parseDateTimeString', () => {
-    it('should parse timezone-aware datetime with Z', () => {
-      const result = parseDateTimeString('2024-06-15T10:00:00Z');
+    it.each([
+      ['2024-06-15T10:00:00Z', 'Z'],
+      ['2024-06-15T10:00:00+05:30', '+05:30'],
+      ['2024-06-15T10:00:00-07:00', '-07:00'],
+    ])('should parse datetime with timezone %s', (input, timezone) => {
+      const result = parseDateTimeString(input);
 
       expect(result).toEqual({
         year: 2024,
@@ -582,35 +557,7 @@ describe('date-utils', () => {
         hour: 10,
         minute: 0,
         second: 0,
-        timezone: 'Z',
-      });
-    });
-
-    it('should parse timezone-aware datetime with positive offset', () => {
-      const result = parseDateTimeString('2024-06-15T10:00:00+05:30');
-
-      expect(result).toEqual({
-        year: 2024,
-        month: 6,
-        day: 15,
-        hour: 10,
-        minute: 0,
-        second: 0,
-        timezone: '+05:30',
-      });
-    });
-
-    it('should parse timezone-aware datetime with negative offset', () => {
-      const result = parseDateTimeString('2024-06-15T10:00:00-07:00');
-
-      expect(result).toEqual({
-        year: 2024,
-        month: 6,
-        day: 15,
-        hour: 10,
-        minute: 0,
-        second: 0,
-        timezone: '-07:00',
+        timezone,
       });
     });
 

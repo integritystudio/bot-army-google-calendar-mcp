@@ -1,7 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-
-
 import { USER_ID } from './lib/constants.mjs';
+import { buildLabelCache, createLabels } from './lib/gmail-label-utils.mjs';
+
 async function createSentryNewsletterSubLabel() {
   const gmail = createGmailClient();
 
@@ -9,44 +9,15 @@ async function createSentryNewsletterSubLabel() {
   console.log('═'.repeat(80) + '\n');
 
   // Pre-fetch existing labels to avoid N+1 queries
-  const existingLabelsRes = await gmail.users.labels.list({ userId: USER_ID, fields: 'labels(id,name)' });
-  const existingLabelMap = new Map(
-    existingLabelsRes.data.labels.map(l => [l.name, l.id])
-  );
+  const existingLabelMap = await buildLabelCache(gmail);
 
   // Step 1: Create Newsletters/Sentry sub-label
   console.log('1️⃣  CREATING LABEL: Newsletters/Sentry\n');
 
-  let sentryNewsletterLabelId;
+  const labelIds = {};
+  await createLabels(gmail, ['Newsletters/Sentry'], labelIds, existingLabelMap);
 
-  try {
-    const response = await gmail.users.labels.create({
-      userId: USER_ID,
-      requestBody: {
-        name: 'Newsletters/Sentry',
-        labelListVisibility: 'labelShow',
-        messageListVisibility: 'show',
-      },
-    });
-
-    console.log('✅ Label created successfully!');
-    console.log(`   Name: ${response.data.name}`);
-    console.log(`   ID: ${response.data.id}\n`);
-    sentryNewsletterLabelId = response.data.id;
-
-  } catch (error) {
-    if (error.message.includes('exists') || error.message.includes('conflicts')) {
-      console.log('⚠️  Label already exists: Newsletters/Sentry\n');
-      const existingId = existingLabelMap.get('Newsletters/Sentry');
-      if (existingId) {
-        console.log(`   ID: ${existingId}\n`);
-        sentryNewsletterLabelId = existingId;
-      }
-    } else {
-      console.error('❌ Error creating label:', error.message);
-      process.exit(1);
-    }
-  }
+  const sentryNewsletterLabelId = labelIds['Newsletters/Sentry'];
 
   // Step 2: Find and move Sentry digests back to Newsletters
   console.log('═'.repeat(80));

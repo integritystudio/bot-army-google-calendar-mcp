@@ -1,0 +1,179 @@
+0a0278b 2026-03-24 fix(factories): resolve originalStartTime type mismatch in makeRecurringEventInstance
+  README.md
+  src/tests/unit/helpers/factories.ts
+
+abaae45 2026-03-24 chore(backlog-migrate): Migrate 20/22 completed items to changelog/1.4.9
+  docs/BACKLOG.md
+
+ba96d9d 2026-03-24 docs(BACKLOG): Final completion assessment - 91% done, 2 items blocked on design
+  docs/BACKLOG.md
+
+31d8de6 2026-03-24 docs(BACKLOG): Final iteration update - 20/22 items complete (91%), 2 BLOCKED
+  docs/BACKLOG.md
+
+18961de 2026-03-24 docs(BACKLOG): update test suite status (492/494 passing, 99.6%)
+  docs/BACKLOG.md
+
+d15ac9b 2026-03-24 fix: BatchListEvents test error message assertion
+  src/tests/unit/handlers/BatchListEvents.test.ts
+
+9d5ea3c 2026-03-24 docs(BACKLOG): clarify L4 completion at practical limit (80%)
+  docs/BACKLOG.md
+
+dd83541 2026-03-24 docs(BACKLOG): document L4 implementation (process.exit testability)
+  docs/BACKLOG.md
+
+469d395 2026-03-24 docs: update BACKLOG.md with M4 completion details
+  docs/BACKLOG.md
+
+7b05774 2026-03-24 feat: consolidate USER_ID constant to lib/constants.mjs
+  analyze_emails.mjs
+
+8893b2b 2026-03-24 docs(BACKLOG): document Ralph Loop iteration 3 test failure discovery and resolution
+  docs/BACKLOG.md
+
+783f439 2026-03-24 fix: resolve pre-existing TypeScript and test failures
+  src/tests/unit/helpers/factories.ts
+  src/tools/registry.ts
+
+33fd885 2026-03-24 docs(backlog): add final assessment for Ralph Loop iteration 2
+  docs/BACKLOG.md
+
+5308f3b 2026-03-24 refactor(lib): reduce TOCTOU risk in token file handling
+  docs/BACKLOG.md
+
+f6b77d9 2026-03-24 docs(backlog): finalize Ralph Loop iteration 2 summary
+  docs/BACKLOG.md
+
+2205027 2026-03-24 feat(lib): add Gmail batch filter operations utility
+  docs/BACKLOG.md
+
+1684772 2026-03-24 docs(backlog): update status summary for Ralph Loop iteration 2
+  docs/BACKLOG.md
+
+69dc094 2026-03-24 refactor: standardize USER_ID constant to local approach
+  docs/BACKLOG.md
+
+da37cc7 2026-03-24 refactor(test-quality): eliminate API redundancy and loop anti-patterns
+  docs/BACKLOG.md
+  src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts
+
+808cdf3 2026-03-24 fix(date-utils): remove duplicate buildUntilClause function
+  package-lock.json
+
+1b2126b 2026-03-23 docs(BACKLOG): mark timezone utilities consolidation as completed
+  docs/BACKLOG.md
+
+0445644 2026-03-23 feat(timezone-utils): consolidate timezone handling logic
+  docs/BACKLOG.md
+
+219525c 2026-03-23 feat(test-helpers): add recurrence factory functions for event testing
+  src/tests/unit/helpers/factories.ts
+
+b1a6b28 2026-03-23 feat(date-utils): add ISO 8601 datetime format validation and parsing
+  src/tests/unit/utils/date-utils.test.ts
+  src/utils/date-utils.ts
+
+d0f808e 2026-03-23 feat(date-utils): add RRULE pattern constants and helper functions
+  docs/BACKLOG.md
+  src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts
+  src/tests/unit/helpers/factories.ts
+  src/tests/unit/schemas/validators.test.ts
+  src/tests/unit/utils/date-utils.test.ts
+  src/utils/date-utils.ts
+
+241167c 2026-03-23 refactor(RecurringEventHelpers): eliminate duplication and magic numbers
+  src/tests/unit/handlers/RecurringEventHelpers.test.ts
+
+bac1531 2026-03-23 refactor(CreateEventHandler.test): consolidate getTextContent() usage
+  src/tests/unit/handlers/CreateEventHandler.test.ts
+
+787f08a 2026-03-23 test(unit/index): consolidate getTextContent() usage, remove unsafe casts
+  src/tests/unit/index.test.ts
+
+91590cb 2026-03-23 test(CreateEventHandler): replace inline event objects with makeEvent() factory
+  src/tests/unit/handlers/CreateEventHandler.test.ts
+
+b8fab89 2026-03-23 feat(test-helpers): add shared event and error factories
+  src/tests/unit/handlers/SearchEventsHandler.test.ts
+  src/tests/unit/helpers/factories.ts
+
+02fada6 2026-03-23 refactor(tests): consolidate text content access with shared helper
+  scripts/repomix/deploy-traditional-server.sh
+  scripts/repomix/verify-bugfixes.sh
+  src/tests/unit/handlers/BatchListEvents.test.ts
+  src/tests/unit/handlers/SearchEventsHandler.test.ts
+
+83385e5 2026-03-23 refactor(gmail): apply DRY principles across all Gmail handlers
+  src/tools/registry.ts
+
+466eb94 2026-03-23 docs: add duplicate checker script and consolidation notes
+  README.md
+
+f67fc0e 2026-03-23 refactor(gmail): consolidate create handlers into single file
+  src/tools/registry.ts
+
+605ea3b 2026-03-23 docs: mark M3 and L1 completed in backlog
+  docs/BACKLOG.md
+
+314c17f 2026-03-23 refactor(scripts): migrate remaining analyze/search scripts to createGmailClient() (L1)
+  docs/BACKLOG.md
+
+8329868 2026-03-23 refactor(scripts): replace inline 'me' with USER_ID constant in filter scripts
+  analyze_emails.mjs
+
+296c817 2026-03-23 refactor(scripts): pre-fetch labels once in create-remaining-filters, mark M1/M2 done
+  docs/BACKLOG.md
+
+6a4b9b3 2026-03-23 feat(lib): add constants.mjs with label names and USER_ID, apply to refactored scripts (M2)
+  docs/BACKLOG.md
+
+fba2fbf 2026-03-23 docs: add backlog references and development guidelines
+  README.md
+
+f35fea9 2026-03-23 docs: update CLAUDE.md and README.md for OAuth extraction completion
+  README.md
+
+70e6861 2026-03-23 docs: document lib/gmail-client.mjs OAuth factory extraction
+  README.md
+
+2f84722 2026-03-23 docs: add describe-internal.mjs to scripts documentation
+  README.md
+
+6fd44c2 2026-03-23 docs: update CLAUDE.md and README.md for summarize-remaining.mjs and test improvements
+  README.md
+
+e7bb8f5 2026-03-23 refactor(tests,scripts): improve type safety and script quality
+  src/tests/unit/handlers/CreateEventHandler.test.ts
+
+ccf228a 2026-03-23 docs: update testing status and remove outdated integration test references
+  README.md
+
+d34fdfc 2026-03-23 test(tests): remove broken tests and fix type narrowing errors
+  src/tests/unit/handlers/CreateEventHandler.test.ts
+
+6471052 2026-03-23 chore: remove Docker dependency from project
+  README.md
+
+cb2d2f4 2026-03-23 feat: add label verification and bulk labeling scripts
+  README.md
+
+494f9e1 2026-03-23 docs: update with email organization system details
+  README.md
+
+ed920d0 2026-03-23 chore: initial commit with google calendar mcp project
+  GMAIL_TOOLS_GUIDE.md
+  README.md
+  analyze_emails.mjs
+  docs/BACKLOG.md
+  package-lock.json
+  src/handlers/utils.ts
+  src/tests/unit/handlers/BatchListEvents.test.ts
+  src/tests/unit/handlers/BatchRequestHandler.test.ts
+  src/tests/unit/handlers/CreateEventHandler.test.ts
+  src/tests/unit/handlers/RecurringEventHelpers.test.ts
+  src/tests/unit/handlers/SearchEventsHandler.test.ts
+  src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts
+  src/tests/unit/index.test.ts
+  src/tests/unit/schemas/validators.test.ts
+  src/tools/registry.ts

@@ -267,4 +267,52 @@ export class TokenManager {
     this.accountMode = newMode;
     return this.loadSavedTokens();
   }
+
+  /**
+   * Check if the current account has valid, non-expired authentication tokens
+   * @returns true if valid tokens exist and are not expired
+   */
+  async isAuthenticated(): Promise<boolean> {
+    if (
+      !this.oauth2Client.credentials ||
+      !this.oauth2Client.credentials.access_token
+    ) {
+      // Try loading from disk
+      if (!(await this.loadSavedTokens())) {
+        return false;
+      }
+    }
+
+    // Check if tokens need refresh
+    return this.refreshTokensIfNeeded();
+  }
+
+  /**
+   * Get the current credentials for the account
+   * @returns Credentials object with access_token, refresh_token, etc.
+   * @throws Error if no credentials are available
+   */
+  getCredentials(): Credentials {
+    if (!this.oauth2Client.credentials) {
+      throw new Error('No credentials available. Please authenticate first.');
+    }
+    return this.oauth2Client.credentials;
+  }
+
+  /**
+   * Explicitly refresh the access token using the refresh token
+   * @returns true if refresh was successful or tokens are still valid
+   * @throws Error if refresh fails with invalid grant
+   */
+  async refreshCredentials(): Promise<boolean> {
+    return this.refreshTokensIfNeeded();
+  }
+
+  /**
+   * Logout by clearing tokens for the current account
+   * @returns Promise resolving when logout is complete
+   */
+  async logout(): Promise<void> {
+    await this.clearTokens();
+  }
 } 

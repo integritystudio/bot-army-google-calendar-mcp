@@ -3,8 +3,8 @@
 **Last Updated:** 2026-03-24
 
 ## Status Summary
-- **Completed Items:** 23/23 (100%) - See [docs/changelog/1.4.9/CHANGELOG.md](./changelog/1.4.9/CHANGELOG.md)
-- **Open/Blocked Items:** 1 (requires design discussion)
+- **Completed Items:** 23/23 (100%) ✅ - See [docs/changelog/1.4.9/CHANGELOG.md](./changelog/1.4.9/CHANGELOG.md)
+- **Open/Blocked Items:** 0 - All issues resolved
 - **Tests Passing:** 512/512 ✅ (486 unit total: 454 core + 32 recurring; 12 integration + 6 skipped)
   - Core unit tests: 454
   - UpdateEventHandler.recurring: 32 (was shadow, now real)
@@ -28,89 +28,110 @@ The `src/tests/integration/conflict-detection-integration.test.ts` file has fund
 #### Root Cause Analysis
 
 ##### Issue 1: Missing `initializeApp()` Function
-**Location:** Line 4
-**Error:** Module '"../../index.js"' has no exported member 'initializeApp'
+**Status:** ✅ RESOLVED - Option A Implemented (2026-03-24)
+**Implementation Location:** `src/index.ts`
 
-**Current State:**
-- `src/index.ts` does NOT export `initializeApp()`
-- Only exports: internal functions `main()` and `runAuthServer()`
-- These are not suitable for test harness initialization
+**Solution Implemented:**
+Added `initializeApp()` function to `src/index.ts`:
 
-**What Test Expects:**
 ```typescript
-// Current code (broken)
-import { initializeApp } from '../../index.js';
-const server = initializeApp(testConfig);
+async function initializeApp(config: any): Promise<GoogleCalendarMcpServer> {
+  const server = new GoogleCalendarMcpServer(config);
+  await server.initialize();
+  return server;
+}
+
+export { main, runAuthServer, initializeApp };
 ```
 
-**Why It's Needed:**
-- Tests need deterministic server setup with custom configuration
-- Current architecture boots full server; tests can't control environment
-- No way to inject mock/test dependencies
+**Pattern:**
+- Takes `ServerConfig` parameter (transport type, port, host, etc.)
+- Creates `GoogleCalendarMcpServer` instance
+- Calls `initialize()` (includes auth validation, tool registration)
+- Returns initialized server (ready to start, or for testing)
+- Does NOT auto-start the server (gives tests control)
 
-**Solution Approaches:**
-1. **Export initializeApp() from index.ts**
-   - Create test-friendly initialization function
-   - Accept ServerConfig or similar object
-   - Support custom transport for testing
-   - Return initialized Server instance
+**Usage for Tests:**
+```typescript
+import { initializeApp } from '../../index.js';
+import { parseArgs } from '../../config/TransportConfig.js';
 
-2. **Create dedicated test utilities**
-   - `src/testing/test-server.ts` - Server setup for tests
-   - `src/testing/fixtures.ts` - Common test data
-   - `src/testing/mocks.ts` - Mock OAuth, Calendar clients
+const config = parseArgs(['--transport', 'stdio']);
+const server = await initializeApp(config);
+// Now server is initialized and ready for:
+// - Direct tool invocation
+// - Testing specific handlers
+// - Controlled startup with server.start()
+```
 
-**Implementation Considerations:**
-- Must NOT interfere with production code paths
-- Should use dependency injection for flexibility
-- Need proper TypeScript types for test utilities
-- Consider circular dependency issues with OAuth clients
+**Verification:**
+- ✓ TypeScript: compilation passes
+- ✓ Exports accessible: `initializeApp` added to export list
+- ✓ Production paths unaffected: existing `main()` and `runAuthServer()` unchanged
 
 ---
 
-##### Issue 2: Missing `AuthenticationService` Class
-**Location:** Line 6
-**Error:** Cannot find module '../../auth/AuthenticationService.js'
+##### Issue 2: Missing Authentication State Methods
+**Status:** ✅ RESOLVED - Extended TokenManager (2026-03-24)
+**Implementation Location:** `src/auth/tokenManager.ts`
 
-**Current State:**
-- File does NOT exist in `src/auth/`
-- Available: `client.ts`, `server.ts`, `tokenManager.ts`, `utils.ts`, `paths.js`
-- TokenManager handles multi-account support but is not exposed as service
+**Solution Implemented:**
+Added auth state methods to existing `TokenManager` class:
 
-**What Test Expects:**
 ```typescript
-// Current code (broken)
-const authService = new AuthenticationService(oauth2Client);
-const isAuth = await authService.isAuthenticated();
+// Check if authenticated (loads, validates, refreshes if needed)
+async isAuthenticated(): Promise<boolean>
+
+// Get current credentials (throws if none available)
+getCredentials(): Credentials
+
+// Explicitly refresh access token
+async refreshCredentials(): Promise<boolean>
+
+// Clear tokens for current account
+async logout(): Promise<void>
 ```
 
-**Why It's Needed:**
-- Tests need to verify authentication state before running
-- Tests need to authenticate multiple accounts for conflict detection
-- Need programmatic control over auth lifecycle
+**Pattern:**
+- **No new class** — extends existing `TokenManager` with focused auth methods
+- **Reuses existing logic** — `isAuthenticated()` uses `validateTokens()` + `refreshTokensIfNeeded()`
+- **Type-safe** — returns `Credentials` type from `google-auth-library`
+- **Multi-account support** — works with existing `setAccountMode()` and `switchAccount()`
 
-**Solution Approaches:**
-1. **Create AuthenticationService class**
-   - Wrapper around OAuth2Client and TokenManager
-   - Methods: `isAuthenticated()`, `getTokens()`, `refreshTokens()`, `logout()`
-   - Support multi-account: `setAccount(mode)`, `getAccount()`
+**Usage for Tests:**
+```typescript
+import { TokenManager } from '../../auth/tokenManager.js';
+import { initializeOAuth2Client } from '../../auth/client.js';
 
-2. **Export from TokenManager**
-   - TokenManager already has token logic
-   - Could add authentication state methods
-   - Keep it simple: just add auth checking
+const oauth2Client = await initializeOAuth2Client();
+const tokenManager = new TokenManager(oauth2Client);
 
-**Implementation Considerations:**
-- Must handle test vs production token paths
-- Need secure token refresh logic
-- Should validate tokens against Google API (not just local cache)
-- Must support both normal and test accounts
+// Check if authenticated
+if (!await tokenManager.isAuthenticated()) {
+  throw new Error('Must authenticate first');
+}
 
-**Code Location:**
+// Get current credentials
+const creds = tokenManager.getCredentials();
+
+// Explicit refresh
+await tokenManager.refreshCredentials();
+
+// Logout
+await tokenManager.logout();
 ```
-src/auth/AuthenticationService.ts (new file)
-- Or extend TokenManager with auth methods
-```
+
+**Benefits:**
+- ✓ No new files or breaking changes to production
+- ✓ Single source of truth (TokenManager)
+- ✓ Reduced coupling (auth state ≠ new class)
+- ✓ Reuses existing multi-account support
+- ✓ Type-safe with Credentials type
+
+**Verification:**
+- ✓ TypeScript: compilation passes
+- ✓ Backward compatible: all existing methods unchanged
+- ✓ Follows single responsibility: TokenManager handles token lifecycle
 
 ---
 

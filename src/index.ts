@@ -108,9 +108,28 @@ function showVersion(): void {
   process.stdout.write(`Google Calendar MCP Server v${VERSION}\n`);
 }
 
-// --- Exports & Execution Guard --- 
-// Export main for testing or potential programmatic use
-export { main, runAuthServer };
+/**
+ * Initialize the MCP server with custom configuration
+ * Useful for testing or programmatic server setup
+ *
+ * @param config - Server configuration (transport type, port, host, etc.)
+ * @returns Initialized GoogleCalendarMcpServer instance
+ * @throws Error if initialization fails
+ *
+ * @example
+ * const config = parseArgs(['--transport', 'stdio']);
+ * const server = await initializeApp(config);
+ * await server.start();
+ */
+async function initializeApp(config: any): Promise<GoogleCalendarMcpServer> {
+  const server = new GoogleCalendarMcpServer(config);
+  await server.initialize();
+  return server;
+}
+
+// --- Exports & Execution Guard ---
+// Export main, runAuthServer, and initializeApp for testing or potential programmatic use
+export { main, runAuthServer, initializeApp };
 
 // Parse CLI arguments
 function parseCliArgs(): { command: string | undefined } {

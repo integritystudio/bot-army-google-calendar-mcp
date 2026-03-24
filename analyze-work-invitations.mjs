@@ -126,4 +126,7 @@ async function analyzeWorkInvitations() {
   }
 }
 
-analyzeWorkInvitations();
+analyzeWorkInvitations().catch(error => {
+  console.error('❌ Error:', error.message);
+  process.exit(1);
+});

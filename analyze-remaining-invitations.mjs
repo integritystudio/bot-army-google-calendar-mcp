@@ -92,4 +92,7 @@ async function analyzeRemainingInvitations() {
   console.log('Community Services: Local community organizations and volunteer opportunities\n');
 }
 
-analyzeRemainingInvitations();
+analyzeRemainingInvitations().catch(error => {
+  console.error('❌ Error:', error.message);
+  process.exit(1);
+});

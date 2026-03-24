@@ -119,4 +119,7 @@ async function analyzeWorkshops() {
   }
 }
 
-analyzeWorkshops();
+analyzeWorkshops().catch(error => {
+  console.error('❌ Error:', error.message);
+  process.exit(1);
+});

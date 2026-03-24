@@ -1,7 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 
-const USER_ID = 'me';
 
+import { USER_ID } from './lib/constants.mjs';
 async function createNewsletterLabel() {
   const gmail = createGmailClient();
 
@@ -54,4 +54,7 @@ async function createNewsletterLabel() {
   }
 }
 
-createNewsletterLabel();
+createNewsletterLabel().catch(error => {
+  console.error('❌ Error:', error.message);
+  process.exit(1);
+});

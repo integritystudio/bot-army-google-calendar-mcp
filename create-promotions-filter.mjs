@@ -1,6 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID } from './lib/constants.mjs';
 
-const USER_ID = 'me';
 
 async function createPromotionsFilter() {
   const gmail = createGmailClient();
@@ -45,4 +45,7 @@ async function createPromotionsFilter() {
   }
 }
 
-createPromotionsFilter();
+createPromotionsFilter().catch(error => {
+  console.error('❌ Error:', error.message);
+  process.exit(1);
+});

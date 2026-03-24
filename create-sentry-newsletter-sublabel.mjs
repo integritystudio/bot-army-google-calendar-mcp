@@ -1,7 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 
-const USER_ID = 'me';
 
+import { USER_ID } from './lib/constants.mjs';
 async function createSentryNewsletterSubLabel() {
   const gmail = createGmailClient();
 

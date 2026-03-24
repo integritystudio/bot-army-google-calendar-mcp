@@ -246,4 +246,7 @@ function categorizeEmail(msg) {
   return { urgencyScore, importanceScore, urgency, importance };
 }
 
-analyzeUnreadEmails();
+analyzeUnreadEmails().catch(error => {
+  console.error('❌ Error:', error.message);
+  process.exit(1);
+});

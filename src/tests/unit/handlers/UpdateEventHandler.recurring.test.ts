@@ -28,7 +28,8 @@ describe('UpdateEventHandler - Recurring Events', () => {
       events: {
         get: vi.fn(),
         patch: vi.fn(),
-        insert: vi.fn()
+        insert: vi.fn(),
+        list: vi.fn().mockResolvedValue({ data: { items: [] } }) // Required by ConflictDetectionService
       },
       calendarList: {
         get: vi.fn().mockResolvedValue({
@@ -42,6 +43,9 @@ describe('UpdateEventHandler - Recurring Events', () => {
 
     handler = new UpdateEventHandler();
     mockOAuth2Client = {} as OAuth2Client;
+
+    // Clear mocks between tests to prevent call count pollution
+    vi.clearAllMocks();
   });
 
   /**

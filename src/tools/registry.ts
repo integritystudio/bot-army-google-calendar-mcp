@@ -20,8 +20,7 @@ import { GetCurrentTimeHandler } from "../handlers/core/GetCurrentTimeHandler.js
 import { GmailSearchHandler } from "../handlers/gmail/GmailSearchHandler.js";
 import { GmailGetProfileHandler } from "../handlers/gmail/GmailGetProfileHandler.js";
 import { GmailModifyHandler } from "../handlers/gmail/GmailModifyHandler.js";
-import { GmailCreateLabelHandler } from "../handlers/gmail/GmailCreateLabelHandler.js";
-import { GmailCreateFilterHandler } from "../handlers/gmail/GmailCreateFilterHandler.js";
+import { GmailCreateLabelHandler, GmailCreateFilterHandler } from "../handlers/gmail/GmailCreateHandler.js";
 import { GmailApplyFiltersHandler } from "../handlers/gmail/GmailApplyFiltersHandler.js";
 
 // Define all tool schemas with TypeScript inference

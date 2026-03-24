@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
 import { OAuth2Client } from 'google-auth-library';
+import { makeEvent } from '../helpers/index.js';
 
 // Mock the googleapis module
 vi.mock('googleapis', () => ({
@@ -59,13 +60,10 @@ describe('CreateEventHandler', () => {
 
   describe('Basic Event Creation', () => {
     it('should create an event without custom ID', async () => {
-      const mockCreatedEvent = {
+      const mockCreatedEvent = makeEvent({
         id: 'generated-id-123',
-        summary: 'Test Event',
-        start: { dateTime: '2025-01-15T10:00:00Z' },
-        end: { dateTime: '2025-01-15T11:00:00Z' },
         htmlLink: 'https://calendar.google.com/event?eid=abc123'
-      };
+      });
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
@@ -97,17 +95,15 @@ describe('CreateEventHandler', () => {
     });
 
     it('should create event with all basic optional fields', async () => {
-      const mockCreatedEvent = {
+      const mockCreatedEvent = makeEvent({
         id: 'full-event',
         summary: 'Full Event',
         description: 'Event description',
         location: 'Conference Room A',
-        start: { dateTime: '2025-01-15T10:00:00Z' },
-        end: { dateTime: '2025-01-15T11:00:00Z' },
         attendees: [{ email: 'test@example.com' }],
         colorId: '5',
         reminders: { useDefault: false, overrides: [{ method: 'email', minutes: 30 }] }
-      };
+      });
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
@@ -152,13 +148,10 @@ describe('CreateEventHandler', () => {
 
   describe('Custom Event IDs', () => {
     it('should create an event with custom ID', async () => {
-      const mockCreatedEvent = {
+      const mockCreatedEvent = makeEvent({
         id: 'customevent2025',
-        summary: 'Test Event',
-        start: { dateTime: '2025-01-15T10:00:00Z' },
-        end: { dateTime: '2025-01-15T11:00:00Z' },
         htmlLink: 'https://calendar.google.com/event?eid=abc123'
-      };
+      });
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
@@ -258,11 +251,10 @@ describe('CreateEventHandler', () => {
 
   describe('Guest Management Properties', () => {
     it('should create event with transparency setting', async () => {
-      const mockCreatedEvent = {
-        id: 'event123',
+      const mockCreatedEvent = makeEvent({
         summary: 'Focus Time',
         transparency: 'transparent'
-      };
+      });
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
@@ -286,11 +278,10 @@ describe('CreateEventHandler', () => {
     });
 
     it('should create event with visibility settings', async () => {
-      const mockCreatedEvent = {
-        id: 'event123',
+      const mockCreatedEvent = makeEvent({
         summary: 'Private Meeting',
         visibility: 'private'
-      };
+      });
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
@@ -314,10 +305,9 @@ describe('CreateEventHandler', () => {
     });
 
     it('should create event with guest permissions', async () => {
-      const mockCreatedEvent = {
-        id: 'event123',
+      const mockCreatedEvent = makeEvent({
         summary: 'Team Meeting'
-      };
+      });
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
@@ -347,10 +337,9 @@ describe('CreateEventHandler', () => {
     });
 
     it('should send update notifications when specified', async () => {
-      const mockCreatedEvent = {
-        id: 'event123',
+      const mockCreatedEvent = makeEvent({
         summary: 'Meeting'
-      };
+      });
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
@@ -374,13 +363,12 @@ describe('CreateEventHandler', () => {
 
   describe('Conference Data', () => {
     it('should create event with conference data', async () => {
-      const mockCreatedEvent = {
-        id: 'event123',
+      const mockCreatedEvent = makeEvent({
         summary: 'Video Call',
         conferenceData: {
           entryPoints: [{ uri: 'https://meet.google.com/abc-defg-hij' }]
         }
-      };
+      });
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
@@ -421,10 +409,9 @@ describe('CreateEventHandler', () => {
 
   describe('Extended Properties', () => {
     it('should create event with extended properties', async () => {
-      const mockCreatedEvent = {
-        id: 'event123',
+      const mockCreatedEvent = makeEvent({
         summary: 'Custom Event'
-      };
+      });
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
@@ -468,10 +455,9 @@ describe('CreateEventHandler', () => {
 
   describe('Attachments', () => {
     it('should create event with attachments', async () => {
-      const mockCreatedEvent = {
-        id: 'event123',
+      const mockCreatedEvent = makeEvent({
         summary: 'Meeting with Docs'
-      };
+      });
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
@@ -522,10 +508,9 @@ describe('CreateEventHandler', () => {
 
   describe('Enhanced Attendees', () => {
     it('should create event with detailed attendee information', async () => {
-      const mockCreatedEvent = {
-        id: 'event123',
+      const mockCreatedEvent = makeEvent({
         summary: 'Team Sync'
-      };
+      });
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
@@ -581,10 +566,9 @@ describe('CreateEventHandler', () => {
 
   describe('Source Property', () => {
     it('should create event with source information', async () => {
-      const mockCreatedEvent = {
-        id: 'event123',
+      const mockCreatedEvent = makeEvent({
         summary: 'Follow-up Meeting'
-      };
+      });
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
@@ -653,10 +637,9 @@ describe('CreateEventHandler', () => {
 
   describe('Combined Properties', () => {
     it('should create event with multiple enhanced properties', async () => {
-      const mockCreatedEvent = {
-        id: 'event123',
+      const mockCreatedEvent = makeEvent({
         summary: 'Complex Event'
-      };
+      });
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 

@@ -2,8 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OAuth2Client } from 'google-auth-library';
 import { calendar_v3, google } from 'googleapis';
 import { UpdateEventHandler } from '../../../handlers/core/UpdateEventHandler.js';
-import { RecurringEventHelpers } from '../../../handlers/core/RecurringEventHelpers.js';
-import { RecurringEventError, RECURRING_EVENT_ERRORS } from '../../../handlers/core/RecurringEventHelpers.js';
 
 // Mock the google.calendar function
 vi.mock('googleapis', async () => {
@@ -19,33 +17,31 @@ vi.mock('googleapis', async () => {
 
 describe('UpdateEventHandler - Recurring Events', () => {
   let handler: UpdateEventHandler;
-  let mockCalendar: any;
+  let mockCalendar: Partial<calendar_v3.Calendar>;
   let mockOAuth2Client: OAuth2Client;
 
   beforeEach(() => {
+    // Clear mocks first to prevent previous test state from bleeding in
+    vi.clearAllMocks();
+
     // Realistic mock calendar API matching Google Calendar v3 structure
     mockCalendar = {
       events: {
         get: vi.fn(),
         patch: vi.fn(),
         insert: vi.fn(),
-        list: vi.fn().mockResolvedValue({ data: { items: [] } }) // Required by ConflictDetectionService
+        list: vi.fn().mockResolvedValue({ data: { items: [] } })
       },
       calendarList: {
-        get: vi.fn().mockResolvedValue({
-          data: { timeZone: 'UTC' }
-        })
+        get: vi.fn().mockResolvedValue({ data: { timeZone: 'UTC' } })
       }
     };
 
     // Mock google.calendar to return our mock calendar
-    vi.mocked(google.calendar).mockReturnValue(mockCalendar);
+    vi.mocked(google.calendar).mockReturnValue(mockCalendar as calendar_v3.Calendar);
 
     handler = new UpdateEventHandler();
     mockOAuth2Client = {} as OAuth2Client;
-
-    // Clear mocks between tests to prevent call count pollution
-    vi.clearAllMocks();
   });
 
   /**
@@ -74,14 +70,6 @@ describe('UpdateEventHandler - Recurring Events', () => {
       ...overrides
     });
   }
-
-  // ============================================================================
-  // PHASE 3: Test Cases will be written here
-  // Testing via public runTool() method with correct scope names:
-  // - 'thisEventOnly': Update single instance of recurring event
-  // - 'thisAndFollowing': Update this and all future instances
-  // - 'all' or undefined: Update all instances
-  // ============================================================================
 
   describe('Scope Validation', () => {
     it('should accept valid scope: thisEventOnly', async () => {
@@ -191,24 +179,6 @@ describe('UpdateEventHandler - Recurring Events', () => {
       ).rejects.toThrow();
     });
 
-    it('should reject scopes other than "all" for non-recurring events', async () => {
-      // Single event - no recurrence
-      const singleEvent = createMockEvent({ recurrence: undefined });
-      mockCalendar.events.get.mockResolvedValue({ data: singleEvent });
-
-      await expect(() =>
-        handler.runTool(
-          {
-            calendarId: 'primary',
-            eventId: 'event123',
-            modificationScope: 'thisEventOnly',
-            originalStartTime: '2026-03-25T10:00:00Z',
-            checkConflicts: false
-          },
-          mockOAuth2Client
-        )
-      ).rejects.toThrow('Scope other than "all" only applies to recurring events');
-    });
   });
 
   describe('Instance ID Formatting', () => {

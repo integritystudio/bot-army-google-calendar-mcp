@@ -41,7 +41,7 @@ export class GmailCreateLabelHandler extends BaseToolHandler {
         message: `Label "${input.name}" created successfully`,
       };
     } catch (error) {
-      const errorMessage = getErrorMessage(error);
+      const errorMessage = formatErrorMessage(error);
 
       if (errorMessage.includes("already exists")) {
         return {

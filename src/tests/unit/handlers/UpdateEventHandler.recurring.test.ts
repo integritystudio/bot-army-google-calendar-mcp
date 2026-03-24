@@ -1,216 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OAuth2Client } from 'google-auth-library';
-import { calendar_v3 } from 'googleapis';
+import { calendar_v3, google } from 'googleapis';
+import { UpdateEventHandler } from '../../../handlers/core/UpdateEventHandler.js';
+import { RecurringEventHelpers } from '../../../handlers/core/RecurringEventHelpers.js';
+import { RecurringEventError, RECURRING_EVENT_ERRORS } from '../../../handlers/core/RecurringEventHelpers.js';
 
-// Enhanced UpdateEventHandler class that will be implemented
-class EnhancedUpdateEventHandler {
-  private calendar: calendar_v3.Calendar;
-
-  constructor(calendar: calendar_v3.Calendar) {
-    this.calendar = calendar;
-  }
-
-  async runTool(args: any, oauth2Client: OAuth2Client): Promise<any> {
-    // This would use the enhanced schema for validation
-    const event = await this.updateEventWithScope(args);
-    return {
-      content: [{
-        type: "text",
-        text: `Event updated: ${event.summary} (${event.id})`,
-      }],
-    };
-  }
-
-  async updateEventWithScope(args: any): Promise<calendar_v3.Schema$Event> {
-    const { event, type: eventType } = await this.getEventAndType(args.eventId, args.calendarId);
-
-    // Validate scope usage
-    if (args.modificationScope !== 'all' && eventType !== 'recurring') {
-      throw new Error('Scope other than "all" only applies to recurring events');
+// Mock the google.calendar function
+vi.mock('googleapis', async () => {
+  const actual = await vi.importActual('googleapis');
+  return {
+    ...actual,
+    google: {
+      ...actual.google,
+      calendar: vi.fn()
     }
-
-    switch (args.modificationScope || 'all') {
-      case 'single':
-        return this.updateSingleInstance(args);
-      case 'all':
-        return this.updateAllInstances(args);
-      case 'future':
-        return this.updateFutureInstances(args, event);
-      default:
-        throw new Error(`Invalid modification scope: ${args.modificationScope}`);
-    }
-  }
-
-  private async detectEventType(eventId: string, calendarId: string): Promise<'recurring' | 'single'> {
-    const response = await this.calendar.events.get({
-      calendarId,
-      eventId
-    });
-
-    const event = response.data;
-    return event.recurrence && event.recurrence.length > 0 ? 'recurring' : 'single';
-  }
-
-  private async getEventAndType(eventId: string, calendarId: string): Promise<{
-    event: calendar_v3.Schema$Event;
-    type: 'recurring' | 'single';
-  }> {
-    const response = await this.calendar.events.get({
-      calendarId,
-      eventId
-    });
-
-    const event = response.data;
-    const type = event.recurrence && event.recurrence.length > 0 ? 'recurring' : 'single';
-    return { event, type };
-  }
-
-  async updateSingleInstance(args: any): Promise<calendar_v3.Schema$Event> {
-    // Format instance ID: eventId_basicTimeFormat (convert to UTC first)
-    const utcDate = new Date(args.originalStartTime);
-    const basicTimeFormat = utcDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    const instanceId = `${args.eventId}_${basicTimeFormat}`;
-    
-    const response = await this.calendar.events.patch({
-      calendarId: args.calendarId,
-      eventId: instanceId,
-      requestBody: this.buildUpdateRequestBody(args)
-    });
-
-    if (!response.data) throw new Error('Failed to update event instance');
-    return response.data;
-  }
-
-  async updateAllInstances(args: any): Promise<calendar_v3.Schema$Event> {
-    const response = await this.calendar.events.patch({
-      calendarId: args.calendarId,
-      eventId: args.eventId,
-      requestBody: this.buildUpdateRequestBody(args)
-    });
-
-    if (!response.data) throw new Error('Failed to update event');
-    return response.data;
-  }
-
-  async updateFutureInstances(args: any, originalEvent?: calendar_v3.Schema$Event): Promise<calendar_v3.Schema$Event> {
-    // Use passed event or fetch if not provided (for backward compatibility)
-    let eventData = originalEvent;
-    if (!eventData) {
-      const originalResponse = await this.calendar.events.get({
-        calendarId: args.calendarId,
-        eventId: args.eventId
-      });
-      eventData = originalResponse.data;
-    }
-
-    if (!eventData.recurrence) {
-      throw new Error('Event does not have recurrence rules');
-    }
-
-    // 1. Calculate UNTIL date (one day before future start date)
-    const futureDate = new Date(args.futureStartDate);
-    const untilDate = new Date(futureDate.getTime() - 86400000); // -1 day
-    const untilString = untilDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-
-    // 2. Update original event with UNTIL clause
-    const updatedRRule = eventData.recurrence[0]
-      .replace(/;UNTIL=\d{8}T\d{6}Z/g, '')
-      .replace(/;COUNT=\d+/g, '') + `;UNTIL=${untilString}`;
-
-    await this.calendar.events.patch({
-      calendarId: args.calendarId,
-      eventId: args.eventId,
-      requestBody: { recurrence: [updatedRRule] }
-    });
-
-    // 3. Create new recurring event starting from future date
-    const newEvent = {
-      ...eventData,
-      ...this.buildUpdateRequestBody(args),
-      start: {
-        dateTime: args.futureStartDate,
-        timeZone: args.timeZone
-      },
-      end: {
-        dateTime: this.calculateEndTime(args.futureStartDate, eventData),
-        timeZone: args.timeZone
-      }
-    };
-
-    // Clean fields that shouldn't be duplicated
-    delete newEvent.id;
-    delete newEvent.etag;
-    delete newEvent.iCalUID;
-    delete newEvent.created;
-    delete newEvent.updated;
-    delete newEvent.htmlLink;
-    delete newEvent.hangoutLink;
-
-    const response = await this.calendar.events.insert({
-      calendarId: args.calendarId,
-      requestBody: newEvent
-    });
-
-    if (!response.data) throw new Error('Failed to create new recurring event');
-    return response.data;
-  }
-
-  private calculateEndTime(newStartTime: string, originalEvent: calendar_v3.Schema$Event): string {
-    const newStart = new Date(newStartTime);
-    const originalStart = new Date(originalEvent.start!.dateTime!);
-    const originalEnd = new Date(originalEvent.end!.dateTime!);
-    const duration = originalEnd.getTime() - originalStart.getTime();
-    
-    return new Date(newStart.getTime() + duration).toISOString();
-  }
-
-  private buildUpdateRequestBody(args: any): calendar_v3.Schema$Event {
-    const requestBody: calendar_v3.Schema$Event = {};
-
-    if (args.summary !== undefined && args.summary !== null) requestBody.summary = args.summary;
-    if (args.description !== undefined && args.description !== null) requestBody.description = args.description;
-    if (args.location !== undefined && args.location !== null) requestBody.location = args.location;
-    if (args.colorId !== undefined && args.colorId !== null) requestBody.colorId = args.colorId;
-    if (args.attendees !== undefined && args.attendees !== null) requestBody.attendees = args.attendees;
-    if (args.reminders !== undefined && args.reminders !== null) requestBody.reminders = args.reminders;
-    if (args.recurrence !== undefined && args.recurrence !== null) requestBody.recurrence = args.recurrence;
-
-    // Handle time changes
-    let timeChanged = false;
-    if (args.start !== undefined && args.start !== null) {
-      requestBody.start = { dateTime: args.start, timeZone: args.timeZone };
-      timeChanged = true;
-    }
-    if (args.end !== undefined && args.end !== null) {
-      requestBody.end = { dateTime: args.end, timeZone: args.timeZone };
-      timeChanged = true;
-    }
-
-    // Only add timezone objects if there were actual time changes, OR if neither start/end provided but timezone is given
-    if (timeChanged || (!args.start && !args.end && args.timeZone)) {
-      if (!requestBody.start) requestBody.start = {};
-      if (!requestBody.end) requestBody.end = {};
-      if (!requestBody.start.timeZone) requestBody.start.timeZone = args.timeZone;
-      if (!requestBody.end.timeZone) requestBody.end.timeZone = args.timeZone;
-    }
-
-    return requestBody;
-  }
-}
-
-/**
- * TODO: This test file tests a shadow implementation (EnhancedUpdateEventHandler) instead of the real
- * UpdateEventHandler from src/handlers/core/UpdateEventHandler.ts. This means:
- * - Tests use wrong scope values ('single'/'future' vs 'thisEventOnly'/'thisAndFollowing')
- * - Tests cannot catch regressions in production code
- * - Entire test suite is functionally inert as a safety net
- *
- * Refactor these tests to import and test the real UpdateEventHandler and RecurringEventHelpers.
- * See: src/handlers/core/RecurringEventHelpers.ts and related test files for examples.
- */
+  };
+});
 
 describe('UpdateEventHandler - Recurring Events', () => {
-  let handler: EnhancedUpdateEventHandler;
+  let handler: UpdateEventHandler;
   let mockCalendar: any;
   let mockOAuth2Client: OAuth2Client;
 
@@ -222,7 +30,11 @@ describe('UpdateEventHandler - Recurring Events', () => {
         insert: vi.fn()
       }
     };
-    handler = new EnhancedUpdateEventHandler(mockCalendar);
+
+    // Mock google.calendar to return our mock calendar
+    vi.mocked(google.calendar).mockReturnValue(mockCalendar);
+
+    handler = new UpdateEventHandler();
     mockOAuth2Client = {} as OAuth2Client;
   });
 

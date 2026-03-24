@@ -5,6 +5,12 @@ import { initializeOAuth2Client } from '../../auth/client.js';
 import { TokenManager } from '../../auth/tokenManager.js';
 import { TestDataFactory } from './test-data-factory.js';
 import { getTextContent } from '../unit/helpers/content.js';
+import {
+  createAndVerifyEvent,
+  updateAndVerifyEvent,
+  createNonOverlappingEventPair,
+  createOverlappingEventPair
+} from './integration-test-helpers.js';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * ONE_HOUR_MS;
@@ -102,176 +108,77 @@ describe('Conflict Detection Integration (MCP Protocol)', () => {
     }
   }, 30000);
 
-  /**
-   * Helper: Extract event ID from tool response
-   */
-  function extractEventId(result: unknown): string {
-    const id = TestDataFactory.extractEventIdFromResponse(result);
-    if (!id) throw new Error('No event ID found in response');
-    return id;
-  }
-
   describe('Event Creation Without Conflicts', () => {
     it('should create non-overlapping events without conflict', async () => {
       const now = new Date();
-      const start1 = new Date(now.getTime() + 2 * ONE_HOUR_MS); // 2 hours from now
-      const end1 = new Date(start1.getTime() + ONE_HOUR_MS); // 1 hour duration
+      const { event1Id, event2Id } = await createNonOverlappingEventPair(
+        mcpClient,
+        TEST_CALENDAR_ID,
+        now,
+        createdEventIds
+      );
 
-      const start2 = new Date(start1.getTime() + 2 * ONE_HOUR_MS); // 2 hours after event 1 ends
-      const end2 = new Date(start2.getTime() + ONE_HOUR_MS);
-
-      // Create first event
-      const result1 = await mcpClient.callTool({
-        name: 'create-event',
-        arguments: {
-          calendarId: TEST_CALENDAR_ID,
-          summary: 'Non-Conflict Test Event 1',
-          start: TestDataFactory.formatDateTimeRFC3339(start1),
-          end: TestDataFactory.formatDateTimeRFC3339(end1),
-          timeZone: 'UTC'
-        }
-      });
-
-      const eventId1 = extractEventId(result1);
-      createdEventIds.push(eventId1);
-      expect(eventId1).toBeTruthy();
-      expect(getTextContent(result1)).toContain('Non-Conflict Test Event 1');
-
-      // Create second event (no overlap)
-      const result2 = await mcpClient.callTool({
-        name: 'create-event',
-        arguments: {
-          calendarId: TEST_CALENDAR_ID,
-          summary: 'Non-Conflict Test Event 2',
-          start: TestDataFactory.formatDateTimeRFC3339(start2),
-          end: TestDataFactory.formatDateTimeRFC3339(end2),
-          timeZone: 'UTC'
-        }
-      });
-
-      const eventId2 = extractEventId(result2);
-      createdEventIds.push(eventId2);
-      expect(eventId2).toBeTruthy();
-      expect(getTextContent(result2)).toContain('Non-Conflict Test Event 2');
+      expect(event1Id).toBeTruthy();
+      expect(event2Id).toBeTruthy();
     });
   });
 
   describe('Conflict Detection: Overlapping Times', () => {
     it('should detect overlap when updating event to conflict with existing', async () => {
       const now = new Date();
-      const start1 = new Date(now.getTime() + 3 * ONE_HOUR_MS); // 3 hours from now
-      const end1 = new Date(start1.getTime() + ONE_HOUR_MS); // 1 hour duration
+      const { event1Id, event2Id } = await createOverlappingEventPair(
+        mcpClient,
+        TEST_CALENDAR_ID,
+        now,
+        createdEventIds
+      );
 
-      const start2 = new Date(start1.getTime() + HALF_HOUR_MS); // 30 min after event 1 starts
+      // Get the overlapping times from the helper
+      const start1 = new Date(now.getTime() + 3 * ONE_HOUR_MS);
+      const start2 = new Date(start1.getTime() + HALF_HOUR_MS);
       const end2 = new Date(start2.getTime() + ONE_HOUR_MS);
 
-      // Create event 1
-      const result1 = await mcpClient.callTool({
-        name: 'create-event',
-        arguments: {
-          calendarId: TEST_CALENDAR_ID,
-          summary: 'Overlap Base Event',
-          start: TestDataFactory.formatDateTimeRFC3339(start1),
-          end: TestDataFactory.formatDateTimeRFC3339(end1),
-          timeZone: 'UTC'
-        }
-      });
-
-      const eventId1 = extractEventId(result1);
-      createdEventIds.push(eventId1);
-
-      // Create event 2 at different time
-      const result2 = await mcpClient.callTool({
-        name: 'create-event',
-        arguments: {
-          calendarId: TEST_CALENDAR_ID,
-          summary: 'Overlap Test Event',
-          start: TestDataFactory.formatDateTimeRFC3339(new Date(now.getTime() + 6 * ONE_HOUR_MS)),
-          end: TestDataFactory.formatDateTimeRFC3339(new Date(now.getTime() + 7 * ONE_HOUR_MS)),
-          timeZone: 'UTC'
-        }
-      });
-
-      const eventId2 = extractEventId(result2);
-      createdEventIds.push(eventId2);
-
       // Update event 2 to overlap with event 1 - check for conflicts
-      const updateResult = await mcpClient.callTool({
-        name: 'update-event',
-        arguments: {
-          calendarId: TEST_CALENDAR_ID,
-          eventId: eventId2,
-          start: TestDataFactory.formatDateTimeRFC3339(start2),
-          end: TestDataFactory.formatDateTimeRFC3339(end2),
-          timeZone: 'UTC',
-          checkConflicts: true
-        }
-      });
+      const { text } = await updateAndVerifyEvent(
+        mcpClient,
+        TEST_CALENDAR_ID,
+        event2Id,
+        start2,
+        end2,
+        true
+      );
 
-      const updateText = getTextContent(updateResult);
-      expect(updateText).toBeTruthy();
-      // Response should either report conflict or succeed (depending on conflict detection config)
-      // At minimum, the update should complete
-      expect(updateResult.content[0].type).toBe('text');
+      expect(text).toBeTruthy();
     });
   });
 
   describe('Conflict Detection: Non-Overlapping Times', () => {
     it('should not detect conflicts for truly non-overlapping events', async () => {
       const now = new Date();
-      const start1 = new Date(now.getTime() + 4 * ONE_HOUR_MS); // 4 hours from now
-      const end1 = new Date(start1.getTime() + ONE_HOUR_MS); // 1 hour duration
+      const { event1Id, event2Id } = await createNonOverlappingEventPair(
+        mcpClient,
+        TEST_CALENDAR_ID,
+        now,
+        createdEventIds
+      );
 
-      const start2 = new Date(end1.getTime() + HALF_HOUR_MS); // 30 min after event 1 ends
+      // Get the non-overlapping times
+      const start1 = new Date(now.getTime() + 4 * ONE_HOUR_MS);
+      const end1 = new Date(start1.getTime() + ONE_HOUR_MS);
+      const start2 = new Date(end1.getTime() + HALF_HOUR_MS);
       const end2 = new Date(start2.getTime() + ONE_HOUR_MS);
 
-      // Create event 1
-      const result1 = await mcpClient.callTool({
-        name: 'create-event',
-        arguments: {
-          calendarId: TEST_CALENDAR_ID,
-          summary: 'No-Conflict Event 1',
-          start: TestDataFactory.formatDateTimeRFC3339(start1),
-          end: TestDataFactory.formatDateTimeRFC3339(end1),
-          timeZone: 'UTC'
-        }
-      });
-
-      const eventId1 = extractEventId(result1);
-      createdEventIds.push(eventId1);
-
-      // Create event 2 with gap from event 1
-      const result2 = await mcpClient.callTool({
-        name: 'create-event',
-        arguments: {
-          calendarId: TEST_CALENDAR_ID,
-          summary: 'No-Conflict Event 2',
-          start: TestDataFactory.formatDateTimeRFC3339(start2),
-          end: TestDataFactory.formatDateTimeRFC3339(end2),
-          timeZone: 'UTC'
-        }
-      });
-
-      const eventId2 = extractEventId(result2);
-      createdEventIds.push(eventId2);
-
       // Update event 2 to maintain gap - should not report conflict
-      const updateResult = await mcpClient.callTool({
-        name: 'update-event',
-        arguments: {
-          calendarId: TEST_CALENDAR_ID,
-          eventId: eventId2,
-          start: TestDataFactory.formatDateTimeRFC3339(start2),
-          end: TestDataFactory.formatDateTimeRFC3339(end2),
-          timeZone: 'UTC',
-          checkConflicts: true
-        }
-      });
+      const { text } = await updateAndVerifyEvent(
+        mcpClient,
+        TEST_CALENDAR_ID,
+        event2Id,
+        start2,
+        end2,
+        true
+      );
 
-      expect(updateResult.content[0].type).toBe('text');
-      // Should succeed without conflict warnings
-      const updateText = getTextContent(updateResult);
-      expect(updateText).toContain('No-Conflict Event 2');
+      expect(text).toContain('No-Conflict Event 2');
     });
   });
 

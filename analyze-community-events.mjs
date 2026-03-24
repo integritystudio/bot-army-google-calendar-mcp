@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 
 async function analyzeCommunityEvents() {
   const gmail = createGmailClient();
@@ -7,7 +8,12 @@ async function analyzeCommunityEvents() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    const labelId = 'Label_4'; // Events/Community
+    const labelCache = await buildLabelCache(gmail);
+    const labelId = labelCache.get('Events/Community');
+    if (!labelId) {
+      console.error('❌ Events/Community label not found');
+      process.exit(1);
+    }
     const messagesResult = await gmail.users.messages.list({
       userId: 'me',
       labelIds: [labelId],

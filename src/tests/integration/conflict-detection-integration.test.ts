@@ -4,6 +4,11 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { initializeOAuth2Client } from '../../auth/client.js';
 import { TokenManager } from '../../auth/tokenManager.js';
 import { TestDataFactory } from './test-data-factory.js';
+import { getTextContent } from '../unit/helpers/content.js';
+
+const ONE_HOUR_MS = 60 * 60 * 1000;
+const ONE_DAY_MS = 24 * ONE_HOUR_MS;
+const HALF_HOUR_MS = 30 * 60 * 1000;
 
 /**
  * Conflict Detection Integration Tests (Option A: MCP Protocol)
@@ -72,50 +77,48 @@ describe('Conflict Detection Integration (MCP Protocol)', () => {
   }, 30000);
 
   afterAll(async () => {
-    // Cleanup: Delete all created test events
-    for (const eventId of createdEventIds) {
-      try {
-        await mcpClient.callTool({
+    // Cleanup: Delete all created test events in parallel
+    const deleteResults = await Promise.allSettled(
+      createdEventIds.map((eventId) =>
+        mcpClient.callTool({
           name: 'delete-event',
           arguments: {
             calendarId: TEST_CALENDAR_ID,
-            eventId: eventId
+            eventId
           }
-        });
-      } catch (error) {
-        console.warn(`Failed to cleanup event ${eventId}:`, error);
+        })
+      )
+    );
+
+    deleteResults.forEach((result, idx) => {
+      if (result.status === 'rejected') {
+        console.warn(`Failed to cleanup event ${createdEventIds[idx]}:`, result.reason);
       }
-    }
+    });
 
     // Close MCP connection
     if (mcpClient) {
       await mcpClient.close();
     }
-  }, 10000);
+  }, 30000);
 
   /**
    * Helper: Extract event ID from tool response
    */
-  function extractEventId(result: any): string {
-    const text = (result.content[0] as { type: string; text: string }).text;
-    return TestDataFactory.extractEventIdFromResponse(result);
-  }
-
-  /**
-   * Helper: Get response text
-   */
-  function getResponseText(result: any): string {
-    return (result.content[0] as { type: string; text: string }).text;
+  function extractEventId(result: unknown): string {
+    const id = TestDataFactory.extractEventIdFromResponse(result);
+    if (!id) throw new Error('No event ID found in response');
+    return id;
   }
 
   describe('Event Creation Without Conflicts', () => {
     it('should create non-overlapping events without conflict', async () => {
       const now = new Date();
-      const start1 = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2 hours from now
-      const end1 = new Date(start1.getTime() + 60 * 60 * 1000); // 1 hour duration
+      const start1 = new Date(now.getTime() + 2 * ONE_HOUR_MS); // 2 hours from now
+      const end1 = new Date(start1.getTime() + ONE_HOUR_MS); // 1 hour duration
 
-      const start2 = new Date(start1.getTime() + 2 * 60 * 60 * 1000); // 2 hours after event 1 ends
-      const end2 = new Date(start2.getTime() + 60 * 60 * 1000);
+      const start2 = new Date(start1.getTime() + 2 * ONE_HOUR_MS); // 2 hours after event 1 ends
+      const end2 = new Date(start2.getTime() + ONE_HOUR_MS);
 
       // Create first event
       const result1 = await mcpClient.callTool({
@@ -132,7 +135,7 @@ describe('Conflict Detection Integration (MCP Protocol)', () => {
       const eventId1 = extractEventId(result1);
       createdEventIds.push(eventId1);
       expect(eventId1).toBeTruthy();
-      expect(getResponseText(result1)).toContain('Non-Conflict Test Event 1');
+      expect(getTextContent(result1)).toContain('Non-Conflict Test Event 1');
 
       // Create second event (no overlap)
       const result2 = await mcpClient.callTool({
@@ -149,18 +152,18 @@ describe('Conflict Detection Integration (MCP Protocol)', () => {
       const eventId2 = extractEventId(result2);
       createdEventIds.push(eventId2);
       expect(eventId2).toBeTruthy();
-      expect(getResponseText(result2)).toContain('Non-Conflict Test Event 2');
+      expect(getTextContent(result2)).toContain('Non-Conflict Test Event 2');
     });
   });
 
   describe('Conflict Detection: Overlapping Times', () => {
     it('should detect overlap when updating event to conflict with existing', async () => {
       const now = new Date();
-      const start1 = new Date(now.getTime() + 3 * 60 * 60 * 1000); // 3 hours from now
-      const end1 = new Date(start1.getTime() + 60 * 60 * 1000); // 1 hour duration
+      const start1 = new Date(now.getTime() + 3 * ONE_HOUR_MS); // 3 hours from now
+      const end1 = new Date(start1.getTime() + ONE_HOUR_MS); // 1 hour duration
 
-      const start2 = new Date(start1.getTime() + 30 * 60 * 1000); // 30 min after event 1 starts
-      const end2 = new Date(start2.getTime() + 60 * 60 * 1000);
+      const start2 = new Date(start1.getTime() + HALF_HOUR_MS); // 30 min after event 1 starts
+      const end2 = new Date(start2.getTime() + ONE_HOUR_MS);
 
       // Create event 1
       const result1 = await mcpClient.callTool({
@@ -183,8 +186,8 @@ describe('Conflict Detection Integration (MCP Protocol)', () => {
         arguments: {
           calendarId: TEST_CALENDAR_ID,
           summary: 'Overlap Test Event',
-          start: TestDataFactory.formatDateTimeRFC3339(new Date(now.getTime() + 6 * 60 * 60 * 1000)),
-          end: TestDataFactory.formatDateTimeRFC3339(new Date(now.getTime() + 7 * 60 * 60 * 1000)),
+          start: TestDataFactory.formatDateTimeRFC3339(new Date(now.getTime() + 6 * ONE_HOUR_MS)),
+          end: TestDataFactory.formatDateTimeRFC3339(new Date(now.getTime() + 7 * ONE_HOUR_MS)),
           timeZone: 'UTC'
         }
       });
@@ -205,7 +208,7 @@ describe('Conflict Detection Integration (MCP Protocol)', () => {
         }
       });
 
-      const updateText = getResponseText(updateResult);
+      const updateText = getTextContent(updateResult);
       expect(updateText).toBeTruthy();
       // Response should either report conflict or succeed (depending on conflict detection config)
       // At minimum, the update should complete
@@ -216,11 +219,11 @@ describe('Conflict Detection Integration (MCP Protocol)', () => {
   describe('Conflict Detection: Non-Overlapping Times', () => {
     it('should not detect conflicts for truly non-overlapping events', async () => {
       const now = new Date();
-      const start1 = new Date(now.getTime() + 4 * 60 * 60 * 1000); // 4 hours from now
-      const end1 = new Date(start1.getTime() + 60 * 60 * 1000); // 1 hour duration
+      const start1 = new Date(now.getTime() + 4 * ONE_HOUR_MS); // 4 hours from now
+      const end1 = new Date(start1.getTime() + ONE_HOUR_MS); // 1 hour duration
 
-      const start2 = new Date(end1.getTime() + 30 * 60 * 1000); // 30 min after event 1 ends
-      const end2 = new Date(start2.getTime() + 60 * 60 * 1000);
+      const start2 = new Date(end1.getTime() + HALF_HOUR_MS); // 30 min after event 1 ends
+      const end2 = new Date(start2.getTime() + ONE_HOUR_MS);
 
       // Create event 1
       const result1 = await mcpClient.callTool({
@@ -267,7 +270,7 @@ describe('Conflict Detection Integration (MCP Protocol)', () => {
 
       expect(updateResult.content[0].type).toBe('text');
       // Should succeed without conflict warnings
-      const updateText = getResponseText(updateResult);
+      const updateText = getTextContent(updateResult);
       expect(updateText).toContain('No-Conflict Event 2');
     });
   });
@@ -275,8 +278,8 @@ describe('Conflict Detection Integration (MCP Protocol)', () => {
   describe('Duplicate Detection', () => {
     it('should handle creation of similar events', async () => {
       const now = new Date();
-      const start = new Date(now.getTime() + 5 * 60 * 60 * 1000); // 5 hours from now
-      const end = new Date(start.getTime() + 60 * 60 * 1000);
+      const start = new Date(now.getTime() + 5 * ONE_HOUR_MS); // 5 hours from now
+      const end = new Date(start.getTime() + ONE_HOUR_MS);
 
       // Create first event
       const result1 = await mcpClient.callTool({
@@ -295,8 +298,9 @@ describe('Conflict Detection Integration (MCP Protocol)', () => {
       expect(eventId1).toBeTruthy();
 
       // Create second event with same summary and similar time
-      const start2 = new Date(start.getTime() + 5 * 60 * 1000); // 5 min later
-      const end2 = new Date(end.getTime() + 5 * 60 * 1000);
+      const FIVE_MIN_MS = 5 * 60 * 1000;
+      const start2 = new Date(start.getTime() + FIVE_MIN_MS); // 5 min later
+      const end2 = new Date(end.getTime() + FIVE_MIN_MS);
 
       const result2 = await mcpClient.callTool({
         name: 'create-event',
@@ -337,8 +341,8 @@ describe('Conflict Detection Integration (MCP Protocol)', () => {
 
       // Create single event that might overlap with one recurrence
       const now = new Date();
-      const overlapStart = new Date(now.getTime() + 86400000); // tomorrow (when recurring starts)
-      overlapStart.setHours(11, 0, 0, 0); // 11 AM (overlaps with 10-11 AM recurring)
+      const overlapStart = new Date(now.getTime() + ONE_DAY_MS); // tomorrow (when recurring starts)
+      overlapStart.setUTCHours(11, 0, 0, 0); // 11 AM UTC (overlaps with 10-11 AM recurring)
 
       const result2 = await mcpClient.callTool({
         name: 'create-event',
@@ -347,7 +351,7 @@ describe('Conflict Detection Integration (MCP Protocol)', () => {
           summary: 'Overlaps Recurring Instance',
           start: TestDataFactory.formatDateTimeRFC3339(overlapStart),
           end: TestDataFactory.formatDateTimeRFC3339(
-            new Date(overlapStart.getTime() + 60 * 60 * 1000)
+            new Date(overlapStart.getTime() + ONE_HOUR_MS)
           ),
           timeZone: 'UTC'
         }

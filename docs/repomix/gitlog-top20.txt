@@ -1,3 +1,35 @@
+7f90eea 2026-03-24 test(date-utils): simplify test file with shared constants and it.each
+  src/tests/unit/utils/date-utils.test.ts
+
+ce1c3b9 2026-03-24 docs: update CLAUDE.md and README to reflect 100% backlog completion
+  README.md
+
+b60614b 2026-03-24 docs(backlog): migrate completed items to v1.4.9 changelog
+  docs/BACKLOG.md
+
+f5d7e32 2026-03-24 fix: resolve TypeScript lint errors
+  docs/BACKLOG.md
+
+2530017 2026-03-24 docs(backlog): record timezone utilities consolidation completion
+  docs/BACKLOG.md
+
+f8f6f4b 2026-03-24 docs(backlog): add deduplication opportunities for testing factories (D1-D4)
+  docs/BACKLOG.md
+
+e9a1d5f 2026-03-24 docs(backlog): update status to reflect test architecture complete
+  docs/BACKLOG.md
+
+3ed7a3d 2026-03-24 feat(auth): resolve Issues 1–2 with initializeApp and TokenManager auth methods
+  docs/BACKLOG.md
+
+74a15a0 2026-03-24 docs(backlog): mark issues 3, 4, 5 resolved with Option A implementation
+  docs/BACKLOG.md
+  docs/repomix/repo-compressed.xml
+  docs/repomix/repomix-docs.xml
+  docs/repomix/repomix-git-ranked.xml
+  docs/repomix/repomix.xml
+  docs/repomix/token-tree.txt
+
 b9cae30 2026-03-24 test(integration): add conflict detection integration tests via MCP protocol
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml

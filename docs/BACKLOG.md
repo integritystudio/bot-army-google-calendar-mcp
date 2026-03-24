@@ -1336,3 +1336,52 @@ Three test data factory sources now exist with overlapping functionality. Consol
 
 ---
 
+### L7: Extract test fixture builders to shared test utilities
+**Status:** ⏳ PENDING
+**Priority:** Low
+**Date Added:** 2026-03-24
+**Estimated Effort:** 2-3 hours
+**Source:** BatchRequestHandler.test.ts simplification
+
+BatchRequestHandler.test.ts extracted four reusable testing patterns that should be checked for similar usage across the codebase:
+
+**Extracted Utilities:**
+1. **Mock response builders** (`buildMockBatchResponse()`, `buildResponsePart()`)
+   - Eliminate boilerplate for constructing multipart HTTP response text
+   - Reduced 80+ lines of duplicated fixture strings in a single test file
+   - Pattern: Used in all response-parsing and integration tests
+
+2. **Typed private method accessors** (`createBatchBody()`, `getBoundary()`, `parseBatchResponse()`)
+   - Replace pervasive `as any` casts with `as unknown as { methodName: signature }`
+   - Maintain type safety while testing private APIs
+   - Can be extended to other handler test files
+
+3. **Test data constants** (`BATCH_BOUNDARY`, `PRIMARY_EVENTS_REQUEST`)
+   - Eliminate magic strings and repeated test payloads
+   - Single point of change for fixture data
+
+**Action Items:**
+1. **Audit other test files** for similar patterns:
+   - Search `src/tests/unit/handlers/*.test.ts` for `as any` usage (private method access)
+   - Search for repeated mock response/fixture string construction
+   - Search for repeated test request/event payloads (candidates for constants)
+
+2. **Consider creating** `src/tests/shared/test-builders.ts` with:
+   - Generic `buildTypedAccessor<T>(obj, methodName)` for private method calls
+   - Response builders for common API response patterns
+   - Shared test data factories
+
+3. **Migration scope:**
+   - At least 5-8 test files likely have `as any` patterns (conflict detection, event creation, etc.)
+   - Each could save 20-40 lines by extracting fixtures and using typed accessors
+   - **Total potential:** 100-300 LOC reduction across test suite
+
+**Benefits:**
+- Improved test readability (builders vs raw strings)
+- Type safety for private method testing
+- Easier maintenance (single source of truth for fixtures and mock format)
+
+**Risk:** Low (test-only changes, no production impact)
+
+---
+

@@ -599,8 +599,51 @@ describe('UpdateEventHandler - Recurring Events', () => {
   });
 
   describe('Integration with Tool Framework', () => {
-    // Tests for runTool() public method and response format
-    it.todo('should return proper CallToolResult from runTool()');
-    it.todo('should include event in response for successful updates');
+    it('should return proper CallToolResult from runTool()', async () => {
+      const recurringEvent = createMockRecurringEvent();
+      mockCalendar.events.get.mockResolvedValue({ data: recurringEvent });
+      mockCalendar.events.patch.mockResolvedValue({ data: recurringEvent });
+
+      const result = await handler.runTool(
+        {
+          calendarId: 'primary',
+          eventId: 'event123',
+          summary: 'Updated Event',
+          checkConflicts: false
+        },
+        mockOAuth2Client
+      );
+
+      // Verify CallToolResult structure
+      expect(result).toBeDefined();
+      expect(result.content).toBeDefined();
+      expect(Array.isArray(result.content)).toBe(true);
+      expect(result.content.length).toBeGreaterThan(0);
+      expect(result.content[0].type).toBe('text');
+      expect(typeof result.content[0].text).toBe('string');
+    });
+
+    it('should include event summary in response text', async () => {
+      const eventSummary = 'Team Standup';
+      const recurringEvent = createMockRecurringEvent({
+        summary: eventSummary
+      });
+      mockCalendar.events.get.mockResolvedValue({ data: recurringEvent });
+      mockCalendar.events.patch.mockResolvedValue({ data: recurringEvent });
+
+      const result = await handler.runTool(
+        {
+          calendarId: 'primary',
+          eventId: 'event123',
+          summary: 'Updated Standup',
+          checkConflicts: false
+        },
+        mockOAuth2Client
+      );
+
+      // Response text should mention the updated event
+      expect(result.content[0].text).toContain('updated');
+      expect(typeof result.content[0].text).toBe('string');
+    });
   });
 });

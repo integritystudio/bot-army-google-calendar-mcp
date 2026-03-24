@@ -56,7 +56,6 @@ export function skipTestIf(
   ctx: TestContext
 ): void {
   if (condition) {
-    console.log(`⊘ Skipped: ${reason}`);
     ctx.skip();
   }
 }
@@ -71,7 +70,6 @@ export function todoTestIf(
   ctx: TestContext
 ): void {
   if (condition) {
-    console.log(`⚠ TODO: ${reason}`);
     ctx.todo();
   }
 }

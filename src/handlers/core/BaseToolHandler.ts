@@ -3,6 +3,7 @@ import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { OAuth2Client } from "google-auth-library";
 import { GaxiosError } from 'gaxios';
 import { calendar_v3, gmail_v1, google } from "googleapis";
+import { formatErrorMessage } from "./errorFormatting.js";
 
 
 export abstract class BaseToolHandler {
@@ -57,16 +58,9 @@ export abstract class BaseToolHandler {
         }
         
         // Handle non-Google API errors
-        if (error instanceof Error) {
-            throw new McpError(
-                ErrorCode.InternalError,
-                `Internal error: ${error.message}`
-            );
-        }
-        
         throw new McpError(
             ErrorCode.InternalError,
-            'An unknown error occurred'
+            `Internal error: ${formatErrorMessage(error)}`
         );
     }
 

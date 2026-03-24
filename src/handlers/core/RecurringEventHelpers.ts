@@ -15,6 +15,10 @@ export class RecurringEventHelpers {
     this.calendar = calendar;
   }
 
+  getCalendar(): calendar_v3.Calendar {
+    return this.calendar;
+  }
+
   /**
    * Detects if an event is recurring or single
    */

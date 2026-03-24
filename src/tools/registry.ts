@@ -195,10 +195,10 @@ export const ToolSchemas = {
       "Conference properties for the event. Use createRequest to add a new conference."
     ),
     extendedProperties: z.object({
-      private: z.record(z.string()).optional().describe(
+      private: z.record(z.string(), z.string()).optional().describe(
         "Properties private to the application. Keys can have max 44 chars, values max 1024 chars."
       ),
-      shared: z.record(z.string()).optional().describe(
+      shared: z.record(z.string(), z.string()).optional().describe(
         "Properties visible to all attendees. Keys can have max 44 chars, values max 1024 chars."
       )
     }).optional().describe(
@@ -651,7 +651,7 @@ export class ToolRegistry {
 
   static getToolsWithSchemas() {
     return this.tools.map(tool => {
-      const jsonSchema = zodToJsonSchema(tool.schema);
+      const jsonSchema = zodToJsonSchema(tool.schema as any);
       return {
         name: tool.name,
         description: tool.description,

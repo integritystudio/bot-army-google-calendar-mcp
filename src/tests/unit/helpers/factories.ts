@@ -286,18 +286,20 @@ export function makeRecurringEventInstance(
   eventId: string,
   instanceDate: Date,
   overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event {
+): calendar_v3.Schema$Event & { originalStartTime?: string } {
   const instanceEndTime = new Date(instanceDate.getTime() + 3600000); // 1 hour duration
 
-  return makeEvent({
+  const event = makeEvent({
     id: `${eventId}_${formatBasicDateTime(instanceDate)}`,
     summary: 'Series Instance',
     recurringEventId: eventId, // Mark as instance of recurring event
-    originalStartTime: formatRFC3339(instanceDate),
     start: { dateTime: formatRFC3339(instanceDate) },
     end: { dateTime: formatRFC3339(instanceEndTime) },
     ...overrides,
   });
+
+  (event as any).originalStartTime = formatRFC3339(instanceDate);
+  return event;
 }
 
 /**

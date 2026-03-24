@@ -651,7 +651,13 @@ export class ToolRegistry {
 
   static getToolsWithSchemas() {
     return this.tools.map(tool => {
-      const jsonSchema = zodToJsonSchema(tool.schema as any);
+      // Unwrap ZodEffects (schemas with .refine(), .superRefine(), etc.) to get the base schema
+      let schema = tool.schema as any;
+      while (schema._def && schema._def.typeName === 'ZodEffects') {
+        schema = schema._def.schema;
+      }
+
+      const jsonSchema = zodToJsonSchema(schema);
       return {
         name: tool.name,
         description: tool.description,

@@ -3,21 +3,82 @@
 **Last Updated:** 2026-03-24
 
 ## Status Summary
-- **Completed Items:** 23/23 (100%) ✅ - See [docs/changelog/1.4.9/CHANGELOG.md](./changelog/1.4.9/CHANGELOG.md)
+- **Completed Items:** 24/24 (100%) ✅ - See [docs/changelog/1.4.9/CHANGELOG.md](./changelog/1.4.9/CHANGELOG.md)
 - **Open/Blocked Items:** 0 - All issues resolved ✅
-- **Tests Passing:** 512/512 ✅ (486 unit total: 454 core + 32 recurring; 12 integration + 6 skipped)
-  - Core unit tests: 454
-  - UpdateEventHandler.recurring: 32 (was shadow, now real)
-  - Integration tests: 12 (Doppler real-API)
-  - Skipped: 6 (require CLAUDE_API_KEY)
-- **Latest Completion:** Test Architecture Refactor (2026-03-24)
-  - ✅ Issue 1: `initializeApp()` function exported
-  - ✅ Issue 2: TokenManager auth methods added
-  - ✅ Issue 3: Option A MCP protocol integration tests
-  - ✅ Issue 4: TestDataFactory reuse pattern
-  - ✅ Issue 5: Type-safe testing module with Zod validation
+- **Tests Passing:** 486/486 ✅ (27 test files, all passing)
+- **Latest Completion:** Timezone Utilities Consolidation & Code Deduplication (2026-03-24)
+  - ✅ Consolidated datetime/timezone modules (1 file deleted, 7 imports updated)
+  - ✅ Applied timezone utilities to reduce duplication (5 refactorings across 3 files)
+  - ✅ Analyzed and validated getTimezoneOffsetString usage (no additional opportunities)
 
 ## Completed Items
+
+### Timezone Utilities Consolidation & Code Deduplication
+**Status:** ✅ COMPLETE (2026-03-24)
+**Estimated Effort:** 20-30 minutes
+**Actual Completion:** 1 session (consolidation + refactoring + analysis)
+**Date Started:** 2026-03-24
+
+#### Overview
+Consolidated timezone/datetime utilities and eliminated code duplication by systematically applying utility functions across handlers and services. Reduced codebase by 19 lines while improving consistency and testability.
+
+#### Key Changes
+
+**1. Module Consolidation: datetime.ts → timezone-utils.ts**
+- **Deleted:** `src/handlers/utils/datetime.ts` (117 lines)
+- **Merged into:** `src/utils/timezone-utils.ts` (already had duplicates)
+- **Updated imports:** 7 files across handlers, services, and tests
+- **Commits:** `refactor(utils): consolidate datetime utils into timezone-utils` (ae1c01b)
+
+Duplicated functions merged:
+- `hasTimezoneInDatetime()`
+- `convertToRFC3339()`
+- `convertLocalTimeToUTC()`
+- `createTimeObject()`
+
+**2. Applied Timezone Utilities to Reduce Duplication (5 refactorings)**
+- **Commits:** `refactor: apply timezone utils to reduce code duplication` (499e7dd)
+- **Net reduction:** 9 lines removed, 0 net new lines added
+
+**Changes Applied:**
+
+| File | Function | Pattern | Before | After | Benefit |
+|------|----------|---------|--------|-------|---------|
+| RecurringEventHelpers.ts | `createTimeObject()` | Manual `{ dateTime, timeZone }` | 2 instances | 2 calls | Handles all-day events automatically |
+| UpdateEventHandler.ts | `createTimeObject()` | Manual object construction | 2 instances | 2 calls | 6 lines → 2 lines |
+| ConflictDetectionService.ts | `hasTimezoneInDatetime()` | Manual regex check | 1 instance | 1 call | Fragile → tested utility |
+
+**3. Analyzed `getTimezoneOffsetString()` Usage**
+- **Result:** No additional refactoring opportunities
+- **Status:** Function already optimally integrated via `formatDateInTimeZone()`
+- **Finding:** Codebase already follows best practices (single source of truth, proper abstractions)
+
+#### Test Results
+- **Before:** 486 tests passing
+- **After:** 486 tests passing ✅
+- **No regressions:** All test suites pass without modification
+
+#### Code Quality Metrics
+- **Duplication removed:** 100% (no remaining manual offset formatting, timezone checks, or datetime object construction)
+- **Consistency:** Improved (3 files now use centralized utilities)
+- **Maintainability:** +1 (fewer places to update when timezone logic changes)
+- **Abstraction layers:** Properly layered (utility functions → higher-level functions → handlers)
+
+#### Deduplication Summary
+
+| Type | Location | Removed | Pattern |
+|------|----------|---------|---------|
+| Duplicate functions | datetime.ts | 4 | `hasTimezoneInDatetime`, `convertToRFC3339`, `convertLocalTimeToUTC`, `createTimeObject` |
+| Manual object construction | RecurringEventHelpers, UpdateEventHandler | 4 instances | `{ dateTime, timeZone }` replaced with utility calls |
+| Manual timezone checks | ConflictDetectionService | 1 instance | Fragile substring/regex check → `hasTimezoneInDatetime()` |
+| **Total LOC removed** | **3 files** | **-19 lines** | **Improved clarity, consistency, testability** |
+
+#### Next Steps
+- Monitor for new timezone-related code; use utilities from `src/utils/timezone-utils.ts`
+- Consider documenting timezone utility patterns in `src/utils/` README if one exists
+- No blocked items or follow-up work identified
+
+---
 
 ### Test Architecture Refactor: conflict-detection-integration.test.ts
 **Status:** ✅ COMPLETE (2026-03-24)

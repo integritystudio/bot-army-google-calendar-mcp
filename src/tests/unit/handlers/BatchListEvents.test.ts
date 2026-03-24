@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OAuth2Client } from 'google-auth-library';
-import { getTextContent, makeEvent, makeEventWithCalendarId, setupListEventsHandler } from '../helpers/index.js';
+import { getTextContent, assertTextContentContains, makeEvent, makeEventWithCalendarId, setupListEventsHandler } from '../helpers/index.js';
 import { LIST_EVENTS_API_DEFAULTS, TIME_MIN, TIME_MAX } from '../helpers/test-configs.js';
 // Import the types and schemas we're testing
 import { ToolSchemas } from '../../../tools/registry.js';
@@ -155,9 +155,7 @@ describe('Batch List Events Functionality', () => {
         ...LIST_EVENTS_API_DEFAULTS
       });
 
-      expect(result.content).toHaveLength(1);
-      expect(result.content[0].type).toBe('text');
-      expect(getTextContent(result)).toContain('Found');
+      assertTextContentContains(result, 'Found');
     });
 
     it('should handle empty results for single calendar', async () => {
@@ -389,9 +387,7 @@ describe('Batch List Events Functionality', () => {
         ...LIST_EVENTS_API_DEFAULTS
       });
 
-      expect(result.content).toHaveLength(1);
-      expect(result.content[0].type).toBe('text');
-      expect(getTextContent(result)).toContain('Found');
+      assertTextContentContains(result, 'Found');
     });
   });
 }); 

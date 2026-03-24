@@ -517,6 +517,15 @@ describe('date-utils', () => {
   });
 
   describe('parseDateTimeString', () => {
+    const EXPECTED_DATE_TIME = {
+      year: 2024,
+      month: 6,
+      day: 15,
+      hour: 10,
+      minute: 0,
+      second: 0,
+    };
+
     it.each([
       ['2024-06-15T10:00:00Z', 'Z'],
       ['2024-06-15T10:00:00+05:30', '+05:30'],
@@ -525,12 +534,7 @@ describe('date-utils', () => {
       const result = parseDateTimeString(input);
 
       expect(result).toEqual({
-        year: 2024,
-        month: 6,
-        day: 15,
-        hour: 10,
-        minute: 0,
-        second: 0,
+        ...EXPECTED_DATE_TIME,
         timezone,
       });
     });
@@ -539,12 +543,7 @@ describe('date-utils', () => {
       const result = parseDateTimeString('2024-06-15T10:00:00');
 
       expect(result).toEqual({
-        year: 2024,
-        month: 6,
-        day: 15,
-        hour: 10,
-        minute: 0,
-        second: 0,
+        ...EXPECTED_DATE_TIME,
         timezone: undefined,
       });
     });
@@ -562,16 +561,20 @@ describe('date-utils', () => {
   });
 
   describe('parseBasicDateTime', () => {
+    const EXPECTED_DATE_TIME_BASIC = {
+      year: 2024,
+      month: 6,
+      day: 15,
+      hour: 10,
+      minute: 0,
+      second: 0,
+    };
+
     it('should parse basic format datetime', () => {
       const result = parseBasicDateTime('20240615T100000Z');
 
       expect(result).toEqual({
-        year: 2024,
-        month: 6,
-        day: 15,
-        hour: 10,
-        minute: 0,
-        second: 0,
+        ...EXPECTED_DATE_TIME_BASIC,
         timezone: 'Z',
       });
     });

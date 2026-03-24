@@ -1,4 +1,4 @@
-export { getTextContent, tryGetTextContent } from './content.js';
+export { getTextContent, tryGetTextContent, assertTextContentContains } from './content.js';
 export { makeEvent, makeEventWithCalendarId, makeEvents, makeGaxiosError, makeCalendarMock } from './factories.js';
 export { createBuilder } from './testBuilder.js';
 export {

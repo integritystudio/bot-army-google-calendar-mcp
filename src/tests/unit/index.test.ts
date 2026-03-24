@@ -11,7 +11,7 @@ import { CreateEventHandler } from "../../handlers/core/CreateEventHandler.js";
 import { ListEventsHandler } from "../../handlers/core/ListEventsHandler.js";
 
 // Import test helpers
-import { getTextContent } from "../unit/helpers/index.js";
+import { getTextContent, assertTextContentContains } from "../unit/helpers/index.js";
 import { LIST_EVENTS_API_DEFAULTS } from "../unit/helpers/test-configs.js";
 import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from "../../testing/constants.js";
 
@@ -305,9 +305,7 @@ Personal (cal2)
         ...LIST_EVENTS_API_DEFAULTS
       });
 
-      expect(result.content).toHaveLength(1);
-      expect(result.content[0].type).toBe('text');
-      expect(getTextContent(result)).toContain('Found');
+      assertTextContentContains(result, 'Found');
     });
   });
 

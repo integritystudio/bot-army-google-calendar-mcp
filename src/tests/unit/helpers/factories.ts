@@ -1,5 +1,6 @@
 import { calendar_v3 } from 'googleapis';
 import { GaxiosError } from 'gaxios';
+import { getFutureDate, getPastDate, formatTZNaiveDateTime, formatRFC3339 } from '../../../utils/date-utils.js';
 
 /**
  * Create a basic calendar event with optional overrides.
@@ -70,4 +71,26 @@ export function makeEvents(
       ...variantOverrides
     });
   });
+}
+
+/**
+ * Generate a future date string in ISO format (timezone-naive).
+ * Useful for tests that need consistent future dates.
+ * @param daysFromNow Number of days in the future (default 365)
+ * @returns ISO date string without timezone suffix (e.g., "2026-03-23T14:30:00")
+ */
+export function makeFutureDateString(daysFromNow: number = 365): string {
+  return formatTZNaiveDateTime(getFutureDate(daysFromNow));
+}
+
+/**
+ * Generate a past date string in ISO format (timezone-aware with Z suffix).
+ * Useful for tests that need to validate past-date rejection.
+ * @param yearsAgo Number of years in the past (default 1)
+ * @returns ISO date string with Z suffix (e.g., "2025-03-23T14:30:00Z")
+ */
+export function makePastDateString(yearsAgo: number = 1): string {
+  const pastDate = new Date();
+  pastDate.setFullYear(pastDate.getFullYear() - yearsAgo);
+  return formatRFC3339(pastDate);
 }

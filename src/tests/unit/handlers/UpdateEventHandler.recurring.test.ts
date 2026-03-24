@@ -181,24 +181,16 @@ class EnhancedUpdateEventHandler {
   }
 }
 
-// Custom error class for recurring event errors
-class RecurringEventError extends Error {
-  public code: string;
-
-  constructor(message: string, code: string) {
-    super(message);
-    this.name = 'RecurringEventError';
-    this.code = code;
-  }
-}
-
-const ERRORS = {
-  INVALID_SCOPE: 'INVALID_MODIFICATION_SCOPE',
-  MISSING_ORIGINAL_TIME: 'MISSING_ORIGINAL_START_TIME',
-  MISSING_FUTURE_DATE: 'MISSING_FUTURE_START_DATE',
-  PAST_FUTURE_DATE: 'FUTURE_DATE_IN_PAST',
-  NON_RECURRING_SCOPE: 'SCOPE_NOT_APPLICABLE_TO_SINGLE_EVENT'
-};
+/**
+ * TODO: This test file tests a shadow implementation (EnhancedUpdateEventHandler) instead of the real
+ * UpdateEventHandler from src/handlers/core/UpdateEventHandler.ts. This means:
+ * - Tests use wrong scope values ('single'/'future' vs 'thisEventOnly'/'thisAndFollowing')
+ * - Tests cannot catch regressions in production code
+ * - Entire test suite is functionally inert as a safety net
+ *
+ * Refactor these tests to import and test the real UpdateEventHandler and RecurringEventHelpers.
+ * See: src/handlers/core/RecurringEventHelpers.ts and related test files for examples.
+ */
 
 describe('UpdateEventHandler - Recurring Events', () => {
   let handler: EnhancedUpdateEventHandler;

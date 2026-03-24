@@ -595,7 +595,433 @@ main().catch(err => {
 
 ---
 
+## Medium Priority Items
+
+### Date Utilities Consolidation: Recurrence Rule Patterns
+**Status:** 📋 DESIGN
+**Priority:** Medium
+**Estimated Effort:** 3-5 hours
+**Date Added:** 2026-03-24
+**Source:** Code quality review after date-utils module creation
+
+#### Problem
+Recurrence rule (RRULE) manipulation patterns are duplicated and scattered:
+- `UNTIL_PATTERN = /;UNTIL=\d{8}T\d{6}Z/g` in RecurringEventHelpers.ts
+- `COUNT_PATTERN = /;COUNT=\d+/g` in RecurringEventHelpers.ts
+- Regex-based replacements in `updateRecurrenceWithUntil()` method
+
+**Current Pattern:**
+```typescript
+// RecurringEventHelpers.ts lines 4-5, 75-77
+const UNTIL_PATTERN = /;UNTIL=\d{8}T\d{6}Z/g;
+const COUNT_PATTERN = /;COUNT=\d+/g;
+
+const updatedRule = rule
+  .replace(UNTIL_PATTERN, '')
+  .replace(COUNT_PATTERN, '')
+  + `;UNTIL=${untilDate}`;
+```
+
+#### Solution
+Move to `src/utils/date-utils.ts`:
+
+1. **Export RRULE pattern constants:**
+   ```typescript
+   export const RRULE_PATTERNS = {
+     UNTIL: /;UNTIL=\d{8}T\d{6}Z/g,
+     COUNT: /;COUNT=\d+/g,
+     RRULE_PREFIX: /^RRULE:/,
+     EXDATE: /^EXDATE:/,
+     RDATE: /^RDATE:/,
+   } as const;
+   ```
+
+2. **Add semantic RRULE helper functions:**
+   ```typescript
+   // Remove UNTIL and COUNT clauses for splitting series
+   export function stripUntilAndCount(rruleString: string): string
+
+   // Build UNTIL clause in basic format
+   export function buildUntilClause(date: Date): string
+
+   // Check if rule string is RRULE vs other recurrence type
+   export function isRRuleString(ruleString: string): boolean
+
+   // Extract RRULE vs preserve EXDATE/RDATE
+   export function extractAndPreserveNonRRuleRecurrence(
+     recurrence: string[]
+   ): { rrules: string[]; otherRules: string[] }
+   ```
+
+3. **Update RecurringEventHelpers:**
+   ```typescript
+   import {
+     RRULE_PATTERNS,
+     stripUntilAndCount,
+     buildUntilClause
+   } from '../../utils/date-utils.js';
+
+   // Simplified updateRecurrenceWithUntil
+   const updatedRule = stripUntilAndCount(rule) + buildUntilClause(untilDate);
+   ```
+
+#### Benefits
+- Centralizes RRULE manipulation logic
+- Eliminates regex duplication
+- Enables future RRULE features (RDATE preservation, EXDATE handling)
+- Testable helper functions for complex recurrence scenarios
+
+---
+
+### Date Utilities Consolidation: Timezone Utilities Migration
+**Status:** 📋 DESIGN
+**Priority:** Medium
+**Estimated Effort:** 4-6 hours
+**Date Added:** 2026-03-24
+**Source:** Code quality review after date-utils module creation
+
+#### Problem
+Timezone handling is fragmented across handlers and utilities:
+
+**Current State:**
+- `GetCurrentTimeHandler.ts` — Timezone offset calculation, validation, formatting (130 lines)
+- `handlers/utils/datetime.ts` — RFC 3339 conversion with timezone awareness (93 lines)
+- `ListEventsHandler.ts` — Timezone precedence logic (scattered in handler)
+
+**Scattered Patterns:**
+```typescript
+// GetCurrentTimeHandler.ts line 107
+private getTimezoneOffset(_date: Date, timeZone: string): string { ... }
+
+// handlers/utils/datetime.ts line 26
+export function convertToRFC3339(datetime: string, fallbackTimezone: string): string { ... }
+
+// ListEventsHandler.ts line 192
+const timezone = options.timeZone || await this.getCalendarTimezone(client, calendarId);
+```
+
+#### Solution
+Create `src/utils/timezone-utils.ts` to consolidate:
+
+1. **Timezone validation:**
+   ```typescript
+   export function isValidIANATimeZone(timeZone: string): boolean
+   export function getSystemTimeZone(): string
+   export function validateTimeZone(tz: string): void // throws on invalid
+   ```
+
+2. **Timezone offset calculation:**
+   ```typescript
+   export function getTimezoneOffsetString(date: Date, timeZone: string): string
+   // Returns: 'Z', '+05:30', '-07:00'
+
+   export function getTimezoneOffsetMinutes(timeZone: string): number
+   // Returns: 0 for UTC, 330 for Asia/Kolkata, -420 for America/Los_Angeles
+   ```
+
+3. **Timezone-aware datetime formatting:**
+   ```typescript
+   export function formatDateInTimeZone(
+     date: Date,
+     timeZone: string
+   ): { rfc3339: string; humanReadable: string; offset: string }
+   ```
+
+4. **RFC 3339 conversion (from handlers/utils/datetime.ts):**
+   ```typescript
+   export function convertToRFC3339(
+     datetime: string,
+     fallbackTimezone: string
+   ): string
+
+   export function hasTimezoneInDatetime(datetime: string): boolean
+   ```
+
+5. **Timezone precedence resolver:**
+   ```typescript
+   export async function resolveTimeZone(
+     preferredTZ: string | undefined,
+     calendarDefaultTZ: string | undefined
+   ): Promise<string>
+   // Returns: preferredTZ || calendarDefaultTZ || systemTimeZone || 'UTC'
+   ```
+
+#### Migration Path
+1. Create `src/utils/timezone-utils.ts` with functions above
+2. Update `GetCurrentTimeHandler` to use `formatDateInTimeZone()`, `isValidIANATimeZone()`
+3. Move `convertToRFC3339()` and `hasTimezoneInDatetime()` from `handlers/utils/datetime.ts`
+4. Update `ListEventsHandler` to use `resolveTimeZone()`
+5. Deprecate `handlers/utils/datetime.ts` in favor of timezone-utils + date-utils
+
+#### Benefits
+- Single source of truth for timezone logic
+- Eliminates duplication across handlers
+- Type-safe timezone operations
+- Testable timezone precedence rules
+
+---
+
+### Date Utilities Consolidation: DateTime Parsing & Validation
+**Status:** 📋 DESIGN
+**Priority:** Medium
+**Estimated Effort:** 2-4 hours
+**Date Added:** 2026-03-24
+**Source:** Code quality review after date-utils module creation
+
+#### Problem
+DateTime string validation and parsing patterns are implicit in regex tests and error handling:
+
+**Current Issues:**
+- Regex pattern in `hasTimezoneInDatetime()` is a magic string: `/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/`
+- Date parsing in `convertLocalTimeToUTC()` uses bare regex match (line 34)
+- No centralized validation for ISO 8601 datetime formats
+- Test validators.test.ts has hardcoded datetime format examples
+
+#### Solution
+Add to `src/utils/date-utils.ts`:
+
+1. **DateTime format constants:**
+   ```typescript
+   export const DATETIME_FORMATS = {
+     // ISO 8601 patterns
+     ISO_DATETIME_TZ_AWARE: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/,
+     ISO_DATETIME_TZ_NAIVE: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/,
+     ISO_DATE_ONLY: /^\d{4}-\d{2}-\d{2}$/,
+     ISO_BASIC_DATETIME: /^\d{8}T\d{6}Z$/, // For RRULE UNTIL clauses
+
+     // Parsing
+     ISO_COMPONENTS: /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/,
+     ISO_DATE_COMPONENTS: /^(\d{4})-(\d{2})-(\d{2})$/,
+   } as const;
+   ```
+
+2. **Validation functions:**
+   ```typescript
+   export function isValidISODateTime(datetime: string): boolean
+   export function isValidISODate(date: string): boolean
+   export function isTimeZoneAware(datetime: string): boolean
+   export function isTimeZoneNaive(datetime: string): boolean
+   export function isAllDayEvent(datetime: string): boolean
+   ```
+
+3. **Parsing functions:**
+   ```typescript
+   export interface DateTimeComponents {
+     year: number;
+     month: number;
+     day: number;
+     hour: number;
+     minute: number;
+     second: number;
+     timezone?: string;
+   }
+
+   export function parseDateTimeString(datetime: string): DateTimeComponents
+   export function parseBasicDateTime(basicFormat: string): DateTimeComponents
+   ```
+
+4. **Error messages:**
+   ```typescript
+   export const DATETIME_ERRORS = {
+     INVALID_FORMAT: 'Invalid ISO 8601 datetime format',
+     INVALID_TIMEZONE: 'Invalid timezone designator (must be Z or ±HH:MM)',
+     INVALID_DATE: 'Invalid date values',
+     AMBIGUOUS_TIME: 'Timezone-naive datetime requires fallback timezone',
+   } as const;
+   ```
+
+#### Benefits
+- Centralized datetime format definitions
+- Testable parsing with clear error messages
+- Prevents regex duplication
+- Enables better error reporting in API responses
+
+---
+
+### Date Utilities Consolidation: Recurrence Test Data Factories
+**Status:** 📋 DESIGN
+**Priority:** Medium
+**Estimated Effort:** 2-3 hours
+**Date Added:** 2026-03-24
+**Source:** Code quality review after date-utils module creation
+
+#### Problem
+Test factories in `src/tests/unit/helpers/factories.ts` only handle basic event creation and simple date generation. Tests for recurrence scenarios must manually construct recurring event objects with RRULE strings, UNTIL dates, and exception handling.
+
+**Example Current Workaround:**
+```typescript
+// In UpdateEventHandler.recurring.test.ts - Manual construction
+const recurringEvent = {
+  data: {
+    id: 'recurring123',
+    summary: 'Weekly Meeting',
+    recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO']
+  }
+};
+```
+
+#### Solution
+Extend `src/tests/unit/helpers/factories.ts` with recurring event builders:
+
+1. **Recurring event factory:**
+   ```typescript
+   export interface RecurringEventConfig {
+     summary: string;
+     frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+     interval?: number;
+     daysOfWeek?: string[]; // MO, TU, WE, etc.
+     count?: number;
+     until?: Date;
+     exceptions?: string[]; // Exception dates in ISO format
+   }
+
+   export function makeRecurringEvent(
+     config: RecurringEventConfig,
+     baseOverrides?: Partial<calendar_v3.Schema$Event>
+   ): calendar_v3.Schema$Event
+   ```
+
+2. **Instance ID generator (for test mocking):**
+   ```typescript
+   export function makeInstanceId(eventId: string, occurrenceDate: Date): string
+   // Uses formatBasicDateTime from date-utils
+   ```
+
+3. **RRULE builder utilities:**
+   ```typescript
+   export function buildRRULE(config: RecurringEventConfig): string
+   // Constructs RRULE string from semantic config
+
+   export function makeRecurrenceWithUntil(
+     baseRRULE: string,
+     untilDate: Date
+   ): string[]
+   // Adds UNTIL clause while preserving other rules
+   ```
+
+4. **Exception handling helpers:**
+   ```typescript
+   export function addException(
+     recurrence: string[],
+     exceptionDate: Date
+   ): string[]
+
+   export function removeException(
+     recurrence: string[],
+     exceptionDate: Date
+   ): string[]
+   ```
+
+#### Benefits
+- DRY principle for recurring event test setup
+- Semantic config instead of manual RRULE strings
+- Prevents hardcoded test data errors
+- Easier to test complex recurrence scenarios
+- Reusable across test suites
+
+---
+
+### Test Quality: UpdateEventHandler.recurring.test.ts Architecture Refactor
+**Status:** 🔴 BLOCKED - Major Refactor Required
+**Priority:** Medium
+**Estimated Effort:** 16-24 hours
+**Date Added:** 2026-03-23
+**Source:** Code simplification review (simplify command)
+
+#### Problem
+The test file `src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts` (997 lines) tests a **shadow implementation** (EnhancedUpdateEventHandler class) instead of the real production code. This makes the entire test suite ineffective as a regression safety net.
+
+**Specific Issues:**
+1. Shadow handler uses wrong scope values: `'single'`/`'future'` vs production `'thisEventOnly'`/`'thisAndFollowing'`
+2. Tests cannot catch regressions in the actual `UpdateEventHandler` class
+3. Tests will pass for the wrong reason—validating stub behavior, not real code
+4. ~180 lines of duplicated handler logic inside test file
+
+#### Solution
+Refactor to test the real `UpdateEventHandler` and `RecurringEventHelpers`:
+1. Delete `EnhancedUpdateEventHandler` class (lines 6-182)
+2. Import real `UpdateEventHandler` from `src/handlers/core/UpdateEventHandler.ts`
+3. Import `RecurringEventHelpers` from `src/handlers/core/RecurringEventHelpers.ts`
+4. Update test mocks to match real handler's actual API
+5. Use correct scope values matching production schema
+6. Verify all tests pass with production code
+
+**Related Files:**
+- `src/handlers/core/UpdateEventHandler.ts`
+- `src/handlers/core/RecurringEventHelpers.ts`
+- `src/handlers/core/RecurringEventHelpers.test.ts` (reference pattern)
+
+---
+
+### Test Quality: Sequential API Calls in updateFutureInstances
+**Status:** 📋 DESIGN
+**Priority:** Medium
+**Estimated Effort:** 2-4 hours
+**Date Added:** 2026-03-23
+**Source:** Code simplification review (efficiency analysis)
+
+#### Problem
+`updateFutureInstances()` in the recurring event handler makes two sequential `calendar.events.get()` calls for the same event:
+1. First in `detectEventType()` to check if event is recurring
+2. Second in `updateFutureInstances()` to get full event for split operation
+
+**Impact:**
+- Doubles network latency on this code path
+- In tests: doubles mock invocation count
+- In production: ~500ms extra per future-instance update
+
+#### Solution
+Pass fetched event from routing method to delegate methods, eliminating redundant fetch:
+1. Fetch event once in `updateEventWithScope()`
+2. Pass event object to delegate methods (`updateSingleInstance`, `updateAllInstances`, etc.)
+3. Delegate methods use passed event instead of re-fetching
+4. Alternative: consolidate detection logic inside each delegate
+
+---
+
+### Test Quality: Loop Isolation Anti-patterns in Mock Setup
+**Status:** 📋 DESIGN
+**Priority:** Medium
+**Estimated Effort:** 4-6 hours
+**Date Added:** 2026-03-23
+**Source:** Code simplification review (efficiency analysis)
+
+#### Problem
+Multiple test loops use `mockClear()` and `mockResolvedValue()` inside `for...of` iterations, causing:
+1. Lost test isolation (mock state accumulates across iterations)
+2. Hot-path bloat (Vitest mock bookkeeping on every iteration)
+3. Silent bugs if call-count assertions ever added
+4. Non-idiomatic test patterns (Vitest prefers `it.each`)
+
+**Affected Tests:**
+- UpdateEventHandler.recurring.test.ts lines 353-372 (timezone test)
+- UpdateEventHandler.recurring.test.ts lines 583-630 (UNTIL/COUNT test)
+- UpdateEventHandler.recurring.test.ts lines 981-995 (invalid scopes test)
+
+#### Solution
+Convert all three loops to use `it.each()` parametrized test pattern:
+```typescript
+it.each(testCases)('test name: %s', async (testCase) => { ... });
+```
+- Fresh mock state per test
+- Proper per-case failure attribution
+- Idiomatic Vitest pattern
+- Better CI output with parameterized names
+
+---
+
 ## Completed Items
+
+### Code Simplification: Test Quality Improvements
+**Status:** ✅ COMPLETED (2026-03-23)
+- Extracted `getFutureDateString()` → `makeFutureDateString()` in `factories.ts`
+- Added `makePastDateString()` helper for symmetry
+- Removed 18 lines of duplicated date logic from validators.test.ts
+- Fixed 2 misleading test names (rejected vs pass-through semantics)
+- Converted 12 forEach-based tests to `it.each()` parametrized pattern
+- Removed dead code (`RecurringEventError`, `ERRORS` constant) from UpdateEventHandler.recurring.test.ts
+- Added architectural warning documenting shadow implementation issue
+- All 338 tests pass
 
 ### Gmail OAuth Integration
 **Status:** ✅ COMPLETED (2026-03-23)

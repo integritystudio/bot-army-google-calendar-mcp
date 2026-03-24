@@ -3,6 +3,7 @@ import { OAuth2Client } from "google-auth-library";
 import { BaseToolHandler } from "./BaseToolHandler.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { GetCurrentTimeInput } from "../../tools/registry.js";
+import { formatRFC3339 } from "../../utils/date-utils.js";
 
 export class GetCurrentTimeHandler extends BaseToolHandler {
     async runTool(args: any, _oauth2Client: OAuth2Client): Promise<CallToolResult> {
@@ -83,8 +84,8 @@ export class GetCurrentTimeHandler extends BaseToolHandler {
     
     private formatDateInTimeZone(date: Date, timeZone: string): string {
         const offset = this.getTimezoneOffset(date, timeZone);
-        // Remove milliseconds from ISO string for proper RFC3339 format
-        const isoString = date.toISOString().replace(/\.\d{3}Z$/, '');
+        // Remove Z suffix from RFC3339 format and add timezone offset
+        const isoString = formatRFC3339(date).slice(0, -1);
         return isoString + offset;
     }
     

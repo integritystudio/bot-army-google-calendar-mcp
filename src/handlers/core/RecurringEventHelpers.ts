@@ -1,8 +1,12 @@
 import { calendar_v3 } from 'googleapis';
-
-const ONE_DAY_MS = 86400000;
-const UNTIL_PATTERN = /;UNTIL=\d{8}T\d{6}Z/g;
-const COUNT_PATTERN = /;COUNT=\d+/g;
+import {
+  TIME_DURATIONS,
+  formatBasicDateTime,
+  oneDayBefore,
+  stripUntilAndCount,
+  buildUntilClause,
+  isRRuleString,
+} from '../../utils/date-utils.js';
 
 export class RecurringEventHelpers {
   private calendar: calendar_v3.Calendar;
@@ -29,7 +33,7 @@ export class RecurringEventHelpers {
    */
   formatInstanceId(eventId: string, originalStartTime: string): string {
     const utcDate = new Date(originalStartTime);
-    const basicTimeFormat = this.toBasicFormat(utcDate);
+    const basicTimeFormat = formatBasicDateTime(utcDate);
     return `${eventId}_${basicTimeFormat}`;
   }
 
@@ -38,12 +42,8 @@ export class RecurringEventHelpers {
    */
   calculateUntilDate(futureStartDate: string): string {
     const futureDate = new Date(futureStartDate);
-    const untilDate = new Date(futureDate.getTime() - ONE_DAY_MS);
-    return this.toBasicFormat(untilDate);
-  }
-
-  private toBasicFormat(date: Date): string {
-    return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const untilDate = oneDayBefore(futureDate);
+    return formatBasicDateTime(untilDate);
   }
 
   /**
@@ -53,9 +53,9 @@ export class RecurringEventHelpers {
     const newStart = new Date(newStartTime);
     const originalStart = new Date(originalEvent.start!.dateTime!);
     const originalEnd = new Date(originalEvent.end!.dateTime!);
-    const duration = originalEnd.getTime() - originalStart.getTime();
-    
-    return new Date(newStart.getTime() + duration).toISOString();
+    const durationMs = originalEnd.getTime() - originalStart.getTime();
+
+    return new Date(newStart.getTime() + durationMs).toISOString();
   }
 
   /**
@@ -70,12 +70,9 @@ export class RecurringEventHelpers {
     let foundRRule = false;
 
     for (const rule of recurrence) {
-      if (rule.startsWith('RRULE:')) {
+      if (isRRuleString(rule)) {
         foundRRule = true;
-        const updatedRule = rule
-          .replace(UNTIL_PATTERN, '')
-          .replace(COUNT_PATTERN, '')
-          + `;UNTIL=${untilDate}`;
+        const updatedRule = stripUntilAndCount(rule) + `;UNTIL=${untilDate}`;
         updatedRecurrence.push(updatedRule);
       } else {
         updatedRecurrence.push(rule);

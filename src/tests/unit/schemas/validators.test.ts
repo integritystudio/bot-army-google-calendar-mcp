@@ -1,17 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { ToolSchemas } from '../../../tools/registry.js';
+import { makeFutureDateString, makePastDateString } from '../helpers/factories.js';
 
-// Use the unified schemas from registry  
 const UpdateEventArgumentsSchema = ToolSchemas['update-event'];
 const ListEventsArgumentsSchema = ToolSchemas['list-events'];
-
-// Helper to generate a future date string in timezone-naive format
-function getFutureDateString(daysFromNow: number = 365): string {
-  const futureDate = new Date();
-  futureDate.setDate(futureDate.getDate() + daysFromNow);
-  // Format as timezone-naive ISO string (no timezone suffix)
-  return futureDate.toISOString().split('.')[0];
-}
 
 describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
   describe('Basic Validation', () => {
@@ -86,7 +78,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
         if (scope === 'thisEventOnly') {
           args.originalStartTime = '2024-06-15T10:00:00';
         } else if (scope === 'thisAndFollowing') {
-          args.futureStartDate = getFutureDateString(90); // 90 days from now
+          args.futureStartDate = makeFutureDateString(90); // 90 days from now
         }
 
         const result = UpdateEventArgumentsSchema.parse(args);
@@ -176,7 +168,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
     });
 
     it('should accept valid futureStartDate for thisAndFollowing scope', () => {
-      const futureDateString = getFutureDateString(30); // 30 days from now
+      const futureDateString = makeFutureDateString(30); // 30 days from now
 
       const args = {
         calendarId: 'primary',
@@ -192,10 +184,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
     });
 
     it('should reject futureStartDate in the past', () => {
-      const pastDate = new Date();
-      pastDate.setFullYear(pastDate.getFullYear() - 1);
-      // Format as ISO string without milliseconds
-      const pastDateString = pastDate.toISOString().split('.')[0] + 'Z';
+      const pastDateString = makePastDateString(1);
 
       const args = {
         calendarId: 'primary',
@@ -240,31 +229,27 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
       '2024-06-15T10:00'         // missing seconds
     ];
 
-    validDatetimes.forEach(datetime => {
-      it(`should accept valid datetime format: ${datetime}`, () => {
-        const args = {
-          calendarId: 'primary',
-          eventId: 'event123',
-          timeZone: 'America/Los_Angeles',
-          start: datetime,
-          end: datetime
-        };
+    it.each(validDatetimes)('should accept valid datetime format: %s', (datetime) => {
+      const args = {
+        calendarId: 'primary',
+        eventId: 'event123',
+        timeZone: 'America/Los_Angeles',
+        start: datetime,
+        end: datetime
+      };
 
-        expect(() => UpdateEventArgumentsSchema.parse(args)).not.toThrow();
-      });
+      expect(() => UpdateEventArgumentsSchema.parse(args)).not.toThrow();
     });
 
-    invalidDatetimes.forEach(datetime => {
-      it(`should reject invalid datetime format: ${datetime}`, () => {
-        const args = {
-          calendarId: 'primary',
-          eventId: 'event123',
-          timeZone: 'America/Los_Angeles',
-          start: datetime
-        };
+    it.each(invalidDatetimes)('should reject invalid datetime format: %s', (datetime) => {
+      const args = {
+        calendarId: 'primary',
+        eventId: 'event123',
+        timeZone: 'America/Los_Angeles',
+        start: datetime
+      };
 
-        expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow();
-      });
+      expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow();
     });
   });
 
@@ -275,7 +260,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
         eventId: 'event123',
         timeZone: 'America/Los_Angeles',
         modificationScope: 'thisAndFollowing',
-        futureStartDate: getFutureDateString(60), // 60 days from now
+        futureStartDate: makeFutureDateString(60), // 60 days from now
         summary: 'Updated Meeting',
         description: 'Updated description',
         location: 'New Conference Room',
@@ -383,7 +368,7 @@ describe('ListEventsArgumentsSchema JSON String Handling', () => {
     expect(() => ListEventsArgumentsSchema.parse(input)).toThrow();
   });
 
-  it('should reject invalid JSON string', () => {
+  it('should pass through invalid JSON strings for handler validation', () => {
     // Invalid JSON strings are accepted by the schema but will fail in the handler
     const input = {
       calendarId: '["primary", invalid]',
@@ -396,7 +381,7 @@ describe('ListEventsArgumentsSchema JSON String Handling', () => {
     expect(result.calendarId).toBe('["primary", invalid]');
   });
 
-  it('should reject JSON string with non-string elements', () => {
+  it('should pass through JSON strings with non-string elements for handler validation', () => {
     // Schema accepts any string - validation happens in the handler
     const input = {
       calendarId: '["primary", 123]',

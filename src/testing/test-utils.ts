@@ -1,6 +1,11 @@
 import type { TestContext } from './types.js';
 import { TypedTestContext } from './types.js';
 import { tryGetTextContent } from '../tests/unit/helpers/index.js';
+import {
+  EVENT_ID_MIN_LENGTH,
+  RESPONSE_PATTERNS,
+  RESPONSE_INDICATORS
+} from './constants.js';
 
 /**
  * Wrap test function with proper async context type
@@ -160,13 +165,13 @@ export function extractEventIdFromResponse(response: any): string | null {
   // Look for various event ID patterns in the response
   // Google Calendar event IDs can contain letters, numbers, underscores, and special characters
   const patterns = [
-    /Event created: .* \(([^)]+)\)/, // Legacy format - Match anything within parentheses after "Event created:"
-    /Event updated: .* \(([^)]+)\)/, // Legacy format - Match anything within parentheses after "Event updated:"
-    /✅ Event created successfully[\s\S]*?([^\s\(]+) \(([^)]+)\)/, // New format - Extract ID from parentheses in event details
-    /✅ Event updated successfully[\s\S]*?([^\s\(]+) \(([^)]+)\)/, // New format - Extract ID from parentheses in event details
-    /Event ID: ([^\s]+)/, // Match non-whitespace characters after "Event ID:"
-    /Created event: .* \(ID: ([^)]+)\)/, // Match anything within parentheses after "ID:"
-    /\(([a-zA-Z0-9_@.-]{10,})\)/, // Specific pattern for Google Calendar IDs with common characters
+    new RegExp(`${RESPONSE_PATTERNS.LEGACY_CREATED}.* \\(([^)]+)\\)`), // Legacy format
+    new RegExp(`${RESPONSE_PATTERNS.LEGACY_UPDATED}.* \\(([^)]+)\\)`), // Legacy format
+    new RegExp(`${RESPONSE_INDICATORS.SUCCESS_CHECK} ${RESPONSE_PATTERNS.NEW_CREATED}[\\s\\S]*?([^\\s\\(]+) \\(([^)]+)\\)`), // New format
+    new RegExp(`${RESPONSE_INDICATORS.SUCCESS_CHECK} ${RESPONSE_PATTERNS.NEW_UPDATED}[\\s\\S]*?([^\\s\\(]+) \\(([^)]+)\\)`), // New format
+    new RegExp(`${RESPONSE_PATTERNS.EVENT_ID_PREFIX}([^\\s]+)`), // Match after "Event ID:"
+    new RegExp(`${RESPONSE_PATTERNS.CREATED_EVENT}.* \\(${RESPONSE_PATTERNS.ID_SUFFIX}([^)]+)\\)`), // Match after "ID:"
+    new RegExp(`\\((${RESPONSE_PATTERNS.EVENT_ID_CHAR_CLASS}{${EVENT_ID_MIN_LENGTH},})\\)`) // Google Calendar ID pattern
   ];
 
   for (const pattern of patterns) {
@@ -178,8 +183,8 @@ export function extractEventIdFromResponse(response: any): string | null {
       if (eventId) {
         // Clean up the captured ID (trim whitespace)
         eventId = eventId.trim();
-        // Google Calendar IDs are typically at least 10 chars
-        if (eventId.length >= 10) {
+        // Validate minimum length for event IDs
+        if (eventId.length >= EVENT_ID_MIN_LENGTH) {
           return eventId;
         }
       }

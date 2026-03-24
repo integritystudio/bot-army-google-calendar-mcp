@@ -1431,3 +1431,67 @@ Open item: audit handlers/services for places that can adopt these utilities.
 
 ---
 
+### L10: Refactor Repomix URL parameter filtering (external repo)
+**Status:** ⏳ PENDING
+**Priority:** Low
+**Date Added:** 2026-03-24
+**External Repo:** [yamadashy/repomix](https://github.com/yamadashy/repomix)
+**Estimated Effort:** 1-2 hours (PR creation, review, merge)
+**Source:** DRY analysis after local event building refactoring
+
+**Pattern Identified:**
+Two functions in `website/client/utils/urlParameters.ts` (lines 110426-110430 and 110573-110580) use identical null/undefined filtering logic:
+
+```typescript
+// Pattern 1: Building URLSearchParams from params object
+for (const [key, value] of Object.entries(params)) {
+  if (value !== undefined && value !== null) {
+    urlSearchParams.set(key, String(value));
+  }
+}
+
+// Pattern 2: Adding parameters with type handling
+for (const [key, value] of Object.entries(options)) {
+  if (value !== undefined && value !== null) {
+    const urlParamKey = getUrlParamKey(key);
+    if (typeof value === 'boolean') {
+      params.set(urlParamKey, value.toString());
+    } else if (typeof value === 'string' && value.trim() !== '') {
+      params.set(urlParamKey, value.trim());
+    }
+  }
+}
+```
+
+**Refactoring Approach:**
+Extract shared helper similar to `buildOptionalEventFields` pattern applied in this project:
+
+```typescript
+function filterNullUndefined(obj: Record<string, any>): Record<string, any> {
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined && value !== null) {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+```
+
+**Action Items:**
+1. Fork/clone Repomix repo
+2. Create feature branch for URL parameter refactoring
+3. Extract `filterNullUndefined()` helper to `website/client/utils/` or `lib/`
+4. Refactor both functions to use helper
+5. Run test suite to verify no regressions
+6. Submit PR with clear description of DRY consolidation
+
+**Benefits:**
+- Single source of truth for null/undefined filtering
+- Reduced duplication across URL parameter handling
+- Easier maintenance and future updates
+
+**Risk:** Low (utility function, minimal impact)
+
+---
+

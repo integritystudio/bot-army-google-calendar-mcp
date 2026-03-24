@@ -9,19 +9,26 @@ import {
   formatBasicDateTime,
   oneDayBefore,
 } from '../../../utils/date-utils.js';
+import { createBuilder } from './testBuilder.js';
+
+// Duration constants (milliseconds)
+const ONE_HOUR_MS = 3600000;
+const THIRTY_MINUTES_MS = 1800000;
+const TWO_HOURS_MS = 7200000;
+
+const EVENT_BUILDER = createBuilder<calendar_v3.Schema$Event>({
+  id: 'event1',
+  summary: 'Test Event',
+  start: { dateTime: '2025-01-15T10:00:00Z' },
+  end: { dateTime: '2025-01-15T11:00:00Z' }
+});
 
 /**
  * Create a basic calendar event with optional overrides.
  * Useful for tests that need consistent event structures.
  */
 export function makeEvent(overrides: Partial<calendar_v3.Schema$Event> = {}): calendar_v3.Schema$Event {
-  return {
-    id: 'event1',
-    summary: 'Test Event',
-    start: { dateTime: '2025-01-15T10:00:00Z' },
-    end: { dateTime: '2025-01-15T11:00:00Z' },
-    ...overrides
-  };
+  return EVENT_BUILDER.build(overrides);
 }
 
 /**
@@ -33,12 +40,8 @@ export function makeEventWithCalendarId(
   overrides: Partial<calendar_v3.Schema$Event> = {}
 ): calendar_v3.Schema$Event & { calendarId?: string } {
   return {
-    id: 'event1',
-    summary: 'Test Event',
-    start: { dateTime: '2025-01-15T10:00:00Z' },
-    end: { dateTime: '2025-01-15T11:00:00Z' },
-    calendarId,
-    ...overrides
+    ...EVENT_BUILDER.build(overrides),
+    calendarId
   };
 }
 
@@ -60,7 +63,7 @@ export function makeGaxiosError(
     (error as any).data = data;
   }
 
-  return error as any;
+  return error as GaxiosError & { data?: object };
 }
 
 /**
@@ -74,16 +77,16 @@ export function makeEvents(
   baseOverrides: Partial<calendar_v3.Schema$Event> = {},
   variantFn?: (index: number) => Partial<calendar_v3.Schema$Event>
 ): calendar_v3.Schema$Event[] {
-  return Array.from({ length: count }, (_, i) => {
+  return EVENT_BUILDER.buildMany(count, (i) => {
     const variantOverrides = variantFn?.(i) ?? {};
-    return makeEvent({
+    return {
+      ...baseOverrides,
       id: `event${i + 1}`,
       summary: `Event ${i + 1}`,
       start: { dateTime: `2025-01-${String((i % 28) + 1).padStart(2, '0')}T10:00:00Z` },
       end: { dateTime: `2025-01-${String((i % 28) + 1).padStart(2, '0')}T11:00:00Z` },
-      ...baseOverrides,
       ...variantOverrides
-    });
+    };
   });
 }
 
@@ -139,7 +142,7 @@ export function makeWeeklyRecurringEvent(
     summary: 'Weekly Meeting',
     recurrence: [rrule],
     start: { dateTime: formatRFC3339(startDate) },
-    end: { dateTime: formatRFC3339(new Date(startDate.getTime() + 3600000)) },
+    end: { dateTime: formatRFC3339(new Date(startDate.getTime() + ONE_HOUR_MS)) },
     ...overrides,
   });
 }
@@ -175,7 +178,7 @@ export function makeDailyRecurringEvent(
     summary: 'Daily Standup',
     recurrence: [rrule],
     start: { dateTime: formatRFC3339(startDate) },
-    end: { dateTime: formatRFC3339(new Date(startDate.getTime() + 1800000)) },
+    end: { dateTime: formatRFC3339(new Date(startDate.getTime() + THIRTY_MINUTES_MS)) },
     ...overrides,
   });
 }
@@ -206,7 +209,7 @@ export function makeMonthlyRecurringEvent(
     summary: 'Monthly Review',
     recurrence: [rrule],
     start: { dateTime: formatRFC3339(startDate) },
-    end: { dateTime: formatRFC3339(new Date(startDate.getTime() + 7200000)) },
+    end: { dateTime: formatRFC3339(new Date(startDate.getTime() + TWO_HOURS_MS)) },
     ...overrides,
   });
 }
@@ -238,7 +241,7 @@ export function makeRecurringEventWithExceptions(
     summary: 'Meeting with Exceptions',
     recurrence,
     start: { dateTime: formatRFC3339(startDate) },
-    end: { dateTime: formatRFC3339(new Date(startDate.getTime() + 3600000)) },
+    end: { dateTime: formatRFC3339(new Date(startDate.getTime() + ONE_HOUR_MS)) },
     ...overrides,
   });
 }
@@ -270,7 +273,7 @@ export function makeRecurringEventWithAdditionalDates(
     summary: 'Meeting with Extra Dates',
     recurrence,
     start: { dateTime: formatRFC3339(startDate) },
-    end: { dateTime: formatRFC3339(new Date(startDate.getTime() + 3600000)) },
+    end: { dateTime: formatRFC3339(new Date(startDate.getTime() + ONE_HOUR_MS)) },
     ...overrides,
   });
 }
@@ -287,20 +290,18 @@ export function makeRecurringEventInstance(
   eventId: string,
   instanceDate: Date,
   overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event & { originalStartTime?: string } {
-  const instanceEndTime = new Date(instanceDate.getTime() + 3600000); // 1 hour duration
+): calendar_v3.Schema$Event {
+  const instanceEndTime = new Date(instanceDate.getTime() + ONE_HOUR_MS);
 
-  const event = makeEvent({
+  return makeEvent({
     id: `${eventId}_${formatBasicDateTime(instanceDate)}`,
     summary: 'Series Instance',
-    recurringEventId: eventId, // Mark as instance of recurring event
+    recurringEventId: eventId,
+    originalStartTime: { dateTime: formatRFC3339(instanceDate) },
     start: { dateTime: formatRFC3339(instanceDate) },
     end: { dateTime: formatRFC3339(instanceEndTime) },
     ...overrides,
   });
-
-  (event as any).originalStartTime = formatRFC3339(instanceDate);
-  return event as calendar_v3.Schema$Event & { originalStartTime?: string };
 }
 
 /**

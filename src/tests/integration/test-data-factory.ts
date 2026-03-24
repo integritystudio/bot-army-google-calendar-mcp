@@ -2,6 +2,11 @@
 import { tryGetTextContent } from '../unit/helpers/index.js';
 import { formatTZNaiveDateTime, formatRFC3339 } from '../../utils/date-utils.js';
 import { extractEventIdFromResponse as extractEventIdFromResponseShared } from '../../testing/test-utils.js';
+import {
+  TIME_DURATIONS,
+  TEST_TIMEZONE,
+  TEST_EVENT_DEFAULTS
+} from '../../testing/constants.js';
 
 export interface TestEvent {
   id?: string;
@@ -60,15 +65,15 @@ export class TestDataFactory {
     const end = new Date(start.getTime() + 60 * 60 * 1000); // 1 hour duration
 
     return {
-      summary: 'Test Integration Event',
-      description: 'Created by integration test suite',
+      summary: TEST_EVENT_DEFAULTS.SUMMARY,
+      description: TEST_EVENT_DEFAULTS.DESCRIPTION,
       start: formatTZNaiveDateTime(start),
       end: formatTZNaiveDateTime(end),
-      timeZone: 'America/Los_Angeles',
-      location: 'Test Conference Room',
+      timeZone: TEST_TIMEZONE,
+      location: TEST_EVENT_DEFAULTS.LOCATION,
       reminders: {
         useDefault: false,
-        overrides: [{ method: 'popup', minutes: 15 }]
+        overrides: [{ method: 'popup', minutes: TEST_EVENT_DEFAULTS.REMINDER_MINUTES }]
       },
       ...overrides
     };
@@ -77,7 +82,7 @@ export class TestDataFactory {
   static createAllDayEvent(overrides: Partial<TestEvent> = {}): TestEvent {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     const dayAfter = new Date(tomorrow);
     dayAfter.setDate(dayAfter.getDate() + 1);
 
@@ -86,8 +91,8 @@ export class TestDataFactory {
     const endDate = dayAfter.toISOString().split('T')[0];
 
     return {
-      summary: 'Test All-Day Event',
-      description: 'All-day test event',
+      summary: TEST_EVENT_DEFAULTS.ALL_DAY_SUMMARY,
+      description: TEST_EVENT_DEFAULTS.ALL_DAY_DESCRIPTION,
       start: startDate,
       end: endDate,
       // Note: timeZone is not used for all-day events (they're date-only)
@@ -99,21 +104,21 @@ export class TestDataFactory {
     const start = new Date();
     start.setDate(start.getDate() + 1); // Tomorrow
     start.setHours(10, 0, 0, 0); // 10 AM
-    
+
     const end = new Date(start);
     end.setHours(11, 0, 0, 0); // 11 AM
 
     return {
-      summary: 'Test Recurring Meeting',
-      description: 'Weekly recurring test meeting',
+      summary: TEST_EVENT_DEFAULTS.RECURRING_SUMMARY,
+      description: TEST_EVENT_DEFAULTS.RECURRING_DESCRIPTION,
       start: formatTZNaiveDateTime(start),
       end: formatTZNaiveDateTime(end),
-      timeZone: 'America/Los_Angeles',
-      location: 'Recurring Meeting Room',
+      timeZone: TEST_TIMEZONE,
+      location: TEST_EVENT_DEFAULTS.RECURRING_LOCATION,
       recurrence: ['RRULE:FREQ=WEEKLY;COUNT=5'], // 5 weeks
       reminders: {
         useDefault: false,
-        overrides: [{ method: 'email', minutes: 1440 }] // 1 day before
+        overrides: [{ method: 'email', minutes: TEST_EVENT_DEFAULTS.RECURRING_EMAIL_REMINDER_MINUTES }]
       },
       ...overrides
     };

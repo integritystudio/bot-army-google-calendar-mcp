@@ -2,11 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { calendar_v3 } from 'googleapis';
 import { RecurringEventHelpers } from '../../../handlers/core/RecurringEventHelpers.js';
 import { makeCalendarMock, makeEvent } from '../helpers/factories.js';
+import {
+  SYSTEM_FIELDS,
+  createTestEventWithTZOffset,
+  createCompleteTestEvent,
+  createUpdateEventArgsWithTimes,
+  createUpdateEventArgsWithAttendees,
+  createComplexUpdateEventArgs
+} from '../helpers/event-test-data.js';
 
 // Test constants
 const CALENDAR_ID = 'primary';
 const EVENT_ID = 'event123';
-const SYSTEM_FIELDS = ['id', 'etag', 'iCalUID', 'created', 'updated', 'htmlLink', 'hangoutLink'] as const;
 
 describe('RecurringEventHelpers', () => {
   let helpers: RecurringEventHelpers;
@@ -120,10 +127,7 @@ describe('RecurringEventHelpers', () => {
 
   describe('calculateEndTime', () => {
     it('should calculate end time based on original duration', () => {
-      const originalEvent: calendar_v3.Schema$Event = {
-        start: { dateTime: '2024-06-15T10:00:00-07:00' },
-        end: { dateTime: '2024-06-15T11:00:00-07:00' }
-      };
+      const originalEvent = createTestEventWithTZOffset('2024-06-15T10:00:00-07:00', '2024-06-15T11:00:00-07:00');
       const newStartTime = '2024-06-15T14:00:00-07:00';
 
       const result = helpers.calculateEndTime(newStartTime, originalEvent);
@@ -131,10 +135,7 @@ describe('RecurringEventHelpers', () => {
     });
 
     it('should handle different durations', () => {
-      const originalEvent: calendar_v3.Schema$Event = {
-        start: { dateTime: '2024-06-15T10:00:00Z' },
-        end: { dateTime: '2024-06-15T12:30:00Z' }
-      };
+      const originalEvent = createTestEventWithTZOffset('2024-06-15T10:00:00Z', '2024-06-15T12:30:00Z');
       const newStartTime = '2024-06-16T09:00:00Z';
 
       const result = helpers.calculateEndTime(newStartTime, originalEvent);
@@ -142,10 +143,7 @@ describe('RecurringEventHelpers', () => {
     });
 
     it('should handle cross-timezone calculations', () => {
-      const originalEvent: calendar_v3.Schema$Event = {
-        start: { dateTime: '2024-06-15T10:00:00-07:00' },
-        end: { dateTime: '2024-06-15T11:00:00-07:00' }
-      };
+      const originalEvent = createTestEventWithTZOffset('2024-06-15T10:00:00-07:00', '2024-06-15T11:00:00-07:00');
       const newStartTime = '2024-06-15T10:00:00+05:30';
 
       const result = helpers.calculateEndTime(newStartTime, originalEvent);
@@ -276,20 +274,14 @@ describe('RecurringEventHelpers', () => {
     }
 
     it('should remove system-generated fields', () => {
-      const originalEvent: calendar_v3.Schema$Event = {
+      const originalEvent = createCompleteTestEvent({
         id: EVENT_ID,
-        etag: '"abc123"',
-        iCalUID: 'uid123@google.com',
-        created: '2024-01-01T00:00:00Z',
-        updated: '2024-01-01T00:00:00Z',
-        htmlLink: 'https://calendar.google.com/event?eid=...',
-        hangoutLink: 'https://meet.google.com/...',
         summary: 'Meeting',
         description: 'Meeting description',
         location: 'Conference Room',
         start: { dateTime: '2024-06-15T10:00:00Z' },
         end: { dateTime: '2024-06-15T11:00:00Z' }
-      };
+      });
 
       const result = helpers.cleanEventForDuplication(originalEvent);
       expectSystemFieldsRemoved(result);
@@ -314,29 +306,14 @@ describe('RecurringEventHelpers', () => {
     });
 
     it('should handle all possible system fields', () => {
-      const eventWithAllSystemFields: calendar_v3.Schema$Event = {
+      const eventWithAllSystemFields = createCompleteTestEvent({
         id: EVENT_ID,
-        etag: '"abc123"',
-        iCalUID: 'uid123@google.com',
-        created: '2024-01-01T00:00:00Z',
-        updated: '2024-01-01T00:00:00Z',
-        htmlLink: 'https://calendar.google.com/event?eid=...',
-        hangoutLink: 'https://meet.google.com/...',
-        conferenceData: { entryPoints: [] },
-        creator: { email: 'creator@example.com' },
-        organizer: { email: 'organizer@example.com' },
-        sequence: 1,
-        status: 'confirmed',
-        transparency: 'opaque',
-        visibility: 'default',
         summary: 'Meeting',
         description: 'Meeting description',
         location: 'Conference Room',
         start: { dateTime: '2024-06-15T10:00:00Z' },
-        end: { dateTime: '2024-06-15T11:00:00Z' },
-        attendees: [{ email: 'attendee@example.com' }],
-        recurrence: ['RRULE:FREQ=WEEKLY']
-      };
+        end: { dateTime: '2024-06-15T11:00:00Z' }
+      });
 
       const result = helpers.cleanEventForDuplication(eventWithAllSystemFields);
       expectSystemFieldsRemoved(result);
@@ -371,12 +348,12 @@ describe('RecurringEventHelpers', () => {
     });
 
     it('should handle time changes correctly', () => {
-      const args = {
-        start: '2024-06-15T10:00:00-07:00',
-        end: '2024-06-15T11:00:00-07:00',
-        timeZone: 'America/Los_Angeles',
-        summary: 'Meeting'
-      };
+      const args = createUpdateEventArgsWithTimes(
+        '2024-06-15T10:00:00-07:00',
+        '2024-06-15T11:00:00-07:00',
+        'America/Los_Angeles',
+        { summary: 'Meeting' }
+      );
 
       const result = helpers.buildUpdateRequestBody(args);
 
@@ -435,20 +412,9 @@ describe('RecurringEventHelpers', () => {
     });
 
     it('should handle attendees and reminders', () => {
-      const args = {
-        attendees: [
-          { email: 'user1@example.com' },
-          { email: 'user2@example.com' }
-        ],
-        reminders: {
-          useDefault: false,
-          overrides: [
-            { method: 'email', minutes: 1440 },
-            { method: 'popup', minutes: 10 }
-          ]
-        },
+      const args = createUpdateEventArgsWithAttendees({
         timeZone: 'UTC'
-      };
+      });
 
       const result = helpers.buildUpdateRequestBody(args);
 
@@ -472,34 +438,7 @@ describe('RecurringEventHelpers', () => {
     });
 
     it('should handle complex nested objects', () => {
-      const complexArgs = {
-        summary: 'Complex Meeting',
-        attendees: [
-          {
-            email: 'user1@example.com',
-            displayName: 'User One',
-            responseStatus: 'accepted'
-          },
-          {
-            email: 'user2@example.com',
-            displayName: 'User Two',
-            responseStatus: 'tentative'
-          }
-        ],
-        reminders: {
-          useDefault: false,
-          overrides: [
-            { method: 'email', minutes: 1440 },
-            { method: 'popup', minutes: 10 },
-            { method: 'sms', minutes: 60 }
-          ]
-        },
-        recurrence: [
-          'RRULE:FREQ=WEEKLY;BYDAY=MO',
-          'EXDATE:20240610T100000Z'
-        ],
-        timeZone: 'America/Los_Angeles'
-      };
+      const complexArgs = createComplexUpdateEventArgs();
 
       const result = helpers.buildUpdateRequestBody(complexArgs);
 

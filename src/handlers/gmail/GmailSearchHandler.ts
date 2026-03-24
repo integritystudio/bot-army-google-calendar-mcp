@@ -1,7 +1,7 @@
 import { BaseToolHandler } from "../core/BaseToolHandler.js";
-import { google } from "googleapis";
 import { OAuth2Client } from "google-auth-library";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { fetchMessageDetails, getErrorMessage } from "./gmailUtils.js";
 
 export interface GmailSearchInput {
   query: string;
@@ -12,16 +12,11 @@ export interface GmailSearchInput {
 export class GmailSearchHandler extends BaseToolHandler {
   async runTool(args: GmailSearchInput, oauth2Client: OAuth2Client): Promise<CallToolResult> {
     const result = await this.execute(args, oauth2Client);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    return this.toResult(result);
   }
 
   async execute(input: GmailSearchInput, oauth2Client: OAuth2Client): Promise<any> {
-    const gmail = google.gmail({
-      version: "v1",
-      auth: oauth2Client,
-    });
+    const gmail = this.getGmail(oauth2Client);
 
     const response = await gmail.users.messages.list({
       userId: "me",
@@ -33,30 +28,22 @@ export class GmailSearchHandler extends BaseToolHandler {
     const messageCount = response.data.resultSizeEstimate || 0;
     const messages = response.data.messages || [];
 
-    // Fetch full message details if requested
     const detailedMessages = await Promise.all(
       messages.map(async (msg) => {
         try {
-          const fullMsg = await gmail.users.messages.get({
-            userId: "me",
-            id: msg.id!,
-            format: "metadata",
-            metadataHeaders: ["Subject", "From", "Date"],
-          });
-
-          const headers = fullMsg.data.payload?.headers || [];
+          const details = await fetchMessageDetails(gmail, msg.id!);
           return {
             id: msg.id,
             threadId: msg.threadId,
-            snippet: fullMsg.data.snippet,
-            subject: headers.find((h) => h.name === "Subject")?.value,
-            from: headers.find((h) => h.name === "From")?.value,
-            date: headers.find((h) => h.name === "Date")?.value,
+            snippet: details.snippet,
+            subject: details.headers.Subject,
+            from: details.headers.From,
+            date: details.headers.Date,
           };
         } catch (error) {
           return {
             id: msg.id,
-            error: `Failed to fetch message details: ${error}`,
+            error: getErrorMessage(error),
           };
         }
       })

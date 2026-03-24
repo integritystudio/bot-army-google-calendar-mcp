@@ -1,7 +1,7 @@
 import { BaseToolHandler } from "../core/BaseToolHandler.js";
-import { google } from "googleapis";
 import { OAuth2Client } from "google-auth-library";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { getErrorMessage } from "./gmailUtils.js";
 
 export interface GmailModifyInput {
   messageIds: string[];
@@ -9,19 +9,27 @@ export interface GmailModifyInput {
   labelId?: string;
 }
 
+const ACTION_LABELS: Record<string, { addLabelIds?: string[]; removeLabelIds?: string[] }> = {
+  markRead: { removeLabelIds: ["UNREAD"] },
+  markUnread: { addLabelIds: ["UNREAD"] },
+  archive: { removeLabelIds: ["INBOX"] },
+};
+
+const ACTION_DESCRIPTIONS: Record<string, string> = {
+  markRead: "marked as read",
+  markUnread: "marked as unread",
+  archive: "archived",
+  delete: "permanently deleted",
+};
+
 export class GmailModifyHandler extends BaseToolHandler {
   async runTool(args: GmailModifyInput, oauth2Client: OAuth2Client): Promise<CallToolResult> {
     const result = await this.execute(args, oauth2Client);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
+    return this.toResult(result);
   }
 
   async execute(input: GmailModifyInput, oauth2Client: OAuth2Client): Promise<any> {
-    const gmail = google.gmail({
-      version: "v1",
-      auth: oauth2Client,
-    });
+    const gmail = this.getGmail(oauth2Client);
 
     const results = {
       action: input.action,
@@ -32,122 +40,76 @@ export class GmailModifyHandler extends BaseToolHandler {
 
     for (const messageId of input.messageIds) {
       try {
-        let response;
-
-        switch (input.action) {
-          case "markRead":
-            response = await gmail.users.messages.modify({
-              userId: "me",
-              id: messageId,
-              requestBody: {
-                removeLabelIds: ["UNREAD"],
-              },
-            });
-            results.messages.push({
-              id: messageId,
-              action: "marked as read",
-              success: true,
-            });
-            results.processed++;
-            break;
-
-          case "markUnread":
-            response = await gmail.users.messages.modify({
-              userId: "me",
-              id: messageId,
-              requestBody: {
-                addLabelIds: ["UNREAD"],
-              },
-            });
-            results.messages.push({
-              id: messageId,
-              action: "marked as unread",
-              success: true,
-            });
-            results.processed++;
-            break;
-
-          case "archive":
-            response = await gmail.users.messages.modify({
-              userId: "me",
-              id: messageId,
-              requestBody: {
-                removeLabelIds: ["INBOX"],
-              },
-            });
-            results.messages.push({
-              id: messageId,
-              action: "archived",
-              success: true,
-            });
-            results.processed++;
-            break;
-
-          case "delete":
-            await gmail.users.messages.delete({
-              userId: "me",
-              id: messageId,
-            });
-            results.messages.push({
-              id: messageId,
-              action: "permanently deleted",
-              success: true,
-            });
-            results.processed++;
-            break;
-
-          case "addLabel":
-            if (!input.labelId) {
-              throw new Error("labelId required for addLabel action");
-            }
-            response = await gmail.users.messages.modify({
-              userId: "me",
-              id: messageId,
-              requestBody: {
-                addLabelIds: [input.labelId],
-              },
-            });
-            results.messages.push({
-              id: messageId,
-              action: `added label ${input.labelId}`,
-              success: true,
-            });
-            results.processed++;
-            break;
-
-          case "removeLabel":
-            if (!input.labelId) {
-              throw new Error("labelId required for removeLabel action");
-            }
-            response = await gmail.users.messages.modify({
-              userId: "me",
-              id: messageId,
-              requestBody: {
-                removeLabelIds: [input.labelId],
-              },
-            });
-            results.messages.push({
-              id: messageId,
-              action: `removed label ${input.labelId}`,
-              success: true,
-            });
-            results.processed++;
-            break;
-
-          default:
-            throw new Error(`Unknown action: ${input.action}`);
-        }
+        const result = await this.applyAction(gmail, messageId, input);
+        results.messages.push(result);
+        results.processed++;
       } catch (error) {
         results.messages.push({
           id: messageId,
           action: input.action,
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
         });
         results.failed++;
       }
     }
 
     return results;
+  }
+
+  private async applyAction(
+    gmail: any,
+    messageId: string,
+    input: GmailModifyInput
+  ): Promise<any> {
+    if (input.action === "delete") {
+      await gmail.users.messages.delete({ userId: "me", id: messageId });
+      return {
+        id: messageId,
+        action: ACTION_DESCRIPTIONS.delete,
+        success: true,
+      };
+    }
+
+    if (input.action === "addLabel" || input.action === "removeLabel") {
+      if (!input.labelId) {
+        throw new Error(`labelId required for ${input.action} action`);
+      }
+
+      const requestBody =
+        input.action === "addLabel"
+          ? { addLabelIds: [input.labelId] }
+          : { removeLabelIds: [input.labelId] };
+
+      await gmail.users.messages.modify({
+        userId: "me",
+        id: messageId,
+        requestBody,
+      });
+
+      const verb = input.action === "addLabel" ? "added" : "removed";
+      return {
+        id: messageId,
+        action: `${verb} label ${input.labelId}`,
+        success: true,
+      };
+    }
+
+    const labels = ACTION_LABELS[input.action];
+    if (!labels) {
+      throw new Error(`Unknown action: ${input.action}`);
+    }
+
+    await gmail.users.messages.modify({
+      userId: "me",
+      id: messageId,
+      requestBody: labels,
+    });
+
+    return {
+      id: messageId,
+      action: ACTION_DESCRIPTIONS[input.action],
+      success: true,
+    };
   }
 }

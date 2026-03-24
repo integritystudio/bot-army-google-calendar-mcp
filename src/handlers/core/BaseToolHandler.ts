@@ -2,7 +2,7 @@ import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { OAuth2Client } from "google-auth-library";
 import { GaxiosError } from 'gaxios';
-import { calendar_v3, google } from "googleapis";
+import { calendar_v3, gmail_v1, google } from "googleapis";
 
 
 export abstract class BaseToolHandler {
@@ -71,11 +71,21 @@ export abstract class BaseToolHandler {
     }
 
     protected getCalendar(auth: OAuth2Client): calendar_v3.Calendar {
-        return google.calendar({ 
-            version: 'v3', 
+        return google.calendar({
+            version: 'v3',
             auth,
             timeout: 3000 // 3 second timeout for API calls
         });
+    }
+
+    protected getGmail(auth: OAuth2Client): gmail_v1.Gmail {
+        return google.gmail({ version: 'v1', auth });
+    }
+
+    protected toResult(data: any): CallToolResult {
+        return {
+            content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+        };
     }
 
     protected async withTimeout<T>(promise: Promise<T>, timeoutMs: number = 30000): Promise<T> {

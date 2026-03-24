@@ -505,11 +505,97 @@ describe('UpdateEventHandler - Recurring Events', () => {
   });
 
   describe('Error Handling', () => {
-    // Tests for proper RecurringEventError types and error codes
-    it.todo('should throw MISSING_ORIGINAL_TIME for thisEventOnly without originalStartTime');
-    it.todo('should throw MISSING_FUTURE_DATE for thisAndFollowing without futureStartDate');
-    it.todo('should throw INVALID_SCOPE for invalid scope value');
-    it.todo('should throw NON_RECURRING_SCOPE for scope on non-recurring event');
+    it('should throw MISSING_ORIGINAL_TIME for thisEventOnly without originalStartTime', async () => {
+      const recurringEvent = createMockRecurringEvent();
+      mockCalendar.events.get.mockResolvedValue({ data: recurringEvent });
+
+      await expect(() =>
+        handler.runTool(
+          {
+            calendarId: 'primary',
+            eventId: 'event123',
+            modificationScope: 'thisEventOnly',
+            // Missing originalStartTime
+            summary: 'Updated',
+            checkConflicts: false
+          },
+          mockOAuth2Client
+        )
+      ).rejects.toThrow('originalStartTime is required for single instance updates');
+    });
+
+    it('should throw MISSING_FUTURE_DATE for thisAndFollowing without futureStartDate', async () => {
+      const recurringEvent = createMockRecurringEvent();
+      mockCalendar.events.get.mockResolvedValue({ data: recurringEvent });
+
+      await expect(() =>
+        handler.runTool(
+          {
+            calendarId: 'primary',
+            eventId: 'event123',
+            modificationScope: 'thisAndFollowing',
+            // Missing futureStartDate
+            summary: 'Updated',
+            checkConflicts: false
+          },
+          mockOAuth2Client
+        )
+      ).rejects.toThrow('futureStartDate is required for future instance updates');
+    });
+
+    it('should throw error for non-recurring event with scope thisEventOnly', async () => {
+      const singleEvent = createMockEvent({ recurrence: undefined });
+      mockCalendar.events.get.mockResolvedValue({ data: singleEvent });
+
+      await expect(() =>
+        handler.runTool(
+          {
+            calendarId: 'primary',
+            eventId: 'single123',
+            modificationScope: 'thisEventOnly',
+            originalStartTime: '2026-03-25T10:00:00Z',
+            checkConflicts: false
+          },
+          mockOAuth2Client
+        )
+      ).rejects.toThrow('Scope other than "all" only applies to recurring events');
+    });
+
+    it('should throw error for non-recurring event with scope thisAndFollowing', async () => {
+      const singleEvent = createMockEvent({ recurrence: undefined });
+      mockCalendar.events.get.mockResolvedValue({ data: singleEvent });
+
+      await expect(() =>
+        handler.runTool(
+          {
+            calendarId: 'primary',
+            eventId: 'single123',
+            modificationScope: 'thisAndFollowing',
+            futureStartDate: '2026-04-01T10:00:00Z',
+            checkConflicts: false
+          },
+          mockOAuth2Client
+        )
+      ).rejects.toThrow('Scope other than "all" only applies to recurring events');
+    });
+
+    it('should handle missing event (404 from API)', async () => {
+      mockCalendar.events.get.mockRejectedValue(
+        new Error('Not found')
+      );
+
+      await expect(() =>
+        handler.runTool(
+          {
+            calendarId: 'primary',
+            eventId: 'nonexistent123',
+            summary: 'Updated',
+            checkConflicts: false
+          },
+          mockOAuth2Client
+        )
+      ).rejects.toThrow();
+    });
   });
 
   describe('Integration with Tool Framework', () => {

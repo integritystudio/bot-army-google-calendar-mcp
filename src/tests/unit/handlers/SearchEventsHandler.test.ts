@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SearchEventsHandler } from '../../../handlers/core/SearchEventsHandler.js';
 import { OAuth2Client } from 'google-auth-library';
 import { calendar_v3 } from 'googleapis';
-import { GaxiosError } from 'gaxios';
+import { getTextContent, makeEvent, makeGaxiosError } from '../helpers/index.js';
 
 vi.mock('googleapis', () => ({
   google: {
@@ -46,26 +46,6 @@ const BASE_ARGS = {
   timeMin: '2025-01-01T00:00:00',
   timeMax: '2025-01-31T23:59:59'
 } as const;
-
-function getTextContent(result: { content: Array<{ type: string; text?: string }> }): string {
-  const item = result.content[0];
-  if (item.type !== 'text' || item.text === undefined) throw new Error('Expected text content');
-  return item.text;
-}
-
-function makeEvent(overrides: Partial<calendar_v3.Schema$Event> = {}): calendar_v3.Schema$Event {
-  return {
-    id: 'event1',
-    summary: 'Test Event',
-    start: { dateTime: '2025-01-15T10:00:00Z' },
-    end: { dateTime: '2025-01-15T11:00:00Z' },
-    ...overrides
-  };
-}
-
-function makeGaxiosError(status: number, message: string, data?: object): GaxiosError {
-  return new GaxiosError(message, {} as any, { status, data } as any);
-}
 
 describe('SearchEventsHandler', () => {
   let handler: SearchEventsHandler;

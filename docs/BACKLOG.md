@@ -1416,19 +1416,19 @@ The following reusable helpers have been extracted from `analyze_emails.mjs` int
 
 Priority order (highest impact first):
 
-1. **[HIGH] `analyze_unread.mjs`** (currently 66 lines)
+1. **[HIGH] `analyze_unread.mjs`** (currently 65 lines)
    - Uses identical unread-fetch + categorization pattern
    - Could use `categorizeEmail()` to add urgency scores
    - Could use `printSection()` for label-grouped output
    - Estimated reduction: ~20 lines
 
-2. **[HIGH] `list-unread-emails.mjs`** (currently ~80 lines)
+2. **[HIGH] `list-unread-emails.mjs`** (currently 155 lines)
    - Serial message fetch (N+1 anti-pattern)
    - Could use refactored `Promise.all` batch from `analyze_emails.mjs`
    - Could use `printSection()` for category rendering
-   - Estimated reduction: ~30 lines + 10% faster (parallel fetch)
+   - Estimated reduction: ~40 lines + 10% faster (parallel fetch)
 
-3. **[MEDIUM] `summarize-remaining.mjs`** (currently ~90 lines)
+3. **[MEDIUM] `summarize-remaining.mjs`** (currently 72 lines)
    - Similar header extraction and formatting patterns
    - Could use `extractDisplayName()` from `lib/email-utils.mjs`
    - Could use `printSection()` for output formatting

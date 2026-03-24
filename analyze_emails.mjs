@@ -1,5 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { extractDisplayName } from './lib/email-utils.mjs';
+import { USER_ID } from './lib/constants.mjs';
 import { categorizeEmail, printSection, ANALYZER_CONFIG } from './lib/email-analyzer.mjs';
 
 const FROM_MAX = 45;
@@ -14,7 +15,7 @@ async function analyzeUnreadEmails() {
     const gmail = createGmailClient();
 
     const response = await gmail.users.messages.list({
-      userId: "me",
+      userId: USER_ID,
       q: "is:unread",
       maxResults: MAX_RESULTS
     });

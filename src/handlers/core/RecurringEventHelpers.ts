@@ -1,17 +1,14 @@
 import { calendar_v3 } from 'googleapis';
 
+const ONE_DAY_MS = 86400000;
+const UNTIL_PATTERN = /;UNTIL=\d{8}T\d{6}Z/g;
+const COUNT_PATTERN = /;COUNT=\d+/g;
+
 export class RecurringEventHelpers {
   private calendar: calendar_v3.Calendar;
 
   constructor(calendar: calendar_v3.Calendar) {
     this.calendar = calendar;
-  }
-
-  /**
-   * Get the calendar instance
-   */
-  getCalendar(): calendar_v3.Calendar {
-    return this.calendar;
   }
 
   /**
@@ -24,17 +21,15 @@ export class RecurringEventHelpers {
     });
 
     const event = response.data;
-    return event.recurrence && event.recurrence.length > 0 ? 'recurring' : 'single';
+    return (event.recurrence?.length ?? 0) > 0 ? 'recurring' : 'single';
   }
 
   /**
    * Formats an instance ID for single instance updates
    */
   formatInstanceId(eventId: string, originalStartTime: string): string {
-    // Convert to UTC first, then format to basic format: YYYYMMDDTHHMMSSZ
     const utcDate = new Date(originalStartTime);
-    const basicTimeFormat = utcDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    
+    const basicTimeFormat = this.toBasicFormat(utcDate);
     return `${eventId}_${basicTimeFormat}`;
   }
 
@@ -43,8 +38,12 @@ export class RecurringEventHelpers {
    */
   calculateUntilDate(futureStartDate: string): string {
     const futureDate = new Date(futureStartDate);
-    const untilDate = new Date(futureDate.getTime() - 86400000); // -1 day
-    return untilDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const untilDate = new Date(futureDate.getTime() - ONE_DAY_MS);
+    return this.toBasicFormat(untilDate);
+  }
+
+  private toBasicFormat(date: Date): string {
+    return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
   }
 
   /**
@@ -74,12 +73,11 @@ export class RecurringEventHelpers {
       if (rule.startsWith('RRULE:')) {
         foundRRule = true;
         const updatedRule = rule
-          .replace(/;UNTIL=\d{8}T\d{6}Z/g, '') // Remove existing UNTIL
-          .replace(/;COUNT=\d+/g, '') // Remove COUNT if present
+          .replace(UNTIL_PATTERN, '')
+          .replace(COUNT_PATTERN, '')
           + `;UNTIL=${untilDate}`;
         updatedRecurrence.push(updatedRule);
       } else {
-        // Preserve EXDATE, RDATE, and other rules as-is
         updatedRecurrence.push(rule);
       }
     }
@@ -115,18 +113,17 @@ export class RecurringEventHelpers {
   buildUpdateRequestBody(args: any, defaultTimeZone?: string): calendar_v3.Schema$Event {
     const requestBody: calendar_v3.Schema$Event = {};
 
-    if (args.summary !== undefined && args.summary !== null) requestBody.summary = args.summary;
-    if (args.description !== undefined && args.description !== null) requestBody.description = args.description;
-    if (args.location !== undefined && args.location !== null) requestBody.location = args.location;
-    if (args.colorId !== undefined && args.colorId !== null) requestBody.colorId = args.colorId;
-    if (args.attendees !== undefined && args.attendees !== null) requestBody.attendees = args.attendees;
-    if (args.reminders !== undefined && args.reminders !== null) requestBody.reminders = args.reminders;
-    if (args.recurrence !== undefined && args.recurrence !== null) requestBody.recurrence = args.recurrence;
+    this.setIfPresent(requestBody, 'summary', args.summary);
+    this.setIfPresent(requestBody, 'description', args.description);
+    this.setIfPresent(requestBody, 'location', args.location);
+    this.setIfPresent(requestBody, 'colorId', args.colorId);
+    this.setIfPresent(requestBody, 'attendees', args.attendees);
+    this.setIfPresent(requestBody, 'reminders', args.reminders);
+    this.setIfPresent(requestBody, 'recurrence', args.recurrence);
 
-    // Handle time changes
     let timeChanged = false;
     const effectiveTimeZone = args.timeZone || defaultTimeZone;
-    
+
     if (args.start !== undefined && args.start !== null) {
       requestBody.start = { dateTime: args.start, timeZone: effectiveTimeZone };
       timeChanged = true;
@@ -136,15 +133,20 @@ export class RecurringEventHelpers {
       timeChanged = true;
     }
 
-    // Only add timezone objects if there were actual time changes, OR if neither start/end provided but timezone is given
     if (timeChanged || (!args.start && !args.end && effectiveTimeZone)) {
-      if (!requestBody.start) requestBody.start = {};
-      if (!requestBody.end) requestBody.end = {};
-      if (!requestBody.start.timeZone) requestBody.start.timeZone = effectiveTimeZone;
-      if (!requestBody.end.timeZone) requestBody.end.timeZone = effectiveTimeZone;
+      requestBody.start = requestBody.start || {};
+      requestBody.end = requestBody.end || {};
+      requestBody.start.timeZone = effectiveTimeZone;
+      requestBody.end.timeZone = effectiveTimeZone;
     }
 
     return requestBody;
+  }
+
+  private setIfPresent(obj: any, key: string, value: any): void {
+    if (value !== undefined && value !== null) {
+      obj[key] = value;
+    }
   }
 }
 

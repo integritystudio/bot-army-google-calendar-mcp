@@ -306,16 +306,11 @@ describe('RecurringEventHelpers', () => {
 
       const result = helpers.cleanEventForDuplication(originalEvent);
 
-      // Should remove system fields
-      expect(result.id).toBeUndefined();
-      expect(result.etag).toBeUndefined();
-      expect(result.iCalUID).toBeUndefined();
-      expect(result.created).toBeUndefined();
-      expect(result.updated).toBeUndefined();
-      expect(result.htmlLink).toBeUndefined();
-      expect(result.hangoutLink).toBeUndefined();
+      const systemFields = ['id', 'etag', 'iCalUID', 'created', 'updated', 'htmlLink', 'hangoutLink'];
+      systemFields.forEach(field => {
+        expect(result[field as keyof typeof result]).toBeUndefined();
+      });
 
-      // Should preserve user fields
       expect(result.summary).toBe('Meeting');
       expect(result.description).toBe('Meeting description');
       expect(result.location).toBe('Conference Room');
@@ -594,7 +589,6 @@ describe('RecurringEventHelpers', () => {
         status: 'confirmed',
         transparency: 'opaque',
         visibility: 'default',
-        // User fields that should be preserved
         summary: 'Meeting',
         description: 'Meeting description',
         location: 'Conference Room',
@@ -606,16 +600,11 @@ describe('RecurringEventHelpers', () => {
 
       const result = helpers.cleanEventForDuplication(eventWithAllSystemFields);
 
-      // Should remove all system fields
-      expect(result.id).toBeUndefined();
-      expect(result.etag).toBeUndefined();
-      expect(result.iCalUID).toBeUndefined();
-      expect(result.created).toBeUndefined();
-      expect(result.updated).toBeUndefined();
-      expect(result.htmlLink).toBeUndefined();
-      expect(result.hangoutLink).toBeUndefined();
+      const systemFields = ['id', 'etag', 'iCalUID', 'created', 'updated', 'htmlLink', 'hangoutLink'];
+      systemFields.forEach(field => {
+        expect(result[field as keyof typeof result]).toBeUndefined();
+      });
 
-      // Should preserve user fields
       expect(result.summary).toBe('Meeting');
       expect(result.description).toBe('Meeting description');
       expect(result.location).toBe('Conference Room');

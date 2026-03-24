@@ -29,6 +29,24 @@ export class RecurringEventHelpers {
   }
 
   /**
+   * Fetches an event and detects if it's recurring or single.
+   * Returns both the event object and its type to avoid redundant fetches.
+   */
+  async getEventAndType(eventId: string, calendarId: string): Promise<{
+    event: calendar_v3.Schema$Event;
+    type: 'recurring' | 'single';
+  }> {
+    const response = await this.calendar.events.get({
+      calendarId,
+      eventId
+    });
+
+    const event = response.data;
+    const type = (event.recurrence?.length ?? 0) > 0 ? 'recurring' : 'single';
+    return { event, type };
+  }
+
+  /**
    * Formats an instance ID for single instance updates
    */
   formatInstanceId(eventId: string, originalStartTime: string): string {

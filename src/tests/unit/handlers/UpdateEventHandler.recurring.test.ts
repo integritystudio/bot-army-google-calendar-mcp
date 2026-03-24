@@ -22,20 +22,20 @@ class EnhancedUpdateEventHandler {
   }
 
   async updateEventWithScope(args: any): Promise<calendar_v3.Schema$Event> {
-    const eventType = await this.detectEventType(args.eventId, args.calendarId);
-    
+    const { event, type: eventType } = await this.getEventAndType(args.eventId, args.calendarId);
+
     // Validate scope usage
     if (args.modificationScope !== 'all' && eventType !== 'recurring') {
       throw new Error('Scope other than "all" only applies to recurring events');
     }
-    
+
     switch (args.modificationScope || 'all') {
       case 'single':
         return this.updateSingleInstance(args);
       case 'all':
         return this.updateAllInstances(args);
       case 'future':
-        return this.updateFutureInstances(args);
+        return this.updateFutureInstances(args, event);
       default:
         throw new Error(`Invalid modification scope: ${args.modificationScope}`);
     }
@@ -49,6 +49,20 @@ class EnhancedUpdateEventHandler {
 
     const event = response.data;
     return event.recurrence && event.recurrence.length > 0 ? 'recurring' : 'single';
+  }
+
+  private async getEventAndType(eventId: string, calendarId: string): Promise<{
+    event: calendar_v3.Schema$Event;
+    type: 'recurring' | 'single';
+  }> {
+    const response = await this.calendar.events.get({
+      calendarId,
+      eventId
+    });
+
+    const event = response.data;
+    const type = event.recurrence && event.recurrence.length > 0 ? 'recurring' : 'single';
+    return { event, type };
   }
 
   async updateSingleInstance(args: any): Promise<calendar_v3.Schema$Event> {
@@ -78,25 +92,28 @@ class EnhancedUpdateEventHandler {
     return response.data;
   }
 
-  async updateFutureInstances(args: any): Promise<calendar_v3.Schema$Event> {
-    // 1. Get original event
-    const originalResponse = await this.calendar.events.get({
-      calendarId: args.calendarId,
-      eventId: args.eventId
-    });
-    const originalEvent = originalResponse.data;
+  async updateFutureInstances(args: any, originalEvent?: calendar_v3.Schema$Event): Promise<calendar_v3.Schema$Event> {
+    // Use passed event or fetch if not provided (for backward compatibility)
+    let eventData = originalEvent;
+    if (!eventData) {
+      const originalResponse = await this.calendar.events.get({
+        calendarId: args.calendarId,
+        eventId: args.eventId
+      });
+      eventData = originalResponse.data;
+    }
 
-    if (!originalEvent.recurrence) {
+    if (!eventData.recurrence) {
       throw new Error('Event does not have recurrence rules');
     }
 
-    // 2. Calculate UNTIL date (one day before future start date)
+    // 1. Calculate UNTIL date (one day before future start date)
     const futureDate = new Date(args.futureStartDate);
     const untilDate = new Date(futureDate.getTime() - 86400000); // -1 day
     const untilString = untilDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
-    // 3. Update original event with UNTIL clause
-    const updatedRRule = originalEvent.recurrence[0]
+    // 2. Update original event with UNTIL clause
+    const updatedRRule = eventData.recurrence[0]
       .replace(/;UNTIL=\d{8}T\d{6}Z/g, '')
       .replace(/;COUNT=\d+/g, '') + `;UNTIL=${untilString}`;
 
@@ -106,17 +123,17 @@ class EnhancedUpdateEventHandler {
       requestBody: { recurrence: [updatedRRule] }
     });
 
-    // 4. Create new recurring event starting from future date
+    // 3. Create new recurring event starting from future date
     const newEvent = {
-      ...originalEvent,
+      ...eventData,
       ...this.buildUpdateRequestBody(args),
-      start: { 
-        dateTime: args.futureStartDate, 
-        timeZone: args.timeZone 
+      start: {
+        dateTime: args.futureStartDate,
+        timeZone: args.timeZone
       },
-      end: { 
-        dateTime: this.calculateEndTime(args.futureStartDate, originalEvent), 
-        timeZone: args.timeZone 
+      end: {
+        dateTime: this.calculateEndTime(args.futureStartDate, eventData),
+        timeZone: args.timeZone
       }
     };
 
@@ -326,42 +343,37 @@ describe('UpdateEventHandler - Recurring Events', () => {
       expect(result.summary).toBe('Updated Instance');
     });
 
-    it('should handle different timezone formats in originalStartTime', async () => {
-      const testCases = [
-        {
-          originalStartTime: '2024-06-15T10:00:00Z',
-          expectedInstanceId: 'event123_20240615T100000Z'
-        },
-        {
-          originalStartTime: '2024-06-15T10:00:00+05:30',
-          expectedInstanceId: 'event123_20240615T043000Z'
-        },
-        {
-          originalStartTime: '2024-06-15T10:00:00.000-08:00',
-          expectedInstanceId: 'event123_20240615T180000Z'
-        }
-      ];
-
-      for (const testCase of testCases) {
-        mockCalendar.events.patch.mockClear();
-        mockCalendar.events.patch.mockResolvedValue({ data: { id: testCase.expectedInstanceId } });
-
-        const args = {
-          calendarId: 'primary',
-          eventId: 'event123',
-          timeZone: 'UTC',
-          originalStartTime: testCase.originalStartTime,
-          summary: 'Test'
-        };
-
-        await handler.updateSingleInstance(args);
-
-        expect(mockCalendar.events.patch).toHaveBeenCalledWith({
-          calendarId: 'primary',
-          eventId: testCase.expectedInstanceId,
-          requestBody: expect.any(Object)
-        });
+    it.each([
+      {
+        originalStartTime: '2024-06-15T10:00:00Z',
+        expectedInstanceId: 'event123_20240615T100000Z'
+      },
+      {
+        originalStartTime: '2024-06-15T10:00:00+05:30',
+        expectedInstanceId: 'event123_20240615T043000Z'
+      },
+      {
+        originalStartTime: '2024-06-15T10:00:00.000-08:00',
+        expectedInstanceId: 'event123_20240615T180000Z'
       }
+    ])('should handle different timezone formats in originalStartTime: $originalStartTime', async (testCase) => {
+      mockCalendar.events.patch.mockResolvedValue({ data: { id: testCase.expectedInstanceId } });
+
+      const args = {
+        calendarId: 'primary',
+        eventId: 'event123',
+        timeZone: 'UTC',
+        originalStartTime: testCase.originalStartTime,
+        summary: 'Test'
+      };
+
+      await handler.updateSingleInstance(args);
+
+      expect(mockCalendar.events.patch).toHaveBeenCalledWith({
+        calendarId: 'primary',
+        eventId: testCase.expectedInstanceId,
+        requestBody: expect.any(Object)
+      });
     });
 
     it('should throw error if patch fails', async () => {
@@ -571,54 +583,49 @@ describe('UpdateEventHandler - Recurring Events', () => {
         .rejects.toThrow('Event does not have recurrence rules');
     });
 
-    it('should handle existing UNTIL and COUNT clauses correctly', async () => {
-      const testCases = [
-        {
-          original: 'RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20240531T170000Z',
-          expected: 'RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20240614T170000Z'
-        },
-        {
-          original: 'RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=10',
-          expected: 'RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20240614T170000Z'
-        },
-        {
-          original: 'RRULE:FREQ=DAILY;INTERVAL=2;COUNT=15;BYHOUR=10',
-          expected: 'RRULE:FREQ=DAILY;INTERVAL=2;BYHOUR=10;UNTIL=20240614T170000Z'
-        }
-      ];
-
-      for (const testCase of testCases) {
-        const originalEvent = {
-          data: {
-            id: 'test',
-            start: { dateTime: '2024-06-01T10:00:00-07:00' },
-            end: { dateTime: '2024-06-01T11:00:00-07:00' },
-            recurrence: [testCase.original]
-          }
-        };
-
-        mockCalendar.events.get.mockResolvedValue(originalEvent);
-        mockCalendar.events.patch.mockClear();
-        mockCalendar.events.patch.mockResolvedValue({ data: {} });
-        mockCalendar.events.insert.mockResolvedValue({ data: {} });
-
-        const args = {
-          calendarId: 'primary',
-          eventId: 'test',
-          futureStartDate: '2024-06-15T10:00:00-07:00',
-          timeZone: 'America/Los_Angeles'
-        };
-
-        await handler.updateFutureInstances(args);
-
-        expect(mockCalendar.events.patch).toHaveBeenCalledWith({
-          calendarId: 'primary',
-          eventId: 'test',
-          requestBody: {
-            recurrence: [testCase.expected]
-          }
-        });
+    it.each([
+      {
+        original: 'RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20240531T170000Z',
+        expected: 'RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20240614T170000Z'
+      },
+      {
+        original: 'RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=10',
+        expected: 'RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20240614T170000Z'
+      },
+      {
+        original: 'RRULE:FREQ=DAILY;INTERVAL=2;COUNT=15;BYHOUR=10',
+        expected: 'RRULE:FREQ=DAILY;INTERVAL=2;BYHOUR=10;UNTIL=20240614T170000Z'
       }
+    ])('should handle existing UNTIL and COUNT clauses correctly: $original', async (testCase) => {
+      const originalEvent = {
+        data: {
+          id: 'test',
+          start: { dateTime: '2024-06-01T10:00:00-07:00' },
+          end: { dateTime: '2024-06-01T11:00:00-07:00' },
+          recurrence: [testCase.original]
+        }
+      };
+
+      mockCalendar.events.get.mockResolvedValue(originalEvent);
+      mockCalendar.events.patch.mockResolvedValue({ data: {} });
+      mockCalendar.events.insert.mockResolvedValue({ data: {} });
+
+      const args = {
+        calendarId: 'primary',
+        eventId: 'test',
+        futureStartDate: '2024-06-15T10:00:00-07:00',
+        timeZone: 'America/Los_Angeles'
+      };
+
+      await handler.updateFutureInstances(args);
+
+      expect(mockCalendar.events.patch).toHaveBeenCalledWith({
+        calendarId: 'primary',
+        eventId: 'test',
+        requestBody: {
+          recurrence: [testCase.expected]
+        }
+      });
     });
   });
 
@@ -960,7 +967,7 @@ describe('UpdateEventHandler - Recurring Events', () => {
         .rejects.toThrow('Network timeout');
     });
 
-    it('should validate scope restrictions on single events', async () => {
+    it.each(['single', 'future'])('should validate scope restrictions on single events: scope=%s', async (scope) => {
       const singleEvent = {
         data: {
           id: 'single123',
@@ -970,21 +977,17 @@ describe('UpdateEventHandler - Recurring Events', () => {
       };
       mockCalendar.events.get.mockResolvedValue(singleEvent);
 
-      const invalidScopes = ['single', 'future'];
-      
-      for (const scope of invalidScopes) {
-        const args = {
-          calendarId: 'primary',
-          eventId: 'single123',
-          timeZone: 'UTC',
-          modificationScope: scope,
-          originalStartTime: '2024-06-15T10:00:00Z',
-          futureStartDate: '2024-06-20T10:00:00Z'
-        };
+      const args = {
+        calendarId: 'primary',
+        eventId: 'single123',
+        timeZone: 'UTC',
+        modificationScope: scope,
+        originalStartTime: '2024-06-15T10:00:00Z',
+        futureStartDate: '2024-06-20T10:00:00Z'
+      };
 
-        await expect(handler.updateEventWithScope(args))
-          .rejects.toThrow('Scope other than "all" only applies to recurring events');
-      }
+      await expect(handler.updateEventWithScope(args))
+        .rejects.toThrow('Scope other than "all" only applies to recurring events');
     });
   });
 }); 

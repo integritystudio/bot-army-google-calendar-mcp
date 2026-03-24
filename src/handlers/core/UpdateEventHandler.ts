@@ -68,20 +68,20 @@ export class UpdateEventHandler extends BaseToolHandler {
         try {
             const calendar = this.getCalendar(client);
             const helpers = new RecurringEventHelpers(calendar);
-            
+
             // Get calendar's default timezone if not provided
             const defaultTimeZone = await this.getCalendarTimezone(client, args.calendarId);
-            
-            // Detect event type and validate scope usage
-            const eventType = await helpers.detectEventType(args.eventId, args.calendarId);
-            
+
+            // Fetch event and detect type in single API call
+            const { event, type: eventType } = await helpers.getEventAndType(args.eventId, args.calendarId);
+
             if (args.modificationScope && args.modificationScope !== 'all' && eventType !== 'recurring') {
                 throw new RecurringEventError(
                     'Scope other than "all" only applies to recurring events',
                     RECURRING_EVENT_ERRORS.NON_RECURRING_SCOPE
                 );
             }
-            
+
             switch (args.modificationScope) {
                 case 'thisEventOnly':
                     return this.updateSingleInstance(helpers, args, defaultTimeZone);
@@ -89,7 +89,7 @@ export class UpdateEventHandler extends BaseToolHandler {
                 case undefined:
                     return this.updateAllInstances(helpers, args, defaultTimeZone);
                 case 'thisAndFollowing':
-                    return this.updateFutureInstances(helpers, args, defaultTimeZone);
+                    return this.updateFutureInstances(helpers, args, defaultTimeZone, event);
                 default:
                     throw new RecurringEventError(
                         `Invalid modification scope: ${args.modificationScope}`,
@@ -149,7 +149,8 @@ export class UpdateEventHandler extends BaseToolHandler {
     private async updateFutureInstances(
         helpers: RecurringEventHelpers,
         args: UpdateEventInput,
-        defaultTimeZone: string
+        defaultTimeZone: string,
+        originalEvent?: calendar_v3.Schema$Event
     ): Promise<calendar_v3.Schema$Event> {
         if (!args.futureStartDate) {
             throw new RecurringEventError(
@@ -161,20 +162,23 @@ export class UpdateEventHandler extends BaseToolHandler {
         const calendar = helpers.getCalendar();
         const effectiveTimeZone = args.timeZone || defaultTimeZone;
 
-        // 1. Get original event
-        const originalResponse = await calendar.events.get({
-            calendarId: args.calendarId,
-            eventId: args.eventId
-        });
-        const originalEvent = originalResponse.data;
+        // Use passed event or fetch if not provided (for backward compatibility)
+        let eventData = originalEvent;
+        if (!eventData) {
+            const originalResponse = await calendar.events.get({
+                calendarId: args.calendarId,
+                eventId: args.eventId
+            });
+            eventData = originalResponse.data;
+        }
 
-        if (!originalEvent.recurrence) {
+        if (!eventData.recurrence) {
             throw new Error('Event does not have recurrence rules');
         }
 
-        // 2. Calculate UNTIL date and update original event
+        // 1. Calculate UNTIL date and update original event
         const untilDate = helpers.calculateUntilDate(args.futureStartDate);
-        const updatedRecurrence = helpers.updateRecurrenceWithUntil(originalEvent.recurrence, untilDate);
+        const updatedRecurrence = helpers.updateRecurrenceWithUntil(eventData.recurrence, untilDate);
 
         await calendar.events.patch({
             calendarId: args.calendarId,
@@ -182,26 +186,26 @@ export class UpdateEventHandler extends BaseToolHandler {
             requestBody: { recurrence: updatedRecurrence }
         });
 
-        // 3. Create new recurring event starting from future date
+        // 2. Create new recurring event starting from future date
         const requestBody = helpers.buildUpdateRequestBody(args, defaultTimeZone);
-        
+
         // Calculate end time if start time is changing
         let endTime = args.end;
         if (args.start || args.futureStartDate) {
             const newStartTime = args.start || args.futureStartDate;
-            endTime = endTime || helpers.calculateEndTime(newStartTime, originalEvent);
+            endTime = endTime || helpers.calculateEndTime(newStartTime, eventData);
         }
 
         const newEvent = {
-            ...helpers.cleanEventForDuplication(originalEvent),
+            ...helpers.cleanEventForDuplication(eventData),
             ...requestBody,
-            start: { 
-                dateTime: args.start || args.futureStartDate, 
-                timeZone: effectiveTimeZone 
+            start: {
+                dateTime: args.start || args.futureStartDate,
+                timeZone: effectiveTimeZone
             },
-            end: { 
-                dateTime: endTime, 
-                timeZone: effectiveTimeZone 
+            end: {
+                dateTime: endTime,
+                timeZone: effectiveTimeZone
             }
         };
 

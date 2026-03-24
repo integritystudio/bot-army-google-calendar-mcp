@@ -954,9 +954,10 @@ Refactor to test the real `UpdateEventHandler` and `RecurringEventHelpers`:
 ---
 
 ### Test Quality: Sequential API Calls in updateFutureInstances
-**Status:** 📋 DESIGN
+**Status:** ✅ COMPLETED (2026-03-24)
 **Priority:** Medium
 **Estimated Effort:** 2-4 hours
+**Actual Effort:** 1 hour
 **Date Added:** 2026-03-23
 **Source:** Code simplification review (efficiency analysis)
 
@@ -970,19 +971,28 @@ Refactor to test the real `UpdateEventHandler` and `RecurringEventHelpers`:
 - In tests: doubles mock invocation count
 - In production: ~500ms extra per future-instance update
 
-#### Solution
-Pass fetched event from routing method to delegate methods, eliminating redundant fetch:
-1. Fetch event once in `updateEventWithScope()`
-2. Pass event object to delegate methods (`updateSingleInstance`, `updateAllInstances`, etc.)
-3. Delegate methods use passed event instead of re-fetching
-4. Alternative: consolidate detection logic inside each delegate
+#### Solution (Implemented)
+Eliminated redundant API call by fetching event once and passing through call chain:
+1. Added `getEventAndType()` helper to RecurringEventHelpers that fetches event once and returns both event + type
+2. Updated `updateEventWithScope()` to call `getEventAndType()` instead of `detectEventType()`
+3. Updated `updateFutureInstances()` signature to accept optional event parameter
+4. Pass fetched event from routing method to `updateFutureInstances()` delegate
+5. Delegate uses passed event instead of re-fetching
+6. Maintained backward compatibility: if no event passed, method fetches it (for isolated test calls)
+
+**Changes:**
+- `src/handlers/core/RecurringEventHelpers.ts`: Added `getEventAndType()` method
+- `src/handlers/core/UpdateEventHandler.ts`: Updated `updateEventWithScope()` to use new method and pass event
+- `src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts`: Updated test handler to use optimized flow
+- All 25 tests pass; no behavior changes
 
 ---
 
 ### Test Quality: Loop Isolation Anti-patterns in Mock Setup
-**Status:** 📋 DESIGN
+**Status:** ✅ COMPLETED (2026-03-24)
 **Priority:** Medium
 **Estimated Effort:** 4-6 hours
+**Actual Effort:** 0.5 hours
 **Date Added:** 2026-03-23
 **Source:** Code simplification review (efficiency analysis)
 
@@ -994,19 +1004,22 @@ Multiple test loops use `mockClear()` and `mockResolvedValue()` inside `for...of
 4. Non-idiomatic test patterns (Vitest prefers `it.each`)
 
 **Affected Tests:**
-- UpdateEventHandler.recurring.test.ts lines 353-372 (timezone test)
-- UpdateEventHandler.recurring.test.ts lines 583-630 (UNTIL/COUNT test)
-- UpdateEventHandler.recurring.test.ts lines 981-995 (invalid scopes test)
+- UpdateEventHandler.recurring.test.ts - timezone test (3 cases)
+- UpdateEventHandler.recurring.test.ts - UNTIL/COUNT test (3 cases)
+- UpdateEventHandler.recurring.test.ts - invalid scopes test (2 cases)
 
-#### Solution
-Convert all three loops to use `it.each()` parametrized test pattern:
-```typescript
-it.each(testCases)('test name: %s', async (testCase) => { ... });
-```
-- Fresh mock state per test
+#### Solution (Implemented)
+Converted all three loops to use `it.each()` parametrized test pattern:
+- Fresh mock state per test iteration
 - Proper per-case failure attribution
 - Idiomatic Vitest pattern
 - Better CI output with parameterized names
+- Test count increased from 25 to 30 (8 new individual test cases)
+
+**Changes:**
+- UpdateEventHandler.recurring.test.ts: Replaced 3 for-of loops with it.each() patterns
+- Removed mockClear() calls (unnecessary with fresh mock state)
+- All 30 tests pass; improved test isolation and error reporting
 
 ---
 

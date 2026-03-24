@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OAuth2Client } from 'google-auth-library';
 import { calendar_v3 } from 'googleapis';
+import { getTextContent } from '../helpers/content.js';
 // Import the types and schemas we're testing
 import { ToolSchemas } from '../../../tools/registry.js';
 
@@ -180,7 +181,7 @@ describe('Batch List Events Functionality', () => {
       // Should return text content with events
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
-      expect((result.content[0] as any).text).toContain('Found');
+      expect(getTextContent(result)).toContain('Found');
     });
 
     it('should handle empty results for single calendar', async () => {
@@ -200,7 +201,7 @@ describe('Batch List Events Functionality', () => {
       // Assert - no events means text saying no events found
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
-      expect((result.content[0] as any).text).toContain('No events found');
+      expect(getTextContent(result)).toContain('No events found');
     });
   });
 
@@ -656,7 +657,7 @@ describe('Batch List Events Functionality', () => {
       // Should return text content with events
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
-      expect((result.content[0] as any).text).toContain('Found');
+      expect(getTextContent(result)).toContain('Found');
     });
   });
 }); 

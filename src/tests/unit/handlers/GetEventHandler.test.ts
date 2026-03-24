@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GetEventHandler } from '../../../handlers/core/GetEventHandler.js';
 import { OAuth2Client } from 'google-auth-library';
+import { getTextContent } from '../helpers/content.js';
 
 // Mock the googleapis module
 vi.mock('googleapis', () => ({
@@ -66,9 +67,9 @@ describe('GetEventHandler', () => {
         eventId: 'event123'
       });
 
-      expect(result.content[0].type).toBe('text');
-      expect((result.content[0] as any).text).toContain('Event Details:');
-      expect((result.content[0] as any).text).toContain('Test Event');
+      const text = getTextContent(result);
+      expect(text).toContain('Event Details:');
+      expect(text).toContain('Test Event');
     });
 
     it('should retrieve an event with custom fields', async () => {
@@ -98,7 +99,7 @@ describe('GetEventHandler', () => {
         fields: 'description,colorId,attendees'
       });
 
-      expect((result.content[0] as any).text).toContain('Event Details:');
+      expect(getTextContent(result)).toContain('Event Details:');
     });
 
     it('should handle event not found', async () => {
@@ -113,7 +114,7 @@ describe('GetEventHandler', () => {
 
       const result = await handler.runTool(args, mockOAuth2Client);
 
-      expect((result.content[0] as any).text).toBe(
+      expect(getTextContent(result)).toBe(
         "Event with ID 'nonexistent' not found in calendar 'primary'."
       );
     });
@@ -146,7 +147,7 @@ describe('GetEventHandler', () => {
 
       const result = await handler.runTool(args, mockOAuth2Client);
 
-      expect((result.content[0] as any).text).toBe(
+      expect(getTextContent(result)).toBe(
         "Event with ID 'event123' not found in calendar 'primary'."
       );
     });

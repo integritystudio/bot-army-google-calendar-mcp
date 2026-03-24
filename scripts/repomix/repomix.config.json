@@ -1,0 +1,51 @@
+{
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "removeComments": false,
+    "removeEmptyLines": false,
+    "showLineNumbers": true,
+    "topFilesLength": 20,
+    "copyToClipboard": false,
+    "instructionFilePath": "CLAUDE.md"
+  },
+  "include": [
+    "src/**/*.py",
+    "scripts/**/*.py",
+    "tests/**/*.py",
+    "examples/**/*.py",
+"docs/**/*.md",
+    "pyproject.toml",
+    "requirements.txt",
+    "CLAUDE.md",
+    "README.md",
+    "playwright.config.ts",
+    "tests/e2e/**/*.ts"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "venv/**",
+      "node_modules/**",
+      ".ast-grep-backups/**",
+      "src/.ast-grep-backups/**",
+      "repomix-output.xml",
+      "scripts/repomix/**",
+      "results/**",
+      "logs/**",
+      "playwright-report/**",
+      "test-results/**",
+      "*.egg-info/**",
+      "**/__pycache__/**",
+      "*.pyc",
+      "lib/**",
+      "bin/**",
+      "schema_org_file_system.egg-info/**",
+      "_site/**"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}

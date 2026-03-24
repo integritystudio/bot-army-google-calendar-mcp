@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { GetCurrentTimeHandler } from '../../../handlers/core/GetCurrentTimeHandler.js';
 import { OAuth2Client } from 'google-auth-library';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { getTextContent } from '../helpers/content.js';
 
 describe('GetCurrentTimeHandler', () => {
   const mockOAuth2Client = {
@@ -16,7 +17,7 @@ describe('GetCurrentTimeHandler', () => {
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
       
-      const response = JSON.parse((result.content[0] as any).text);
+      const response = JSON.parse(getTextContent(result));
       expect(response.currentTime).toBeDefined();
       expect(response.currentTime.utc).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
       expect(response.currentTime.timestamp).toBeTypeOf('number');
@@ -32,7 +33,7 @@ describe('GetCurrentTimeHandler', () => {
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
       
-      const response = JSON.parse((result.content[0] as any).text);
+      const response = JSON.parse(getTextContent(result));
       expect(response.currentTime).toBeDefined();
       expect(response.currentTime.utc).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
       expect(response.currentTime.timestamp).toBeTypeOf('number');
@@ -45,7 +46,7 @@ describe('GetCurrentTimeHandler', () => {
       const handler = new GetCurrentTimeHandler();
       const result = await handler.runTool({ timeZone: 'UTC' }, mockOAuth2Client);
       
-      const response = JSON.parse((result.content[0] as any).text);
+      const response = JSON.parse(getTextContent(result));
       expect(response.currentTime.requestedTimeZone.timeZone).toBe('UTC');
       expect(response.currentTime.requestedTimeZone.rfc3339).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
       expect(response.currentTime.requestedTimeZone.offset).toBe('Z');
@@ -82,7 +83,7 @@ describe('GetCurrentTimeHandler', () => {
 
       for (const timezone of validTimezones) {
         const result = await handler.runTool({ timeZone: timezone }, mockOAuth2Client);
-        const response = JSON.parse((result.content[0] as any).text);
+        const response = JSON.parse(getTextContent(result));
         expect(response.currentTime.requestedTimeZone.timeZone).toBe(timezone);
       }
     });
@@ -108,7 +109,7 @@ describe('GetCurrentTimeHandler', () => {
     it('should include all required fields in response without timezone', async () => {
       const handler = new GetCurrentTimeHandler();
       const result = await handler.runTool({}, mockOAuth2Client);
-      const response = JSON.parse((result.content[0] as any).text);
+      const response = JSON.parse(getTextContent(result));
 
       expect(response.currentTime).toHaveProperty('utc');
       expect(response.currentTime).toHaveProperty('timestamp');
@@ -124,7 +125,7 @@ describe('GetCurrentTimeHandler', () => {
     it('should include all required fields in response with timezone', async () => {
       const handler = new GetCurrentTimeHandler();
       const result = await handler.runTool({ timeZone: 'UTC' }, mockOAuth2Client);
-      const response = JSON.parse((result.content[0] as any).text);
+      const response = JSON.parse(getTextContent(result));
 
       expect(response.currentTime).toHaveProperty('utc');
       expect(response.currentTime).toHaveProperty('timestamp');
@@ -141,7 +142,7 @@ describe('GetCurrentTimeHandler', () => {
     it('should format RFC3339 timestamps correctly', async () => {
       const handler = new GetCurrentTimeHandler();
       const result = await handler.runTool({ timeZone: 'UTC' }, mockOAuth2Client);
-      const response = JSON.parse((result.content[0] as any).text);
+      const response = JSON.parse(getTextContent(result));
 
       // Should match RFC3339 pattern with timezone
       expect(response.currentTime.requestedTimeZone.rfc3339).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/);

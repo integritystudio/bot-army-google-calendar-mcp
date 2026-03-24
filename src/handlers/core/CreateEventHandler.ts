@@ -13,6 +13,7 @@ import {
   performConflictCheck,
   getConferenceAndAttachmentOptions,
 } from "./eventManipulationUtils.js";
+import { DuplicateInfo } from "../../services/conflict-detection/types.js";
 
 export class CreateEventHandler extends BaseToolHandler {
     private conflictDetectionService: ConflictDetectionService;
@@ -43,7 +44,7 @@ export class CreateEventHandler extends BaseToolHandler {
 
         // Block creation if exact or near-exact duplicate found
         const exactDuplicate = conflicts.duplicates.find(
-            dup => dup.event.similarity >= CONFLICT_DETECTION_CONFIG.DUPLICATE_THRESHOLDS.BLOCKING
+            (dup: DuplicateInfo) => dup.event.similarity >= CONFLICT_DETECTION_CONFIG.DUPLICATE_THRESHOLDS.BLOCKING
         );
 
         if (exactDuplicate && validArgs.allowDuplicates !== true) {

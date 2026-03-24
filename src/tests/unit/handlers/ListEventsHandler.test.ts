@@ -3,6 +3,7 @@ import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
 import { OAuth2Client } from 'google-auth-library';
 import { google } from 'googleapis';
 import { convertToRFC3339 } from '../../../handlers/utils/datetime.js';
+import { getTextContent } from '../helpers/content.js';
 
 // Mock googleapis globally
 vi.mock('googleapis', () => ({
@@ -76,8 +77,7 @@ Content-Type: application/json
 
     const result = await handler.runTool(args, mockOAuth2Client);
     expect(result.content).toHaveLength(1);
-    expect(result.content[0].type).toBe('text');
-    expect((result.content[0] as any).text).toContain('Found');
+    expect(getTextContent(result)).toContain('Found');
   });
 
   it('should handle multiple calendar IDs as array', async () => {
@@ -89,8 +89,7 @@ Content-Type: application/json
 
     const result = await handler.runTool(args, mockOAuth2Client);
     expect(result.content).toHaveLength(1);
-    expect(result.content[0].type).toBe('text');
-    expect((result.content[0] as any).text).toContain('Found');
+    expect(getTextContent(result)).toContain('Found');
   });
 
   it('should handle calendar IDs passed as JSON string', async () => {
@@ -110,8 +109,7 @@ Content-Type: application/json
 
     const result = await handler.runTool(processedArgs, mockOAuth2Client);
     expect(result.content).toHaveLength(1);
-    expect(result.content[0].type).toBe('text');
-    expect((result.content[0] as any).text).toContain('Found');
+    expect(getTextContent(result)).toContain('Found');
   });
 });
 

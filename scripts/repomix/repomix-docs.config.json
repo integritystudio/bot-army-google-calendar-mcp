@@ -1,0 +1,31 @@
+{
+  "output": {
+    "filePath": "repomix-docs.xml",
+    "style": "xml",
+    "removeComments": false,
+    "removeEmptyLines": false,
+    "showLineNumbers": true,
+    "topFilesLength": 10,
+    "copyToClipboard": false,
+    "instructionFilePath": "CLAUDE.md"
+  },
+  "include": [
+    "docs/**/*.md",
+    "CLAUDE.md",
+    "README.md",
+    "pyproject.toml",
+    "requirements.txt"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "venv/**",
+      "node_modules/**",
+      "docs/repomix/**"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}

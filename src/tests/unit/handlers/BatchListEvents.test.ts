@@ -2,8 +2,9 @@
  * @jest-environment node
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { OAuth2Client } from 'google-auth-library';
 import { getTextContent, makeEvent, makeEventWithCalendarId, setupListEventsHandler } from '../helpers/index.js';
-import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
+import { LIST_EVENTS_API_DEFAULTS, TIME_MIN, TIME_MAX } from '../helpers/test-configs.js';
 // Import the types and schemas we're testing
 import { ToolSchemas } from '../../../tools/registry.js';
 import { ExtendedEvent } from '../../../handlers/core/batchUtils.js';
@@ -18,10 +19,18 @@ import { groupBy } from '../../../utils/aggregationHelpers.js';
 vi.mock('google-auth-library');
 vi.mock('googleapis');
 
-const TIME_MIN = '2024-01-01T00:00:00Z';
-const TIME_MAX = '2024-01-31T23:59:59Z';
-
 describe('Batch List Events Functionality', () => {
+  let mockOAuth2Client: OAuth2Client;
+  let listEventsHandler: ListEventsHandler;
+  let mockCalendarApi: ReturnType<typeof setupListEventsHandler>['mockCalendarApi'];
+
+  beforeEach(() => {
+    const setup = setupListEventsHandler();
+    mockOAuth2Client = setup.mockOAuth2Client;
+    listEventsHandler = setup.handler;
+    mockCalendarApi = setup.mockCalendarApi;
+  });
+
   describe('Input Validation', () => {
     it('should validate single calendar ID string', () => {
       const input = {
@@ -36,7 +45,6 @@ describe('Batch List Events Functionality', () => {
     });
 
     it('should validate array of calendar IDs', () => {
-      // Arrays must be passed as JSON strings in the new schema
       const input = {
         calendarId: '["primary", "work@example.com", "personal@example.com"]',
         timeMin: '2024-01-01T00:00:00Z'
@@ -49,22 +57,19 @@ describe('Batch List Events Functionality', () => {
     });
 
     it('should accept actual array of calendar IDs (not JSON string)', () => {
-      // In the new schema, arrays are not directly supported - they must be JSON strings
       const input = {
         calendarId: ['primary', 'work@example.com', 'personal@example.com'],
         timeMin: '2024-01-01T00:00:00Z'
       };
 
       const result = ListEventsArgumentsSchema.safeParse(input);
-      // Arrays are no longer accepted directly
       expect(result.success).toBe(false);
       expect(result.error?.issues[0].message).toContain('expected string');
     });
 
     it('should handle malformed JSON string gracefully', () => {
-      // Test that malformed JSON is treated as a regular string
       const input = {
-        calendarId: '["primary", "work@example.com"', // Missing closing bracket
+        calendarId: '["primary", "work@example.com"',
         timeMin: '2024-01-01T00:00:00Z'
       };
 
@@ -97,31 +102,36 @@ describe('Batch List Events Functionality', () => {
     it('should reject invalid time format', () => {
       const input = {
         calendarId: 'primary',
-        timeMin: '2024-01-01' // Missing time and timezone
+        timeMin: '2024-01-01'
       };
 
       const result = ListEventsArgumentsSchema.safeParse(input);
       expect(result.success).toBe(false);
     });
+
+    it('should handle maximum allowed calendars (50)', () => {
+      const maxCalendars = Array(50).fill('cal').map((c, i) => `${c}${i}@example.com`);
+
+      const input = {
+        calendarId: JSON.stringify(maxCalendars),
+        timeMin: TIME_MIN
+      };
+
+      const result = ListEventsArgumentsSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      expect(typeof result.data?.calendarId).toBe('string');
+      const parsed = JSON.parse(result.data?.calendarId);
+      expect(parsed).toHaveLength(50);
+    });
   });
 
   describe('Single Calendar Events (Existing Functionality)', () => {
-    let mockOAuth2Client: any;
-    let listEventsHandler: ListEventsHandler;
-    let mockCalendarApi: any;
-
-    beforeEach(() => {
-      const setup = setupListEventsHandler();
-      mockOAuth2Client = setup.mockOAuth2Client;
-      listEventsHandler = setup.handler;
-      mockCalendarApi = setup.mockCalendarApi;
-    });
 
     it('should handle single calendar ID as string', async () => {
       // Arrange
       const mockEvents = [
-        makeEvent('event1', { summary: 'Meeting', start: { dateTime: '2024-01-15T10:00:00Z' }, end: { dateTime: '2024-01-15T11:00:00Z' } }),
-        makeEvent('event2', { summary: 'Lunch', start: { dateTime: '2024-01-15T12:00:00Z' }, end: { dateTime: '2024-01-15T13:00:00Z' }, location: 'Restaurant' })
+        makeEvent({ id: 'event1', summary: 'Meeting', start: { dateTime: '2024-01-15T10:00:00Z' }, end: { dateTime: '2024-01-15T11:00:00Z' } }),
+        makeEvent({ id: 'event2', summary: 'Lunch', start: { dateTime: '2024-01-15T12:00:00Z' }, end: { dateTime: '2024-01-15T13:00:00Z' }, location: 'Restaurant' })
       ];
 
       mockCalendarApi.events.list.mockResolvedValue({
@@ -268,7 +278,7 @@ describe('Batch List Events Functionality', () => {
           headers: {},
           body: {
             items: [
-              makeEvent('event1', { summary: 'Only Event', start: { dateTime: '2024-01-15T09:00:00Z' }, end: { dateTime: '2024-01-15T10:00:00Z' } })
+              makeEvent({ id: 'event1', summary: 'Only Event', start: { dateTime: '2024-01-15T09:00:00Z' }, end: { dateTime: '2024-01-15T10:00:00Z' } })
             ]
           }
         }
@@ -336,17 +346,6 @@ describe('Batch List Events Functionality', () => {
   });
 
   describe('Error Handling', () => {
-    let mockOAuth2Client: any;
-    let listEventsHandler: ListEventsHandler;
-    let mockCalendarApi: any;
-
-    beforeEach(() => {
-      const setup = setupListEventsHandler();
-      mockOAuth2Client = setup.mockOAuth2Client;
-      listEventsHandler = setup.handler;
-      mockCalendarApi = setup.mockCalendarApi;
-    });
-
     it('should handle authentication errors', async () => {
       // Mock authentication failure
       const authError = new Error('Authentication required');
@@ -367,33 +366,6 @@ describe('Batch List Events Functionality', () => {
   });
 
   describe('Integration Scenarios', () => {
-    let mockOAuth2Client: any;
-    let listEventsHandler: ListEventsHandler;
-    let mockCalendarApi: any;
-
-    beforeEach(() => {
-      const setup = setupListEventsHandler();
-      mockOAuth2Client = setup.mockOAuth2Client;
-      listEventsHandler = setup.handler;
-      mockCalendarApi = setup.mockCalendarApi;
-    });
-
-    it('should handle maximum allowed calendars (50)', () => {
-      const maxCalendars = Array(50).fill('cal').map((c, i) => `${c}${i}@example.com`);
-
-      const input = {
-        calendarId: JSON.stringify(maxCalendars),
-        timeMin: TIME_MIN
-      };
-
-      const result = ListEventsArgumentsSchema.safeParse(input);
-      expect(result.success).toBe(true);
-      expect(typeof result.data?.calendarId).toBe('string');
-      // Verify the JSON string contains all 50 calendars
-      const parsed = JSON.parse(result.data?.calendarId);
-      expect(parsed).toHaveLength(50);
-    });
-
     it('should prefer existing single calendar path for single array item', async () => {
       const args = {
         calendarId: ['primary'], // Array with single item
@@ -401,7 +373,7 @@ describe('Batch List Events Functionality', () => {
       };
 
       const mockEvents = [
-        makeEvent('event1', { summary: 'Single Calendar Event', start: { dateTime: '2024-01-15T10:00:00Z' }, end: { dateTime: '2024-01-15T11:00:00Z' } })
+        makeEvent({ id: 'event1', summary: 'Single Calendar Event', start: { dateTime: '2024-01-15T10:00:00Z' }, end: { dateTime: '2024-01-15T11:00:00Z' } })
       ];
 
       mockCalendarApi.events.list.mockResolvedValue({

@@ -199,38 +199,24 @@ describe('date-utils', () => {
   });
 
   describe('isFutureDate', () => {
-    it('should return true for future date string', () => {
+    it.each([
+      [10, true],
+      [-10, false],
+    ])('should return %s for date offset %s days', (daysOffset, expected) => {
       const now = new Date();
-      const futureDate = addDays(now, 10);
-      const dateString = futureDate.toISOString();
-
-      expect(isFutureDate(dateString)).toBe(true);
-    });
-
-    it('should return false for past date string', () => {
-      const now = new Date();
-      const pastDate = addDays(now, -10);
-      const dateString = pastDate.toISOString();
-
-      expect(isFutureDate(dateString)).toBe(false);
+      const date = addDays(now, daysOffset);
+      expect(isFutureDate(date.toISOString())).toBe(expected);
     });
   });
 
   describe('isPastDate', () => {
-    it('should return true for past date string', () => {
+    it.each([
+      [-10, true],
+      [10, false],
+    ])('should return %s for date offset %s days', (daysOffset, expected) => {
       const now = new Date();
-      const pastDate = addDays(now, -10);
-      const dateString = pastDate.toISOString();
-
-      expect(isPastDate(dateString)).toBe(true);
-    });
-
-    it('should return false for future date string', () => {
-      const now = new Date();
-      const futureDate = addDays(now, 10);
-      const dateString = futureDate.toISOString();
-
-      expect(isPastDate(dateString)).toBe(false);
+      const date = addDays(now, daysOffset);
+      expect(isPastDate(date.toISOString())).toBe(expected);
     });
   });
 
@@ -335,28 +321,19 @@ describe('date-utils', () => {
       const result = buildUntilClause(BASE_DATE);
 
       expect(result).toBe(';UNTIL=20240615T100000Z');
-      expect(result.startsWith(';UNTIL=')).toBe(true);
-      expect(result).toMatch(/^\;UNTIL=\d{8}T\d{6}Z$/);
     });
   });
 
   describe('isRRuleString', () => {
-    it('should return true for RRULE strings', () => {
-      expect(isRRuleString('RRULE:FREQ=WEEKLY')).toBe(true);
-      expect(isRRuleString('RRULE:FREQ=DAILY;COUNT=5')).toBe(true);
-    });
-
-    it('should return false for EXDATE strings', () => {
-      expect(isRRuleString('EXDATE:20240615T100000Z')).toBe(false);
-    });
-
-    it('should return false for RDATE strings', () => {
-      expect(isRRuleString('RDATE:20240615T100000Z,20240616T100000Z')).toBe(false);
-    });
-
-    it('should return false for non-RRULE strings', () => {
-      expect(isRRuleString('DTSTART:20240615T100000Z')).toBe(false);
-      expect(isRRuleString('')).toBe(false);
+    it.each([
+      ['RRULE:FREQ=WEEKLY', true],
+      ['RRULE:FREQ=DAILY;COUNT=5', true],
+      ['EXDATE:20240615T100000Z', false],
+      ['RDATE:20240615T100000Z,20240616T100000Z', false],
+      ['DTSTART:20240615T100000Z', false],
+      ['', false],
+    ])('should return %s for isRRuleString("%s")', (input, expected) => {
+      expect(isRRuleString(input)).toBe(expected);
     });
   });
 
@@ -508,37 +485,34 @@ describe('date-utils', () => {
   });
 
   describe('isTimeZoneAware', () => {
-    it('should detect timezone-aware datetimes', () => {
-      expect(isTimeZoneAware('2024-06-15T10:00:00Z')).toBe(true);
-      expect(isTimeZoneAware('2024-06-15T10:00:00+05:30')).toBe(true);
-      expect(isTimeZoneAware('2024-06-15T10:00:00-07:00')).toBe(true);
-    });
-
-    it('should not detect timezone-naive datetimes', () => {
-      expect(isTimeZoneAware('2024-06-15T10:00:00')).toBe(false);
+    it.each([
+      ['2024-06-15T10:00:00Z', true],
+      ['2024-06-15T10:00:00+05:30', true],
+      ['2024-06-15T10:00:00-07:00', true],
+      ['2024-06-15T10:00:00', false],
+    ])('should return %s for isTimeZoneAware("%s")', (input, expected) => {
+      expect(isTimeZoneAware(input)).toBe(expected);
     });
   });
 
   describe('isTimeZoneNaive', () => {
-    it('should detect timezone-naive datetimes', () => {
-      expect(isTimeZoneNaive('2024-06-15T10:00:00')).toBe(true);
-    });
-
-    it('should not detect timezone-aware datetimes', () => {
-      expect(isTimeZoneNaive('2024-06-15T10:00:00Z')).toBe(false);
-      expect(isTimeZoneNaive('2024-06-15T10:00:00+05:30')).toBe(false);
+    it.each([
+      ['2024-06-15T10:00:00', true],
+      ['2024-06-15T10:00:00Z', false],
+      ['2024-06-15T10:00:00+05:30', false],
+    ])('should return %s for isTimeZoneNaive("%s")', (input, expected) => {
+      expect(isTimeZoneNaive(input)).toBe(expected);
     });
   });
 
   describe('isAllDayEvent', () => {
-    it('should detect all-day events', () => {
-      expect(isAllDayEvent('2024-06-15')).toBe(true);
-      expect(isAllDayEvent('2024-01-01')).toBe(true);
-    });
-
-    it('should not detect timed events', () => {
-      expect(isAllDayEvent('2024-06-15T10:00:00')).toBe(false);
-      expect(isAllDayEvent('2024-06-15T10:00:00Z')).toBe(false);
+    it.each([
+      ['2024-06-15', true],
+      ['2024-01-01', true],
+      ['2024-06-15T10:00:00', false],
+      ['2024-06-15T10:00:00Z', false],
+    ])('should return %s for isAllDayEvent("%s")', (input, expected) => {
+      expect(isAllDayEvent(input)).toBe(expected);
     });
   });
 

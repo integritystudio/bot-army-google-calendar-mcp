@@ -7,6 +7,19 @@
 import { formatRFC3339 } from './date-utils.js';
 
 /**
+ * Shared Intl.DateTimeFormat options for offset calculation.
+ * Used by getTimezoneOffsetMinutes and convertLocalTimeToUTC.
+ */
+const DATETIME_OFFSET_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+};
+
+/**
  * Check if a timezone string is a valid IANA timezone identifier.
  * @param timeZone Timezone string to validate (e.g., 'America/Los_Angeles')
  * @returns true if valid IANA timezone
@@ -57,24 +70,14 @@ export function getTimezoneOffsetMinutes(timeZone: string): number {
 
   // Get the target timezone's local time string
   const targetTimeString = new Intl.DateTimeFormat('sv-SE', {
+    ...DATETIME_OFFSET_FORMAT_OPTIONS,
     timeZone: timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
   }).format(date);
 
   // Get UTC time string
   const utcTimeString = new Intl.DateTimeFormat('sv-SE', {
+    ...DATETIME_OFFSET_FORMAT_OPTIONS,
     timeZone: 'UTC',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
   }).format(date);
 
   // Parse both times and calculate difference
@@ -237,13 +240,8 @@ function convertLocalTimeToUTC(
 
   // Get what this UTC time looks like in the target timezone
   const options: Intl.DateTimeFormatOptions = {
+    ...DATETIME_OFFSET_FORMAT_OPTIONS,
     timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
     hour12: false,
   };
 

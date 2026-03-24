@@ -2,6 +2,13 @@
  * Shared test configuration objects to eliminate duplication across test suites
  */
 
+export const LIST_EVENTS_API_DEFAULTS = {
+  singleEvents: true,
+  orderBy: 'startTime'
+} as const;
+
+export const DUPLICATE_SUGGESTION = 'This event is very similar to an existing one. Is this intentional?';
+
 export const ANALYZER_CONFIG_BASE = {
   DEFAULT_SCORE: 5,
   HIGH_SCORE: 9,

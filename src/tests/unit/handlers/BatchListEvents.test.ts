@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OAuth2Client } from 'google-auth-library';
 import { getTextContent, makeCalendarMock, makeEvent, makeEventWithCalendarId } from '../helpers/index.js';
+import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
 // Import the types and schemas we're testing
 import { ToolSchemas } from '../../../tools/registry.js';
 import { ExtendedEvent } from '../../../handlers/core/batchUtils.js';
@@ -143,11 +144,9 @@ describe('Batch List Events Functionality', () => {
         calendarId: 'primary',
         timeMin: args.timeMin,
         timeMax: args.timeMax,
-        singleEvents: true,
-        orderBy: 'startTime'
+        ...LIST_EVENTS_API_DEFAULTS
       });
 
-      // Should return text content with events
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
       expect(getTextContent(result)).toContain('Found');
@@ -419,8 +418,7 @@ describe('Batch List Events Functionality', () => {
         calendarId: 'primary',
         timeMin: args.timeMin,
         timeMax: undefined,
-        singleEvents: true,
-        orderBy: 'startTime'
+        ...LIST_EVENTS_API_DEFAULTS
       });
 
       expect(result.content).toHaveLength(1);

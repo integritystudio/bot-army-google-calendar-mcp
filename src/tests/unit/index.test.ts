@@ -12,6 +12,7 @@ import { ListEventsHandler } from "../../handlers/core/ListEventsHandler.js";
 
 // Import test helpers
 import { getTextContent } from "../unit/helpers/index.js";
+import { LIST_EVENTS_API_DEFAULTS } from "../unit/helpers/test-configs.js";
 import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from "../../testing/constants.js";
 
 // Mock OAuth2Client
@@ -301,11 +302,9 @@ Personal (cal2)
         calendarId: listEventsArgs.calendarId,
         timeMin: listEventsArgs.timeMin,
         timeMax: listEventsArgs.timeMax,
-        singleEvents: true,
-        orderBy: 'startTime'
+        ...LIST_EVENTS_API_DEFAULTS
       });
 
-      // Should return text content with events
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
       expect(getTextContent(result)).toContain('Found');

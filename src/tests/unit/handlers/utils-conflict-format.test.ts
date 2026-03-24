@@ -3,6 +3,7 @@ import { formatConflictWarnings } from '../../../handlers/utils.js';
 import { ConflictCheckResult } from '../../../services/conflict-detection/types.js';
 import { calendar_v3 } from 'googleapis';
 import { makeEvent } from '../helpers/index.js';
+import { DUPLICATE_SUGGESTION } from '../helpers/test-configs.js';
 
 describe('Enhanced Conflict Response Formatting', () => {
   it('should format duplicate warnings with full event details', () => {
@@ -103,7 +104,7 @@ describe('Enhanced Conflict Response Formatting', () => {
           url: 'https://calendar.google.com/event?eid=dup789',
           similarity: 0.85
         },
-        suggestion: 'This event is very similar to an existing one. Is this intentional?'
+        suggestion: DUPLICATE_SUGGESTION
       }],
       conflicts: []
     };

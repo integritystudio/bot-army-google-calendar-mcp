@@ -3,6 +3,7 @@ import { formatConflictWarnings } from '../../../handlers/utils.js';
 import { ConflictCheckResult } from '../../../services/conflict-detection/types.js';
 import { calendar_v3 } from 'googleapis';
 import { makeEvent } from '../helpers/index.js';
+import { DUPLICATE_SUGGESTION } from '../helpers/test-configs.js';
 
 describe('Duplicate Event Display', () => {
   it('should show full formatted event details for duplicates with calendarId', () => {
@@ -45,7 +46,7 @@ describe('Duplicate Event Display', () => {
         },
         fullEvent: duplicateEvent,
         calendarId: 'primary',
-        suggestion: 'This event is very similar to an existing one. Is this intentional?'
+        suggestion: DUPLICATE_SUGGESTION
       }],
       conflicts: []
     };
@@ -104,7 +105,7 @@ describe('Duplicate Event Display', () => {
           },
           fullEvent: dup1,
           calendarId: 'primary',
-          suggestion: 'This event is very similar to an existing one. Is this intentional?'
+          suggestion: DUPLICATE_SUGGESTION
         },
         {
           event: {
@@ -114,7 +115,7 @@ describe('Duplicate Event Display', () => {
           },
           fullEvent: dup2,
           calendarId: 'work@company.com',
-          suggestion: 'This event is very similar to an existing one. Is this intentional?'
+          suggestion: DUPLICATE_SUGGESTION
         }
       ],
       conflicts: []
@@ -147,7 +148,7 @@ describe('Duplicate Event Display', () => {
           url: 'https://calendar.google.com/event/basic-dup',
           similarity: 0.7
         },
-        suggestion: 'This event is very similar to an existing one. Is this intentional?'
+        suggestion: DUPLICATE_SUGGESTION
       }],
       conflicts: []
     };

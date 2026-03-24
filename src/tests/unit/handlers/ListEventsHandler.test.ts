@@ -4,6 +4,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { google } from 'googleapis';
 import { convertToRFC3339 } from '../../../utils/timezone-utils.js';
 import { getTextContent, makeEvent } from '../helpers/index.js';
+import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
 
 // Mock googleapis globally
 vi.mock('googleapis', () => ({
@@ -217,8 +218,7 @@ describe('ListEventsHandler - Timezone Handling', () => {
         calendarId: 'primary',
         timeMin: '2025-01-01T18:00:00Z', // 10:00 AM PST = 18:00 UTC
         timeMax: '2025-01-02T02:00:00Z', // 18:00 PM PST = 02:00 UTC next day
-        singleEvents: true,
-        orderBy: 'startTime'
+        ...LIST_EVENTS_API_DEFAULTS
       });
     });
 
@@ -237,8 +237,7 @@ describe('ListEventsHandler - Timezone Handling', () => {
         calendarId: 'primary',
         timeMin: '2025-01-01T10:00:00-08:00',
         timeMax: '2025-01-01T18:00:00-08:00',
-        singleEvents: true,
-        orderBy: 'startTime'
+        ...LIST_EVENTS_API_DEFAULTS
       });
     });
 
@@ -262,8 +261,7 @@ describe('ListEventsHandler - Timezone Handling', () => {
         calendarId: 'primary',
         timeMin: '2025-01-01T18:00:00Z', // 10:00 AM PST = 18:00 UTC
         timeMax: '2025-01-02T02:00:00Z', // 18:00 PM PST = 02:00 UTC next day
-        singleEvents: true,
-        orderBy: 'startTime'
+        ...LIST_EVENTS_API_DEFAULTS
       });
     });
 
@@ -282,8 +280,7 @@ describe('ListEventsHandler - Timezone Handling', () => {
         calendarId: 'primary',
         timeMin: '2025-01-01T10:00:00Z',
         timeMax: '2025-01-01T18:00:00Z',
-        singleEvents: true,
-        orderBy: 'startTime'
+        ...LIST_EVENTS_API_DEFAULTS
       });
     });
   });

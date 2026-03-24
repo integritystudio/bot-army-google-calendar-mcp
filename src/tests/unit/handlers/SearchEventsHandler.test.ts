@@ -3,6 +3,7 @@ import { SearchEventsHandler } from '../../../handlers/core/SearchEventsHandler.
 import { OAuth2Client } from 'google-auth-library';
 import { calendar_v3 } from 'googleapis';
 import { getTextContent, makeEvent, makeGaxiosError } from '../helpers/index.js';
+import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
 
 vi.mock('googleapis', () => ({
   google: {
@@ -127,8 +128,7 @@ describe('SearchEventsHandler', () => {
         expect.objectContaining({
           calendarId: 'primary',
           q: 'meeting',
-          singleEvents: true,
-          orderBy: 'startTime'
+          ...LIST_EVENTS_API_DEFAULTS
         })
       );
 

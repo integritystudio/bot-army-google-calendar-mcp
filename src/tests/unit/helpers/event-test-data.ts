@@ -174,3 +174,20 @@ export function createComplexUpdateEventArgs(
     ...overrides
   };
 }
+
+/**
+ * Create test arguments for CreateEvent handler.
+ * Base pattern for handler tests with standard calendar, summary, start/end times.
+ */
+export function createCreateEventArgs(
+  calendarId: string = 'primary',
+  overrides: Record<string, any> = {}
+): Record<string, any> {
+  return {
+    calendarId,
+    summary: 'Test Event',
+    start: '2025-01-15T10:00:00',
+    end: '2025-01-15T11:00:00',
+    ...overrides
+  };
+}

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
 import { OAuth2Client } from 'google-auth-library';
-import { makeEvent, getTextContent } from '../helpers/index.js';
+import { makeEvent, getTextContent, createCreateEventArgs } from '../helpers/index.js';
 
 // Mock the googleapis module
 vi.mock('googleapis', () => ({
@@ -67,12 +67,7 @@ describe('CreateEventHandler', () => {
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
-      const args = {
-        calendarId: 'primary',
-        summary: 'Test Event',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00'
-      };
+      const args = createCreateEventArgs();
 
       const result = await handler.runTool(args, mockOAuth2Client);
 

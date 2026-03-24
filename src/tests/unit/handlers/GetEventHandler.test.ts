@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GetEventHandler } from '../../../handlers/core/GetEventHandler.js';
 import { OAuth2Client } from 'google-auth-library';
-import { getTextContent } from '../helpers/content.js';
+import { getTextContent, makeEvent } from '../helpers/index.js';
 
 // Mock the googleapis module
 vi.mock('googleapis', () => ({
@@ -45,13 +45,11 @@ describe('GetEventHandler', () => {
 
   describe('runTool', () => {
     it('should retrieve an event successfully', async () => {
-      const mockEvent = {
+      const mockEvent = makeEvent({
         id: 'event123',
         summary: 'Test Event',
-        start: { dateTime: '2025-01-15T10:00:00Z' },
-        end: { dateTime: '2025-01-15T11:00:00Z' },
         status: 'confirmed'
-      };
+      });
 
       mockCalendar.events.get.mockResolvedValue({ data: mockEvent });
 
@@ -73,15 +71,13 @@ describe('GetEventHandler', () => {
     });
 
     it('should retrieve an event with custom fields', async () => {
-      const mockEvent = {
+      const mockEvent = makeEvent({
         id: 'event123',
         summary: 'Test Event',
-        start: { dateTime: '2025-01-15T10:00:00Z' },
-        end: { dateTime: '2025-01-15T11:00:00Z' },
         description: 'Event description',
         colorId: '5',
         attendees: [{ email: 'test@example.com' }]
-      };
+      });
 
       mockCalendar.events.get.mockResolvedValue({ data: mockEvent });
 
@@ -155,10 +151,10 @@ describe('GetEventHandler', () => {
 
   describe('field mask integration', () => {
     it('should not include fields parameter when no fields requested', async () => {
-      const mockEvent = {
+      const mockEvent = makeEvent({
         id: 'event123',
         summary: 'Test Event'
-      };
+      });
 
       mockCalendar.events.get.mockResolvedValue({ data: mockEvent });
 
@@ -176,11 +172,11 @@ describe('GetEventHandler', () => {
     });
 
     it('should include fields parameter when fields are requested', async () => {
-      const mockEvent = {
+      const mockEvent = makeEvent({
         id: 'event123',
         summary: 'Test Event',
         description: 'Test Description'
-      };
+      });
 
       mockCalendar.events.get.mockResolvedValue({ data: mockEvent });
 

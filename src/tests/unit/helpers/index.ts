@@ -9,5 +9,6 @@ export {
   createUpdateEventArgs,
   createUpdateEventArgsWithTimes,
   createUpdateEventArgsWithAttendees,
-  createComplexUpdateEventArgs
+  createComplexUpdateEventArgs,
+  createCreateEventArgs
 } from './event-test-data.js';

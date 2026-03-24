@@ -2,19 +2,20 @@ import { describe, it, expect } from 'vitest';
 import { formatConflictWarnings } from '../../../handlers/utils.js';
 import { ConflictCheckResult } from '../../../services/conflict-detection/types.js';
 import { calendar_v3 } from 'googleapis';
+import { makeEvent } from '../helpers/index.js';
 
 describe('Duplicate Event Display', () => {
   it('should show full formatted event details for duplicates with calendarId', () => {
-    const duplicateEvent: calendar_v3.Schema$Event = {
+    const duplicateEvent = makeEvent({
       id: 'dup123',
       summary: 'Weekly Team Standup',
       description: 'Weekly sync with the engineering team',
       location: 'Conference Room B',
-      start: { 
+      start: {
         dateTime: '2024-01-15T10:00:00-08:00',
         timeZone: 'America/Los_Angeles'
       },
-      end: { 
+      end: {
         dateTime: '2024-01-15T10:30:00-08:00',
         timeZone: 'America/Los_Angeles'
       },
@@ -31,7 +32,7 @@ describe('Duplicate Event Display', () => {
         useDefault: false,
         overrides: [{ method: 'popup', minutes: 10 }]
       }
-    };
+    });
 
     const conflicts: ConflictCheckResult = {
       hasConflicts: true,
@@ -76,21 +77,21 @@ describe('Duplicate Event Display', () => {
   });
 
   it('should show multiple duplicates with their full details', () => {
-    const dup1: calendar_v3.Schema$Event = {
+    const dup1 = makeEvent({
       id: 'morning-standup',
       summary: 'Team Standup',
       start: { dateTime: '2024-01-15T09:00:00Z' },
       end: { dateTime: '2024-01-15T09:15:00Z' }
-    };
+    });
 
-    const dup2: calendar_v3.Schema$Event = {
+    const dup2 = makeEvent({
       id: 'daily-standup',
       summary: 'Daily Team Standup',
       description: 'Quick sync',
       start: { dateTime: '2024-01-15T09:00:00Z' },
       end: { dateTime: '2024-01-15T09:30:00Z' },
       location: 'Zoom'
-    };
+    });
 
     const conflicts: ConflictCheckResult = {
       hasConflicts: true,

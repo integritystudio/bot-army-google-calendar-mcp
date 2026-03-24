@@ -3,7 +3,7 @@ import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
 import { OAuth2Client } from 'google-auth-library';
 import { google } from 'googleapis';
 import { convertToRFC3339 } from '../../../utils/timezone-utils.js';
-import { getTextContent } from '../helpers/content.js';
+import { getTextContent, makeEvent } from '../helpers/index.js';
 
 // Mock googleapis globally
 vi.mock('googleapis', () => ({
@@ -33,12 +33,10 @@ describe('ListEventsHandler JSON String Handling', () => {
         list: vi.fn().mockResolvedValue({
           data: {
             items: [
-              {
+              makeEvent({
                 id: 'test-event',
-                summary: 'Test Event',
-                start: { dateTime: '2025-06-02T10:00:00Z' },
-                end: { dateTime: '2025-06-02T11:00:00Z' },
-              }
+                summary: 'Test Event'
+              })
             ]
           }
         })

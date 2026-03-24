@@ -2,10 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { formatConflictWarnings } from '../../../handlers/utils.js';
 import { ConflictCheckResult } from '../../../services/conflict-detection/types.js';
 import { calendar_v3 } from 'googleapis';
+import { makeEvent } from '../helpers/index.js';
 
 describe('Enhanced Conflict Response Formatting', () => {
   it('should format duplicate warnings with full event details', () => {
-    const fullEvent: calendar_v3.Schema$Event = {
+    const fullEvent = makeEvent({
       id: 'duplicate123',
       summary: 'Team Meeting',
       description: 'Weekly team sync',
@@ -16,7 +17,7 @@ describe('Enhanced Conflict Response Formatting', () => {
         { email: 'john@example.com', displayName: 'John Doe', responseStatus: 'accepted' }
       ],
       htmlLink: 'https://calendar.google.com/event?eid=duplicate123'
-    };
+    });
 
     const conflicts: ConflictCheckResult = {
       hasConflicts: true,
@@ -47,7 +48,7 @@ describe('Enhanced Conflict Response Formatting', () => {
   });
 
   it('should format conflict warnings with full event details', () => {
-    const conflictingEvent: calendar_v3.Schema$Event = {
+    const conflictingEvent = makeEvent({
       id: 'conflict456',
       summary: 'Design Review',
       description: 'Q4 design review meeting',
@@ -55,7 +56,7 @@ describe('Enhanced Conflict Response Formatting', () => {
       start: { dateTime: '2024-01-15T13:30:00Z' },
       end: { dateTime: '2024-01-15T14:30:00Z' },
       htmlLink: 'https://calendar.google.com/event?eid=conflict456'
-    };
+    });
 
     const conflicts: ConflictCheckResult = {
       hasConflicts: true,

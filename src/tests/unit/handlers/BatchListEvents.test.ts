@@ -12,6 +12,7 @@ import { ToolSchemas } from '../../../tools/registry.js';
 const ListEventsArgumentsSchema = ToolSchemas['list-events'];
 import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
 import { processBatchResponses } from '../../../handlers/core/batchUtils.js';
+import { groupBy } from '../../../utils/aggregationHelpers.js';
 
 // Mock the BatchRequestHandler that we'll implement
 class MockBatchRequestHandler {
@@ -449,12 +450,7 @@ describe('Batch List Events Functionality', () => {
       ];
 
       // Group events by calendar
-      const grouped = events.reduce((acc, event) => {
-        const calId = (event as any).calendarId || 'unknown';
-        if (!acc[calId]) acc[calId] = [];
-        acc[calId].push(event);
-        return acc;
-      }, {} as Record<string, ExtendedEvent[]>);
+      const grouped = groupBy(events, (event) => (event as any).calendarId || 'unknown');
 
       // Since we now return resources instead of formatted text,
       // we just verify that events are grouped correctly

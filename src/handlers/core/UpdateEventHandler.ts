@@ -6,6 +6,7 @@ import { calendar_v3 } from 'googleapis';
 import { RecurringEventHelpers, RecurringEventError, RECURRING_EVENT_ERRORS } from './RecurringEventHelpers.js';
 import { createEventResponseWithConflicts } from "../utils.js";
 import { ConflictDetectionService } from "../../services/conflict-detection/index.js";
+import { createTimeObject } from "../../utils/timezone-utils.js";
 import {
   buildEventForConflictCheckUpdate,
   performConflictCheck,
@@ -199,14 +200,8 @@ export class UpdateEventHandler extends BaseToolHandler {
         const newEvent = {
             ...helpers.cleanEventForDuplication(eventData),
             ...requestBody,
-            start: {
-                dateTime: args.start || args.futureStartDate,
-                timeZone: effectiveTimeZone
-            },
-            end: {
-                dateTime: endTime,
-                timeZone: effectiveTimeZone
-            }
+            start: createTimeObject(args.start || args.futureStartDate, effectiveTimeZone),
+            end: createTimeObject(endTime, effectiveTimeZone)
         };
 
         const response = await calendar.events.insert({

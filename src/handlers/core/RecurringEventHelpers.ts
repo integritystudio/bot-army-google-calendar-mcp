@@ -7,6 +7,7 @@ import {
   buildUntilClause,
   isRRuleString,
 } from '../../utils/date-utils.js';
+import { createTimeObject } from '../../utils/timezone-utils.js';
 
 export class RecurringEventHelpers {
   private calendar: calendar_v3.Calendar;
@@ -144,11 +145,11 @@ export class RecurringEventHelpers {
     const effectiveTimeZone = args.timeZone || defaultTimeZone;
 
     if (args.start !== undefined && args.start !== null) {
-      requestBody.start = { dateTime: args.start, timeZone: effectiveTimeZone };
+      requestBody.start = createTimeObject(args.start, effectiveTimeZone);
       timeChanged = true;
     }
     if (args.end !== undefined && args.end !== null) {
-      requestBody.end = { dateTime: args.end, timeZone: effectiveTimeZone };
+      requestBody.end = createTimeObject(args.end, effectiveTimeZone);
       timeChanged = true;
     }
 

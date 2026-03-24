@@ -1,16 +1,16 @@
 import { OAuth2Client } from "google-auth-library";
 import { google, calendar_v3 } from "googleapis";
-import { 
-  ConflictCheckResult, 
-  ConflictInfo, 
-  DuplicateInfo, 
-  ConflictDetectionOptions 
+import {
+  ConflictCheckResult,
+  ConflictInfo,
+  DuplicateInfo,
+  ConflictDetectionOptions
 } from "./types.js";
 import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
 import { ConflictAnalyzer } from "./ConflictAnalyzer.js";
 import { CONFLICT_DETECTION_CONFIG } from "./config.js";
 import { getEventUrl } from "../../handlers/utils.js";
-import { convertToRFC3339 } from "../../utils/timezone-utils.js";
+import { convertToRFC3339, hasTimezoneInDatetime } from "../../utils/timezone-utils.js";
 
 /**
  * Service for detecting event conflicts and duplicates.
@@ -68,16 +68,11 @@ export class ConflictDetectionService {
 
     // Extract timezone if present (prefer start time's timezone)
     const timezone = event.start.timeZone || event.end.timeZone;
-    
-    
+
     // The Google Calendar API requires RFC3339 format for timeMin/timeMax
     // If we have timezone-naive datetimes with a timezone field, convert them to proper RFC3339
-    // Check for minus but exclude the date separator (e.g., 2025-09-05)
-    const needsConversion = timezone && timeMin && 
-      !timeMin.includes('Z') && 
-      !timeMin.includes('+') && 
-      !timeMin.substring(10).includes('-'); // Only check for minus after the date part
-      
+    const needsConversion = timezone && timeMin && !hasTimezoneInDatetime(timeMin);
+
     if (needsConversion) {
       timeMin = convertToRFC3339(timeMin, timezone);
       timeMax = convertToRFC3339(timeMax, timezone);

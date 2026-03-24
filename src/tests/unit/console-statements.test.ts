@@ -10,8 +10,10 @@ import { join, extname } from 'path';
 const ALLOWED_CONSOLE_FILES = [
   // Example files are allowed to have console statements
   'examples/',
-  // Build scripts are allowed to have console statements  
+  // Build scripts are allowed to have console statements
   'scripts/',
+  // CLI utilities for development (not part of MCP server)
+  'verify-tokens.ts',
   // Test files can have console statements for debugging
   '.test.ts',
   '.test.js',

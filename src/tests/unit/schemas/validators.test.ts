@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ToolSchemas } from '../../../tools/registry.js';
 import { makeFutureDateString, makePastDateString } from '../helpers/factories.js';
+import { TIME_MIN } from '../helpers/test-configs.js';
 import {
   createUpdateEventArgs,
   createUpdateEventArgsWithTimes,
@@ -289,7 +290,7 @@ describe('ListEventsArgumentsSchema JSON String Handling', () => {
   it('should parse JSON string calendarId into array', () => {
     const input = {
       calendarId: '["primary", "secondary@gmail.com"]',
-      timeMin: '2024-01-01T00:00:00Z',
+      timeMin: TIME_MIN,
       timeMax: '2024-01-02T00:00:00Z'
     };
 
@@ -301,7 +302,7 @@ describe('ListEventsArgumentsSchema JSON String Handling', () => {
   it('should handle regular string calendarId', () => {
     const input = {
       calendarId: 'primary',
-      timeMin: '2024-01-01T00:00:00Z',
+      timeMin: TIME_MIN,
       timeMax: '2024-01-02T00:00:00Z'
     };
 
@@ -313,7 +314,7 @@ describe('ListEventsArgumentsSchema JSON String Handling', () => {
     // Arrays are no longer directly supported - they must be JSON strings
     const input = {
       calendarId: ['primary', 'secondary@gmail.com'],
-      timeMin: '2024-01-01T00:00:00Z',
+      timeMin: TIME_MIN,
       timeMax: '2024-01-02T00:00:00Z'
     };
 
@@ -325,7 +326,7 @@ describe('ListEventsArgumentsSchema JSON String Handling', () => {
     // Invalid JSON strings are accepted by the schema but will fail in the handler
     const input = {
       calendarId: '["primary", invalid]',
-      timeMin: '2024-01-01T00:00:00Z',
+      timeMin: TIME_MIN,
       timeMax: '2024-01-02T00:00:00Z'
     };
 
@@ -338,7 +339,7 @@ describe('ListEventsArgumentsSchema JSON String Handling', () => {
     // Schema accepts any string - validation happens in the handler
     const input = {
       calendarId: '["primary", 123]',
-      timeMin: '2024-01-01T00:00:00Z',
+      timeMin: TIME_MIN,
       timeMax: '2024-01-02T00:00:00Z'
     };
 

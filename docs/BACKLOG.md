@@ -1429,23 +1429,13 @@ BatchRequestHandler.test.ts extracted four reusable testing patterns that should
 ---
 
 ### L7: Migrate remaining handler tests to makeCalendarMock factory
-**Status:** Open
+**Status:** ✅ COMPLETED (2026-03-24)
 **Priority:** Low
 **Date Added:** 2026-03-24
+**Commits:** 77e1bcc, b2570e3
 **Source:** RecurringEventHelpers.test.ts refactor session
 
-`makeCalendarMock()` was added to `src/tests/unit/helpers/factories.ts` to provide a typed, reusable calendar mock. Four handler test files still declare `mockCalendar: any` inline, bypassing type checking.
-
-**Files with `mockCalendar: any`:**
-- `src/tests/unit/handlers/CreateEventHandler.test.ts`
-- `src/tests/unit/handlers/GetEventHandler.test.ts`
-- `src/tests/unit/handlers/ListEventsHandler.test.ts`
-- `src/tests/unit/handlers/SearchEventsHandler.test.ts`
-
-**Action Items:**
-1. Replace `let mockCalendar: any` with `let mockCalendar: ReturnType<typeof makeCalendarMock>`
-2. Replace inline `{ events: { get: vi.fn(), ... } }` constructions with `makeCalendarMock()`
-3. Cast at construction: `new Handler(mockCalendar as unknown as calendar_v3.Calendar)`
+Migrated all four handler tests from `mockCalendar: any` to `ReturnType<typeof makeCalendarMock>`. Extended factory with `calendarListGet` override for ListEventsHandler. Also fixed `HandlerSetup.mockCalendarApi: any` in `handler-setup.ts`. All 567 tests passing.
 
 **Benefits:** Removes `any` escape hatch; mock method mismatches caught at compile time.
 **Risk:** Low (test-only changes)

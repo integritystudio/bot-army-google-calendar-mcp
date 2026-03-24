@@ -212,9 +212,137 @@ describe('UpdateEventHandler - Recurring Events', () => {
   });
 
   describe('Instance ID Formatting', () => {
-    // Tests for correct instance ID formatting: eventId_YYYYMMDDTHHMMSSZ
-    it.todo('should format instance ID correctly for single instance updates');
-    it.todo('should handle various datetime formats in originalStartTime');
+    it('should format instance ID correctly for single instance updates', async () => {
+      const recurringEvent = createMockRecurringEvent();
+      mockCalendar.events.get.mockResolvedValue({ data: recurringEvent });
+      mockCalendar.events.patch.mockResolvedValue({ data: recurringEvent });
+
+      const originalStartTime = '2026-03-25T10:00:00Z';
+      await handler.runTool(
+        {
+          calendarId: 'primary',
+          eventId: 'recurring123',
+          modificationScope: 'thisEventOnly',
+          originalStartTime,
+          summary: 'Updated Single Instance',
+          checkConflicts: false
+        },
+        mockOAuth2Client
+      );
+
+      // Expected instance ID format: eventId_YYYYMMDDTHHMMSSZ
+      expect(mockCalendar.events.patch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventId: 'recurring123_20260325T100000Z'
+        })
+      );
+    });
+
+    it('should handle ISO timestamp with timezone offset (+HH:MM)', async () => {
+      const recurringEvent = createMockRecurringEvent();
+      mockCalendar.events.get.mockResolvedValue({ data: recurringEvent });
+      mockCalendar.events.patch.mockResolvedValue({ data: recurringEvent });
+
+      // Timestamp with +05:30 offset should be converted to UTC
+      const originalStartTime = '2026-03-25T15:30:00+05:30';
+      await handler.runTool(
+        {
+          calendarId: 'primary',
+          eventId: 'event-with-tz',
+          modificationScope: 'thisEventOnly',
+          originalStartTime,
+          summary: 'Updated',
+          checkConflicts: false
+        },
+        mockOAuth2Client
+      );
+
+      // Verify patch was called with instance ID
+      expect(mockCalendar.events.patch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventId: expect.stringMatching(/^event-with-tz_\d{8}T\d{6}Z$/)
+        })
+      );
+    });
+
+    it('should handle ISO timestamp with negative timezone offset (-HH:MM)', async () => {
+      const recurringEvent = createMockRecurringEvent();
+      mockCalendar.events.get.mockResolvedValue({ data: recurringEvent });
+      mockCalendar.events.patch.mockResolvedValue({ data: recurringEvent });
+
+      const originalStartTime = '2026-03-25T05:00:00-08:00';
+      await handler.runTool(
+        {
+          calendarId: 'primary',
+          eventId: 'pst-event',
+          modificationScope: 'thisEventOnly',
+          originalStartTime,
+          summary: 'Updated',
+          checkConflicts: false
+        },
+        mockOAuth2Client
+      );
+
+      // Verify patch was called with instance ID format
+      expect(mockCalendar.events.patch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventId: expect.stringMatching(/^pst-event_\d{8}T\d{6}Z$/)
+        })
+      );
+    });
+
+    it('should handle timestamp without timezone designation', async () => {
+      const recurringEvent = createMockRecurringEvent();
+      mockCalendar.events.get.mockResolvedValue({ data: recurringEvent });
+      mockCalendar.events.patch.mockResolvedValue({ data: recurringEvent });
+
+      const originalStartTime = '2026-03-25T10:00:00';
+      await handler.runTool(
+        {
+          calendarId: 'primary',
+          eventId: 'no-tz-event',
+          modificationScope: 'thisEventOnly',
+          originalStartTime,
+          summary: 'Updated',
+          checkConflicts: false
+        },
+        mockOAuth2Client
+      );
+
+      // Should still format correctly with pattern eventId_YYYYMMDDTHHMMSSZ
+      expect(mockCalendar.events.patch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventId: expect.stringMatching(/^no-tz-event_20260325T\d{6}Z$/)
+        })
+      );
+    });
+
+    it('should preserve event ID when formatting instance', async () => {
+      const longEventId = 'abc123def456ghi789jkl000';
+      const recurringEvent = createMockRecurringEvent({ id: longEventId });
+      mockCalendar.events.get.mockResolvedValue({ data: recurringEvent });
+      mockCalendar.events.patch.mockResolvedValue({ data: recurringEvent });
+
+      const originalStartTime = '2026-03-25T10:00:00Z';
+      await handler.runTool(
+        {
+          calendarId: 'primary',
+          eventId: longEventId,
+          modificationScope: 'thisEventOnly',
+          originalStartTime,
+          summary: 'Updated',
+          checkConflicts: false
+        },
+        mockOAuth2Client
+      );
+
+      // Instance ID should preserve the full event ID before underscore
+      expect(mockCalendar.events.patch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventId: `${longEventId}_20260325T100000Z`
+        })
+      );
+    });
   });
 
   describe('RRULE Manipulation', () => {

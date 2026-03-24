@@ -1,4 +1,5 @@
 // Test data factory utilities for integration tests
+import { tryGetTextContent } from '../unit/helpers/index.js';
 
 export interface TestEvent {
   id?: string;
@@ -231,14 +232,14 @@ export class TestDataFactory {
     if (!response || !response.content || !Array.isArray(response.content)) {
       return false;
     }
-    
-    const text = response.content[0]?.text;
+
+    const text = tryGetTextContent(response);
     // Accept empty strings for search operations - they indicate "no results found"
     return typeof text === 'string';
   }
 
   static extractEventIdFromResponse(response: any): string | null {
-    const text = response.content[0]?.text;
+    const text = tryGetTextContent(response);
     if (!text) return null;
     
     // Look for various event ID patterns in the response
@@ -274,7 +275,7 @@ export class TestDataFactory {
   }
 
   static extractAllEventIds(response: any): string[] {
-    const text = response.content[0]?.text;
+    const text = tryGetTextContent(response);
     if (!text) return [];
     
     const eventIds: string[] = [];

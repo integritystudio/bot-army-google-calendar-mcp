@@ -1,7 +1,8 @@
 import { gmail_v1 } from 'googleapis';
+import { formatErrorMessage } from '../core/errorFormatting.js';
 
 export function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  return formatErrorMessage(error);
 }
 
 export async function fetchMessageDetails(

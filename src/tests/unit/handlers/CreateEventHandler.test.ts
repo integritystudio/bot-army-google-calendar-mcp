@@ -293,16 +293,13 @@ describe('CreateEventHandler', () => {
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
-      const args = {
-        calendarId: 'primary',
+      const args = createCreateEventArgs('primary', {
         summary: 'Team Meeting',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00',
         guestsCanInviteOthers: false,
         guestsCanModify: true,
         guestsCanSeeOtherGuests: false,
         anyoneCanAddSelf: true
-      };
+      });
 
       await handler.runTool(args, mockOAuth2Client);
 
@@ -325,13 +322,10 @@ describe('CreateEventHandler', () => {
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
-      const args = {
-        calendarId: 'primary',
+      const args = createCreateEventArgs('primary', {
         summary: 'Meeting',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00',
         sendUpdates: 'externalOnly' as const
-      };
+      });
 
       await handler.runTool(args, mockOAuth2Client);
 
@@ -354,11 +348,8 @@ describe('CreateEventHandler', () => {
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
-      const args = {
-        calendarId: 'primary',
+      const args = createCreateEventArgs('primary', {
         summary: 'Video Call',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00',
         conferenceData: {
           createRequest: {
             requestId: 'unique-request-123',
@@ -367,7 +358,7 @@ describe('CreateEventHandler', () => {
             }
           }
         }
-      };
+      });
 
       await handler.runTool(args, mockOAuth2Client);
 
@@ -397,11 +388,8 @@ describe('CreateEventHandler', () => {
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
-      const args = {
-        calendarId: 'primary',
+      const args = createCreateEventArgs('primary', {
         summary: 'Custom Event',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00',
         extendedProperties: {
           private: {
             'appId': '12345',
@@ -412,7 +400,7 @@ describe('CreateEventHandler', () => {
             'category': 'meeting'
           }
         }
-      };
+      });
 
       await handler.runTool(args, mockOAuth2Client);
 
@@ -443,11 +431,8 @@ describe('CreateEventHandler', () => {
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
-      const args = {
-        calendarId: 'primary',
+      const args = createCreateEventArgs('primary', {
         summary: 'Meeting with Docs',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00',
         attachments: [
           {
             fileUrl: 'https://docs.google.com/document/d/123',
@@ -461,7 +446,7 @@ describe('CreateEventHandler', () => {
             fileId: '456'
           }
         ]
-      };
+      });
 
       await handler.runTool(args, mockOAuth2Client);
 
@@ -496,11 +481,8 @@ describe('CreateEventHandler', () => {
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
-      const args = {
-        calendarId: 'primary',
+      const args = createCreateEventArgs('primary', {
         summary: 'Team Sync',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00',
         attendees: [
           {
             email: 'alice@example.com',
@@ -517,7 +499,7 @@ describe('CreateEventHandler', () => {
             additionalGuests: 2
           }
         ]
-      };
+      });
 
       await handler.runTool(args, mockOAuth2Client);
 
@@ -554,16 +536,13 @@ describe('CreateEventHandler', () => {
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
-      const args = {
-        calendarId: 'primary',
+      const args = createCreateEventArgs('primary', {
         summary: 'Follow-up Meeting',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00',
         source: {
           url: 'https://example.com/meetings/123',
           title: 'Original Meeting Request'
         }
-      };
+      });
 
       await handler.runTool(args, mockOAuth2Client);
 
@@ -586,12 +565,7 @@ describe('CreateEventHandler', () => {
       (apiError as any).code = 500;
       mockCalendar.events.insert.mockRejectedValue(apiError);
 
-      const args = {
-        calendarId: 'primary',
-        summary: 'Test Event',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00'
-      };
+      const args = createCreateEventArgs();
 
       // Mock handleGoogleApiError
       vi.spyOn(handler as any, 'handleGoogleApiError').mockImplementation(() => {
@@ -604,12 +578,7 @@ describe('CreateEventHandler', () => {
     it('should handle missing response data', async () => {
       mockCalendar.events.insert.mockResolvedValue({ data: null });
 
-      const args = {
-        calendarId: 'primary',
-        summary: 'Test Event',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00'
-      };
+      const args = createCreateEventArgs();
 
       await expect(handler.runTool(args, mockOAuth2Client)).rejects.toThrow(
         'Failed to create event, no data returned'
@@ -625,13 +594,10 @@ describe('CreateEventHandler', () => {
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
-      const args = {
-        calendarId: 'primary',
+      const args = createCreateEventArgs('primary', {
         eventId: 'customcomplexevent',
         summary: 'Complex Event',
         description: 'An event with all features',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00',
         location: 'Conference Room A',
         transparency: 'opaque' as const,
         visibility: 'public' as const,
@@ -662,7 +628,7 @@ describe('CreateEventHandler', () => {
           title: 'Source System'
         },
         sendUpdates: 'all' as const
-      };
+      });
 
       await handler.runTool(args, mockOAuth2Client);
 

@@ -107,16 +107,16 @@ describe('EventSimilarityChecker', () => {
 
   describe('all-day vs timed events', () => {
     it('should not treat all-day event as duplicate of timed event with same title', () => {
-      const allDayEvent: calendar_v3.Schema$Event = {
+      const allDayEvent = makeEvent({
         summary: 'Conference',
         start: { date: '2024-01-15' },
         end: { date: '2024-01-16' }
-      };
-      const timedEvent: calendar_v3.Schema$Event = {
+      });
+      const timedEvent = makeEvent({
         summary: 'Conference',
         start: { dateTime: '2024-01-15T09:00:00' },
         end: { dateTime: '2024-01-15T17:00:00' }
-      };
+      });
 
       const similarity = checker.checkSimilarity(allDayEvent, timedEvent);
       expect(similarity).toBeLessThanOrEqual(0.3);
@@ -124,18 +124,18 @@ describe('EventSimilarityChecker', () => {
     });
 
     it('should not treat timed event as duplicate of all-day event', () => {
-      const timedEvent: calendar_v3.Schema$Event = {
+      const timedEvent = makeEvent({
         summary: 'Team Offsite',
         location: 'Mountain View',
         start: { dateTime: '2024-01-15T10:00:00' },
         end: { dateTime: '2024-01-15T15:00:00' }
-      };
-      const allDayEvent: calendar_v3.Schema$Event = {
+      });
+      const allDayEvent = makeEvent({
         summary: 'Team Offsite',
         location: 'Mountain View',
         start: { date: '2024-01-15' },
         end: { date: '2024-01-16' }
-      };
+      });
 
       const similarity = checker.checkSimilarity(timedEvent, allDayEvent);
       expect(similarity).toBeLessThanOrEqual(0.3);
@@ -143,16 +143,16 @@ describe('EventSimilarityChecker', () => {
     });
 
     it('should still detect duplicates between two all-day events', () => {
-      const allDay1: calendar_v3.Schema$Event = {
+      const allDay1 = makeEvent({
         summary: 'Company Holiday',
         start: { date: '2024-07-04' },
         end: { date: '2024-07-05' }
-      };
-      const allDay2: calendar_v3.Schema$Event = {
+      });
+      const allDay2 = makeEvent({
         summary: 'Company Holiday',
         start: { date: '2024-07-04' },
         end: { date: '2024-07-05' }
-      };
+      });
 
       const similarity = checker.checkSimilarity(allDay1, allDay2);
       expect(similarity).toBe(0.95); // Exact title + overlapping = 0.95
@@ -160,16 +160,16 @@ describe('EventSimilarityChecker', () => {
     });
 
     it('should still detect duplicates between two timed events', () => {
-      const timed1: calendar_v3.Schema$Event = {
+      const timed1 = makeEvent({
         summary: 'Sprint Planning',
         start: { dateTime: '2024-01-15T10:00:00' },
         end: { dateTime: '2024-01-15T12:00:00' }
-      };
-      const timed2: calendar_v3.Schema$Event = {
+      });
+      const timed2 = makeEvent({
         summary: 'Sprint Planning',
         start: { dateTime: '2024-01-15T10:00:00' },
         end: { dateTime: '2024-01-15T12:00:00' }
-      };
+      });
 
       const similarity = checker.checkSimilarity(timed1, timed2);
       expect(similarity).toBe(0.95); // Exact title + overlapping = 0.95
@@ -177,16 +177,16 @@ describe('EventSimilarityChecker', () => {
     });
 
     it('should handle common patterns like OOO/vacation', () => {
-      const allDayOOO: calendar_v3.Schema$Event = {
+      const allDayOOO = makeEvent({
         summary: 'John OOO',
         start: { date: '2024-01-15' },
         end: { date: '2024-01-16' }
-      };
-      const timedMeeting: calendar_v3.Schema$Event = {
+      });
+      const timedMeeting = makeEvent({
         summary: 'Meeting with John',
         start: { dateTime: '2024-01-15T14:00:00' },
         end: { dateTime: '2024-01-15T15:00:00' }
-      };
+      });
 
       const similarity = checker.checkSimilarity(allDayOOO, timedMeeting);
       expect(similarity).toBeLessThan(0.3);
@@ -196,16 +196,16 @@ describe('EventSimilarityChecker', () => {
 
   describe('isDuplicate', () => {
     it('should identify duplicates above threshold', () => {
-      const event1: calendar_v3.Schema$Event = {
+      const event1 = makeEvent({
         summary: 'Team Meeting',
         start: { dateTime: '2024-01-01T10:00:00' },
         end: { dateTime: '2024-01-01T11:00:00' }
-      };
-      const event2: calendar_v3.Schema$Event = {
+      });
+      const event2 = makeEvent({
         summary: 'Team Meeting',
         start: { dateTime: '2024-01-01T10:00:00' },
         end: { dateTime: '2024-01-01T11:00:00' }
-      };
+      });
 
       expect(checker.isDuplicate(event1, event2)).toBe(true); // 0.95 >= 0.7 default threshold
       expect(checker.isDuplicate(event1, event2, 0.9)).toBe(true); // 0.95 >= 0.9
@@ -213,16 +213,16 @@ describe('EventSimilarityChecker', () => {
     });
 
     it('should not identify non-duplicates as duplicates', () => {
-      const event1: calendar_v3.Schema$Event = {
+      const event1 = makeEvent({
         summary: 'Team Meeting',
         start: { dateTime: '2024-01-01T10:00:00' },
         end: { dateTime: '2024-01-01T11:00:00' }
-      };
-      const event2: calendar_v3.Schema$Event = {
+      });
+      const event2 = makeEvent({
         summary: 'Different Meeting',
         start: { dateTime: '2024-01-02T14:00:00' },
         end: { dateTime: '2024-01-02T15:00:00' }
-      };
+      });
 
       expect(checker.isDuplicate(event1, event2)).toBe(false);
       expect(checker.isDuplicate(event1, event2, 0.5)).toBe(false);

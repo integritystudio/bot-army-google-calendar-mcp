@@ -3,6 +3,7 @@ import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js
 import { OAuth2Client } from 'google-auth-library';
 import { calendar_v3 } from 'googleapis';
 import { CONFLICT_DETECTION_CONFIG } from '../../../services/conflict-detection/config.js';
+import { getTextContent } from '../helpers/index.js';
 
 describe('CreateEventHandler Blocking Logic', () => {
   const mockOAuth2Client = {
@@ -61,7 +62,7 @@ describe('CreateEventHandler Blocking Logic', () => {
     };
 
     const result = await handler.runTool(args, mockOAuth2Client);
-    const response = (result.content[0] as { type: 'text'; text: string }).text;
+    const response = getTextContent(result);
 
     // Verify the response format - now includes similarity percentage
     expect(response).toContain('⚠️ DUPLICATE EVENT DETECTED (100% similar)!');

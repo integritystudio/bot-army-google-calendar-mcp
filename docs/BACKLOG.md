@@ -5,7 +5,7 @@
 ## Status Summary
 - **Completed Items:** 27/27 (100%) ✅ - Migrated to [docs/changelog/1.4.9/CHANGELOG.md](./changelog/1.4.9/CHANGELOG.md)
 - **Open/Blocked Items:** 0 - All issues resolved ✅
-- **Tests Passing:** 566/566 ✅ (30 test files, all passing)
+- **Tests Passing:** 571/571 ✅ (30 test files, all passing; +5 applyTimezone tests)
 
 All completed backlog items have been migrated to the v1.4.9 changelog. See the changelog for detailed implementation notes and commit references.
 
@@ -1552,6 +1552,66 @@ function filterNullUndefined(obj: Record<string, any>): Record<string, any> {
 - All null/undefined filtering now consolidated in buildOptionalEventFields
 - Timezone handling is a good next candidate for consolidation
 - Consider revisiting when other event-building patterns emerge in future features
+
+---
+
+### L12: Timezone handling abstraction (applyTimezone helper)
+**Status:** ✅ COMPLETE (2026-03-24)
+**Commits:** d7643ec
+**Source:** L11 future consolidation opportunities, aggressive refactoring
+
+**Implementation:**
+
+1. **`applyTimezone()` helper** — `src/utils/timezone-utils.ts`
+   - Centralizes timezone application logic for start/end event objects
+   - Handles defined, undefined, and partial start/end objects
+   - Creates empty objects if needed for timezone-only updates
+   - Type signature: `applyTimezone(start?, end?, timezone) -> { start: {..., timeZone}, end: {..., timeZone} }`
+
+2. **Applied in RecurringEventHelpers.buildUpdateRequestBody()** (line 154)
+   - Replaced inline pattern:
+     ```typescript
+     // Before:
+     requestBody.start = requestBody.start || {};
+     requestBody.end = requestBody.end || {};
+     requestBody.start.timeZone = effectiveTimeZone;
+     requestBody.end.timeZone = effectiveTimeZone;
+
+     // After:
+     const { start, end } = applyTimezone(requestBody.start, requestBody.end, effectiveTimeZone);
+     requestBody.start = start;
+     requestBody.end = end;
+     ```
+
+3. **Test Coverage** — `src/tests/unit/utils/timezone-utils.test.ts`
+   - 5 new tests covering:
+     * Both start/end defined
+     * Both undefined (timezone-only updates)
+     * Partial start/end objects
+     * Date-only vs datetime objects
+     * Timezone overwriting behavior
+   - Tests validate object creation and field preservation
+
+**Benefits Achieved:**
+- **Consolidation:** Single source of truth for timezone application
+- **Clarity:** Replaces 6-line boilerplate pattern with 1-line helper call
+- **Reusability:** Pattern can be applied to other event-building scenarios
+- **Maintainability:** Changes to timezone logic only in one location
+
+**Test Results:**
+- All 571 tests passing (5 new applyTimezone tests added)
+- 0 regressions from refactoring
+- Type safety maintained via TypeScript signatures
+
+**Metrics:**
+- **LOC Reduction:** 4 lines saved in buildUpdateRequestBody
+- **DRY Improvement:** Single implementation for timezone application pattern
+- **Coverage:** 100% of start/end timezone scenarios
+
+**Future Opportunities:**
+- Apply to other event builders that may emerge
+- Consider generic field application patterns (e.g., `applyField(obj, fields, values)`)
+- Monitor for similar "ensure object exists" patterns across codebase
 
 ---
 

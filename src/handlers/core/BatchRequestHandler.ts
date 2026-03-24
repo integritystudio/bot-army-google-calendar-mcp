@@ -1,4 +1,5 @@
 import { OAuth2Client } from "google-auth-library";
+import { formatErrorMessage } from "./errorFormatting.js";
 
 export interface BatchRequest {
   method: string;
@@ -100,17 +101,18 @@ export class BatchRequestHandler {
       // Retry on network errors
       if (attempt < this.maxRetries && this.isRetryableError(error)) {
         const delay = this.baseDelay * Math.pow(2, attempt);
-        process.stderr.write(`Network error, retrying after ${delay}ms (attempt ${attempt + 1}/${this.maxRetries}): ${error instanceof Error ? error.message : 'Unknown error'}\n`);
+        process.stderr.write(`Network error, retrying after ${delay}ms (attempt ${attempt + 1}/${this.maxRetries}): ${formatErrorMessage(error)}\n`);
         await this.sleep(delay);
         return this.executeBatchWithRetry(requests, attempt + 1);
       }
       
       // Handle network or auth errors
+      const errorMessage = formatErrorMessage(error);
       throw new BatchRequestError(
-        `Failed to execute batch request: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to execute batch request: ${errorMessage}`,
         [{
           statusCode: 0,
-          message: error instanceof Error ? error.message : 'Unknown error',
+          message: errorMessage,
           details: error
         }]
       );

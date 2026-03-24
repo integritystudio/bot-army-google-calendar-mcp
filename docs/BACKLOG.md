@@ -1495,3 +1495,63 @@ function filterNullUndefined(obj: Record<string, any>): Record<string, any> {
 
 ---
 
+### L11: Event building consolidation tracking
+**Status:** ✅ COMPLETE (2026-03-24)
+**Commits:** 6065ecc
+**Source:** DRY analysis and refactoring session
+
+**Functions Created/Refactored:**
+
+1. **`buildCoreEvent()`** — `src/handlers/core/eventManipulationUtils.ts`
+   - Shared core field extraction (summary, description, start, end, attendees, location)
+   - Used by both create and update scenarios
+   - Handles fallback logic for updates (preserves existing values)
+   - **Callers:** buildEventForConflictCheckCreate, buildEventForConflictCheckUpdate, buildEventRequestBodyCreate, RecurringEventHelpers.buildUpdateRequestBody
+
+2. **`buildOptionalEventFields()`** — `src/handlers/core/eventManipulationUtils.ts`
+   - Shared optional field extraction (colorId, reminders, recurrence, transparency, visibility, guests, conference, attachments, etc.)
+   - Filters undefined values to prevent empty object keys
+   - **Callers:** buildEventRequestBodyCreate, RecurringEventHelpers.buildUpdateRequestBody
+
+3. **`RecurringEventHelpers.buildUpdateRequestBody()`** — Refactored (line 135)
+   - Now uses `buildCoreEvent()` + `buildOptionalEventFields()` instead of reimplementing
+   - Removed private `setIfPresent()` helper (25 lines saved)
+   - Properly handles timezone-only updates
+   - **Type signature changed:** `args: any` → `args: UpdateEventInput` for better type safety
+
+4. **`UpdateEventHandler.updateFutureInstances()`** — Simplified (line 185)
+   - Removed intermediate variable and redundant start/end overrides
+   - Cleaner integration with `buildUpdateRequestBody()`
+   - Reduced dead variable usage
+
+**Future Consolidation Opportunities:**
+
+1. **Timezone handling abstraction** — Both `buildCoreEvent()` and `buildUpdateRequestBody()` handle timezone logic separately. Consider:
+   - Extract `applyTimezone(start, end, timezone)` helper
+   - Centralize logic for creating timezone-only start/end objects
+
+2. **Optional field filtering pattern** — `buildOptionalEventFields()` uses inline conditional checks. Could extract:
+   - Generic `filterPresent<T>(input, keys): Partial<T>` helper
+   - Reduces boilerplate in similar field extraction patterns
+
+3. **Create vs Update branching** — `buildCoreEvent()` currently handles both via `'summary' in input` checks:
+   - Could split into separate `buildCreateEvent()` and `buildUpdateEvent()` for clarity
+   - Trade-off: duplication vs explicit intent
+
+4. **Request body building pattern** — Multiple handlers may benefit from unified event request body construction:
+   - Check CreateEventHandler, BatchRequestHandler, FreeBusyEventHandler for similar patterns
+   - Potential to unify around `buildEventRequestBody(type, input, timezone)` factory
+
+**Metrics:**
+- **LOC Reduction:** ~24 lines (removed setIfPresent helper + consolidated logic)
+- **Duplication Eliminated:** Core field extraction now shared across 4+ callers
+- **Type Safety Improvement:** buildUpdateRequestBody signature improved
+- **Test Coverage:** 566/566 tests passing after refactoring
+
+**Notes:**
+- All null/undefined filtering now consolidated in buildOptionalEventFields
+- Timezone handling is a good next candidate for consolidation
+- Consider revisiting when other event-building patterns emerge in future features
+
+---
+

@@ -84,12 +84,131 @@ describe('UpdateEventHandler - Recurring Events', () => {
   // ============================================================================
 
   describe('Scope Validation', () => {
-    // Tests for valid/invalid scope names and scope validation
-    it.todo('should accept valid scope: thisEventOnly');
-    it.todo('should accept valid scope: thisAndFollowing');
-    it.todo('should accept valid scope: all');
-    it.todo('should reject invalid scope values');
-    it.todo('should reject scopes other than "all" for non-recurring events');
+    it('should accept valid scope: thisEventOnly', async () => {
+      const recurringEvent = createMockRecurringEvent();
+      mockCalendar.events.get.mockResolvedValue({ data: recurringEvent });
+      mockCalendar.events.patch.mockResolvedValue({ data: recurringEvent });
+
+      const result = await handler.runTool(
+        {
+          calendarId: 'primary',
+          eventId: 'event123',
+          modificationScope: 'thisEventOnly',
+          originalStartTime: '2026-03-25T10:00:00Z',
+          summary: 'Updated'
+        },
+        mockOAuth2Client
+      );
+
+      expect(result.content).toBeDefined();
+      expect(result.content[0].type).toBe('text');
+      expect(mockCalendar.events.patch).toHaveBeenCalled();
+    });
+
+    it('should accept valid scope: thisAndFollowing', async () => {
+      const recurringEvent = createMockRecurringEvent();
+      mockCalendar.events.get.mockResolvedValue({ data: recurringEvent });
+      mockCalendar.events.patch.mockResolvedValue({ data: recurringEvent });
+      mockCalendar.events.insert.mockResolvedValue({ data: createMockRecurringEvent({ id: 'new-event' }) });
+
+      const futureDate = new Date('2026-04-01T10:00:00Z');
+      const result = await handler.runTool(
+        {
+          calendarId: 'primary',
+          eventId: 'event123',
+          modificationScope: 'thisAndFollowing',
+          futureStartDate: futureDate.toISOString(),
+          checkConflicts: false // Disable conflict checking for simpler test
+        },
+        mockOAuth2Client
+      );
+
+      expect(result.content).toBeDefined();
+      expect(result.content[0].type).toBe('text');
+      expect(mockCalendar.events.patch).toHaveBeenCalled();
+      expect(mockCalendar.events.insert).toHaveBeenCalled();
+    });
+
+    it('should accept valid scope: all', async () => {
+      const recurringEvent = createMockRecurringEvent();
+      mockCalendar.events.get.mockResolvedValue({ data: recurringEvent });
+      mockCalendar.events.patch.mockResolvedValue({ data: recurringEvent });
+
+      const result = await handler.runTool(
+        {
+          calendarId: 'primary',
+          eventId: 'event123',
+          modificationScope: 'all',
+          summary: 'Updated All Instances',
+          checkConflicts: false
+        },
+        mockOAuth2Client
+      );
+
+      expect(result.content).toBeDefined();
+      expect(mockCalendar.events.patch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventId: 'event123'
+        })
+      );
+    });
+
+    it('should accept undefined scope as "all"', async () => {
+      const recurringEvent = createMockRecurringEvent();
+      mockCalendar.events.get.mockResolvedValue({ data: recurringEvent });
+      mockCalendar.events.patch.mockResolvedValue({ data: recurringEvent });
+
+      const result = await handler.runTool(
+        {
+          calendarId: 'primary',
+          eventId: 'event123',
+          summary: 'Updated',
+          checkConflicts: false
+        },
+        mockOAuth2Client
+      );
+
+      expect(result.content).toBeDefined();
+      expect(mockCalendar.events.patch).toHaveBeenCalled();
+    });
+
+    it('should reject invalid scope values', async () => {
+      const recurringEvent = createMockRecurringEvent();
+      mockCalendar.events.get.mockResolvedValue({ data: recurringEvent });
+
+      // Try with invalid scope (will fail schema validation)
+      await expect(() =>
+        handler.runTool(
+          {
+            calendarId: 'primary',
+            eventId: 'event123',
+            modificationScope: 'invalid-scope' as any,
+            summary: 'Updated',
+            checkConflicts: false
+          },
+          mockOAuth2Client
+        )
+      ).rejects.toThrow();
+    });
+
+    it('should reject scopes other than "all" for non-recurring events', async () => {
+      // Single event - no recurrence
+      const singleEvent = createMockEvent({ recurrence: undefined });
+      mockCalendar.events.get.mockResolvedValue({ data: singleEvent });
+
+      await expect(() =>
+        handler.runTool(
+          {
+            calendarId: 'primary',
+            eventId: 'event123',
+            modificationScope: 'thisEventOnly',
+            originalStartTime: '2026-03-25T10:00:00Z',
+            checkConflicts: false
+          },
+          mockOAuth2Client
+        )
+      ).rejects.toThrow('Scope other than "all" only applies to recurring events');
+    });
   });
 
   describe('Instance ID Formatting', () => {

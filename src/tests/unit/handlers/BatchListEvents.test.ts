@@ -90,7 +90,7 @@ describe('Batch List Events Functionality', () => {
       const result = ListEventsArgumentsSchema.safeParse(input);
       // Arrays are no longer accepted directly
       expect(result.success).toBe(false);
-      expect(result.error?.issues[0].message).toContain('Expected string');
+      expect(result.error?.issues[0].message).toContain('expected string');
     });
 
     it('should handle malformed JSON string gracefully', () => {

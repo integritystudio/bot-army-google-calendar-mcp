@@ -1411,26 +1411,23 @@ BatchRequestHandler.test.ts extracted four reusable testing patterns that should
 
 ---
 
-### L8: Identify overlap between resolveTimeRange and existing handler methods
-**Status:** Open
-**Priority:** Low
-**Date Added:** 2026-03-24
-**Source:** timezone-utils refactor session
+### L8: Apply resolveTimeRange where appropriate
+**Status:** ✅ COMPLETE (2026-03-24)
+**Commits:** e3df2ce
 
-`resolveTimeRange(timeMin, timeMax, timezone)` was extracted to `src/utils/timezone-utils.ts` and adopted by `ListEventsHandler` and `SearchEventsHandler`. Review other handlers for the same inline pattern.
+`resolveTimeRange` applied to `ConflictDetectionService` — the only remaining production caller of inline `convertToRFC3339` on optional timeMin/timeMax. No other handlers had the pattern. `resolveTimeRange` stays in `timezone-utils.ts`.
 
-**Overlap candidates to audit:**
-- Any handler calling `convertToRFC3339` on optional fields with ternary guards
-- `BatchListEvents` or other handlers that accept `timeMin`/`timeMax` args
-- Search: `grep -r "convertToRFC3339" src/handlers/`
+---
 
-**Action Items:**
-1. Run `grep -r "convertToRFC3339" src/handlers/` to find remaining callers
-2. Replace inline `timeMin ? convertToRFC3339(timeMin, tz) : undefined` patterns with `resolveTimeRange()`
-3. Check if `resolveTimeRange` should move to a handler-focused utility module vs `timezone-utils.ts`
+### L9: Generic batch processing utility
+**Status:** ✅ COMPLETE (2026-03-24)
+**Commits:** 043aaf3
 
-**Risk:** Low (pure utility refactor, same behavior)
-**Estimated Effort:** 30 min
+Added `src/utils/batchProcessor.ts` with:
+- `processBatchItems()` — parallel execution with per-item error aggregation, continueOnError mode, custom error formatters
+- `processBatchItemsChunked()` — chunked concurrency limiting (default batch size 5)
+
+Open item: audit handlers/services for places that can adopt these utilities.
 
 ---
 

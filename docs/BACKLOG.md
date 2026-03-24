@@ -1299,3 +1299,129 @@ L4 is considered ✅ COMPLETED. The 80% coverage represents 100% of function-bas
 Further progress requires either:
 1. Design decisions on BLOCKED items (unlocks 40-60 hours of work)
 2. Explicit prioritization of OPTIONAL items (L5, L6)
+
+---
+
+## Post-L6 Opportunities: Email Analyzer Module Extraction
+
+### New Library Module: `lib/email-analyzer.mjs`
+**Status:** ✅ CREATED (2026-03-24)
+**Commit:** `0682823`
+
+#### Extracted Exports
+The following reusable helpers have been extracted from `analyze_emails.mjs` into a shared library module:
+
+##### 1. `categorizeEmail(msg) → { urgency, importance }`
+**Purpose:** Score and classify emails by urgency (high/medium/low) and importance (high/medium/low)
+**Scoring:** Uses keyword pattern matching on subject + from + snippet
+**Parameters:**
+- `msg.subject` (string)
+- `msg.from` (string)
+- `msg.snippet` (string)
+
+**Where It Can Be Applied:**
+- ✓ `analyze_emails.mjs` (already using)
+- `analyze_unread.mjs` - Could categorize by labels instead of source, but same logic
+- `analyze-subject-newsletters.mjs` - Classify newsletters by urgency
+- `analyze-work-invitations.mjs` - Classify meeting invites by urgency
+- `analyze-community-events.mjs` - Classify events by urgency
+- `analyze-workshops.mjs` - Classify workshops by urgency
+- `analyze-events-detailed.mjs` - Classify events by urgency
+- `analyze-ccv-newsletter.mjs` - Classify CCV emails by urgency
+- `analyze-remaining-invitations.mjs` - Classify invitations by urgency
+
+**Dedup Potential:** All `analyze-*` scripts repeat the same urgency/importance keyword matching logic
+
+##### 2. `printSection(title, subsections, displayConfig) → void`
+**Purpose:** Render a categorized email section with configurable truncation
+**Signature:** `printSection(title, subsections, { fromMax, subjectMax, snippetMax })`
+**Parameters:**
+- `title` (string) - Section header (e.g., "🔴 HIGH URGENCY EMAILS")
+- `subsections` (array) - Each with `{ label, emails, limit?, count? }`
+- `displayConfig` (object) - Optional truncation widths
+
+**Rendering Features:**
+- Skips empty sections
+- Supports slicing (e.g., "show 5, then ... and N more")
+- Special handling for count-only display (archive candidates)
+- Consistent emoji/formatting across all analyze scripts
+
+**Where It Can Be Applied:**
+- ✓ `analyze_emails.mjs` (already using)
+- `analyze_unread.mjs` - Could render by label categories
+- `list-unread-emails.mjs` - Currently prints in serial loop, could use printSection for category headers
+- `summarize-remaining.mjs` - Could render remaining unread in consistent format
+- All other `analyze-*` scripts that print categorized results
+
+**Dedup Potential:** ~8-10 scripts have similar category-header-then-loop-emails patterns
+
+##### 3. `scoreContent(content, highKeywords, lowKeywords) → [2|5|9]`
+**Purpose:** Unified scoring logic for keyword-based classification
+**Returns:** LOW_SCORE (2), DEFAULT_SCORE (5), or HIGH_SCORE (9)
+
+**Where It Can Be Applied:**
+- ✓ `categorizeEmail()` (already using via lib)
+- Could be reused in future filtering scripts that need keyword-based rules
+- Enables consistent scoring thresholds across the project
+
+##### 4. `ANALYZER_CONFIG` Export
+**Purpose:** Centralized configuration for scoring, keywords, and dividers
+**Contents:**
+```javascript
+{
+  DEFAULT_SCORE, HIGH_SCORE, LOW_SCORE,
+  HIGH_THRESHOLD, LOW_THRESHOLD,
+  SECTION_DIVIDER, ROW_DIVIDER,
+  HIGH_URGENCY_KEYWORDS, LOW_URGENCY_KEYWORDS,
+  HIGH_IMPORTANCE_KEYWORDS, LOW_IMPORTANCE_KEYWORDS
+}
+```
+
+**Benefits:**
+- Enables global tuning of scoring rules (adjust thresholds once, applies everywhere)
+- Keyword lists are visible and auditable in one location
+- Scripts can import and extend config as needed
+
+#### Deduplication Checklist
+
+Priority order (highest impact first):
+
+1. **[HIGH] `analyze_unread.mjs`** (currently 66 lines)
+   - Uses identical unread-fetch + categorization pattern
+   - Could use `categorizeEmail()` to add urgency scores
+   - Could use `printSection()` for label-grouped output
+   - Estimated reduction: ~20 lines
+
+2. **[HIGH] `list-unread-emails.mjs`** (currently ~80 lines)
+   - Serial message fetch (N+1 anti-pattern)
+   - Could use refactored `Promise.all` batch from `analyze_emails.mjs`
+   - Could use `printSection()` for category rendering
+   - Estimated reduction: ~30 lines + 10% faster (parallel fetch)
+
+3. **[MEDIUM] `summarize-remaining.mjs`** (currently ~90 lines)
+   - Similar header extraction and formatting patterns
+   - Could use `extractDisplayName()` from `lib/email-utils.mjs`
+   - Could use `printSection()` for output formatting
+   - Estimated reduction: ~20 lines
+
+4. **[MEDIUM] All `analyze-*` scripts** (currently ~10-20 scripts, avg 50 lines each)
+   - Repeat keyword-matching patterns
+   - Could all import `categorizeEmail()` + `ANALYZER_CONFIG`
+   - Could use `printSection()` for consistent output
+   - Estimated reduction: ~500 lines across all 10 scripts
+
+#### Implementation Notes
+
+**Current Status:**
+- `analyze_emails.mjs` refactored to import from `lib/email-analyzer.mjs` ✅
+- `categorizeEmail()` now returns only `{ urgency, importance }` (removed redundant scores)
+- `printSection()` accepts config for display customization ✅
+- Constants centralized in `ANALYZER_CONFIG` ✅
+
+**Next Steps (if prioritized):**
+1. Audit `analyze_unread.mjs` for categorizeEmail() reuse opportunity
+2. Batch `list-unread-emails.mjs` message fetches (parallel Promise.all)
+3. Apply `printSection()` to other analyze-* scripts
+4. Consider extracting common "fetch unread + categorize + print" pattern into helper
+
+**Risk Level:** Low (module is self-contained, no side effects)

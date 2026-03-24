@@ -1,18 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { EventSimilarityChecker } from '../../../../services/conflict-detection/EventSimilarityChecker.js';
-import { makeEvent } from '../../helpers/factories.js';
+import { makeEvent, makeTeamMeetingEvent } from '../../helpers/factories.js';
 
 describe('EventSimilarityChecker', () => {
   const checker = new EventSimilarityChecker();
 
   describe('checkSimilarity', () => {
     it('should return 0.95 for identical events', () => {
-      const event1 = makeEvent({
-        summary: 'Team Meeting',
-        location: 'Conference Room A',
-        start: { dateTime: '2024-01-01T10:00:00' },
-        end: { dateTime: '2024-01-01T11:00:00' }
-      });
+      const event1 = makeTeamMeetingEvent();
       const event2 = { ...event1 };
 
       const similarity = checker.checkSimilarity(event1, event2);
@@ -20,32 +15,18 @@ describe('EventSimilarityChecker', () => {
     });
 
     it('should detect high similarity for events with same title and time', () => {
-      const event1 = makeEvent({
-        summary: 'Team Meeting',
-        location: 'Conference Room A',
-        start: { dateTime: '2024-01-01T10:00:00' },
-        end: { dateTime: '2024-01-01T11:00:00' }
-      });
-      const event2 = makeEvent({
-        summary: 'Team Meeting',
-        location: 'Conference Room B', // Different location
-        start: { dateTime: '2024-01-01T10:00:00' },
-        end: { dateTime: '2024-01-01T11:00:00' }
-      });
+      const event1 = makeTeamMeetingEvent();
+      const event2 = makeTeamMeetingEvent('Conference Room B');
 
       const similarity = checker.checkSimilarity(event1, event2);
       expect(similarity).toBeGreaterThan(0.8);
     });
 
     it('should detect moderate similarity for events with similar titles', () => {
-      const event1 = makeEvent({
-        summary: 'Team Meeting',
-        start: { dateTime: '2024-01-01T10:00:00' },
-        end: { dateTime: '2024-01-01T11:00:00' }
-      });
+      const event1 = makeTeamMeetingEvent();
       const event2 = makeEvent({
         summary: 'Team Meeting Discussion',
-        start: { dateTime: '2024-01-01T14:00:00' }, // Different time
+        start: { dateTime: '2024-01-01T14:00:00' },
         end: { dateTime: '2024-01-01T15:00:00' }
       });
 
@@ -54,12 +35,7 @@ describe('EventSimilarityChecker', () => {
     });
 
     it('should detect low similarity for completely different events', () => {
-      const event1 = makeEvent({
-        summary: 'Team Meeting',
-        location: 'Conference Room A',
-        start: { dateTime: '2024-01-01T10:00:00' },
-        end: { dateTime: '2024-01-01T11:00:00' }
-      });
+      const event1 = makeTeamMeetingEvent();
       const event2 = makeEvent({
         summary: 'Doctor Appointment',
         location: 'Medical Center',
@@ -124,9 +100,8 @@ describe('EventSimilarityChecker', () => {
     });
 
     it('should not treat timed event as duplicate of all-day event', () => {
-      const timedEvent = makeEvent({
+      const timedEvent = makeTeamMeetingEvent('Mountain View', {
         summary: 'Team Offsite',
-        location: 'Mountain View',
         start: { dateTime: '2024-01-15T10:00:00' },
         end: { dateTime: '2024-01-15T15:00:00' }
       });
@@ -196,16 +171,8 @@ describe('EventSimilarityChecker', () => {
 
   describe('isDuplicate', () => {
     it('should identify duplicates above threshold', () => {
-      const event1 = makeEvent({
-        summary: 'Team Meeting',
-        start: { dateTime: '2024-01-01T10:00:00' },
-        end: { dateTime: '2024-01-01T11:00:00' }
-      });
-      const event2 = makeEvent({
-        summary: 'Team Meeting',
-        start: { dateTime: '2024-01-01T10:00:00' },
-        end: { dateTime: '2024-01-01T11:00:00' }
-      });
+      const event1 = makeTeamMeetingEvent();
+      const event2 = makeTeamMeetingEvent();
 
       expect(checker.isDuplicate(event1, event2)).toBe(true); // 0.95 >= 0.7 default threshold
       expect(checker.isDuplicate(event1, event2, 0.9)).toBe(true); // 0.95 >= 0.9
@@ -213,11 +180,7 @@ describe('EventSimilarityChecker', () => {
     });
 
     it('should not identify non-duplicates as duplicates', () => {
-      const event1 = makeEvent({
-        summary: 'Team Meeting',
-        start: { dateTime: '2024-01-01T10:00:00' },
-        end: { dateTime: '2024-01-01T11:00:00' }
-      });
+      const event1 = makeTeamMeetingEvent();
       const event2 = makeEvent({
         summary: 'Different Meeting',
         start: { dateTime: '2024-01-02T14:00:00' },

@@ -1,22 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { ConflictAnalyzer } from '../../../../services/conflict-detection/ConflictAnalyzer.js';
-import { makeEvent } from '../../helpers/factories.js';
+import { makeEvent, makeConflictingEvents } from '../../helpers/factories.js';
 
 describe('ConflictAnalyzer', () => {
   const analyzer = new ConflictAnalyzer();
 
   describe('analyzeOverlap', () => {
     it('should detect full overlap', () => {
-      const event1 = makeEvent({
-        summary: 'Meeting 1',
-        start: { dateTime: '2024-01-01T10:00:00Z' },
-        end: { dateTime: '2024-01-01T11:00:00Z' }
-      });
-      const event2 = makeEvent({
-        summary: 'Meeting 2',
-        start: { dateTime: '2024-01-01T10:00:00Z' },
-        end: { dateTime: '2024-01-01T11:00:00Z' }
-      });
+      const [event1, event2] = makeConflictingEvents();
 
       const result = analyzer.analyzeOverlap(event1, event2);
       expect(result.hasOverlap).toBe(true);
@@ -25,16 +16,13 @@ describe('ConflictAnalyzer', () => {
     });
 
     it('should detect partial overlap', () => {
-      const event1 = makeEvent({
-        summary: 'Meeting 1',
-        start: { dateTime: '2024-01-01T10:00:00Z' },
-        end: { dateTime: '2024-01-01T11:00:00Z' }
-      });
-      const event2 = makeEvent({
-        summary: 'Meeting 2',
-        start: { dateTime: '2024-01-01T10:30:00Z' },
-        end: { dateTime: '2024-01-01T11:30:00Z' }
-      });
+      const [event1, event2] = makeConflictingEvents(
+        {},
+        {
+          start: { dateTime: '2024-01-01T10:30:00Z' },
+          end: { dateTime: '2024-01-01T11:30:00Z' }
+        }
+      );
 
       const result = analyzer.analyzeOverlap(event1, event2);
       expect(result.hasOverlap).toBe(true);
@@ -43,16 +31,13 @@ describe('ConflictAnalyzer', () => {
     });
 
     it('should detect no overlap', () => {
-      const event1 = makeEvent({
-        summary: 'Meeting 1',
-        start: { dateTime: '2024-01-01T10:00:00Z' },
-        end: { dateTime: '2024-01-01T11:00:00Z' }
-      });
-      const event2 = makeEvent({
-        summary: 'Meeting 2',
-        start: { dateTime: '2024-01-01T11:00:00Z' },
-        end: { dateTime: '2024-01-01T12:00:00Z' }
-      });
+      const [event1, event2] = makeConflictingEvents(
+        {},
+        {
+          start: { dateTime: '2024-01-01T11:00:00Z' },
+          end: { dateTime: '2024-01-01T12:00:00Z' }
+        }
+      );
 
       const result = analyzer.analyzeOverlap(event1, event2);
       expect(result.hasOverlap).toBe(false);

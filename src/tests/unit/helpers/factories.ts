@@ -332,6 +332,58 @@ export function makeRecurringEventInstances(
 // MOCK BUILDERS - Create mocks for Google Calendar API responses
 // ============================================================================
 
+// ============================================================================
+// CONFLICT DETECTION BUILDERS - Pre-configured events for conflict tests
+// ============================================================================
+
+/**
+ * Create a pair of events with identical times (for overlap/conflict testing).
+ * Useful for tests that validate conflict detection algorithms.
+ * @param overrides1 Properties for first event
+ * @param overrides2 Properties for second event (inherits time from event1 if not specified)
+ * @returns Array of two conflicting events [event1, event2]
+ */
+export function makeConflictingEvents(
+  overrides1: Partial<calendar_v3.Schema$Event> = {},
+  overrides2: Partial<calendar_v3.Schema$Event> = {}
+): [calendar_v3.Schema$Event, calendar_v3.Schema$Event] {
+  const event1 = makeEvent({
+    summary: 'Meeting 1',
+    start: { dateTime: '2024-01-01T10:00:00Z' },
+    end: { dateTime: '2024-01-01T11:00:00Z' },
+    ...overrides1,
+  });
+
+  const event2 = makeEvent({
+    summary: 'Meeting 2',
+    start: overrides2.start ?? event1.start,
+    end: overrides2.end ?? event1.end,
+    ...overrides2,
+  });
+
+  return [event1, event2];
+}
+
+/**
+ * Create a standard "Team Meeting" event with location.
+ * Useful for similarity/duplicate detection tests.
+ * @param location Location for the meeting (default: "Conference Room A")
+ * @param overrides Additional properties
+ * @returns A team meeting event
+ */
+export function makeTeamMeetingEvent(
+  location: string = 'Conference Room A',
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event {
+  return makeEvent({
+    summary: 'Team Meeting',
+    location,
+    start: { dateTime: '2024-01-01T10:00:00' },
+    end: { dateTime: '2024-01-01T11:00:00' },
+    ...overrides,
+  });
+}
+
 /**
  * Create a typed mock calendar object for testing handlers.
  * Provides the minimal calendar_v3.Calendar interface needed by handlers.

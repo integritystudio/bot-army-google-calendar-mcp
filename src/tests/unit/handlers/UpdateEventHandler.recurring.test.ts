@@ -346,11 +346,162 @@ describe('UpdateEventHandler - Recurring Events', () => {
   });
 
   describe('RRULE Manipulation', () => {
-    // Tests for RRULE updates when using thisAndFollowing scope
-    it.todo('should add UNTIL clause when updating future instances');
-    it.todo('should remove COUNT pattern when adding UNTIL');
-    it.todo('should create new recurring event from future date');
-    it.todo('should preserve original event duration in new series');
+    it('should add UNTIL clause when updating future instances', async () => {
+      const weeklyEvent = createMockRecurringEvent({
+        recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO']
+      });
+      mockCalendar.events.get.mockResolvedValue({ data: weeklyEvent });
+      mockCalendar.events.patch.mockResolvedValue({ data: weeklyEvent });
+      mockCalendar.events.insert.mockResolvedValue({ data: createMockRecurringEvent({ id: 'new-event' }) });
+
+      const futureDate = '2026-04-01T10:00:00Z';
+      await handler.runTool(
+        {
+          calendarId: 'primary',
+          eventId: 'event123',
+          modificationScope: 'thisAndFollowing',
+          futureStartDate: futureDate,
+          checkConflicts: false
+        },
+        mockOAuth2Client
+      );
+
+      // Verify patch was called with UNTIL clause
+      const patchCall = mockCalendar.events.patch.mock.calls[0];
+      const updatedRRule = patchCall[0].requestBody.recurrence[0];
+
+      // Should have UNTIL pattern like RRULE:...; UNTIL=20260331T235959Z
+      expect(updatedRRule).toMatch(/UNTIL=\d{8}T\d{6}Z/);
+    });
+
+    it('should remove COUNT pattern when adding UNTIL', async () => {
+      const countEvent = createMockRecurringEvent({
+        recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=10']
+      });
+      mockCalendar.events.get.mockResolvedValue({ data: countEvent });
+      mockCalendar.events.patch.mockResolvedValue({ data: countEvent });
+      mockCalendar.events.insert.mockResolvedValue({ data: createMockRecurringEvent({ id: 'new-event' }) });
+
+      const futureDate = '2026-04-01T10:00:00Z';
+      await handler.runTool(
+        {
+          calendarId: 'primary',
+          eventId: 'event-with-count',
+          modificationScope: 'thisAndFollowing',
+          futureStartDate: futureDate,
+          checkConflicts: false
+        },
+        mockOAuth2Client
+      );
+
+      // Verify patch was called and COUNT was removed
+      const patchCall = mockCalendar.events.patch.mock.calls[0];
+      const updatedRRule = patchCall[0].requestBody.recurrence[0];
+
+      expect(updatedRRule).not.toContain('COUNT=10');
+      expect(updatedRRule).toMatch(/UNTIL=/);
+    });
+
+    it('should create new recurring event from future date', async () => {
+      const originalEvent = createMockRecurringEvent({
+        id: 'original123',
+        summary: 'Original Event',
+        start: { dateTime: '2026-03-25T10:00:00Z', timeZone: 'UTC' },
+        end: { dateTime: '2026-03-25T11:00:00Z', timeZone: 'UTC' },
+        recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=WE']
+      });
+      mockCalendar.events.get.mockResolvedValue({ data: originalEvent });
+      mockCalendar.events.patch.mockResolvedValue({ data: originalEvent });
+      mockCalendar.events.insert.mockResolvedValue({ data: createMockRecurringEvent({ id: 'future123' }) });
+
+      const futureDate = '2026-04-01T10:00:00Z';
+      await handler.runTool(
+        {
+          calendarId: 'primary',
+          eventId: 'original123',
+          modificationScope: 'thisAndFollowing',
+          futureStartDate: futureDate,
+          checkConflicts: false
+        },
+        mockOAuth2Client
+      );
+
+      // Verify insert was called to create new event
+      expect(mockCalendar.events.insert).toHaveBeenCalled();
+      const insertCall = mockCalendar.events.insert.mock.calls[0];
+      const newEvent = insertCall[0].requestBody;
+
+      // New event should start on futureDate
+      expect(newEvent.start.dateTime).toBe(futureDate);
+      // Should not have original ID (deleted fields)
+      expect(newEvent.id).toBeUndefined();
+    });
+
+    it('should preserve original event duration in new series', async () => {
+      const originalEvent = createMockRecurringEvent({
+        summary: 'Meeting',
+        start: { dateTime: '2026-03-25T10:00:00Z', timeZone: 'UTC' },
+        end: { dateTime: '2026-03-25T11:30:00Z', timeZone: 'UTC' }, // 1.5 hour duration
+        recurrence: ['RRULE:FREQ=DAILY']
+      });
+      mockCalendar.events.get.mockResolvedValue({ data: originalEvent });
+      mockCalendar.events.patch.mockResolvedValue({ data: originalEvent });
+      mockCalendar.events.insert.mockResolvedValue({ data: createMockRecurringEvent({ id: 'new-future-event' }) });
+
+      const futureDate = '2026-04-15T14:00:00Z';
+      await handler.runTool(
+        {
+          calendarId: 'primary',
+          eventId: 'daily-event',
+          modificationScope: 'thisAndFollowing',
+          futureStartDate: futureDate,
+          checkConflicts: false
+        },
+        mockOAuth2Client
+      );
+
+      // Verify new event preserves duration
+      const insertCall = mockCalendar.events.insert.mock.calls[0];
+      const newEvent = insertCall[0].requestBody;
+
+      // Original duration: 11:30 - 10:00 = 1.5 hours = 5400 seconds
+      // New event end should be: 14:00 + 1.5 hours = 15:30
+      const newStart = new Date(newEvent.start.dateTime);
+      const newEnd = new Date(newEvent.end.dateTime);
+      const durationMs = newEnd.getTime() - newStart.getTime();
+      const originalDurationMs = 1.5 * 60 * 60 * 1000; // 1.5 hours
+
+      expect(durationMs).toBe(originalDurationMs);
+    });
+
+    it('should handle multiple RRULE patterns and clean all removable parts', async () => {
+      const complexEvent = createMockRecurringEvent({
+        recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=20;UNTIL=20270101T000000Z']
+      });
+      mockCalendar.events.get.mockResolvedValue({ data: complexEvent });
+      mockCalendar.events.patch.mockResolvedValue({ data: complexEvent });
+      mockCalendar.events.insert.mockResolvedValue({ data: createMockRecurringEvent({ id: 'new' }) });
+
+      const futureDate = '2026-06-01T10:00:00Z';
+      await handler.runTool(
+        {
+          calendarId: 'primary',
+          eventId: 'complex123',
+          modificationScope: 'thisAndFollowing',
+          futureStartDate: futureDate,
+          checkConflicts: false
+        },
+        mockOAuth2Client
+      );
+
+      // Verify both COUNT and old UNTIL were removed, new UNTIL added
+      const patchCall = mockCalendar.events.patch.mock.calls[0];
+      const updatedRRule = patchCall[0].requestBody.recurrence[0];
+
+      expect(updatedRRule).not.toContain('COUNT=20');
+      expect(updatedRRule).not.toContain('20270101T000000Z'); // Old UNTIL removed
+      expect(updatedRRule).toMatch(/UNTIL=\d{8}T\d{6}Z$/); // New UNTIL added at end
+    });
   });
 
   describe('Error Handling', () => {

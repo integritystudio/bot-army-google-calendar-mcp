@@ -107,7 +107,7 @@ class XyzHandler extends BaseToolHandler {
 - Test mode: 7-day expiry (Google requirement)
 
 ### Timezone Handling
-All datetime operations consolidated in `src/utils/timezone-utils.ts` (refactored c9a57a9):
+All datetime operations consolidated in `src/utils/timezone-utils.ts` (refactored ae1c01b, 499e7dd):
 - `convertToRFC3339()` - Datetime string → RFC3339 with timezone
 - `convertLocalTimeToUTC()` - Local time + timezone → UTC offset
 - `hasTimezoneInDatetime()` - Detect timezone in datetime string
@@ -176,7 +176,7 @@ Token file structure (both accounts in one file):
 - Replaced direct `validateTokens()` calls with semantic API methods
 - `isAuthenticated()` - Clearer intent for auth status checks
 - `getCredentials()` - Improved encapsulation over direct credential access
-- Applied across 6 locations (server.ts, auth/server.ts, integration tests)
+- Applied across 5 locations (server.ts ×2, auth/server.ts ×1, integration tests ×2)
 - All 486 tests passing after refactor
 
 ### Timezone Utilities Consolidation (ae1c01b, 499e7dd)

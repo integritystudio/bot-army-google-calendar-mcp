@@ -1,3 +1,16 @@
+b9cae30 2026-03-24 test(integration): add conflict detection integration tests via MCP protocol
+  docs/repomix/repo-compressed.xml
+  docs/repomix/repomix-docs.xml
+  docs/repomix/repomix-git-ranked.xml
+  docs/repomix/repomix.xml
+  docs/repomix/token-tree.txt
+
+d71d910 2026-03-24 fix(tests): update missed hardcoded futureStartDate at line 276
+  src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts
+
+7880e00 2026-03-24 fix(tests): use dynamic future dates to prevent test expiration
+  src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts
+
 1a45955 2026-03-24 refactor(tests): integrate production Zod types with schema validation in recurring event tests
   src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts
 

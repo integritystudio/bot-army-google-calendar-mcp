@@ -177,6 +177,7 @@ src/
   tests/
     integration/
       claude-mcp-integration.test.ts
+      conflict-detection-integration.test.ts
       README.md
       test-data-factory.ts
       UpdateEventHandler.recurring.integration.test.ts
@@ -5663,311 +5664,6 @@ environment: 'node', // Specify the test environment
 // Enable coverage
 ⋮----
 provider: 'v8', // or 'istanbul'
-</file>
-
-<file path="docs/repomix/token-tree.txt">
-🔢 Token Count Tree:
-────────────────────
-├── .env.test (40 tokens)
-├── .gitignore (156 tokens)
-├── AGENTS.md (748 tokens)
-├── analyze_emails.mjs (1,163 tokens)
-├── analyze-ccv-newsletter.mjs (1,246 tokens)
-├── analyze-community-events.mjs (1,096 tokens)
-├── analyze-events-detailed.mjs (1,258 tokens)
-├── analyze-remaining-invitations.mjs (776 tokens)
-├── analyze-subject-newsletters.mjs (1,112 tokens)
-├── analyze-unread.mjs (474 tokens)
-├── analyze-work-invitations.mjs (1,065 tokens)
-├── analyze-workshops.mjs (983 tokens)
-├── apply-billing-filter-to-unread.mjs (965 tokens)
-├── apply-filters-to-unread.mjs (835 tokens)
-├── archive-dmarc-emails.mjs (524 tokens)
-├── archive-old-meeting-responses.mjs (647 tokens)
-├── archive-signoz-dmarc.mjs (736 tokens)
-├── auth-gmail.mjs (766 tokens)
-├── BACKLOG_SESSION_SUMMARY.md (1,175 tokens)
-├── check_emails.mjs (1,517 tokens)
-├── check-gmail.mjs (199 tokens)
-├── check-google-dev-labels.mjs (272 tokens)
-├── check-status.mjs (195 tokens)
-├── CLAUDE.md (1,416 tokens)
-├── cleanup-and-push.mjs (361 tokens)
-├── count-unread.mjs (85 tokens)
-├── create-all-sublabels.mjs (1,142 tokens)
-├── create-billing-filter.mjs (1,365 tokens)
-├── create-ccv-newsletter-sublabel.mjs (734 tokens)
-├── create-community-sublabels.mjs (1,545 tokens)
-├── create-dmarc-filter.mjs (719 tokens)
-├── create-event-sublabels.mjs (565 tokens)
-├── create-eventbrite-filter.mjs (709 tokens)
-├── create-events-label.mjs (379 tokens)
-├── create-events-meetup-skip-filter.mjs (526 tokens)
-├── create-invitations-sublabels.mjs (1,051 tokens)
-├── create-meet-notes-filter.mjs (714 tokens)
-├── create-newsletter-label.mjs (380 tokens)
-├── create-newsletter-skip-inbox-filter.mjs (584 tokens)
-├── create-newsletter-type-sublabels.mjs (1,436 tokens)
-├── create-performance-tracking-label.mjs (1,206 tokens)
-├── create-promotions-filter.mjs (422 tokens)
-├── create-remaining-filters.mjs (1,476 tokens)
-├── create-sentry-newsletter-sublabel.mjs (1,004 tokens)
-├── create-signoz-filter.mjs (712 tokens)
-├── create-social-newsletters-sublabel.mjs (1,023 tokens)
-├── create-subject-newsletters-sublabel.mjs (698 tokens)
-├── create-unread-filters.mjs (1,193 tokens)
-├── create-work-meeting-sublabels.mjs (1,201 tokens)
-├── debug-tools.mjs (190 tokens)
-├── delete-sentry-filter.mjs (326 tokens)
-├── describe-internal.mjs (594 tokens)
-├── doppler.yaml (9 tokens)
-├── filter-events-by-date.mjs (1,298 tokens)
-├── FINAL_BACKLOG_STATUS.md (1,010 tokens)
-├── final-cleanup.mjs (1,111 tokens)
-├── gcp-oauth.keys.example.json (50 tokens)
-├── GMAIL_TOOLS_COMPLETE.md (2,224 tokens)
-├── GMAIL_TOOLS_GUIDE.md (4,244 tokens)
-├── label-final-community.mjs (900 tokens)
-├── label-google-cloud-feb.mjs (902 tokens)
-├── label-google-dev-forums.mjs (445 tokens)
-├── label-google-workspace.mjs (963 tokens)
-├── label-remaining-community.mjs (1,198 tokens)
-├── label-remaining-unread.mjs (667 tokens)
-├── label-sentry-team.mjs (925 tokens)
-├── LICENSE (222 tokens)
-├── list-labels.mjs (141 tokens)
-├── list-remaining-unread.mjs (521 tokens)
-├── list-unread-emails.mjs (1,131 tokens)
-├── mark-all-labeled-read.mjs (526 tokens)
-├── mark-archived-as-read.mjs (567 tokens)
-├── mark-past-events-read.mjs (732 tokens)
-├── mark-product-updates-read-v2.mjs (574 tokens)
-├── mark-product-updates-read.mjs (481 tokens)
-├── mark-signoz-read.mjs (434 tokens)
-├── organize-ccv-emails.mjs (1,197 tokens)
-├── organize-events-sublabels.mjs (1,198 tokens)
-├── organize-events.mjs (1,043 tokens)
-├── organize-international-house.mjs (1,369 tokens)
-├── organize-newsletters.mjs (1,042 tokens)
-├── package.json (851 tokens)
-├── protect-important-inbox.mjs (984 tokens)
-├── quick-status.mjs (340 tokens)
-├── README.md (4,135 tokens)
-├── relabel-event-announcements.mjs (568 tokens)
-├── revert-google-workspace-labels.mjs (639 tokens)
-├── search-events.ts (566 tokens)
-├── search-hackathon.mjs (646 tokens)
-├── show-remaining-unread.mjs (266 tokens)
-├── status-all-labels.mjs (263 tokens)
-├── summarize-remaining.mjs (592 tokens)
-├── test-schema-debug.ts (228 tokens)
-├── test-schema-debug2.ts (206 tokens)
-├── test-zodtojsonschema.ts (388 tokens)
-├── tsconfig.json (118 tokens)
-├── tsconfig.lint.json (59 tokens)
-├── update-billing-filter.mjs (894 tokens)
-├── verify-labels.mjs (390 tokens)
-├── verify-refactor.mjs (348 tokens)
-├── verify-tokens.mjs (705 tokens)
-├── vitest.config.ts (210 tokens)
-├── .claude/ (3,736 tokens)
-│   └── settings.local.json (3,736 tokens)
-├── docs/ (62,267 tokens)
-│   ├── advanced-usage.md (1,057 tokens)
-│   ├── architecture.md (344 tokens)
-│   ├── authentication.md (1,248 tokens)
-│   ├── BACKLOG.md (14,540 tokens)
-│   ├── CHANGELOG.md (201 tokens)
-│   ├── DELIVERABLES.md (3,697 tokens)
-│   ├── deployment.md (975 tokens)
-│   ├── development.md (207 tokens)
-│   ├── DOPPLER_SETUP.md (794 tokens)
-│   ├── IMPLEMENTATION-GUIDE.md (12,217 tokens)
-│   ├── LABEL-RESOLUTION-GUIDE.md (1,135 tokens)
-│   ├── README.md (366 tokens)
-│   ├── REFACTOR_RECURRING_TESTS.md (2,184 tokens)
-│   ├── SCHEMA-ORG-ALIGNMENT.md (4,148 tokens)
-│   ├── SCHEMA-ORG-ANALYSIS-SUMMARY.md (2,829 tokens)
-│   ├── SCHEMA-ORG-INDEX.md (2,529 tokens)
-│   ├── SCHEMA-ORG-MCP-TOOLS.md (2,793 tokens)
-│   ├── SCHEMA-ORG-QUICK-REFERENCE.md (2,462 tokens)
-│   ├── SCHEMA-ORG-QUICK-START.md (3,190 tokens)
-│   ├── SIMPLE_RRULE_INTEGRATION.md (1,073 tokens)
-│   ├── testing.md (2,382 tokens)
-│   ├── changelog/ (1,896 tokens)
-│   │   └── 1.4.9/ (1,896 tokens)
-│   │       └── CHANGELOG.md (1,896 tokens)
-│   ├── llm/ (0 tokens)
-│   │   └── smart-event-detection (0 tokens)
-│   └── repomix/ (0 tokens)
-│       └── token-tree.txt (0 tokens)
-├── examples/ (2,601 tokens)
-│   ├── http-client.js (1,194 tokens)
-│   ├── http-with-curl.sh (1,326 tokens)
-│   └── README.md (81 tokens)
-├── instructions/ (2,154 tokens)
-│   └── file_structure.md (2,154 tokens)
-├── lib/ (5,375 tokens)
-│   ├── constants.mjs (195 tokens)
-│   ├── date-based-filter.mjs (1,797 tokens)
-│   ├── email-analyzer.mjs (732 tokens)
-│   ├── email-utils.mjs (211 tokens)
-│   ├── gmail-batch.mjs (852 tokens)
-│   ├── gmail-client.mjs (432 tokens)
-│   └── gmail-label-utils.mjs (1,156 tokens)
-├── scripts/ (25,345 tokens)
-│   ├── account-manager.js (2,418 tokens)
-│   ├── build.js (515 tokens)
-│   ├── check-duplicates.mjs (1,937 tokens)
-│   ├── dev.js (1,834 tokens)
-│   ├── README.md (246 tokens)
-│   ├── setup-doppler-tests.sh (253 tokens)
-│   └── repomix/ (18,142 tokens)
-│       ├── deploy-traditional-server.sh (4,501 tokens)
-│       ├── find_duplication.sh (441 tokens)
-│       ├── find_large_classes.sh (354 tokens)
-│       ├── generate-diff-summary.sh (309 tokens)
-│       ├── generate-repo-compressed.sh (104 tokens)
-│       ├── generate-repomix-docs.sh (338 tokens)
-│       ├── generate-repomix-git-ranked.sh (1,871 tokens)
-│       ├── generate-repomix.sh (82 tokens)
-│       ├── generate-sidequest-gitlog.sh (318 tokens)
-│       ├── generate-token-tree.sh (184 tokens)
-│       ├── replace-magic.sh (1,405 tokens)
-│       ├── repo-compressed.sh (104 tokens)
-│       ├── repomix-docs.config.json (185 tokens)
-│       ├── repomix-regen.sh (999 tokens)
-│       ├── repomix.config.json (319 tokens)
-│       ├── run-python-tests.sh (513 tokens)
-│       ├── verify-bugfixes.sh (5,468 tokens)
-│       └── warm-doppler-cache.sh (647 tokens)
-└── src/ (141,869 tokens)
-    ├── auth-server.ts (640 tokens)
-    ├── index.ts (1,200 tokens)
-    ├── README.md (298 tokens)
-    ├── server.ts (1,305 tokens)
-    ├── verify-tokens.ts (632 tokens)
-    ├── auth/ (5,961 tokens)
-    │   ├── client.ts (491 tokens)
-    │   ├── paths.d.ts (31 tokens)
-    │   ├── paths.js (324 tokens)
-    │   ├── README.md (526 tokens)
-    │   ├── server.ts (2,021 tokens)
-    │   ├── tokenManager.ts (2,060 tokens)
-    │   └── utils.ts (508 tokens)
-    ├── config/ (571 tokens)
-    │   ├── README.md (84 tokens)
-    │   └── TransportConfig.ts (487 tokens)
-    ├── handlers/ (22,665 tokens)
-    │   ├── README.md (213 tokens)
-    │   ├── utils.ts (2,517 tokens)
-    │   ├── core/ (14,378 tokens)
-    │   │   ├── BaseToolHandler.ts (983 tokens)
-    │   │   ├── BatchRequestHandler.ts (2,042 tokens)
-    │   │   ├── CreateEventHandler.ts (901 tokens)
-    │   │   ├── DeleteEventHandler.ts (237 tokens)
-    │   │   ├── eventManipulationUtils.ts (780 tokens)
-    │   │   ├── FreeBusyEventHandler.ts (660 tokens)
-    │   │   ├── GetCurrentTimeHandler.ts (540 tokens)
-    │   │   ├── GetEventHandler.ts (443 tokens)
-    │   │   ├── ListCalendarsHandler.ts (795 tokens)
-    │   │   ├── ListColorsHandler.ts (308 tokens)
-    │   │   ├── ListEventsHandler.ts (2,108 tokens)
-    │   │   ├── README.md (945 tokens)
-    │   │   ├── RecurringEventHelpers.ts (1,394 tokens)
-    │   │   ├── SearchEventsHandler.ts (605 tokens)
-    │   │   └── UpdateEventHandler.ts (1,637 tokens)
-    │   ├── gmail/ (4,220 tokens)
-    │   │   ├── GmailApplyFiltersHandler.ts (812 tokens)
-    │   │   ├── GmailCreateFilterHandler.ts (964 tokens)
-    │   │   ├── GmailCreateLabelHandler.ts (433 tokens)
-    │   │   ├── GmailGetProfileHandler.ts (190 tokens)
-    │   │   ├── GmailModifyHandler.ts (765 tokens)
-    │   │   ├── GmailSearchHandler.ts (391 tokens)
-    │   │   └── gmailUtils.ts (665 tokens)
-    │   └── utils/ (1,337 tokens)
-    │       ├── datetime.ts (1,213 tokens)
-    │       └── README.md (124 tokens)
-    ├── schemas/ (423 tokens)
-    │   ├── README.md (99 tokens)
-    │   └── types.ts (324 tokens)
-    ├── services/ (5,525 tokens)
-    │   └── conflict-detection/ (5,525 tokens)
-    │       ├── config.ts (176 tokens)
-    │       ├── ConflictAnalyzer.ts (1,078 tokens)
-    │       ├── ConflictDetectionService.ts (2,260 tokens)
-    │       ├── EventSimilarityChecker.ts (1,465 tokens)
-    │       ├── index.ts (44 tokens)
-    │       ├── README.md (248 tokens)
-    │       └── types.ts (254 tokens)
-    ├── testing/ (3,791 tokens)
-    │   ├── example.test.ts (772 tokens)
-    │   ├── index.ts (23 tokens)
-    │   ├── README.md (601 tokens)
-    │   ├── test-data.ts (802 tokens)
-    │   ├── test-utils.ts (846 tokens)
-    │   └── types.ts (747 tokens)
-    ├── tests/ (80,470 tokens)
-    │   ├── integration/ (8,249 tokens)
-    │   │   ├── claude-mcp-integration.test.ts (2,291 tokens)
-    │   │   ├── README.md (625 tokens)
-    │   │   ├── test-data-factory.ts (2,612 tokens)
-    │   │   └── UpdateEventHandler.recurring.integration.test.ts (2,721 tokens)
-    │   └── unit/ (72,221 tokens)
-    │       ├── console-statements.test.ts (1,511 tokens)
-    │       ├── index.test.ts (2,702 tokens)
-    │       ├── README.md (163 tokens)
-    │       ├── handlers/ (37,036 tokens)
-    │       │   ├── BatchListEvents.test.ts (5,157 tokens)
-    │       │   ├── BatchRequestHandler.test.ts (2,835 tokens)
-    │       │   ├── create-event-blocking.test.ts (941 tokens)
-    │       │   ├── CreateEventHandler.test.ts (4,929 tokens)
-    │       │   ├── datetime-utils.test.ts (713 tokens)
-    │       │   ├── duplicate-event-display.test.ts (1,378 tokens)
-    │       │   ├── GetCurrentTimeHandler.test.ts (1,684 tokens)
-    │       │   ├── GetEventHandler.test.ts (1,336 tokens)
-    │       │   ├── ListEventsHandler.test.ts (2,567 tokens)
-    │       │   ├── README.md (154 tokens)
-    │       │   ├── RecurringEventHelpers.test.ts (6,401 tokens)
-    │       │   ├── SearchEventsHandler.test.ts (2,842 tokens)
-    │       │   ├── UpdateEventHandler.recurring.test.ts (3,887 tokens)
-    │       │   ├── utils-conflict-format.test.ts (1,549 tokens)
-    │       │   └── utils.test.ts (663 tokens)
-    │       ├── helpers/ (6,411 tokens)
-    │       │   ├── content.ts (145 tokens)
-    │       │   ├── factories.test.ts (2,722 tokens)
-    │       │   ├── factories.ts (2,824 tokens)
-    │       │   ├── index.ts (41 tokens)
-    │       │   └── README.md (679 tokens)
-    │       ├── schemas/ (8,523 tokens)
-    │       │   ├── enhanced-properties.test.ts (2,245 tokens)
-    │       │   ├── no-refs.test.ts (859 tokens)
-    │       │   ├── README.md (78 tokens)
-    │       │   ├── tool-registration.test.ts (2,053 tokens)
-    │       │   └── validators.test.ts (3,288 tokens)
-    │       ├── services/ (4,497 tokens)
-    │       │   └── conflict-detection/ (4,497 tokens)
-    │       │       ├── ConflictAnalyzer.test.ts (1,931 tokens)
-    │       │       └── EventSimilarityChecker.test.ts (2,566 tokens)
-    │       └── utils/ (11,378 tokens)
-    │           ├── date-utils.test.ts (6,367 tokens)
-    │           ├── event-id-validator.test.ts (1,633 tokens)
-    │           ├── field-mask-builder.test.ts (988 tokens)
-    │           └── timezone-utils.test.ts (2,390 tokens)
-    ├── tools/ (8,813 tokens)
-    │   ├── README.md (120 tokens)
-    │   └── registry.ts (8,693 tokens)
-    ├── transports/ (1,182 tokens)
-    │   ├── http.ts (939 tokens)
-    │   ├── README.md (147 tokens)
-    │   └── stdio.ts (96 tokens)
-    └── utils/ (8,393 tokens)
-        ├── date-utils.ts (3,364 tokens)
-        ├── event-id-validator.ts (897 tokens)
-        ├── field-mask-builder.ts (947 tokens)
-        ├── README.md (195 tokens)
-        ├── simple-rrule-adapter.ts (495 tokens)
-        └── timezone-utils.ts (2,495 tokens)
 </file>
 
 <file path="docs/CHANGELOG.md">
@@ -14323,6 +14019,101 @@ todoIf(condition: boolean): void
 onTestFinished(fn: () => void | Promise<void>): void
 </file>
 
+<file path="src/tests/integration/conflict-detection-integration.test.ts">
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { initializeOAuth2Client } from '../../auth/client.js';
+import { TokenManager } from '../../auth/tokenManager.js';
+import { TestDataFactory } from './test-data-factory.js';
+⋮----
+/**
+ * Conflict Detection Integration Tests (Option A: MCP Protocol)
+ *
+ * PURPOSE: Test conflict and duplicate detection via MCP protocol
+ * - Uses real MCP server spawned as child process
+ * - Calls tools via stdio transport (Option A pattern)
+ * - Uses real Google Calendar API with Doppler credentials
+ * - Tests overlap detection, duplicate detection, non-conflict cases
+ * - Real event creation and cleanup
+ *
+ * RUN: doppler run --project integrity-studio --config dev -- npm run test:integration
+ * OR: GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json doppler run -- npm run test:integration
+ */
+⋮----
+// 1. Auth guard: verify real credentials are available
+⋮----
+// 2. Start MCP server via stdio transport
+⋮----
+// 3. Verify tools are available
+⋮----
+// Cleanup: Delete all created test events
+⋮----
+// Close MCP connection
+⋮----
+/**
+   * Helper: Extract event ID from tool response
+   */
+function extractEventId(result: any): string
+⋮----
+/**
+   * Helper: Get response text
+   */
+function getResponseText(result: any): string
+⋮----
+const start1 = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2 hours from now
+const end1 = new Date(start1.getTime() + 60 * 60 * 1000); // 1 hour duration
+⋮----
+const start2 = new Date(start1.getTime() + 2 * 60 * 60 * 1000); // 2 hours after event 1 ends
+⋮----
+// Create first event
+⋮----
+// Create second event (no overlap)
+⋮----
+const start1 = new Date(now.getTime() + 3 * 60 * 60 * 1000); // 3 hours from now
+const end1 = new Date(start1.getTime() + 60 * 60 * 1000); // 1 hour duration
+⋮----
+const start2 = new Date(start1.getTime() + 30 * 60 * 1000); // 30 min after event 1 starts
+⋮----
+// Create event 1
+⋮----
+// Create event 2 at different time
+⋮----
+// Update event 2 to overlap with event 1 - check for conflicts
+⋮----
+// Response should either report conflict or succeed (depending on conflict detection config)
+// At minimum, the update should complete
+⋮----
+const start1 = new Date(now.getTime() + 4 * 60 * 60 * 1000); // 4 hours from now
+const end1 = new Date(start1.getTime() + 60 * 60 * 1000); // 1 hour duration
+⋮----
+const start2 = new Date(end1.getTime() + 30 * 60 * 1000); // 30 min after event 1 ends
+⋮----
+// Create event 1
+⋮----
+// Create event 2 with gap from event 1
+⋮----
+// Update event 2 to maintain gap - should not report conflict
+⋮----
+// Should succeed without conflict warnings
+⋮----
+const start = new Date(now.getTime() + 5 * 60 * 60 * 1000); // 5 hours from now
+⋮----
+// Create first event
+⋮----
+// Create second event with same summary and similar time
+const start2 = new Date(start.getTime() + 5 * 60 * 1000); // 5 min later
+⋮----
+// Both events created successfully (duplicates not blocked, just detected)
+⋮----
+// Create recurring event
+⋮----
+// Create single event that might overlap with one recurrence
+⋮----
+const overlapStart = new Date(now.getTime() + 86400000); // tomorrow (when recurring starts)
+overlapStart.setHours(11, 0, 0, 0); // 11 AM (overlaps with 10-11 AM recurring)
+</file>
+
 <file path="src/tests/integration/test-data-factory.ts">
 // Test data factory utilities for integration tests
 import { tryGetTextContent } from '../unit/helpers/index.js';
@@ -14518,6 +14309,33 @@ async function createTestEvent(overrides: any =
 // Try to move event 2 to overlap with event 1
 ⋮----
 // Should either succeed or report conflicts (depending on conflict detection)
+</file>
+
+<file path="src/tests/unit/handlers/GetCurrentTimeHandler.test.ts">
+import { describe, it, expect, vi } from 'vitest';
+import { GetCurrentTimeHandler } from '../../../handlers/core/GetCurrentTimeHandler.js';
+import { OAuth2Client } from 'google-auth-library';
+import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { getTextContent } from '../helpers/content.js';
+⋮----
+// Should match RFC3339 pattern with timezone
+</file>
+
+<file path="src/tests/unit/handlers/GetEventHandler.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { GetEventHandler } from '../../../handlers/core/GetEventHandler.js';
+import { OAuth2Client } from 'google-auth-library';
+import { getTextContent } from '../helpers/content.js';
+⋮----
+// Mock the googleapis module
+⋮----
+// Mock the field mask builder
+⋮----
+// Setup mock calendar
+⋮----
+// Mock the getCalendar method
+⋮----
+// Mock handleGoogleApiError to throw a specific error
 </file>
 
 <file path="src/tests/unit/handlers/ListEventsHandler.test.ts">
@@ -15403,6 +15221,14 @@ async function archiveDmarcEmails()
 // Find existing DMARC emails
 </file>
 
+<file path="archive-old-meeting-responses.mjs">
+// Calculate date one week ago
+⋮----
+// Search for meeting acceptances/declines older than a week
+⋮----
+// Parse email date
+</file>
+
 <file path="archive-signoz-dmarc.mjs">
 async function archiveSignozAndDmarc()
 ⋮----
@@ -15560,6 +15386,10 @@ async function authGmail()
 
 **Status:** ✅ All actionable backlog items completed
 **Remaining Work:** Blocked pending design decisions + optional items
+</file>
+
+<file path="check-google-dev-labels.mjs">
+
 </file>
 
 <file path="check-status.mjs">
@@ -15801,6 +15631,14 @@ async function labelGoogleCloudFeb()
 // Label the emails
 ⋮----
 // Label the found email(s)
+</file>
+
+<file path="label-google-dev-forums.mjs">
+// Get Communities label ID
+⋮----
+// Find all Google Developer forum emails
+⋮----
+// Label and mark as read in batches
 </file>
 
 <file path="label-google-workspace.mjs">
@@ -16313,6 +16151,312 @@ The following items require design-level decisions before implementation:
 - a3e6dc2 - feat(L6): Add label ID resolution functions
 </file>
 
+<file path="docs/repomix/token-tree.txt">
+🔢 Token Count Tree:
+────────────────────
+├── .env.test (40 tokens)
+├── .gitignore (156 tokens)
+├── AGENTS.md (748 tokens)
+├── analyze_emails.mjs (1,163 tokens)
+├── analyze-ccv-newsletter.mjs (1,246 tokens)
+├── analyze-community-events.mjs (1,096 tokens)
+├── analyze-events-detailed.mjs (1,258 tokens)
+├── analyze-remaining-invitations.mjs (776 tokens)
+├── analyze-subject-newsletters.mjs (1,112 tokens)
+├── analyze-unread.mjs (474 tokens)
+├── analyze-work-invitations.mjs (1,065 tokens)
+├── analyze-workshops.mjs (983 tokens)
+├── apply-billing-filter-to-unread.mjs (965 tokens)
+├── apply-filters-to-unread.mjs (835 tokens)
+├── archive-dmarc-emails.mjs (524 tokens)
+├── archive-old-meeting-responses.mjs (647 tokens)
+├── archive-signoz-dmarc.mjs (736 tokens)
+├── auth-gmail.mjs (766 tokens)
+├── BACKLOG_SESSION_SUMMARY.md (1,175 tokens)
+├── check_emails.mjs (1,517 tokens)
+├── check-gmail.mjs (199 tokens)
+├── check-google-dev-labels.mjs (272 tokens)
+├── check-status.mjs (195 tokens)
+├── CLAUDE.md (1,416 tokens)
+├── cleanup-and-push.mjs (361 tokens)
+├── count-unread.mjs (85 tokens)
+├── create-all-sublabels.mjs (1,142 tokens)
+├── create-billing-filter.mjs (1,365 tokens)
+├── create-ccv-newsletter-sublabel.mjs (734 tokens)
+├── create-community-sublabels.mjs (1,545 tokens)
+├── create-dmarc-filter.mjs (719 tokens)
+├── create-event-sublabels.mjs (565 tokens)
+├── create-eventbrite-filter.mjs (709 tokens)
+├── create-events-label.mjs (379 tokens)
+├── create-events-meetup-skip-filter.mjs (526 tokens)
+├── create-invitations-sublabels.mjs (1,051 tokens)
+├── create-meet-notes-filter.mjs (714 tokens)
+├── create-newsletter-label.mjs (380 tokens)
+├── create-newsletter-skip-inbox-filter.mjs (584 tokens)
+├── create-newsletter-type-sublabels.mjs (1,436 tokens)
+├── create-performance-tracking-label.mjs (1,206 tokens)
+├── create-promotions-filter.mjs (422 tokens)
+├── create-remaining-filters.mjs (1,476 tokens)
+├── create-sentry-newsletter-sublabel.mjs (1,004 tokens)
+├── create-signoz-filter.mjs (712 tokens)
+├── create-social-newsletters-sublabel.mjs (1,023 tokens)
+├── create-subject-newsletters-sublabel.mjs (698 tokens)
+├── create-unread-filters.mjs (1,193 tokens)
+├── create-work-meeting-sublabels.mjs (1,201 tokens)
+├── debug-tools.mjs (190 tokens)
+├── delete-sentry-filter.mjs (326 tokens)
+├── describe-internal.mjs (594 tokens)
+├── doppler.yaml (9 tokens)
+├── filter-events-by-date.mjs (1,298 tokens)
+├── FINAL_BACKLOG_STATUS.md (1,010 tokens)
+├── final-cleanup.mjs (1,111 tokens)
+├── gcp-oauth.keys.example.json (50 tokens)
+├── GMAIL_TOOLS_COMPLETE.md (2,224 tokens)
+├── GMAIL_TOOLS_GUIDE.md (4,244 tokens)
+├── label-final-community.mjs (900 tokens)
+├── label-google-cloud-feb.mjs (902 tokens)
+├── label-google-dev-forums.mjs (445 tokens)
+├── label-google-workspace.mjs (963 tokens)
+├── label-remaining-community.mjs (1,198 tokens)
+├── label-remaining-unread.mjs (667 tokens)
+├── label-sentry-team.mjs (925 tokens)
+├── LICENSE (222 tokens)
+├── list-labels.mjs (141 tokens)
+├── list-remaining-unread.mjs (521 tokens)
+├── list-unread-emails.mjs (1,131 tokens)
+├── mark-all-labeled-read.mjs (526 tokens)
+├── mark-archived-as-read.mjs (567 tokens)
+├── mark-past-events-read.mjs (732 tokens)
+├── mark-product-updates-read-v2.mjs (574 tokens)
+├── mark-product-updates-read.mjs (481 tokens)
+├── mark-signoz-read.mjs (434 tokens)
+├── organize-ccv-emails.mjs (1,197 tokens)
+├── organize-events-sublabels.mjs (1,198 tokens)
+├── organize-events.mjs (1,043 tokens)
+├── organize-international-house.mjs (1,369 tokens)
+├── organize-newsletters.mjs (1,042 tokens)
+├── package.json (851 tokens)
+├── protect-important-inbox.mjs (984 tokens)
+├── quick-status.mjs (340 tokens)
+├── README.md (4,135 tokens)
+├── relabel-event-announcements.mjs (568 tokens)
+├── revert-google-workspace-labels.mjs (639 tokens)
+├── search-events.ts (566 tokens)
+├── search-hackathon.mjs (646 tokens)
+├── show-remaining-unread.mjs (266 tokens)
+├── status-all-labels.mjs (263 tokens)
+├── summarize-remaining.mjs (592 tokens)
+├── test-schema-debug.ts (228 tokens)
+├── test-schema-debug2.ts (206 tokens)
+├── test-zodtojsonschema.ts (388 tokens)
+├── tsconfig.json (118 tokens)
+├── tsconfig.lint.json (59 tokens)
+├── update-billing-filter.mjs (894 tokens)
+├── verify-labels.mjs (390 tokens)
+├── verify-refactor.mjs (348 tokens)
+├── verify-tokens.mjs (705 tokens)
+├── vitest.config.ts (210 tokens)
+├── .claude/ (3,736 tokens)
+│   └── settings.local.json (3,736 tokens)
+├── docs/ (61,906 tokens)
+│   ├── advanced-usage.md (1,057 tokens)
+│   ├── architecture.md (344 tokens)
+│   ├── authentication.md (1,248 tokens)
+│   ├── BACKLOG.md (14,179 tokens)
+│   ├── CHANGELOG.md (201 tokens)
+│   ├── DELIVERABLES.md (3,697 tokens)
+│   ├── deployment.md (975 tokens)
+│   ├── development.md (207 tokens)
+│   ├── DOPPLER_SETUP.md (794 tokens)
+│   ├── IMPLEMENTATION-GUIDE.md (12,217 tokens)
+│   ├── LABEL-RESOLUTION-GUIDE.md (1,135 tokens)
+│   ├── README.md (366 tokens)
+│   ├── REFACTOR_RECURRING_TESTS.md (2,184 tokens)
+│   ├── SCHEMA-ORG-ALIGNMENT.md (4,148 tokens)
+│   ├── SCHEMA-ORG-ANALYSIS-SUMMARY.md (2,829 tokens)
+│   ├── SCHEMA-ORG-INDEX.md (2,529 tokens)
+│   ├── SCHEMA-ORG-MCP-TOOLS.md (2,793 tokens)
+│   ├── SCHEMA-ORG-QUICK-REFERENCE.md (2,462 tokens)
+│   ├── SCHEMA-ORG-QUICK-START.md (3,190 tokens)
+│   ├── SIMPLE_RRULE_INTEGRATION.md (1,073 tokens)
+│   ├── testing.md (2,382 tokens)
+│   ├── changelog/ (1,896 tokens)
+│   │   └── 1.4.9/ (1,896 tokens)
+│   │       └── CHANGELOG.md (1,896 tokens)
+│   ├── llm/ (0 tokens)
+│   │   └── smart-event-detection (0 tokens)
+│   └── repomix/ (0 tokens)
+│       └── token-tree.txt (0 tokens)
+├── examples/ (2,601 tokens)
+│   ├── http-client.js (1,194 tokens)
+│   ├── http-with-curl.sh (1,326 tokens)
+│   └── README.md (81 tokens)
+├── instructions/ (2,154 tokens)
+│   └── file_structure.md (2,154 tokens)
+├── lib/ (5,375 tokens)
+│   ├── constants.mjs (195 tokens)
+│   ├── date-based-filter.mjs (1,797 tokens)
+│   ├── email-analyzer.mjs (732 tokens)
+│   ├── email-utils.mjs (211 tokens)
+│   ├── gmail-batch.mjs (852 tokens)
+│   ├── gmail-client.mjs (432 tokens)
+│   └── gmail-label-utils.mjs (1,156 tokens)
+├── scripts/ (25,345 tokens)
+│   ├── account-manager.js (2,418 tokens)
+│   ├── build.js (515 tokens)
+│   ├── check-duplicates.mjs (1,937 tokens)
+│   ├── dev.js (1,834 tokens)
+│   ├── README.md (246 tokens)
+│   ├── setup-doppler-tests.sh (253 tokens)
+│   └── repomix/ (18,142 tokens)
+│       ├── deploy-traditional-server.sh (4,501 tokens)
+│       ├── find_duplication.sh (441 tokens)
+│       ├── find_large_classes.sh (354 tokens)
+│       ├── generate-diff-summary.sh (309 tokens)
+│       ├── generate-repo-compressed.sh (104 tokens)
+│       ├── generate-repomix-docs.sh (338 tokens)
+│       ├── generate-repomix-git-ranked.sh (1,871 tokens)
+│       ├── generate-repomix.sh (82 tokens)
+│       ├── generate-sidequest-gitlog.sh (318 tokens)
+│       ├── generate-token-tree.sh (184 tokens)
+│       ├── replace-magic.sh (1,405 tokens)
+│       ├── repo-compressed.sh (104 tokens)
+│       ├── repomix-docs.config.json (185 tokens)
+│       ├── repomix-regen.sh (999 tokens)
+│       ├── repomix.config.json (319 tokens)
+│       ├── run-python-tests.sh (513 tokens)
+│       ├── verify-bugfixes.sh (5,468 tokens)
+│       └── warm-doppler-cache.sh (647 tokens)
+└── src/ (144,974 tokens)
+    ├── auth-server.ts (640 tokens)
+    ├── index.ts (1,200 tokens)
+    ├── README.md (298 tokens)
+    ├── server.ts (1,305 tokens)
+    ├── verify-tokens.ts (632 tokens)
+    ├── auth/ (5,961 tokens)
+    │   ├── client.ts (491 tokens)
+    │   ├── paths.d.ts (31 tokens)
+    │   ├── paths.js (324 tokens)
+    │   ├── README.md (526 tokens)
+    │   ├── server.ts (2,021 tokens)
+    │   ├── tokenManager.ts (2,060 tokens)
+    │   └── utils.ts (508 tokens)
+    ├── config/ (571 tokens)
+    │   ├── README.md (84 tokens)
+    │   └── TransportConfig.ts (487 tokens)
+    ├── handlers/ (22,665 tokens)
+    │   ├── README.md (213 tokens)
+    │   ├── utils.ts (2,517 tokens)
+    │   ├── core/ (14,378 tokens)
+    │   │   ├── BaseToolHandler.ts (983 tokens)
+    │   │   ├── BatchRequestHandler.ts (2,042 tokens)
+    │   │   ├── CreateEventHandler.ts (901 tokens)
+    │   │   ├── DeleteEventHandler.ts (237 tokens)
+    │   │   ├── eventManipulationUtils.ts (780 tokens)
+    │   │   ├── FreeBusyEventHandler.ts (660 tokens)
+    │   │   ├── GetCurrentTimeHandler.ts (540 tokens)
+    │   │   ├── GetEventHandler.ts (443 tokens)
+    │   │   ├── ListCalendarsHandler.ts (795 tokens)
+    │   │   ├── ListColorsHandler.ts (308 tokens)
+    │   │   ├── ListEventsHandler.ts (2,108 tokens)
+    │   │   ├── README.md (945 tokens)
+    │   │   ├── RecurringEventHelpers.ts (1,394 tokens)
+    │   │   ├── SearchEventsHandler.ts (605 tokens)
+    │   │   └── UpdateEventHandler.ts (1,637 tokens)
+    │   ├── gmail/ (4,220 tokens)
+    │   │   ├── GmailApplyFiltersHandler.ts (812 tokens)
+    │   │   ├── GmailCreateFilterHandler.ts (964 tokens)
+    │   │   ├── GmailCreateLabelHandler.ts (433 tokens)
+    │   │   ├── GmailGetProfileHandler.ts (190 tokens)
+    │   │   ├── GmailModifyHandler.ts (765 tokens)
+    │   │   ├── GmailSearchHandler.ts (391 tokens)
+    │   │   └── gmailUtils.ts (665 tokens)
+    │   └── utils/ (1,337 tokens)
+    │       ├── datetime.ts (1,213 tokens)
+    │       └── README.md (124 tokens)
+    ├── schemas/ (423 tokens)
+    │   ├── README.md (99 tokens)
+    │   └── types.ts (324 tokens)
+    ├── services/ (5,525 tokens)
+    │   └── conflict-detection/ (5,525 tokens)
+    │       ├── config.ts (176 tokens)
+    │       ├── ConflictAnalyzer.ts (1,078 tokens)
+    │       ├── ConflictDetectionService.ts (2,260 tokens)
+    │       ├── EventSimilarityChecker.ts (1,465 tokens)
+    │       ├── index.ts (44 tokens)
+    │       ├── README.md (248 tokens)
+    │       └── types.ts (254 tokens)
+    ├── testing/ (3,791 tokens)
+    │   ├── example.test.ts (772 tokens)
+    │   ├── index.ts (23 tokens)
+    │   ├── README.md (601 tokens)
+    │   ├── test-data.ts (802 tokens)
+    │   ├── test-utils.ts (846 tokens)
+    │   └── types.ts (747 tokens)
+    ├── tests/ (83,575 tokens)
+    │   ├── integration/ (11,405 tokens)
+    │   │   ├── claude-mcp-integration.test.ts (2,291 tokens)
+    │   │   ├── conflict-detection-integration.test.ts (3,156 tokens)
+    │   │   ├── README.md (625 tokens)
+    │   │   ├── test-data-factory.ts (2,612 tokens)
+    │   │   └── UpdateEventHandler.recurring.integration.test.ts (2,721 tokens)
+    │   └── unit/ (72,170 tokens)
+    │       ├── console-statements.test.ts (1,511 tokens)
+    │       ├── index.test.ts (2,702 tokens)
+    │       ├── README.md (163 tokens)
+    │       ├── handlers/ (36,985 tokens)
+    │       │   ├── BatchListEvents.test.ts (5,157 tokens)
+    │       │   ├── BatchRequestHandler.test.ts (2,835 tokens)
+    │       │   ├── create-event-blocking.test.ts (941 tokens)
+    │       │   ├── CreateEventHandler.test.ts (4,929 tokens)
+    │       │   ├── datetime-utils.test.ts (713 tokens)
+    │       │   ├── duplicate-event-display.test.ts (1,378 tokens)
+    │       │   ├── GetCurrentTimeHandler.test.ts (1,684 tokens)
+    │       │   ├── GetEventHandler.test.ts (1,336 tokens)
+    │       │   ├── ListEventsHandler.test.ts (2,567 tokens)
+    │       │   ├── README.md (154 tokens)
+    │       │   ├── RecurringEventHelpers.test.ts (6,401 tokens)
+    │       │   ├── SearchEventsHandler.test.ts (2,842 tokens)
+    │       │   ├── UpdateEventHandler.recurring.test.ts (3,836 tokens)
+    │       │   ├── utils-conflict-format.test.ts (1,549 tokens)
+    │       │   └── utils.test.ts (663 tokens)
+    │       ├── helpers/ (6,411 tokens)
+    │       │   ├── content.ts (145 tokens)
+    │       │   ├── factories.test.ts (2,722 tokens)
+    │       │   ├── factories.ts (2,824 tokens)
+    │       │   ├── index.ts (41 tokens)
+    │       │   └── README.md (679 tokens)
+    │       ├── schemas/ (8,523 tokens)
+    │       │   ├── enhanced-properties.test.ts (2,245 tokens)
+    │       │   ├── no-refs.test.ts (859 tokens)
+    │       │   ├── README.md (78 tokens)
+    │       │   ├── tool-registration.test.ts (2,053 tokens)
+    │       │   └── validators.test.ts (3,288 tokens)
+    │       ├── services/ (4,497 tokens)
+    │       │   └── conflict-detection/ (4,497 tokens)
+    │       │       ├── ConflictAnalyzer.test.ts (1,931 tokens)
+    │       │       └── EventSimilarityChecker.test.ts (2,566 tokens)
+    │       └── utils/ (11,378 tokens)
+    │           ├── date-utils.test.ts (6,367 tokens)
+    │           ├── event-id-validator.test.ts (1,633 tokens)
+    │           ├── field-mask-builder.test.ts (988 tokens)
+    │           └── timezone-utils.test.ts (2,390 tokens)
+    ├── tools/ (8,813 tokens)
+    │   ├── README.md (120 tokens)
+    │   └── registry.ts (8,693 tokens)
+    ├── transports/ (1,182 tokens)
+    │   ├── http.ts (939 tokens)
+    │   ├── README.md (147 tokens)
+    │   └── stdio.ts (96 tokens)
+    └── utils/ (8,393 tokens)
+        ├── date-utils.ts (3,364 tokens)
+        ├── event-id-validator.ts (897 tokens)
+        ├── field-mask-builder.ts (947 tokens)
+        ├── README.md (195 tokens)
+        ├── simple-rrule-adapter.ts (495 tokens)
+        └── timezone-utils.ts (2,495 tokens)
+</file>
+
 <file path="lib/email-analyzer.mjs">
 export function scoreContent(content, highKeywords, lowKeywords)
 ⋮----
@@ -16822,31 +16966,35 @@ calendarId: ['primary'], // Array with single item
 // Should return text content with events
 </file>
 
-<file path="src/tests/unit/handlers/GetCurrentTimeHandler.test.ts">
+<file path="src/tests/unit/handlers/create-event-blocking.test.ts">
 import { describe, it, expect, vi } from 'vitest';
-import { GetCurrentTimeHandler } from '../../../handlers/core/GetCurrentTimeHandler.js';
+import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
 import { OAuth2Client } from 'google-auth-library';
-import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { getTextContent } from '../helpers/content.js';
+import { calendar_v3 } from 'googleapis';
+import { CONFLICT_DETECTION_CONFIG } from '../../../services/conflict-detection/config.js';
+import { getTextContent } from '../helpers/index.js';
 ⋮----
-// Should match RFC3339 pattern with timezone
-</file>
-
-<file path="src/tests/unit/handlers/GetEventHandler.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GetEventHandler } from '../../../handlers/core/GetEventHandler.js';
-import { OAuth2Client } from 'google-auth-library';
-import { getTextContent } from '../helpers/content.js';
+// Mock the conflict detection service
 ⋮----
-// Mock the googleapis module
+// Mock the checkConflicts method to return a high similarity duplicate
 ⋮----
-// Mock the field mask builder
+similarity: 1.0 // 100% similar
 ⋮----
-// Setup mock calendar
+// Mock getCalendarTimezone
 ⋮----
-// Mock the getCalendar method
+// Verify the response format - now includes similarity percentage
 ⋮----
-// Mock handleGoogleApiError to throw a specific error
+// Should show similarity percentage in the header
+⋮----
+// Should show the duplicate suggestion
+⋮----
+// Should show full event details
+⋮----
+// Should include the view link
+⋮----
+// Should include instructions to override
+⋮----
+// Verify that the config has the expected thresholds
 </file>
 
 <file path="src/tests/unit/handlers/SearchEventsHandler.test.ts">
@@ -17248,14 +17396,6 @@ const labelId = 'Label_5'; // Events/Workshops
 // Display results
 </file>
 
-<file path="archive-old-meeting-responses.mjs">
-// Calculate date one week ago
-⋮----
-// Search for meeting acceptances/declines older than a week
-⋮----
-// Parse email date
-</file>
-
 <file path="check_emails.mjs">
 async function checkUnreadEmails()
 ⋮----
@@ -17280,10 +17420,6 @@ function outputResults(categorized)
 
 <file path="check-gmail.mjs">
 async function checkUnreadEmails()
-</file>
-
-<file path="check-google-dev-labels.mjs">
-
 </file>
 
 <file path="create-billing-filter.mjs">
@@ -17364,14 +17500,6 @@ async function createFilters()
 // Summary
 </file>
 
-<file path="label-google-dev-forums.mjs">
-// Get Communities label ID
-⋮----
-// Find all Google Developer forum emails
-⋮----
-// Label and mark as read in batches
-</file>
-
 <file path="relabel-event-announcements.mjs">
 async function relabelEventAnnouncements()
 ⋮----
@@ -17416,35 +17544,33 @@ export function extractDisplayName(from)
 export function extractEmailAddress(from)
 </file>
 
-<file path="src/tests/unit/handlers/create-event-blocking.test.ts">
-import { describe, it, expect, vi } from 'vitest';
+<file path="src/tests/unit/handlers/CreateEventHandler.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
 import { OAuth2Client } from 'google-auth-library';
-import { calendar_v3 } from 'googleapis';
-import { CONFLICT_DETECTION_CONFIG } from '../../../services/conflict-detection/config.js';
-import { getTextContent } from '../helpers/index.js';
+import { makeEvent, getTextContent } from '../helpers/index.js';
 ⋮----
-// Mock the conflict detection service
+// Mock the googleapis module
 ⋮----
-// Mock the checkConflicts method to return a high similarity duplicate
+// Mock the event ID validator
 ⋮----
-similarity: 1.0 // 100% similar
+// Mock datetime utilities
+⋮----
+// Setup mock calendar
+⋮----
+// Mock the getCalendar method
 ⋮----
 // Mock getCalendarTimezone
 ⋮----
-// Verify the response format - now includes similarity percentage
+// Should not include id field when no custom ID provided
 ⋮----
-// Should show similarity percentage in the header
+eventId: 'abc', // Too short (< 5 chars)
 ⋮----
-// Should show the duplicate suggestion
+// Should not call the API if validation fails
 ⋮----
-// Should show full event details
+eventId: 'bad id', // Contains space
 ⋮----
-// Should include the view link
-⋮----
-// Should include instructions to override
-⋮----
-// Verify that the config has the expected thresholds
+// Mock handleGoogleApiError
 </file>
 
 <file path="analyze-community-events.mjs">
@@ -17581,6 +17707,12 @@ async function createSubjectNewslettersSubLabel()
 // Step 3: Create filter for future subject-based newsletters
 </file>
 
+<file path="summarize-remaining.mjs">
+const getHeader = (headers, name)
+⋮----
+async function printQueryResults(query, label, previewCount)
+</file>
+
 <file path="lib/constants.mjs">
 /** Gmail user ID (special value 'me' = authenticated user) */
 ⋮----
@@ -17657,35 +17789,6 @@ private setIfPresent(obj: any, key: string, value: any): void
 export class RecurringEventError extends Error
 ⋮----
 constructor(message: string, code: string)
-</file>
-
-<file path="src/tests/unit/handlers/CreateEventHandler.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
-import { OAuth2Client } from 'google-auth-library';
-import { makeEvent, getTextContent } from '../helpers/index.js';
-⋮----
-// Mock the googleapis module
-⋮----
-// Mock the event ID validator
-⋮----
-// Mock datetime utilities
-⋮----
-// Setup mock calendar
-⋮----
-// Mock the getCalendar method
-⋮----
-// Mock getCalendarTimezone
-⋮----
-// Should not include id field when no custom ID provided
-⋮----
-eventId: 'abc', // Too short (< 5 chars)
-⋮----
-// Should not call the API if validation fails
-⋮----
-eventId: 'bad id', // Contains space
-⋮----
-// Mock handleGoogleApiError
 </file>
 
 <file path="src/tools/registry.ts">
@@ -17945,12 +18048,6 @@ async function listUnreadEmails()
     "vitest": "^3.1.1"
   }
 }
-</file>
-
-<file path="summarize-remaining.mjs">
-const getHeader = (headers, name)
-⋮----
-async function printQueryResults(query, label, previewCount)
 </file>
 
 <file path="src/tests/unit/helpers/factories.ts">
@@ -18709,7 +18806,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { calendar_v3, google } from 'googleapis';
 import { UpdateEventHandler } from '../../../handlers/core/UpdateEventHandler.js';
 import { UpdateEventInput, ToolSchemas } from '../../../tools/registry.js';
-import { makeEvent } from '../helpers/factories.js';
+import { makeEvent, makeFutureDateString } from '../helpers/factories.js';
 ⋮----
 /**
    * Create mock calendar event from production factory with metadata.
@@ -18868,139 +18965,80 @@ src/auth/AuthenticationService.ts (new file)
 ---
 
 ##### Issue 3: `Server.callTool()` Method Doesn't Exist
-**Locations:** Lines 55, 68, 102, 120, 157, 168, etc.
-**Error:** Property 'callTool()' does not exist on type Server
+**Status:** ✅ RESOLVED - Option A Implemented (2026-03-24)
+**Implementation Location:** `src/tests/integration/conflict-detection-integration.test.ts`
 
-**Current State:**
-- MCP SDK's `Server` class is for receiving tool calls FROM clients
-- Does NOT have a method to call tools directly
-- Tool calls must come through MCP protocol (JSON-RPC over stdio/HTTP)
+**Solution Implemented:**
+Created integration test using Option A (Test via MCP Protocol):
 
-**What Test Expects:**
 ```typescript
-// Current code (broken)
-const result = await server.callTool('create-event', args);
-expect(result.content[0].text).toContain('event created');
+// Spawn server process
+const transport = new StdioClientTransport({
+  command: 'node',
+  args: ['build/index.js'],
+  env: cleanEnv
+});
+
+// Create MCP client
+const mcpClient = new Client({ name: 'test-client', version: '1.0.0' }, {});
+await mcpClient.connect(transport);
+
+// Call tools via protocol
+const result = await mcpClient.callTool({
+  name: 'create-event',
+  arguments: { calendarId, summary, start, end, timeZone }
+});
 ```
 
-**Why It's Wrong:**
-- Violates MCP architecture (server receives calls, doesn't make them)
-- Tests would need to run HTTP/stdio transport to communicate
-- This is integration test, not unit test of server internals
+**Pattern Details:**
+- Uses `@modelcontextprotocol/sdk` `Client` + `StdioClientTransport`
+- Spawns real server process with `NODE_ENV=test`
+- Validates auth with real Doppler credentials
+- Creates real events in Google Calendar API
+- Tests: non-overlapping, overlapping, duplicate, recurring conflict scenarios
+- Cleanup guaranteed via MCP tool calls in `afterAll`
 
-**Solution Approaches:**
-
-**Option A: Test via MCP Protocol (Recommended)**
-```typescript
-// Correct way: use MCP client
-const client = new StdioClientTransport({ command: 'node', args: [...] });
-const result = await client.callTool('create-event', args);
-```
-- Pros: Tests real MCP behavior, catches protocol issues
-- Cons: Slower, more setup overhead, integration test not unit test
-
-**Option B: Test Tool Handlers Directly**
-```typescript
-// Test the handler directly (unit test)
-const handler = new CreateEventHandler();
-const result = await handler.runTool(args, mockOAuth2Client);
-```
-- Pros: Fast, isolated, testable
-- Cons: Doesn't test tool registry, MCP server behavior
-
-**Option C: Inject Mock Transport (Advanced)**
-```typescript
-// Mock the server's request handling
-const mockTransport = new MockTransport();
-const server = new Server({}, {}, mockTransport);
-const result = await server.callTool(...); // Mock handles it
-```
-- Pros: Tests server without real transport overhead
-- Cons: Complex to implement, easy to break isolation
-
-**Recommended Pattern:**
-- Use **Option A** for integration tests (test real MCP flow)
-- Use **Option B** for unit tests (test handlers in isolation)
-- Clearly separate: `*.test.ts` (unit) vs `*.integration.test.ts` (integration)
+**Verification:**
+- ✓ File: `src/tests/integration/conflict-detection-integration.test.ts` (13 KB)
+- ✓ TypeScript: compilation passes
+- ✓ Run: `doppler run --project integrity-studio --config dev -- npm run test:integration`
 
 ---
 
-##### Issue 4: Missing TestDataFactory Static Methods
-**Locations:** Lines 35, 39, 65, 112, 143, 165, 180
-**Errors:**
-- `cleanupTestEvents()` not defined
-- `trackCreatedEvent()` not defined
+##### Issue 4: TestDataFactory Usage in Integration Tests
+**Status:** ✅ RESOLVED - Factory Methods Reused (2026-03-24)
+**Implementation Location:** `src/tests/integration/conflict-detection-integration.test.ts`
 
-**Current State:**
+**Solution Implemented:**
+Leveraged existing `TestDataFactory` static methods without adding new static cleanup methods:
+
 ```typescript
-// TestDataFactory exists (src/tests/integration/test-data-factory.ts)
-// But only has instance methods:
-addCreatedEventId()
-clearCreatedEventIds()
-extractEventIdFromResponse()
-// Missing static cleanup/tracking methods
+// Event creation
+const eventData = TestDataFactory.createSingleEvent(overrides);
+const recurringData = TestDataFactory.createRecurringEvent(overrides);
+
+// Date formatting
+TestDataFactory.formatDateTimeRFC3339(date);
+TestDataFactory.formatDateTimeRFC3339WithTimezone(date);
+
+// Response parsing
+const eventId = TestDataFactory.extractEventIdFromResponse(result);
+
+// Calendar ID resolution
+const TEST_CALENDAR_ID = TestDataFactory.getTestCalendarId();
 ```
 
-**What Test Expects:**
-```typescript
-// Current code (broken)
-TestDataFactory.cleanupTestEvents(calendarId);
-TestDataFactory.trackCreatedEvent(eventId);
-```
+**Design Decision:**
+Rather than add static cleanup methods to `TestDataFactory`, the integration test:
+1. **Tracks events locally** - `createdEventIds: string[]` array in test scope
+2. **Cleans up via MCP tools** - `mcpClient.callTool('delete-event', ...)` in `afterAll`
+3. **Uses existing factories** - No duplication of event creation logic
 
-**Why It's Needed:**
-- Tests need to clean up after themselves (no test pollution)
-- Tests need to track which events were created (for verification)
-- Static methods allow cleanup in `afterEach()` hooks
-
-**Solution Approaches:**
-
-**Option A: Add Static Methods to TestDataFactory**
-```typescript
-export class TestDataFactory {
-  private static createdEvents: Map<string, string[]> = new Map();
-
-  static trackCreatedEvent(calendarId: string, eventId: string) {
-    if (!this.createdEvents.has(calendarId)) {
-      this.createdEvents.set(calendarId, []);
-    }
-    this.createdEvents.get(calendarId)!.push(eventId);
-  }
-
-  static async cleanupTestEvents(
-    calendarId: string,
-    oauth2Client: OAuth2Client
-  ) {
-    const events = this.createdEvents.get(calendarId) || [];
-    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-    for (const eventId of events) {
-      await calendar.events.delete({
-        calendarId,
-        eventId,
-        sendUpdates: 'none'
-      });
-    }
-    this.createdEvents.delete(calendarId);
-  }
-}
-```
-
-**Option B: Create Separate Test Utilities Module**
-```typescript
-// src/tests/integration/test-utils.ts
-export class TestCleanup {
-  private events: Map<string, string[]> = new Map();
-
-  track(calendarId: string, eventId: string) { ... }
-  async cleanup(calendarId: string, oauth2Client: OAuth2Client) { ... }
-}
-
-// Usage in tests
-const cleanup = new TestCleanup();
-afterEach(() => cleanup.cleanup(calendarId, oauth2Client));
-```
-
-**Recommended:** Option A (simpler, follows existing pattern)
+**Why Not Static Cleanup Methods:**
+- Integration tests don't need token management in TestDataFactory
+- MCP tools are the proper layer for calendar operations
+- Reduces coupling between test utilities and authentication
+- Each test can choose its cleanup strategy (MCP vs direct API)
 
 ---
 

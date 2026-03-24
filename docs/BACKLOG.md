@@ -115,139 +115,80 @@ src/auth/AuthenticationService.ts (new file)
 ---
 
 ##### Issue 3: `Server.callTool()` Method Doesn't Exist
-**Locations:** Lines 55, 68, 102, 120, 157, 168, etc.
-**Error:** Property 'callTool()' does not exist on type Server
+**Status:** ✅ RESOLVED - Option A Implemented (2026-03-24)
+**Implementation Location:** `src/tests/integration/conflict-detection-integration.test.ts`
 
-**Current State:**
-- MCP SDK's `Server` class is for receiving tool calls FROM clients
-- Does NOT have a method to call tools directly
-- Tool calls must come through MCP protocol (JSON-RPC over stdio/HTTP)
+**Solution Implemented:**
+Created integration test using Option A (Test via MCP Protocol):
 
-**What Test Expects:**
 ```typescript
-// Current code (broken)
-const result = await server.callTool('create-event', args);
-expect(result.content[0].text).toContain('event created');
+// Spawn server process
+const transport = new StdioClientTransport({
+  command: 'node',
+  args: ['build/index.js'],
+  env: cleanEnv
+});
+
+// Create MCP client
+const mcpClient = new Client({ name: 'test-client', version: '1.0.0' }, {});
+await mcpClient.connect(transport);
+
+// Call tools via protocol
+const result = await mcpClient.callTool({
+  name: 'create-event',
+  arguments: { calendarId, summary, start, end, timeZone }
+});
 ```
 
-**Why It's Wrong:**
-- Violates MCP architecture (server receives calls, doesn't make them)
-- Tests would need to run HTTP/stdio transport to communicate
-- This is integration test, not unit test of server internals
+**Pattern Details:**
+- Uses `@modelcontextprotocol/sdk` `Client` + `StdioClientTransport`
+- Spawns real server process with `NODE_ENV=test`
+- Validates auth with real Doppler credentials
+- Creates real events in Google Calendar API
+- Tests: non-overlapping, overlapping, duplicate, recurring conflict scenarios
+- Cleanup guaranteed via MCP tool calls in `afterAll`
 
-**Solution Approaches:**
-
-**Option A: Test via MCP Protocol (Recommended)**
-```typescript
-// Correct way: use MCP client
-const client = new StdioClientTransport({ command: 'node', args: [...] });
-const result = await client.callTool('create-event', args);
-```
-- Pros: Tests real MCP behavior, catches protocol issues
-- Cons: Slower, more setup overhead, integration test not unit test
-
-**Option B: Test Tool Handlers Directly**
-```typescript
-// Test the handler directly (unit test)
-const handler = new CreateEventHandler();
-const result = await handler.runTool(args, mockOAuth2Client);
-```
-- Pros: Fast, isolated, testable
-- Cons: Doesn't test tool registry, MCP server behavior
-
-**Option C: Inject Mock Transport (Advanced)**
-```typescript
-// Mock the server's request handling
-const mockTransport = new MockTransport();
-const server = new Server({}, {}, mockTransport);
-const result = await server.callTool(...); // Mock handles it
-```
-- Pros: Tests server without real transport overhead
-- Cons: Complex to implement, easy to break isolation
-
-**Recommended Pattern:**
-- Use **Option A** for integration tests (test real MCP flow)
-- Use **Option B** for unit tests (test handlers in isolation)
-- Clearly separate: `*.test.ts` (unit) vs `*.integration.test.ts` (integration)
+**Verification:**
+- ✓ File: `src/tests/integration/conflict-detection-integration.test.ts` (13 KB)
+- ✓ TypeScript: compilation passes
+- ✓ Run: `doppler run --project integrity-studio --config dev -- npm run test:integration`
 
 ---
 
-##### Issue 4: Missing TestDataFactory Static Methods
-**Locations:** Lines 35, 39, 65, 112, 143, 165, 180
-**Errors:**
-- `cleanupTestEvents()` not defined
-- `trackCreatedEvent()` not defined
+##### Issue 4: TestDataFactory Usage in Integration Tests
+**Status:** ✅ RESOLVED - Factory Methods Reused (2026-03-24)
+**Implementation Location:** `src/tests/integration/conflict-detection-integration.test.ts`
 
-**Current State:**
+**Solution Implemented:**
+Leveraged existing `TestDataFactory` static methods without adding new static cleanup methods:
+
 ```typescript
-// TestDataFactory exists (src/tests/integration/test-data-factory.ts)
-// But only has instance methods:
-addCreatedEventId()
-clearCreatedEventIds()
-extractEventIdFromResponse()
-// Missing static cleanup/tracking methods
+// Event creation
+const eventData = TestDataFactory.createSingleEvent(overrides);
+const recurringData = TestDataFactory.createRecurringEvent(overrides);
+
+// Date formatting
+TestDataFactory.formatDateTimeRFC3339(date);
+TestDataFactory.formatDateTimeRFC3339WithTimezone(date);
+
+// Response parsing
+const eventId = TestDataFactory.extractEventIdFromResponse(result);
+
+// Calendar ID resolution
+const TEST_CALENDAR_ID = TestDataFactory.getTestCalendarId();
 ```
 
-**What Test Expects:**
-```typescript
-// Current code (broken)
-TestDataFactory.cleanupTestEvents(calendarId);
-TestDataFactory.trackCreatedEvent(eventId);
-```
+**Design Decision:**
+Rather than add static cleanup methods to `TestDataFactory`, the integration test:
+1. **Tracks events locally** - `createdEventIds: string[]` array in test scope
+2. **Cleans up via MCP tools** - `mcpClient.callTool('delete-event', ...)` in `afterAll`
+3. **Uses existing factories** - No duplication of event creation logic
 
-**Why It's Needed:**
-- Tests need to clean up after themselves (no test pollution)
-- Tests need to track which events were created (for verification)
-- Static methods allow cleanup in `afterEach()` hooks
-
-**Solution Approaches:**
-
-**Option A: Add Static Methods to TestDataFactory**
-```typescript
-export class TestDataFactory {
-  private static createdEvents: Map<string, string[]> = new Map();
-
-  static trackCreatedEvent(calendarId: string, eventId: string) {
-    if (!this.createdEvents.has(calendarId)) {
-      this.createdEvents.set(calendarId, []);
-    }
-    this.createdEvents.get(calendarId)!.push(eventId);
-  }
-
-  static async cleanupTestEvents(
-    calendarId: string,
-    oauth2Client: OAuth2Client
-  ) {
-    const events = this.createdEvents.get(calendarId) || [];
-    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-    for (const eventId of events) {
-      await calendar.events.delete({
-        calendarId,
-        eventId,
-        sendUpdates: 'none'
-      });
-    }
-    this.createdEvents.delete(calendarId);
-  }
-}
-```
-
-**Option B: Create Separate Test Utilities Module**
-```typescript
-// src/tests/integration/test-utils.ts
-export class TestCleanup {
-  private events: Map<string, string[]> = new Map();
-
-  track(calendarId: string, eventId: string) { ... }
-  async cleanup(calendarId: string, oauth2Client: OAuth2Client) { ... }
-}
-
-// Usage in tests
-const cleanup = new TestCleanup();
-afterEach(() => cleanup.cleanup(calendarId, oauth2Client));
-```
-
-**Recommended:** Option A (simpler, follows existing pattern)
+**Why Not Static Cleanup Methods:**
+- Integration tests don't need token management in TestDataFactory
+- MCP tools are the proper layer for calendar operations
+- Reduces coupling between test utilities and authentication
+- Each test can choose its cleanup strategy (MCP vs direct API)
 
 ---
 

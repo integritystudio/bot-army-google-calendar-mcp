@@ -1,4 +1,5 @@
 import { calendar_v3 } from 'googleapis';
+import { TEST_EVENT_DEFAULTS } from '../../../testing/constants.js';
 
 /**
  * System-generated fields that should be removed during event duplication.
@@ -128,7 +129,7 @@ export function createUpdateEventArgsWithAttendees(
     reminders: {
       useDefault: false,
       overrides: [
-        { method: 'email', minutes: 1440 },
+        { method: 'email', minutes: TEST_EVENT_DEFAULTS.RECURRING_EMAIL_REMINDER_MINUTES },
         { method: 'popup', minutes: 10 }
       ]
     },
@@ -160,7 +161,7 @@ export function createComplexUpdateEventArgs(
     reminders: {
       useDefault: false,
       overrides: [
-        { method: 'email', minutes: 1440 },
+        { method: 'email', minutes: TEST_EVENT_DEFAULTS.RECURRING_EMAIL_REMINDER_MINUTES },
         { method: 'popup', minutes: 10 },
         { method: 'sms', minutes: 60 }
       ]

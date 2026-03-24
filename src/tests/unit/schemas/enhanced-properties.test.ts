@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ToolSchemas } from '../../../tools/registry.js';
+import { TEST_EVENT_DEFAULTS } from '../../../testing/constants.js';
 
 describe('Enhanced Create-Event Properties', () => {
   const createEventSchema = ToolSchemas['create-event'];
@@ -339,7 +340,7 @@ describe('Enhanced Create-Event Properties', () => {
         colorId: '5',
         reminders: {
           useDefault: false,
-          overrides: [{ method: 'popup', minutes: 15 }]
+          overrides: [{ method: 'popup', minutes: TEST_EVENT_DEFAULTS.REMINDER_MINUTES }]
         }
       };
       

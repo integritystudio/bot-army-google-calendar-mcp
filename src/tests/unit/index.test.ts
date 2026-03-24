@@ -12,6 +12,7 @@ import { ListEventsHandler } from "../../handlers/core/ListEventsHandler.js";
 
 // Import test helpers
 import { getTextContent } from "../unit/helpers/index.js";
+import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from "../../testing/constants.js";
 
 // Mock OAuth2Client
 vi.mock('google-auth-library', () => ({
@@ -97,15 +98,15 @@ describe('Google Calendar MCP Server', () => {
               hidden: false,
               backgroundColor: '#0D7377',
               defaultReminders: [
-                { method: 'popup', minutes: 15 },
+                { method: 'popup', minutes: TEST_EVENT_DEFAULTS.REMINDER_MINUTES },
                 { method: 'email', minutes: 60 }
               ],
               description: 'Work-related events and meetings'
             },
-            { 
-              id: 'cal2', 
+            {
+              id: 'cal2',
               summary: 'Personal',
-              timeZone: 'America/Los_Angeles',
+              timeZone: TEST_TIMEZONE,
               kind: 'calendar#calendarListEntry',
               accessRole: 'reader',
               primary: false,
@@ -131,11 +132,11 @@ describe('Google Calendar MCP Server', () => {
   Selected: Yes
   Hidden: No
   Background Color: #0D7377
-  Default Reminders: popup (15min before), email (60min before)
+  Default Reminders: popup (${TEST_EVENT_DEFAULTS.REMINDER_MINUTES}min before), email (60min before)
   Description: Work-related events and meetings
 
 Personal (cal2)
-  Timezone: America/Los_Angeles
+  Timezone: ${TEST_TIMEZONE}
   Kind: calendar#calendarListEntry
   Access Role: reader
   Selected: Yes
@@ -171,7 +172,7 @@ Personal (cal2)
       (mockCalendarApi.calendarList.get as any).mockResolvedValue({
         data: {
           id: 'primary',
-          timeZone: 'America/Los_Angeles'
+          timeZone: TEST_TIMEZONE
         }
       });
 

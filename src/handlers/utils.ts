@@ -1,5 +1,6 @@
 import { calendar_v3 } from "googleapis";
 import { ConflictCheckResult } from "../services/conflict-detection/types.js";
+import { RESPONSE_PATTERNS } from "../testing/constants.js";
 
 /**
  * Generates a Google Calendar event view URL
@@ -108,7 +109,7 @@ function formatAttendees(attendees?: calendar_v3.Schema$EventAttendee[]): string
  */
 export function formatEventWithDetails(event: calendar_v3.Schema$Event, calendarId?: string): string {
     const title = event.summary ? `Event: ${event.summary}` : "Untitled Event";
-    const eventId = event.id ? `\nEvent ID: ${event.id}` : "";
+    const eventId = event.id ? `\n${RESPONSE_PATTERNS.EVENT_ID_PREFIX}${event.id}` : "";
     const description = event.description ? `\nDescription: ${event.description}` : "";
     const location = event.location ? `\nLocation: ${event.location}` : "";
     const colorId = event.colorId ? `\nColor ID: ${event.colorId}` : "";

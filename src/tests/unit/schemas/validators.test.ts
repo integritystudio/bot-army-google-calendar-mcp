@@ -6,6 +6,7 @@ import {
   createUpdateEventArgsWithTimes,
   createComplexUpdateEventArgs
 } from '../helpers/event-test-data.js';
+import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from '../../../testing/constants.js';
 
 const UpdateEventArgumentsSchema = ToolSchemas['update-event'];
 const ListEventsArgumentsSchema = ToolSchemas['list-events'];
@@ -19,7 +20,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
       expect(result.modificationScope).toBeUndefined(); // optional with no default
       expect(result.calendarId).toBe('primary');
       expect(result.eventId).toBe('event123');
-      expect(result.timeZone).toBe('America/Los_Angeles');
+      expect(result.timeZone).toBe(TEST_TIMEZONE);
     });
 
     it('should reject missing required fields', () => {
@@ -32,7 +33,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
     });
 
     it('should validate optional fields when provided', () => {
-      const validArgs = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
+      const validArgs = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
         summary: 'Updated Meeting',
         description: 'Updated description',
         location: 'New Location',
@@ -61,7 +62,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
       const validScopes = ['thisEventOnly', 'all', 'thisAndFollowing'] as const;
 
       validScopes.forEach(scope => {
-        const args: any = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
+        const args: any = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
           modificationScope: scope
         });
 
@@ -78,7 +79,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
     });
 
     it('should reject invalid modificationScope values', () => {
-      const args = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
         modificationScope: 'invalid'
       });
 
@@ -88,7 +89,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
 
   describe('Single Instance Scope Validation', () => {
     it('should require originalStartTime when modificationScope is "thisEventOnly"', () => {
-      const args = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
         modificationScope: 'thisEventOnly'
         // missing originalStartTime
       });
@@ -99,7 +100,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
     });
 
     it('should accept valid originalStartTime for thisEventOnly scope', () => {
-      const args = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
         modificationScope: 'thisEventOnly',
         originalStartTime: '2024-06-15T10:00:00'
       });
@@ -110,7 +111,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
     });
 
     it('should reject invalid originalStartTime format', () => {
-      const args = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
         modificationScope: 'thisEventOnly',
         originalStartTime: '2024-06-15 10:00:00' // invalid format
       });
@@ -119,7 +120,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
     });
 
     it('should accept originalStartTime without timezone designator', () => {
-      const args = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
         modificationScope: 'thisEventOnly',
         originalStartTime: '2024-06-15T10:00:00' // timezone-naive format (expected)
       });
@@ -130,7 +131,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
 
   describe('Future Instances Scope Validation', () => {
     it('should require futureStartDate when modificationScope is "thisAndFollowing"', () => {
-      const args = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
         modificationScope: 'thisAndFollowing'
         // missing futureStartDate
       });
@@ -143,7 +144,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
     it('should accept valid futureStartDate for thisAndFollowing scope', () => {
       const futureDateString = makeFutureDateString(30); // 30 days from now
 
-      const args = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
         modificationScope: 'thisAndFollowing',
         futureStartDate: futureDateString
       });
@@ -156,7 +157,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
     it('should reject futureStartDate in the past', () => {
       const pastDateString = makePastDateString(1);
 
-      const args = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
         modificationScope: 'thisAndFollowing',
         futureStartDate: pastDateString
       });
@@ -167,7 +168,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
     });
 
     it('should reject invalid futureStartDate format', () => {
-      const args = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
         modificationScope: 'thisAndFollowing',
         futureStartDate: '2024-12-31 10:00:00' // invalid format
       });
@@ -197,7 +198,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
       const args = {
         calendarId: 'primary',
         eventId: 'event123',
-        timeZone: 'America/Los_Angeles',
+        timeZone: TEST_TIMEZONE,
         start: datetime,
         end: datetime
       };
@@ -209,7 +210,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
       const args = {
         calendarId: 'primary',
         eventId: 'event123',
-        timeZone: 'America/Los_Angeles',
+        timeZone: TEST_TIMEZONE,
         start: datetime
       };
 
@@ -219,7 +220,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
 
   describe('Complex Scenarios', () => {
     it('should validate complete update with all fields', () => {
-      const args = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
         modificationScope: 'thisAndFollowing',
         futureStartDate: makeFutureDateString(60), // 60 days from now
         summary: 'Updated Meeting',
@@ -235,7 +236,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
         reminders: {
           useDefault: false,
           overrides: [
-            { method: 'email', minutes: 1440 },
+            { method: 'email', minutes: TEST_EVENT_DEFAULTS.RECURRING_EMAIL_REMINDER_MINUTES },
             { method: 'popup', minutes: 10 }
           ]
         },
@@ -247,7 +248,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
     });
 
     it('should not require conditional fields for "all" scope', () => {
-      const args = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
         modificationScope: 'all',
         summary: 'Updated Meeting'
         // no originalStartTime or futureStartDate required
@@ -257,7 +258,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
     });
 
     it('should allow optional conditional fields when not required', () => {
-      const args = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
         modificationScope: 'all',
         originalStartTime: '2024-06-15T10:00:00', // optional for 'all' scope
         summary: 'Updated Meeting'
@@ -271,7 +272,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
   describe('Backward Compatibility', () => {
     it('should maintain compatibility with existing update calls', () => {
       // Existing call format without new parameters
-      const legacyArgs = createUpdateEventArgs('primary', 'event123', 'America/Los_Angeles', {
+      const legacyArgs = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
         summary: 'Updated Meeting',
         location: 'Conference Room A'
       });

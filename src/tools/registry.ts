@@ -24,6 +24,14 @@ import { GmailCreateLabelHandler } from "../handlers/gmail/GmailCreateLabelHandl
 import { GmailCreateFilterHandler } from "../handlers/gmail/GmailCreateFilterHandler.js";
 import { GmailApplyFiltersHandler } from "../handlers/gmail/GmailApplyFiltersHandler.js";
 
+// ISO 8601 datetime validation (with optional timezone)
+const ISO8601_DATETIME_REGEX_WITH_TZ = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/;
+const ISO8601_DATETIME_REGEX_WITHOUT_TZ = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
+
+const isValidISO8601DateTime = (val: string): boolean => {
+  return ISO8601_DATETIME_REGEX_WITH_TZ.test(val) || ISO8601_DATETIME_REGEX_WITHOUT_TZ.test(val);
+};
+
 // Define all tool schemas with TypeScript inference
 export const ToolSchemas = {
   'list-calendars': z.object({}),
@@ -33,19 +41,11 @@ export const ToolSchemas = {
       "ID of the calendar(s) to list events from. Accepts either a single calendar ID string or an array of calendar IDs (passed as JSON string like '[\"cal1\", \"cal2\"]')"
     ),
     timeMin: z.string()
-      .refine((val) => {
-        const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
-        const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
-        return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
+      .refine(isValidISO8601DateTime, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("Start time boundary. Preferred: '2024-01-01T00:00:00' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T00:00:00Z' or '2024-01-01T00:00:00-08:00'.")
       .optional(),
     timeMax: z.string()
-      .refine((val) => {
-        const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
-        const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
-        return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
+      .refine(isValidISO8601DateTime, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("End time boundary. Preferred: '2024-01-01T23:59:59' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T23:59:59Z' or '2024-01-01T23:59:59-08:00'.")
       .optional(),
     timeZone: z.string().optional().describe(
@@ -74,18 +74,10 @@ export const ToolSchemas = {
       "Free text search query (searches summary, description, location, attendees, etc.)"
     ),
     timeMin: z.string()
-      .refine((val) => {
-        const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
-        const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
-        return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
+      .refine(isValidISO8601DateTime, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("Start time boundary. Preferred: '2024-01-01T00:00:00' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T00:00:00Z' or '2024-01-01T00:00:00-08:00'."),
     timeMax: z.string()
-      .refine((val) => {
-        const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
-        const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
-        return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
+      .refine(isValidISO8601DateTime, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("End time boundary. Preferred: '2024-01-01T23:59:59' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T23:59:59Z' or '2024-01-01T23:59:59-08:00'."),
     timeZone: z.string().optional().describe(
       "Timezone as IANA Time Zone Database name (e.g., America/Los_Angeles). Takes priority over calendar's default timezone. Only used for timezone-naive datetime strings."
@@ -350,18 +342,10 @@ export const ToolSchemas = {
       "List of calendars and/or groups to query for free/busy information"
     ),
     timeMin: z.string()
-      .refine((val) => {
-        const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
-        const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
-        return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
+      .refine(isValidISO8601DateTime, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("Start time boundary. Preferred: '2024-01-01T00:00:00' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T00:00:00Z' or '2024-01-01T00:00:00-08:00'."),
     timeMax: z.string()
-      .refine((val) => {
-        const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
-        const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
-        return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
+      .refine(isValidISO8601DateTime, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("End time boundary. Preferred: '2024-01-01T23:59:59' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T23:59:59Z' or '2024-01-01T23:59:59-08:00'."),
     timeZone: z.string().optional().describe("Timezone for the query"),
     groupExpansionMax: z.number().int().max(100).optional().describe(

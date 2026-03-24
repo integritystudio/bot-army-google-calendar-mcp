@@ -103,22 +103,29 @@ async function createWorkMeetingSubLabels() {
   console.log('═'.repeat(80));
   console.log('\n2️⃣  APPLYING SUB-LABELS TO EXISTING EMAILS\n');
 
+  // Resolve parent label ID at runtime instead of hardcoding
+  const workParentId = existingLabelMap.get('Events/Invitations/Work');
+  if (!workParentId) {
+    console.error('❌ Error: Could not find "Events/Invitations/Work" label. Create it first.');
+    process.exit(1);
+  }
+
   const workPatterns = [
     {
       label: 'Events/Invitations/Work/One-on-One',
-      query: 'label:Label_16 AND (subject:"John" OR subject:"1:1" OR subject:"one-on-one" OR subject:"neighbor client")',
+      query: `label:${workParentId} AND (subject:"John" OR subject:"1:1" OR subject:"one-on-one" OR subject:"neighbor client")`,
     },
     {
       label: 'Events/Invitations/Work/Team Syncs',
-      query: 'label:Label_16 AND (subject:"Team" OR subject:"Sync" OR subject:"Integrity" OR subject:"Core Team")',
+      query: `label:${workParentId} AND (subject:"Team" OR subject:"Sync" OR subject:"Integrity" OR subject:"Core Team")`,
     },
     {
       label: 'Events/Invitations/Work/Client/External',
-      query: 'label:Label_16 AND (subject:client OR subject:external OR subject:partner)',
+      query: `label:${workParentId} AND (subject:client OR subject:external OR subject:partner)`,
     },
     {
       label: 'Events/Invitations/Work/Internal Meetings',
-      query: 'label:Label_16 AND (subject:meeting OR subject:workshop OR subject:training OR subject:strategy)',
+      query: `label:${workParentId} AND (subject:meeting OR subject:workshop OR subject:training OR subject:strategy)`,
     },
   ];
 

@@ -106,34 +106,41 @@ async function createCommunitySubLabels() {
   console.log('═'.repeat(80));
   console.log('\n2️⃣  APPLYING SUB-LABELS TO EXISTING EMAILS\n');
 
+  // Resolve parent label ID at runtime instead of hardcoding
+  const communityParentId = existingLabelMap.get('Events/Community');
+  if (!communityParentId) {
+    console.error('❌ Error: Could not find "Events/Community" label. Create it first.');
+    process.exit(1);
+  }
+
   const communityPatterns = [
     {
       label: 'Events/Community/Creative-Arts',
-      query: 'label:Label_4 AND (subject:"drawing" OR subject:"art" OR subject:"creative" OR subject:"sketch")',
+      query: `label:${communityParentId} AND (subject:"drawing" OR subject:"art" OR subject:"creative" OR subject:"sketch")`,
     },
     {
       label: 'Events/Community/Tech-Professional',
-      query: 'label:Label_4 AND (subject:tech OR subject:ai OR subject:robotics OR subject:data OR subject:coding OR subject:engineering)',
+      query: `label:${communityParentId} AND (subject:tech OR subject:ai OR subject:robotics OR subject:data OR subject:coding OR subject:engineering)`,
     },
     {
       label: 'Events/Community/Spiritual-Wellness',
-      query: 'label:Label_4 AND (subject:astrology OR subject:psychic OR subject:yoga OR subject:meditation OR subject:healing OR subject:zen OR subject:conscious)',
+      query: `label:${communityParentId} AND (subject:astrology OR subject:psychic OR subject:yoga OR subject:meditation OR subject:healing OR subject:zen OR subject:conscious)`,
     },
     {
       label: 'Events/Community/Networking',
-      query: 'label:Label_4 AND (subject:networking OR subject:"open forum")',
+      query: `label:${communityParentId} AND (subject:networking OR subject:"open forum")`,
     },
     {
       label: 'Events/Community/Learning-Education',
-      query: 'label:Label_4 AND (subject:workshop OR subject:virtual OR subject:agents OR subject:mcp)',
+      query: `label:${communityParentId} AND (subject:workshop OR subject:virtual OR subject:agents OR subject:mcp)`,
     },
     {
       label: 'Events/Community/Social-Recreation',
-      query: 'label:Label_4 AND (subject:"game night" OR subject:social OR subject:recreation)',
+      query: `label:${communityParentId} AND (subject:"game night" OR subject:social OR subject:recreation)`,
     },
     {
       label: 'Events/Community/Food-Dining',
-      query: 'label:Label_4 AND (subject:lunch OR subject:eating OR subject:food OR subject:dining)',
+      query: `label:${communityParentId} AND (subject:lunch OR subject:eating OR subject:food OR subject:dining)`,
     },
   ];
 

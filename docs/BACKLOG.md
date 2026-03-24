@@ -1533,3 +1533,161 @@ Priority order (highest impact first):
 
 ---
 
+## Test Factory Pattern Deduplication
+
+### ✅ COMPLETED: Test Factory Extraction (2026-03-24)
+
+**Session:** Code Simplification & Factory Pattern Application
+**Status:** ✅ DONE
+**Files Modified:** 5
+
+#### Changes Made
+
+**1. New Factories in `src/tests/unit/helpers/factories.ts`**
+- `makeUpdateEventArgs(overrides)` — Update event handler arguments with defaults
+- `makeReminders(overrides)` — Reminders object factory with standard email/popup defaults
+- `makeAttendees(emails?)` — Attendee array factory with customizable email list
+
+**2. Applied in `src/tests/unit/schemas/validators.test.ts`**
+- Refactored 20+ test cases to use `makeUpdateEventArgs()` instead of inline object literals
+- Covered: Basic Validation, Modification Scope, Single Instance, Future Instances, Datetime Format, Complex Scenarios, Backward Compatibility
+- Eliminated ~40 lines of duplicated `{ calendarId: 'primary', eventId: 'event123', timeZone: 'America/Los_Angeles' }` patterns
+
+**3. Applied in `src/tests/unit/handlers/RecurringEventHelpers.test.ts`**
+- Added `SYSTEM_FIELDS` constant (prevents drift between identical field lists in 2 tests)
+- Added `makeMockEventResponse()` helper (eliminates `{ data: { ... } }` wrapper duplication)
+- Replaced 8 inline event constructions with `makeEvent()` calls
+- Applied `makeAttendees()` and `makeReminders()` in 2 test cases
+- Reduced inline object literals by ~30 lines
+
+**4. Applied in `src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts`**
+- Refactored `buildUpdateEventInput()` helper to use `makeUpdateEventArgs()` internally
+- Maintains schema validation while leveraging factory defaults
+- Feeds 21 test cases with consistent, maintainable arguments
+
+#### Metrics
+
+- **Lines Eliminated:** ~70 (duplicated object literals and field lists)
+- **Tests Affected:** 72 total (validators + RecurringEventHelpers + UpdateEventHandler recurring)
+- **All Tests Passing:** ✅ 486/486 unit tests pass
+- **Maintainability:** Factory pattern prevents silent divergence when defaults change
+
+#### Pattern Identified for Future Deduplication
+
+**3 More Extraction Candidates Found:**
+1. `makeEvent()` factory usage — Already applied in test files that needed event objects
+2. Test assertion patterns — Multiple tests assert identical reminder structures (could be test helper)
+3. Mock setup patterns — Calendar mock initialization shows repetition in beforeEach hooks (could be factory)
+
+**Dedup Potential:** If these are pursued, estimated additional 20-30 lines reduction across handler tests.
+
+#### Risk Assessment
+
+- **Risk Level:** Low
+- **Breaking Changes:** None (factories are purely additive)
+- **Migration Effort:** 0 (factories already applied comprehensively)
+
+---
+
+## Deduplication Opportunities: Testing Factories & Utilities (2026-03-24)
+
+**Context:** Test Architecture Refactor (Session 2026-03-24) introduced new testing modules and factories.
+Three test data factory sources now exist with overlapping functionality. Consolidation recommended.
+
+### Current Duplication Landscape
+
+| Module | Location | Exports | Status |
+|--------|----------|---------|--------|
+| **TestDataFactory** | `src/tests/integration/test-data-factory.ts` | Event creation, date formatting, response parsing | Mature, comprehensive |
+| **makeEvent/make\*RecurringEvent** | `src/tests/unit/helpers/factories.ts` | Event creation, recurring patterns, instances | Mature, 300+ LOC |
+| **TestConfigFactory/TestOAuthFactory** | `src/testing/test-data.ts` | OAuth/env config creation, validation | New, minimal (50 LOC) |
+| **TestInputFactory** | `src/testing/test-data.ts` | Tool input payload creation | New, placeholder (30 LOC) |
+| **Date formatters** | Multiple locations | RFC3339, TZ-naive, TZ-aware formatting | Duplicated |
+
+### Identified Overlaps & Opportunities
+
+#### 1. Date Formatting Consolidation (P2, ~8 hours)
+**Problem:** Date formatting logic split across 3 modules
+- `src/utils/date-utils.ts` — Production formatters: `formatRFC3339()`, `formatTZNaiveDateTime()`, `formatBasicDateTime()`
+- `src/testing/test-data.ts` — Test wrapper: `TestDataFactory.formatDateTimeRFC3339()`, `formatDateTimeRFC3339WithTimezone()`
+- `src/tests/integration/test-data-factory.ts` — Duplicate: `formatDateTimeRFC3339()`, `formatDateTimeRFC3339WithTimezone()`
+
+**Solution:**
+- Remove duplicate wrappers from `src/testing/test-data.ts` and `src/tests/integration/test-data-factory.ts`
+- Use `src/utils/date-utils.ts` directly: `formatRFC3339()`, `formatTZNaiveDateTime()`
+- Add to `src/testing/` module exports as thin wrappers for test ergonomics (not duplication, just re-export)
+- **Estimated lines removed:** 30-40
+- **Files affected:** 2
+- **Risk:** Low (non-breaking refactor)
+
+#### 2. Test Event Creation Consolidation (P2, ~12 hours)
+**Problem:** Event factories created independently in 3 places
+- `src/tests/unit/helpers/factories.ts` — `makeEvent()`, `makeWeeklyRecurringEvent()`, `makeRecurringEventInstance()` (comprehensive)
+- `src/tests/integration/test-data-factory.ts` — `createSingleEvent()`, `createRecurringEvent()`, `createEventWithAttendees()` (comprehensive)
+- `src/testing/test-data.ts` — `TestInputFactory.createEvent()` (placeholder, incomplete)
+
+**Solution Options:**
+- **Option A:** Consolidate to single source (`src/tests/unit/helpers/factories.ts`) and re-export from `src/testing/`
+  - Pros: Single source of truth, already mature
+  - Cons: Moves test factory to unit test location (breaks abstraction)
+
+- **Option B:** Promote `src/tests/integration/test-data-factory.ts` to shared `src/testing/test-factory.ts`
+  - Pros: Dedicated testing module, clean separation
+  - Cons: Migration effort for unit tests
+
+- **Option C:** Merge into existing `src/testing/test-data.ts` with clear sections
+  - Pros: Single new module, minimal duplication
+  - Cons: Large file (400+ LOC)
+
+**Recommended:** Option B (dedicated `src/testing/test-factory.ts`)
+- **Estimated lines removed:** 100-150 (duplicate logic across factories)
+- **Files affected:** 3 (migrate unit helpers + integration factory + testing module)
+- **Risk:** Medium (breaking imports for unit tests, needs migration guide)
+
+#### 3. OAuth/Config Factory Consolidation (P3, ~6 hours)
+**Problem:** `TestOAuthFactory` in `src/testing/test-data.ts` wraps logic already in `src/auth/`
+- Duplicates: `getAccountMode()`, `getSecureTokenPath()` from `src/auth/utils.ts`
+- Thin wrapper around `TokenManager.validateTokens()`, `initializeOAuth2Client()`
+
+**Solution:**
+- Remove `TestOAuthFactory.fromEnv()` — users should call `initializeOAuth2Client()` directly
+- Keep `TestOAuthFactory.createTestConfig()` as minimal test helper (not duplication, just convenience)
+- Add documentation linking to existing auth utilities in `src/testing/README.md`
+- **Estimated lines removed:** 15-20
+- **Files affected:** 1
+- **Risk:** Low (TestOAuthFactory is only used in tests)
+
+#### 4. Response Parsing Helper (P3, ~4 hours)
+**Problem:** Multiple test modules manually parse MCP responses
+- `TestDataFactory.extractEventIdFromResponse()` — Integration test pattern
+- Inline extraction in `conflict-detection-integration.test.ts` — Duplicate pattern
+
+**Solution:**
+- Create shared helper in `src/testing/test-utils.ts`: `extractEventIdFromResponse(result: any): string`
+- Update `src/tests/integration/test-data-factory.ts` to use it (remove duplicate)
+- Update `conflict-detection-integration.test.ts` to use it
+- **Estimated lines removed:** 10-15
+- **Files affected:** 2
+- **Risk:** Low (new shared helper, non-breaking)
+
+### Implementation Priority
+
+| ID | Opportunity | P | Effort | Benefit | Risk | Recommend |
+|----|----|---|--------|---------|------|-----------|
+| D1 | Date formatting consolidation | 2 | 8h | 30-40 LOC | Low | Yes |
+| D2 | Event factory consolidation | 2 | 12h | 100-150 LOC | Medium | Phase 2 |
+| D3 | OAuth/Config wrapping | 3 | 6h | 15-20 LOC | Low | Yes |
+| D4 | Response parsing helper | 3 | 4h | 10-15 LOC | Low | Yes |
+
+**Recommended Phase 1 (8+6+4 = 18 hours):**
+- D1: Date formatting → direct use of `src/utils/date-utils.ts`
+- D3: OAuth factory cleanup → keep only test convenience wrapper
+- D4: Response parsing → shared helper in test-utils
+
+**Phase 2 (12 hours, after Phase 1 stabilizes):**
+- D2: Event factory consolidation → create `src/testing/test-factory.ts`
+
+**Total potential:** ~180-250 LOC reduction, improved maintainability, single source of truth
+
+---
+

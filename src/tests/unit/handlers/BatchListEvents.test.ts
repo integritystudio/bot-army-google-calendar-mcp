@@ -3,10 +3,10 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OAuth2Client } from 'google-auth-library';
-import { calendar_v3 } from 'googleapis';
-import { getTextContent } from '../helpers/content.js';
+import { getTextContent, makeCalendarMock, makeEvent, makeEventWithCalendarId } from '../helpers/index.js';
 // Import the types and schemas we're testing
 import { ToolSchemas } from '../../../tools/registry.js';
+import { ExtendedEvent } from '../../../handlers/core/batchUtils.js';
 
 // Get the schema for validation testing
 const ListEventsArgumentsSchema = ToolSchemas['list-events'];
@@ -14,48 +14,14 @@ import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
 import { processBatchResponses } from '../../../handlers/core/batchUtils.js';
 import { groupBy } from '../../../utils/aggregationHelpers.js';
 
-// Mock the BatchRequestHandler that we'll implement
-class MockBatchRequestHandler {
-  constructor(_auth: OAuth2Client) {}
-
-  async executeBatch(_requests: any[]): Promise<any[]> {
-    // This will be mocked in tests
-    return [];
-  }
-}
-
 // Mock dependencies
 vi.mock('google-auth-library');
 vi.mock('googleapis');
 
-interface ExtendedEvent extends calendar_v3.Schema$Event {
-  calendarId?: string;
-}
+const TIME_MIN = '2024-01-01T00:00:00Z';
+const TIME_MAX = '2024-01-31T23:59:59Z';
 
 describe('Batch List Events Functionality', () => {
-  let mockOAuth2Client: OAuth2Client;
-  let listEventsHandler: ListEventsHandler;
-  let mockCalendarApi: any;
-
-  beforeEach(() => {
-    // Reset all mocks
-    vi.clearAllMocks();
-
-    // Create mock OAuth2Client
-    mockOAuth2Client = new OAuth2Client();
-    
-    // Create mock calendar API
-    mockCalendarApi = {
-      events: {
-        list: vi.fn()
-      }
-    };
-
-    // Mock the getCalendar method in BaseToolHandler
-    listEventsHandler = new ListEventsHandler();
-    vi.spyOn(listEventsHandler as any, 'getCalendar').mockReturnValue(mockCalendarApi);
-  });
-
   describe('Input Validation', () => {
     it('should validate single calendar ID string', () => {
       const input = {
@@ -140,22 +106,23 @@ describe('Batch List Events Functionality', () => {
   });
 
   describe('Single Calendar Events (Existing Functionality)', () => {
+    let mockOAuth2Client: OAuth2Client;
+    let listEventsHandler: ListEventsHandler;
+    let mockCalendarApi: any;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      mockOAuth2Client = new OAuth2Client();
+      mockCalendarApi = makeCalendarMock();
+      listEventsHandler = new ListEventsHandler();
+      vi.spyOn(listEventsHandler as any, 'getCalendar').mockReturnValue(mockCalendarApi);
+    });
+
     it('should handle single calendar ID as string', async () => {
       // Arrange
-      const mockEvents: ExtendedEvent[] = [
-        {
-          id: 'event1',
-          summary: 'Meeting',
-          start: { dateTime: '2024-01-15T10:00:00Z' },
-          end: { dateTime: '2024-01-15T11:00:00Z' }
-        },
-        {
-          id: 'event2',
-          summary: 'Lunch',
-          start: { dateTime: '2024-01-15T12:00:00Z' },
-          end: { dateTime: '2024-01-15T13:00:00Z' },
-          location: 'Restaurant'
-        }
+      const mockEvents = [
+        makeEvent('event1', { summary: 'Meeting', start: { dateTime: '2024-01-15T10:00:00Z' }, end: { dateTime: '2024-01-15T11:00:00Z' } }),
+        makeEvent('event2', { summary: 'Lunch', start: { dateTime: '2024-01-15T12:00:00Z' }, end: { dateTime: '2024-01-15T13:00:00Z' }, location: 'Restaurant' })
       ];
 
       mockCalendarApi.events.list.mockResolvedValue({
@@ -164,8 +131,8 @@ describe('Batch List Events Functionality', () => {
 
       const args = {
         calendarId: 'primary',
-        timeMin: '2024-01-01T00:00:00Z',
-        timeMax: '2024-01-31T23:59:59Z'
+        timeMin: TIME_MIN,
+        timeMax: TIME_MAX
       };
 
       // Act
@@ -207,60 +174,6 @@ describe('Batch List Events Functionality', () => {
     });
   });
 
-  describe('Batch Request Creation', () => {
-    it('should create proper batch requests for multiple calendars', () => {
-      // This tests the batch request creation logic
-      const calendarIds = ['primary', 'work@example.com', 'personal@example.com'];
-      const options = {
-        timeMin: '2024-01-01T00:00:00Z',
-        timeMax: '2024-01-31T23:59:59Z'
-      };
-
-      // Expected batch requests
-      const expectedRequests = calendarIds.map(calendarId => ({
-        method: 'GET',
-        path: `/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?` + 
-          new URLSearchParams({
-            singleEvents: 'true',
-            orderBy: 'startTime',
-            timeMin: options.timeMin,
-            timeMax: options.timeMax
-          }).toString()
-      }));
-
-      // Verify the expected structure
-      expect(expectedRequests).toHaveLength(3);
-      expect(expectedRequests[0].path).toContain('calendars/primary/events');
-      expect(expectedRequests[1].path).toContain('calendars/work%40example.com/events');
-      expect(expectedRequests[2].path).toContain('calendars/personal%40example.com/events');
-      
-      // All should have proper query parameters
-      expectedRequests.forEach(req => {
-        expect(req.path).toContain('singleEvents=true');
-        expect(req.path).toContain('orderBy=startTime');
-        expect(req.path).toContain('timeMin=2024-01-01T00%3A00%3A00Z');
-        expect(req.path).toContain('timeMax=2024-01-31T23%3A59%3A59Z');
-      });
-    });
-
-    it('should handle optional parameters in batch requests', () => {
-      const options = { timeMin: '2024-01-01T00:00:00Z' }; // Only timeMin, no timeMax
-
-      const expectedRequest = {
-        method: 'GET',
-        path: `/calendar/v3/calendars/primary/events?` + 
-          new URLSearchParams({
-            singleEvents: 'true',
-            orderBy: 'startTime',
-            timeMin: options.timeMin
-          }).toString()
-      };
-
-      expect(expectedRequest.path).toContain('timeMin=2024-01-01T00%3A00%3A00Z');
-      expect(expectedRequest.path).not.toContain('timeMax');
-    });
-  });
-
   describe('Batch Response Parsing', () => {
     it('should parse successful batch responses correctly', () => {
       // Mock successful batch responses
@@ -270,12 +183,7 @@ describe('Batch List Events Functionality', () => {
           headers: {},
           body: {
             items: [
-              {
-                id: 'work1',
-                summary: 'Work Meeting',
-                start: { dateTime: '2024-01-15T09:00:00Z' },
-                end: { dateTime: '2024-01-15T10:00:00Z' }
-              }
+              makeEvent('work1', { summary: 'Work Meeting', start: { dateTime: '2024-01-15T09:00:00Z' }, end: { dateTime: '2024-01-15T10:00:00Z' } })
             ]
           }
         },
@@ -284,12 +192,7 @@ describe('Batch List Events Functionality', () => {
           headers: {},
           body: {
             items: [
-              {
-                id: 'personal1',
-                summary: 'Gym',
-                start: { dateTime: '2024-01-15T18:00:00Z' },
-                end: { dateTime: '2024-01-15T19:00:00Z' }
-              }
+              makeEvent('personal1', { summary: 'Gym', start: { dateTime: '2024-01-15T18:00:00Z' }, end: { dateTime: '2024-01-15T19:00:00Z' } })
             ]
           }
         }
@@ -317,12 +220,7 @@ describe('Batch List Events Functionality', () => {
           headers: {},
           body: {
             items: [
-              {
-                id: 'event1',
-                summary: 'Success Event',
-                start: { dateTime: '2024-01-15T09:00:00Z' },
-                end: { dateTime: '2024-01-15T10:00:00Z' }
-              }
+              makeEvent('event1', { summary: 'Success Event', start: { dateTime: '2024-01-15T09:00:00Z' }, end: { dateTime: '2024-01-15T10:00:00Z' } })
             ]
           }
         },
@@ -373,12 +271,7 @@ describe('Batch List Events Functionality', () => {
           headers: {},
           body: {
             items: [
-              {
-                id: 'event1',
-                summary: 'Only Event',
-                start: { dateTime: '2024-01-15T09:00:00Z' },
-                end: { dateTime: '2024-01-15T10:00:00Z' }
-              }
+              makeEvent('event1', { summary: 'Only Event', start: { dateTime: '2024-01-15T09:00:00Z' }, end: { dateTime: '2024-01-15T10:00:00Z' } })
             ]
           }
         }
@@ -394,37 +287,20 @@ describe('Batch List Events Functionality', () => {
   });
 
   describe('Event Sorting and Formatting', () => {
+    const sortByStartTime = (a: ExtendedEvent, b: ExtendedEvent) => {
+      const aStart = a.start?.dateTime || a.start?.date || '';
+      const bStart = b.start?.dateTime || b.start?.date || '';
+      return aStart.localeCompare(bStart);
+    };
+
     it('should sort events by start time across multiple calendars', () => {
-      const events: ExtendedEvent[] = [
-        {
-          id: 'event2',
-          summary: 'Second Event',
-          start: { dateTime: '2024-01-15T14:00:00Z' },
-          end: { dateTime: '2024-01-15T15:00:00Z' },
-          calendarId: 'cal2'
-        },
-        {
-          id: 'event1',
-          summary: 'First Event',
-          start: { dateTime: '2024-01-15T09:00:00Z' },
-          end: { dateTime: '2024-01-15T10:00:00Z' },
-          calendarId: 'cal1'
-        },
-        {
-          id: 'event3',
-          summary: 'Third Event',
-          start: { dateTime: '2024-01-15T18:00:00Z' },
-          end: { dateTime: '2024-01-15T19:00:00Z' },
-          calendarId: 'cal1'
-        }
+      const events = [
+        makeEventWithCalendarId('cal2', { id: 'event2', summary: 'Second Event', start: { dateTime: '2024-01-15T14:00:00Z' }, end: { dateTime: '2024-01-15T15:00:00Z' } }),
+        makeEventWithCalendarId('cal1', { id: 'event1', summary: 'First Event', start: { dateTime: '2024-01-15T09:00:00Z' }, end: { dateTime: '2024-01-15T10:00:00Z' } }),
+        makeEventWithCalendarId('cal1', { id: 'event3', summary: 'Third Event', start: { dateTime: '2024-01-15T18:00:00Z' }, end: { dateTime: '2024-01-15T19:00:00Z' } })
       ];
 
-      // Sort events by start time
-      const sortedEvents = events.sort((a, b) => {
-        const aStart = a.start?.dateTime || a.start?.date || '';
-        const bStart = b.start?.dateTime || b.start?.date || '';
-        return aStart.localeCompare(bStart);
-      });
+      const sortedEvents = events.sort(sortByStartTime);
 
       expect(sortedEvents[0].summary).toBe('First Event');
       expect(sortedEvents[1].summary).toBe('Second Event');
@@ -432,25 +308,13 @@ describe('Batch List Events Functionality', () => {
     });
 
     it('should format multiple calendar events with calendar grouping', () => {
-      const events: ExtendedEvent[] = [
-        {
-          id: 'work1',
-          summary: 'Work Meeting',
-          start: { dateTime: '2024-01-15T09:00:00Z' },
-          end: { dateTime: '2024-01-15T10:00:00Z' },
-          calendarId: 'work@example.com'
-        },
-        {
-          id: 'personal1',
-          summary: 'Gym',
-          start: { dateTime: '2024-01-15T18:00:00Z' },
-          end: { dateTime: '2024-01-15T19:00:00Z' },
-          calendarId: 'personal@example.com'
-        }
+      const events = [
+        makeEventWithCalendarId('work@example.com', { id: 'work1', summary: 'Work Meeting', start: { dateTime: '2024-01-15T09:00:00Z' }, end: { dateTime: '2024-01-15T10:00:00Z' } }),
+        makeEventWithCalendarId('personal@example.com', { id: 'personal1', summary: 'Gym', start: { dateTime: '2024-01-15T18:00:00Z' }, end: { dateTime: '2024-01-15T19:00:00Z' } })
       ];
 
       // Group events by calendar
-      const grouped = groupBy(events, (event) => (event as any).calendarId || 'unknown');
+      const grouped = groupBy(events, (event) => event.calendarId || 'unknown');
 
       // Since we now return resources instead of formatted text,
       // we just verify that events are grouped correctly
@@ -461,26 +325,12 @@ describe('Batch List Events Functionality', () => {
     });
 
     it('should handle date-only events in sorting', () => {
-      const events: ExtendedEvent[] = [
-        {
-          id: 'all-day',
-          summary: 'All Day Event',
-          start: { date: '2024-01-15' },
-          end: { date: '2024-01-16' }
-        },
-        {
-          id: 'timed',
-          summary: 'Timed Event',
-          start: { dateTime: '2024-01-15T09:00:00Z' },
-          end: { dateTime: '2024-01-15T10:00:00Z' }
-        }
+      const events = [
+        makeEvent('all-day', { summary: 'All Day Event', start: { date: '2024-01-15' }, end: { date: '2024-01-16' } }),
+        makeEvent('timed', { summary: 'Timed Event', start: { dateTime: '2024-01-15T09:00:00Z' }, end: { dateTime: '2024-01-15T10:00:00Z' } })
       ];
 
-      const sortedEvents = events.sort((a, b) => {
-        const aStart = a.start?.dateTime || a.start?.date || '';
-        const bStart = b.start?.dateTime || b.start?.date || '';
-        return aStart.localeCompare(bStart);
-      });
+      const sortedEvents = events.sort(sortByStartTime);
 
       // Date-only event should come before timed event on same day
       expect(sortedEvents[0].summary).toBe('All Day Event');
@@ -489,6 +339,18 @@ describe('Batch List Events Functionality', () => {
   });
 
   describe('Error Handling', () => {
+    let mockOAuth2Client: OAuth2Client;
+    let listEventsHandler: ListEventsHandler;
+    let mockCalendarApi: any;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      mockOAuth2Client = new OAuth2Client();
+      mockCalendarApi = makeCalendarMock();
+      listEventsHandler = new ListEventsHandler();
+      vi.spyOn(listEventsHandler as any, 'getCalendar').mockReturnValue(mockCalendarApi);
+    });
+
     it('should handle authentication errors', async () => {
       // Mock authentication failure
       const authError = new Error('Authentication required');
@@ -500,92 +362,51 @@ describe('Batch List Events Functionality', () => {
 
       const args = {
         calendarId: 'primary',
-        timeMin: '2024-01-01T00:00:00Z'
+        timeMin: TIME_MIN
       };
 
       await expect(listEventsHandler.runTool(args, mockOAuth2Client))
         .rejects.toThrow('Authentication required');
     });
-
-    it('should handle rate limiting gracefully', () => {
-      const rateLimitResponse = {
-        statusCode: 429,
-        headers: { 'Retry-After': '60' },
-        body: {
-          error: {
-            code: 429,
-            message: 'Rate limit exceeded'
-          }
-        }
-      };
-
-      // This would be handled in the batch response processing
-      const calendarId = 'primary';
-      const errors: Array<{ calendarId: string; error: any }> = [];
-
-      errors.push({
-        calendarId,
-        error: rateLimitResponse.body
-      });
-
-      expect(errors).toHaveLength(1);
-      expect(errors[0].error.error.code).toBe(429);
-      expect(errors[0].error.error.message).toContain('Rate limit');
-    });
-
-    it('should handle network errors in batch requests', () => {
-      const networkError = {
-        statusCode: 0,
-        headers: {},
-        body: null,
-        error: new Error('Network connection failed')
-      };
-
-      const calendarId = 'primary';
-      const errors: Array<{ calendarId: string; error: any }> = [];
-
-      errors.push({
-        calendarId,
-        error: networkError.error
-      });
-
-      expect(errors).toHaveLength(1);
-      expect(errors[0].error.message).toContain('Network connection failed');
-    });
   });
 
   describe('Integration Scenarios', () => {
+    let mockOAuth2Client: OAuth2Client;
+    let listEventsHandler: ListEventsHandler;
+    let mockCalendarApi: any;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      mockOAuth2Client = new OAuth2Client();
+      mockCalendarApi = makeCalendarMock();
+      listEventsHandler = new ListEventsHandler();
+      vi.spyOn(listEventsHandler as any, 'getCalendar').mockReturnValue(mockCalendarApi);
+    });
+
     it('should handle maximum allowed calendars (50)', () => {
       const maxCalendars = Array(50).fill('cal').map((c, i) => `${c}${i}@example.com`);
-      
-      // Arrays must be passed as JSON strings in the new schema
+
       const input = {
         calendarId: JSON.stringify(maxCalendars),
-        timeMin: '2024-01-01T00:00:00Z'
+        timeMin: TIME_MIN
       };
 
       const result = ListEventsArgumentsSchema.safeParse(input);
       expect(result.success).toBe(true);
       expect(typeof result.data?.calendarId).toBe('string');
       // Verify the JSON string contains all 50 calendars
-      const parsed = JSON.parse(result.data?.calendarId as string);
+      const parsed = JSON.parse(result.data?.calendarId);
       expect(parsed).toHaveLength(50);
     });
 
     it('should prefer existing single calendar path for single array item', async () => {
-      // When array has only one item, should use existing implementation
       const args = {
         calendarId: ['primary'], // Array with single item
-        timeMin: '2024-01-01T00:00:00Z'
+        timeMin: TIME_MIN
       };
 
-      const mockEvents: ExtendedEvent[] = [
-        {
-          id: 'event1',
-          summary: 'Single Calendar Event',
-          start: { dateTime: '2024-01-15T10:00:00Z' },
-          end: { dateTime: '2024-01-15T11:00:00Z' }
-        }
+      const mockEvents = [
+        makeEvent('event1', { summary: 'Single Calendar Event', start: { dateTime: '2024-01-15T10:00:00Z' }, end: { dateTime: '2024-01-15T11:00:00Z' } })
       ];
 
       mockCalendarApi.events.list.mockResolvedValue({
@@ -594,7 +415,6 @@ describe('Batch List Events Functionality', () => {
 
       const result = await listEventsHandler.runTool(args, mockOAuth2Client);
 
-      // Should call regular API, not batch
       expect(mockCalendarApi.events.list).toHaveBeenCalledWith({
         calendarId: 'primary',
         timeMin: args.timeMin,
@@ -603,7 +423,6 @@ describe('Batch List Events Functionality', () => {
         orderBy: 'startTime'
       });
 
-      // Should return text content with events
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
       expect(getTextContent(result)).toContain('Found');

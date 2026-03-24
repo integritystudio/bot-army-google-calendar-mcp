@@ -10,6 +10,9 @@ import { ListCalendarsHandler } from "../../handlers/core/ListCalendarsHandler.j
 import { CreateEventHandler } from "../../handlers/core/CreateEventHandler.js";
 import { ListEventsHandler } from "../../handlers/core/ListEventsHandler.js";
 
+// Import test helpers
+import { getTextContent } from "../unit/helpers/index.js";
+
 // Mock OAuth2Client
 vi.mock('google-auth-library', () => ({
   OAuth2Client: vi.fn().mockImplementation(() => ({
@@ -191,8 +194,8 @@ Personal (cal2)
 
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
-      expect((result.content[0] as any).text).toContain('Event created successfully!');
-      expect((result.content[0] as any).text).toContain('calendar.google.com');
+      expect(getTextContent(result)).toContain('Event created successfully!');
+      expect(getTextContent(result)).toContain('calendar.google.com');
     });
 
     it('should use calendar default timezone when timeZone is not provided', async () => {
@@ -304,7 +307,7 @@ Personal (cal2)
       // Should return text content with events
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
-      expect((result.content[0] as any).text).toContain('Found');
+      expect(getTextContent(result)).toContain('Found');
     });
   });
 

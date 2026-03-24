@@ -1,6 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID } from './lib/constants.mjs';
-import { createLabels, applyPatterns } from './lib/gmail-label-utils.mjs';
+import { createLabels, applyPatterns, buildLabelCache } from './lib/gmail-label-utils.mjs';
 
 async function createAllSubLabels() {
   const gmail = createGmailClient();
@@ -13,6 +13,7 @@ async function createAllSubLabels() {
     existingLabelsRes.data.labels.map(l => [l.name, l.id])
   );
 
+  const labelCache = await buildLabelCache(gmail);
   const labelIds = {};
 
   console.log('1️⃣  CREATING WORKSHOP SUB-LABELS\n');
@@ -45,28 +46,35 @@ async function createAllSubLabels() {
 
   console.log('═'.repeat(80));
   console.log('\n3️⃣  APPLYING WORKSHOP SUB-LABELS\n');
+
+  const workshopParentId = labelCache.get('Events/Workshops');
+  if (!workshopParentId) {
+    console.error('❌ Events/Workshops parent label not found');
+    process.exit(1);
+  }
+
   const workshopsLabeled = await applyPatterns(
     gmail,
     [
       {
         label: 'Events/Workshops/Technical/AI-ML',
-        query: 'label:Label_5 AND (subject:"computer vision" OR subject:ai OR subject:"machine learning" OR subject:coding)',
+        query: `label:${workshopParentId} AND (subject:"computer vision" OR subject:ai OR subject:"machine learning" OR subject:coding)`,
       },
       {
         label: 'Events/Workshops/Professional Development',
-        query: 'label:Label_5 AND (subject:"validating world models" OR subject:"video datasets")',
+        query: `label:${workshopParentId} AND (subject:"validating world models" OR subject:"video datasets")`,
       },
       {
         label: 'Events/Workshops/Healthcare/Medical',
-        query: 'label:Label_5 AND (subject:"home care" OR subject:healthcare OR subject:medical)',
+        query: `label:${workshopParentId} AND (subject:"home care" OR subject:healthcare OR subject:medical)`,
       },
       {
         label: 'Events/Workshops/Creative/Arts',
-        query: 'label:Label_5 AND (subject:"god-given" OR subject:"operational excellence")',
+        query: `label:${workshopParentId} AND (subject:"god-given" OR subject:"operational excellence")`,
       },
       {
         label: 'Events/Workshops/Business/Leadership',
-        query: 'label:Label_5 AND (subject:"business plan")',
+        query: `label:${workshopParentId} AND (subject:"business plan")`,
       },
     ],
     labelIds
@@ -75,20 +83,27 @@ async function createAllSubLabels() {
 
   console.log('═'.repeat(80));
   console.log('\n4️⃣  APPLYING COMMUNITY SERVICES SUB-LABELS\n');
+
+  const communityParentId = labelCache.get('Events/Invitations/Community Services');
+  if (!communityParentId) {
+    console.error('❌ Events/Invitations/Community Services parent label not found');
+    process.exit(1);
+  }
+
   const communityLabeled = await applyPatterns(
     gmail,
     [
       {
         label: 'Events/Invitations/Community Services/Capital City Village',
-        query: 'label:Label_18 AND (from:capitalcityvillage OR from:capitalcity)',
+        query: `label:${communityParentId} AND (from:capitalcityvillage OR from:capitalcity)`,
       },
       {
         label: 'Events/Invitations/Community Services/Social Events',
-        query: 'label:Label_18 AND (subject:"let\'s do lunch" OR subject:"game night" OR subject:"gathering")',
+        query: `label:${communityParentId} AND (subject:"let's do lunch" OR subject:"game night" OR subject:"gathering")`,
       },
       {
         label: 'Events/Invitations/Community Services/Volunteer',
-        query: 'label:Label_18 AND (subject:volunteer OR subject:opportunity)',
+        query: `label:${communityParentId} AND (subject:volunteer OR subject:opportunity)`,
       },
     ],
     labelIds

@@ -6,6 +6,11 @@ import {
   EmailSubsectionSchema,
   AnalyzerConfigSchema
 } from '../../../schemas/email-analyzer-types';
+import {
+  ANALYZER_CONFIG_COMPLETE,
+  ANALYZER_CONFIG_INVALID_KEYWORDS,
+  ANALYZER_CONFIG_WITH_EXTRA
+} from '../helpers/test-configs';
 
 describe('email-analyzer types', () => {
   describe('EmailMessageSchema', () => {
@@ -175,20 +180,9 @@ describe('email-analyzer types', () => {
 
   describe('AnalyzerConfigSchema', () => {
     it('validates a complete analyzer config', () => {
-      const config = {
-        DEFAULT_SCORE: 5,
-        HIGH_SCORE: 9,
-        LOW_SCORE: 2,
-        HIGH_THRESHOLD: 7,
-        LOW_THRESHOLD: 3,
-        SECTION_DIVIDER: '═'.repeat(80),
-        ROW_DIVIDER: '─'.repeat(76),
-        HIGH_URGENCY_KEYWORDS: ['urgent', 'asap'],
-        LOW_URGENCY_KEYWORDS: ['fyi', 'newsletter'],
-        HIGH_IMPORTANCE_KEYWORDS: ['invoice', 'payment'],
-        LOW_IMPORTANCE_KEYWORDS: ['sale', 'discount']
-      };
-      expect(AnalyzerConfigSchema.parse(config)).toEqual(config);
+      expect(AnalyzerConfigSchema.parse(ANALYZER_CONFIG_COMPLETE)).toEqual(
+        ANALYZER_CONFIG_COMPLETE
+      );
     });
 
     it('rejects missing required fields', () => {
@@ -201,38 +195,15 @@ describe('email-analyzer types', () => {
     });
 
     it('rejects non-array keyword lists', () => {
-      const config = {
-        DEFAULT_SCORE: 5,
-        HIGH_SCORE: 9,
-        LOW_SCORE: 2,
-        HIGH_THRESHOLD: 7,
-        LOW_THRESHOLD: 3,
-        SECTION_DIVIDER: '═'.repeat(80),
-        ROW_DIVIDER: '─'.repeat(76),
-        HIGH_URGENCY_KEYWORDS: 'urgent', // Invalid: string instead of array
-        LOW_URGENCY_KEYWORDS: ['fyi'],
-        HIGH_IMPORTANCE_KEYWORDS: ['invoice'],
-        LOW_IMPORTANCE_KEYWORDS: ['sale']
-      };
-      expect(() => AnalyzerConfigSchema.parse(config)).toThrow();
+      expect(() =>
+        AnalyzerConfigSchema.parse(ANALYZER_CONFIG_INVALID_KEYWORDS)
+      ).toThrow();
     });
 
     it('rejects extra fields (strict mode)', () => {
-      const config = {
-        DEFAULT_SCORE: 5,
-        HIGH_SCORE: 9,
-        LOW_SCORE: 2,
-        HIGH_THRESHOLD: 7,
-        LOW_THRESHOLD: 3,
-        SECTION_DIVIDER: '═'.repeat(80),
-        ROW_DIVIDER: '─'.repeat(76),
-        HIGH_URGENCY_KEYWORDS: ['urgent'],
-        LOW_URGENCY_KEYWORDS: ['fyi'],
-        HIGH_IMPORTANCE_KEYWORDS: ['invoice'],
-        LOW_IMPORTANCE_KEYWORDS: ['sale'],
-        EXTRA_FIELD: 'not allowed' // Extra field
-      };
-      expect(() => AnalyzerConfigSchema.parse(config)).toThrow();
+      expect(() =>
+        AnalyzerConfigSchema.parse(ANALYZER_CONFIG_WITH_EXTRA)
+      ).toThrow();
     });
   });
 });

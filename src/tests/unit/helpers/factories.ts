@@ -299,7 +299,7 @@ export function makeRecurringEventInstance(
   });
 
   (event as any).originalStartTime = formatRFC3339(instanceDate);
-  return event;
+  return event as calendar_v3.Schema$Event & { originalStartTime?: string };
 }
 
 /**

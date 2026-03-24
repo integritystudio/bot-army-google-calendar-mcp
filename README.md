@@ -17,6 +17,25 @@ A Model Context Protocol (MCP) server that provides Google Calendar and Gmail in
 - **Profile Management**: Get account information (message count, thread count, email address)
 - **Multi-Account Support**: Use multiple Gmail accounts with separate OAuth tokens
 
+## Recent Updates (v1.4.9)
+
+**Performance & Reliability:**
+- 🚀 Dynamic label ID resolution (L6) - Scripts now work across accounts with different label hierarchies
+- ⚡ Sequential API optimization - ~500ms latency reduction per operation
+- 📦 Batch filter operations - 10-100x speedup for bulk Gmail tasks
+
+**Tooling & Infrastructure:**
+- ✅ Comprehensive label resolution guide ([docs/LABEL-RESOLUTION-GUIDE.md](docs/LABEL-RESOLUTION-GUIDE.md))
+- 🧪 Parametrized test expansion (25 → 30+ test cases)
+- 📋 New changelog system ([docs/changelog/](docs/changelog/)) tracking all improvements
+
+**Testing:**
+- 492/494 tests passing (99.6%)
+- Reduced technical debt with shared utilities in `lib/gmail-*.mjs`
+- CLAUDE.md updated with latest patterns and utilities
+
+See [CHANGELOG](docs/CHANGELOG.md) for complete v1.4.9 release notes.
+
 ## Quick Start
 
 ### Prerequisites
@@ -198,11 +217,19 @@ Automated scripts for organizing and filtering large volumes of Gmail with focus
 - `organize-international-house.mjs` - Label and organize International House event emails
 
 **Utilities:**
-- `lib/gmail-client.mjs` - Authenticated Gmail API client factory. Centralizes OAuth2 init, token validation, and multi-account support. Use in scripts:
+- `lib/gmail-client.mjs` - Authenticated Gmail API client factory. Centralizes OAuth2 init, token validation, and multi-account support:
   ```js
   import { createGmailClient } from './lib/gmail-client.mjs';
   const gmail = createGmailClient(); // Uses ACCOUNT_MODE env var, throws on missing tokens
   ```
+- `lib/gmail-label-utils.mjs` - Label ID resolution (NEW in v1.4.9). Resolves hardcoded label IDs dynamically for account portability:
+  ```js
+  import { buildLabelCache, resolveLabelId } from './lib/gmail-label-utils.mjs';
+  const labelCache = await buildLabelCache(gmail);
+  const labelId = labelCache.get('Events/Community'); // Dynamic instead of hardcoded Label_N
+  ```
+  See [`docs/LABEL-RESOLUTION-GUIDE.md`](docs/LABEL-RESOLUTION-GUIDE.md) for complete documentation.
+- `lib/gmail-batch.mjs` - Batch filter operations for bulk Gmail tasks (10-100x speedup)
 - `lib/date-based-filter.mjs` - Pure utility for date-based email classification: extracts dates (ISO, US format, text dates, weekday patterns), compares to today, classifies as past/future/unknown. Does not mutate input. Handles dates without year by inferring current or next year.
 
 ## Example Usage

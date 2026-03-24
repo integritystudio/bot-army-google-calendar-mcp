@@ -78,18 +78,37 @@ node archive-signoz-dmarc.mjs         # Monitoring/DMARC auto-archive
 | Billing | Conditional | GW invoices, GC charges (rate-limit aware) |
 
 **Shared Utilities:**
-- `lib/gmail-client.mjs` - Authenticated Gmail client factory; use `createGmailClient()` in all scripts (OAuth extraction ✅ complete for: apply-filters-to-unread, create-remaining-filters, describe-internal, list-unread-emails, summarize-remaining)
+- `lib/gmail-client.mjs` - Authenticated Gmail client factory; use `createGmailClient()` in all scripts (✅ Applied to 65+ scripts)
+- `lib/gmail-label-utils.mjs` - Label resolution utilities (NEW - see L6 below)
+  - `buildLabelCache(gmail)` - Fetch all labels once at startup
+  - `resolveLabelId(gmail, labelName, labelCache)` - Cached single label lookup
+  - `resolveLabelIds(gmail, labelNames)` - Batch label resolution
+- `lib/gmail-batch.mjs` - Batch filter operations for 10-100x speedup
 - `lib/date-based-filter.mjs` - Pure utility for date parsing (ISO, US, text, weekday patterns; no mutations)
 
 **Code Quality:**
 - **Established patterns:** Refactored scripts use best practices (error handling, named constants, getHeader() helpers, parallel `Promise.all` for list + detail fetches)
 - **Performance:** Use `Promise.all` for concurrent list + detail fetches (not serial loops)
-- **Remaining refactor targets:** Extract label constants to `lib/constants.mjs`; batch filter ops to `lib/gmail-batch.mjs`; apply `createGmailClient()` to remaining 70+ root scripts
+- **L6 Pattern (NEW):** Dynamic label ID resolution for portability across accounts
+  - See `docs/LABEL-RESOLUTION-GUIDE.md` for complete pattern documentation
+  - Replace hardcoded `Label_N` IDs with `labelCache.get('Label/Name')`
+  - Enables scripts to work across different Gmail accounts with different label IDs
 
 ## Backlog & Roadmap
 
-See [`docs/BACKLOG.md`](docs/BACKLOG.md) for detailed planning of:
-- **High Priority:** Test architecture refactor for conflict detection (40-64 hours, blocked pending design discussion)
-- **Medium Priority:** Email parsing helpers (M1), label constants extraction (M2)
-- **Low Priority:** Bulk script refactoring (L1-L4), batch operations, testability improvements
-- **Completed:** Gmail OAuth integration, test SDK compatibility fixes, documentation updates
+**Current Status:** 20/22 items complete (91%) - See [`docs/changelog/1.4.9/CHANGELOG.md`](docs/changelog/1.4.9/CHANGELOG.md)
+
+### Completed (v1.4.9)
+✅ **L1:** createGmailClient() refactoring (applied to 65+ scripts)
+✅ **L2:** Batch filter operations (`lib/gmail-batch.mjs`)
+✅ **L3:** TOCTOU risk mitigation in token handling
+✅ **L4:** process.exit pattern documentation
+✅ **L5:** Extract shared helpers (createLabels, applyPatterns)
+✅ **L6:** Dynamic label ID resolution (new feature)
+✅ **Medium Priority:** Sequential API optimization (~500ms latency reduction), loop isolation anti-patterns
+
+### Blocked (Require Design Discussion)
+🔴 **Blocked:** Test architecture refactor for conflict-detection-integration.test.ts (40-60 hours, awaiting architecture design)
+🔴 **Blocked:** UpdateEventHandler.recurring.test.ts refactor (16-24 hours, awaiting design review)
+
+See [`docs/BACKLOG.md`](docs/BACKLOG.md) for open items and [`docs/CHANGELOG.md`](docs/CHANGELOG.md) for version history.

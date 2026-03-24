@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
 import { OAuth2Client } from 'google-auth-library';
-import { makeEvent, getTextContent, createCreateEventArgs } from '../helpers/index.js';
+import { makeEvent, getTextContent, createCreateEventArgs, makeCalendarMock } from '../helpers/index.js';
 
 // Mock the googleapis module
 vi.mock('googleapis', () => ({
@@ -38,19 +38,14 @@ vi.mock('../../../utils/datetime.js', () => ({
 describe('CreateEventHandler', () => {
   let handler: CreateEventHandler;
   let mockOAuth2Client: OAuth2Client;
-  let mockCalendar: any;
+  let mockCalendar: ReturnType<typeof makeCalendarMock>;
 
   beforeEach(() => {
     handler = new CreateEventHandler();
     mockOAuth2Client = new OAuth2Client();
-    
-    // Setup mock calendar
-    mockCalendar = {
-      events: {
-        insert: vi.fn()
-      }
-    };
-    
+
+    mockCalendar = makeCalendarMock();
+
     // Mock the getCalendar method
     vi.spyOn(handler as any, 'getCalendar').mockReturnValue(mockCalendar);
     

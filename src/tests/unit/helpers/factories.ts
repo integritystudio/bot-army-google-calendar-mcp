@@ -388,19 +388,23 @@ export function makeTeamMeetingEvent(
  * Create a typed mock calendar object for testing handlers.
  * Provides the minimal calendar_v3.Calendar interface needed by handlers.
  * @param overrides Custom mock implementations for specific methods
- * @returns Typed mock calendar with get/patch/insert/list methods
+ * @returns Typed mock calendar with get/patch/insert/list methods and calendarList.get
  */
 export function makeCalendarMock(overrides: {
   get?: ReturnType<typeof vi.fn>;
   patch?: ReturnType<typeof vi.fn>;
   insert?: ReturnType<typeof vi.fn>;
   list?: ReturnType<typeof vi.fn>;
+  calendarListGet?: ReturnType<typeof vi.fn>;
 } = {}): Pick<calendar_v3.Calendar, 'events'> & {
   events: {
     get: ReturnType<typeof vi.fn>;
     patch: ReturnType<typeof vi.fn>;
     insert: ReturnType<typeof vi.fn>;
     list: ReturnType<typeof vi.fn>;
+  };
+  calendarList: {
+    get: ReturnType<typeof vi.fn>;
   };
 } {
   return {
@@ -409,6 +413,9 @@ export function makeCalendarMock(overrides: {
       patch: overrides.patch ?? vi.fn(),
       insert: overrides.insert ?? vi.fn(),
       list: overrides.list ?? vi.fn(),
+    },
+    calendarList: {
+      get: overrides.calendarListGet ?? vi.fn(),
     },
   };
 }

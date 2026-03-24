@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SearchEventsHandler } from '../../../handlers/core/SearchEventsHandler.js';
 import { OAuth2Client } from 'google-auth-library';
 import { calendar_v3 } from 'googleapis';
-import { getTextContent, makeEvent, makeGaxiosError } from '../helpers/index.js';
+import { getTextContent, makeEvent, makeGaxiosError, makeCalendarMock } from '../helpers/index.js';
 import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
 
 vi.mock('googleapis', () => ({
@@ -49,17 +49,13 @@ const BASE_ARGS = {
 describe('SearchEventsHandler', () => {
   let handler: SearchEventsHandler;
   let mockOAuth2Client: OAuth2Client;
-  let mockCalendar: any;
+  let mockCalendar: ReturnType<typeof makeCalendarMock>;
 
   beforeEach(() => {
     handler = new SearchEventsHandler();
     mockOAuth2Client = new OAuth2Client();
 
-    mockCalendar = {
-      events: {
-        list: vi.fn().mockResolvedValue({ data: { items: [] } })
-      }
-    };
+    mockCalendar = makeCalendarMock({ list: vi.fn().mockResolvedValue({ data: { items: [] } }) });
 
     vi.spyOn(handler as any, 'getCalendar').mockReturnValue(mockCalendar);
     vi.spyOn(handler as any, 'getCalendarTimezone').mockResolvedValue('America/Los_Angeles');

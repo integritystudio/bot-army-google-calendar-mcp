@@ -3,7 +3,7 @@ import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
 import { OAuth2Client } from 'google-auth-library';
 import { google } from 'googleapis';
 import { convertToRFC3339 } from '../../../utils/timezone-utils.js';
-import { getTextContent, makeEvent } from '../helpers/index.js';
+import { getTextContent, makeEvent, makeCalendarMock } from '../helpers/index.js';
 import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
 
 // Mock googleapis globally
@@ -24,30 +24,17 @@ describe('ListEventsHandler JSON String Handling', () => {
   const mockOAuth2Client = {
     getAccessToken: vi.fn().mockResolvedValue({ token: 'mock-token' })
   } as unknown as OAuth2Client;
-  
+
   const handler = new ListEventsHandler();
-  let mockCalendar: any;
+  let mockCalendar: ReturnType<typeof makeCalendarMock>;
 
   beforeEach(() => {
-    mockCalendar = {
-      events: {
-        list: vi.fn().mockResolvedValue({
-          data: {
-            items: [
-              makeEvent({
-                id: 'test-event',
-                summary: 'Test Event'
-              })
-            ]
-          }
-        })
-      },
-      calendarList: {
-        get: vi.fn().mockResolvedValue({
-          data: { timeZone: 'UTC' }
-        })
-      }
-    };
+    mockCalendar = makeCalendarMock({
+      list: vi.fn().mockResolvedValue({
+        data: { items: [makeEvent({ id: 'test-event', summary: 'Test Event' })] }
+      }),
+      calendarListGet: vi.fn().mockResolvedValue({ data: { timeZone: 'UTC' } }),
+    });
     vi.mocked(google.calendar).mockReturnValue(mockCalendar);
   });
 
@@ -115,19 +102,12 @@ Content-Type: application/json
 describe('ListEventsHandler - Timezone Handling', () => {
   let handler: ListEventsHandler;
   let mockOAuth2Client: OAuth2Client;
-  let mockCalendar: any;
+  let mockCalendar: ReturnType<typeof makeCalendarMock>;
 
   beforeEach(() => {
     handler = new ListEventsHandler();
     mockOAuth2Client = {} as OAuth2Client;
-    mockCalendar = {
-      events: {
-        list: vi.fn()
-      },
-      calendarList: {
-        get: vi.fn()
-      }
-    };
+    mockCalendar = makeCalendarMock();
     vi.mocked(google.calendar).mockReturnValue(mockCalendar);
   });
 

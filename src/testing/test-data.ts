@@ -8,127 +8,52 @@ import {
 } from './types.js';
 
 /**
- * Type-safe test event factory
- * Creates mock and real test events with consistent validation
+ * Configuration validation factories with Zod
+ * Reuses existing test factories from src/tests/unit/helpers/
+ * This module focuses on configuration validation, not event creation
  */
-export class TestEventFactory {
-  /**
-   * Create a minimal mock event
-   */
-  static createMockEvent(
-    overrides?: Partial<calendar_v3.Schema$Event>
-  ): calendar_v3.Schema$Event {
-    const now = new Date();
-    const start = new Date(now.getTime() + 86400000); // tomorrow
-    const end = new Date(start.getTime() + 3600000); // +1 hour
-
-    return {
-      id: 'mock-event-' + Math.random().toString(36).slice(2),
-      summary: 'Test Event',
-      description: 'Created by test suite',
-      start: {
-        dateTime: start.toISOString(),
-        timeZone: 'UTC'
-      },
-      end: {
-        dateTime: end.toISOString(),
-        timeZone: 'UTC'
-      },
-      created: now.toISOString(),
-      updated: now.toISOString(),
-      etag: '"test-etag"',
-      kind: 'calendar#event',
-      status: 'confirmed',
-      ...overrides
-    };
-  }
-
-  /**
-   * Create a mock recurring event
-   */
-  static createMockRecurringEvent(
-    overrides?: Partial<calendar_v3.Schema$Event>
-  ): calendar_v3.Schema$Event {
-    return this.createMockEvent({
-      recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO'],
-      ...overrides
-    });
-  }
-
-  /**
-   * Create a mock event with proper RRULE structure
-   */
-  static createMockEventWithRRULE(
-    rrule: string,
-    overrides?: Partial<calendar_v3.Schema$Event>
-  ): calendar_v3.Schema$Event {
-    return this.createMockEvent({
-      recurrence: [rrule],
-      ...overrides
-    });
-  }
-
+export class TestConfigFactory {
   /**
    * Validate event config with Zod
    */
-  static validateConfig(config: Partial<TestEventConfig>): TestEventConfig {
+  static validateEventConfig(
+    config: Partial<TestEventConfig>
+  ): TestEventConfig {
     return TestEventConfigSchema.parse(config);
   }
 
   /**
-   * Create event with validated config
+   * Validate OAuth config with Zod
    */
-  static fromConfig(config: Partial<TestEventConfig>): calendar_v3.Schema$Event {
-    const validated = this.validateConfig(config);
-    const now = new Date();
-    const start = new Date(
-      now.getTime() + validated.daysOffset * 86400000
-    );
-    const end = new Date(
-      start.getTime() + validated.durationHours * 3600000
-    );
-
-    const event = this.createMockEvent({
-      summary: validated.summary,
-      description: validated.description,
-      start: {
-        dateTime: start.toISOString(),
-        timeZone: validated.timeZone
-      },
-      end: {
-        dateTime: end.toISOString(),
-        timeZone: validated.timeZone
-      }
-    });
-
-    if (validated.recurrence) {
-      event.recurrence = validated.recurrence;
-    }
-
-    return event;
+  static validateOAuthConfig(
+    config: Partial<TestOAuthConfig>
+  ): TestOAuthConfig {
+    return TestOAuthConfigSchema.parse(config);
   }
 }
 
 /**
- * OAuth configuration factory with validation
+ * OAuth configuration factory with environment and defaults support
  */
 export class TestOAuthFactory {
   /**
-   * Create OAuth config from environment
+   * Create OAuth config from environment variables
    */
   static fromEnv(): TestOAuthConfig {
     return TestOAuthConfigSchema.parse({
-      clientId: process.env.GOOGLE_OAUTH_CLIENT_ID || 'test-client-id',
-      clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || 'test-secret',
-      redirectUrl:
-        process.env.GOOGLE_OAUTH_REDIRECT_URL || 'http://localhost:3000/auth',
+      clientId: process.env.GOOGLE_OAUTH_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+      redirectUrl: process.env.GOOGLE_OAUTH_REDIRECT_URL,
       tokenPath: process.env.CALENDARMCP_TOKEN_PATH,
-      accountMode: process.env.GOOGLE_ACCOUNT_MODE as 'test' | 'normal' | undefined
+      accountMode: process.env.GOOGLE_ACCOUNT_MODE as
+        | 'test'
+        | 'normal'
+        | undefined
     });
   }
 
   /**
-   * Create test OAuth config
+   * Create test OAuth config with defaults
    */
   static createTestConfig(
     overrides?: Partial<TestOAuthConfig>
@@ -140,13 +65,6 @@ export class TestOAuthFactory {
       accountMode: 'test',
       ...overrides
     });
-  }
-
-  /**
-   * Validate OAuth config
-   */
-  static validate(config: unknown): TestOAuthConfig {
-    return TestOAuthConfigSchema.parse(config);
   }
 }
 
@@ -166,14 +84,14 @@ export function createMockOAuth2Client() {
 
 /**
  * Utilities for creating tool input payloads in tests
+ * Re-export existing factories from src/tests/unit/helpers/
+ * for consistent event creation across test suites
  */
 export const TestInputFactory = {
   /**
-   * Create UpdateEventHandler input
+   * Create UpdateEventHandler input with defaults
    */
-  createUpdateEventInput(
-    overrides?: Partial<Record<string, any>>
-  ): Record<string, any> {
+  updateEvent(overrides?: Partial<Record<string, any>>): Record<string, any> {
     return {
       calendarId: 'primary',
       eventId: 'test-event-id',
@@ -185,11 +103,9 @@ export const TestInputFactory = {
   },
 
   /**
-   * Create CreateEventHandler input
+   * Create CreateEventHandler input with defaults
    */
-  createCreateEventInput(
-    overrides?: Partial<Record<string, any>>
-  ): Record<string, any> {
+  createEvent(overrides?: Partial<Record<string, any>>): Record<string, any> {
     const now = new Date();
     const start = new Date(now.getTime() + 86400000);
     const end = new Date(start.getTime() + 3600000);
@@ -204,11 +120,9 @@ export const TestInputFactory = {
   },
 
   /**
-   * Create GetEventHandler input
+   * Create GetEventHandler input with defaults
    */
-  createGetEventInput(
-    overrides?: Partial<Record<string, any>>
-  ): Record<string, any> {
+  getEvent(overrides?: Partial<Record<string, any>>): Record<string, any> {
     return {
       calendarId: 'primary',
       eventId: 'test-event-id',

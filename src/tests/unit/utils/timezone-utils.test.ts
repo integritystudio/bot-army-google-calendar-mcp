@@ -10,6 +10,7 @@ import {
   hasTimezoneInDatetime,
   convertToRFC3339,
   createTimeObject,
+  applyTimezone,
 } from '../../../utils/timezone-utils.js';
 
 describe('Timezone Utilities', () => {
@@ -240,6 +241,55 @@ describe('Timezone Utilities', () => {
       const result = createTimeObject('2024-06-15T10:00:00+05:30', 'UTC');
       expect(result.dateTime).toBe('2024-06-15T10:00:00+05:30');
       expect(result.timeZone).toBeUndefined();
+    });
+  });
+
+  describe('applyTimezone', () => {
+    it('should apply timezone to both start and end objects', () => {
+      const start = { dateTime: '2024-06-15T10:00:00' };
+      const end = { dateTime: '2024-06-15T11:00:00' };
+      const result = applyTimezone(start, end, 'America/Los_Angeles');
+
+      expect(result.start.timeZone).toBe('America/Los_Angeles');
+      expect(result.end.timeZone).toBe('America/Los_Angeles');
+      expect(result.start.dateTime).toBe('2024-06-15T10:00:00');
+      expect(result.end.dateTime).toBe('2024-06-15T11:00:00');
+    });
+
+    it('should create start/end objects if undefined', () => {
+      const result = applyTimezone(undefined, undefined, 'UTC');
+
+      expect(result.start).toEqual({ timeZone: 'UTC' });
+      expect(result.end).toEqual({ timeZone: 'UTC' });
+    });
+
+    it('should handle partial start/end objects', () => {
+      const start = { dateTime: '2024-06-15T10:00:00' };
+      const result = applyTimezone(start, undefined, 'Europe/London');
+
+      expect(result.start.timeZone).toBe('Europe/London');
+      expect(result.start.dateTime).toBe('2024-06-15T10:00:00');
+      expect(result.end).toEqual({ timeZone: 'Europe/London' });
+    });
+
+    it('should handle date-only objects', () => {
+      const start = { date: '2024-06-15' };
+      const end = { date: '2024-06-16' };
+      const result = applyTimezone(start, end, 'Asia/Tokyo');
+
+      expect(result.start.timeZone).toBe('Asia/Tokyo');
+      expect(result.start.date).toBe('2024-06-15');
+      expect(result.end.timeZone).toBe('Asia/Tokyo');
+      expect(result.end.date).toBe('2024-06-16');
+    });
+
+    it('should preserve existing timezone properties when overwriting', () => {
+      const start = { dateTime: '2024-06-15T10:00:00', timeZone: 'UTC' };
+      const end = { dateTime: '2024-06-15T11:00:00', timeZone: 'UTC' };
+      const result = applyTimezone(start, end, 'America/New_York');
+
+      expect(result.start.timeZone).toBe('America/New_York');
+      expect(result.end.timeZone).toBe('America/New_York');
     });
   });
 });

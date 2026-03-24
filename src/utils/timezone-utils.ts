@@ -264,6 +264,34 @@ function convertLocalTimeToUTC(
 }
 
 /**
+ * Apply timezone to start and end objects, ensuring both exist and have the timezone set.
+ * Handles timezone-only updates where start/end may be undefined.
+ * @param start Start time object (may be undefined)
+ * @param end End time object (may be undefined)
+ * @param timezone IANA timezone to apply
+ * @returns Object with updated start and end objects
+ */
+export function applyTimezone(
+  start: { dateTime?: string; date?: string; timeZone?: string } | undefined,
+  end: { dateTime?: string; date?: string; timeZone?: string } | undefined,
+  timezone: string
+): {
+  start: { dateTime?: string; date?: string; timeZone: string };
+  end: { dateTime?: string; date?: string; timeZone: string };
+} {
+  const updatedStart = start || {};
+  const updatedEnd = end || {};
+
+  updatedStart.timeZone = timezone;
+  updatedEnd.timeZone = timezone;
+
+  return {
+    start: updatedStart as { dateTime?: string; date?: string; timeZone: string },
+    end: updatedEnd as { dateTime?: string; date?: string; timeZone: string },
+  };
+}
+
+/**
  * Create a time object for Google Calendar API, handling both timezone-aware and timezone-naive datetime strings.
  * Also handles all-day events by using 'date' field instead of 'dateTime'.
  * @param datetime ISO 8601 datetime string (with or without timezone)

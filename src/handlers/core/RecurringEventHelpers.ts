@@ -7,7 +7,7 @@ import {
   buildUntilClause,
   isRRuleString,
 } from '../../utils/date-utils.js';
-import { createTimeObject } from '../../utils/timezone-utils.js';
+import { createTimeObject, applyTimezone } from '../../utils/timezone-utils.js';
 import { buildCoreEvent, buildOptionalEventFields } from './eventManipulationUtils.js';
 import { UpdateEventInput } from '../../tools/registry.js';
 
@@ -149,12 +149,11 @@ export class RecurringEventHelpers {
       }
     });
 
-    // Ensure start/end objects exist with timezone if timeZone is provided
+    // Apply timezone if provided, ensures start/end objects exist with timezone set
     if (effectiveTimeZone) {
-      requestBody.start = requestBody.start || {};
-      requestBody.end = requestBody.end || {};
-      requestBody.start.timeZone = effectiveTimeZone;
-      requestBody.end.timeZone = effectiveTimeZone;
+      const { start, end } = applyTimezone(requestBody.start, requestBody.end, effectiveTimeZone);
+      requestBody.start = start;
+      requestBody.end = end;
     }
 
     return requestBody;

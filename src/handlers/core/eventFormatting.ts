@@ -4,6 +4,7 @@
 
 import { calendar_v3 } from 'googleapis';
 import { formatEventWithDetails } from '../utils.js';
+import { groupBy } from '../../utils/aggregationHelpers.js';
 
 export interface ExtendedEvent extends calendar_v3.Schema$Event {
   calendarId?: string;
@@ -63,10 +64,5 @@ function formatGroupedEventsList(events: ExtendedEvent[]): string {
 }
 
 function groupEventsByCalendar(events: ExtendedEvent[]): Record<string, ExtendedEvent[]> {
-  return events.reduce((acc, event) => {
-    const calId = event.calendarId || 'Unknown';
-    if (!acc[calId]) acc[calId] = [];
-    acc[calId].push(event);
-    return acc;
-  }, {} as Record<string, ExtendedEvent[]>);
+  return groupBy(events, (event) => event.calendarId || 'Unknown');
 }

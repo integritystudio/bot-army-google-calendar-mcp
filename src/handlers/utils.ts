@@ -1,6 +1,7 @@
 import { calendar_v3 } from "googleapis";
 import { ConflictCheckResult } from "../services/conflict-detection/types.js";
 import { RESPONSE_PATTERNS } from "../testing/constants.js";
+import { groupBy } from "../utils/aggregationHelpers.js";
 
 /**
  * Generates a Google Calendar event view URL
@@ -211,11 +212,7 @@ export function formatConflictWarnings(conflicts: ConflictCheckResult): string {
     // Format conflict warnings
     if (conflicts.conflicts.length > 0) {
         warnings += "\n\n⚠️ SCHEDULING CONFLICTS DETECTED:";
-        const conflictsByCalendar = conflicts.conflicts.reduce((acc, conflict) => {
-            if (!acc[conflict.calendar]) acc[conflict.calendar] = [];
-            acc[conflict.calendar].push(conflict);
-            return acc;
-        }, {} as Record<string, typeof conflicts.conflicts>);
+        const conflictsByCalendar = groupBy(conflicts.conflicts, (conflict) => conflict.calendar);
         
         for (const [calendar, calendarConflicts] of Object.entries(conflictsByCalendar)) {
             warnings += `\n\nCalendar: ${calendar}`;

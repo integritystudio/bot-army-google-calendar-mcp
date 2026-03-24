@@ -23,14 +23,17 @@ A Model Context Protocol (MCP) server that provides Google Calendar and Gmail in
 - 🚀 Dynamic label ID resolution (L6) - Scripts now work across accounts with different label hierarchies
 - ⚡ Sequential API optimization - ~500ms latency reduction per operation
 - 📦 Batch filter operations - 10-100x speedup for bulk Gmail tasks
+- 🔧 Timezone utilities consolidation - Reduced codebase by 19 lines, eliminated duplicate datetime logic
 
 **Tooling & Infrastructure:**
 - ✅ Comprehensive label resolution guide ([docs/LABEL-RESOLUTION-GUIDE.md](docs/LABEL-RESOLUTION-GUIDE.md))
 - 🧪 Parametrized test expansion (25 → 30+ test cases)
 - 📋 New changelog system ([docs/changelog/](docs/changelog/)) tracking all improvements
+- 🔐 Auth refactor: new `isAuthenticated()` and `getCredentials()` methods
 
 **Testing:**
-- 492/494 tests passing (99.6%)
+- 486/486 tests passing (100%) ✅
+- Integration tests for conflict detection via MCP protocol (real server, real API)
 - Reduced technical debt with shared utilities in `lib/gmail-*.mjs`
 - CLAUDE.md updated with latest patterns and utilities
 
@@ -349,11 +352,12 @@ The email organization system uses intelligent date parsing (`lib/date-based-fil
 - Detect duplicated code blocks: `node scripts/check-duplicates.mjs src 6` (reports suspicious file pairs, overlapping logic)
 - Consolidated: `GmailCreateHandler.ts` unifies filter and label creation logic (single source of truth)
 
-**Future Roadmap:**
-- See [`docs/BACKLOG.md`](docs/BACKLOG.md) for detailed backlog, refactoring targets (M1-L4), and completed items
-- High-priority test architecture refactor for conflict detection (blocked pending design discussion)
-- Medium-priority: Email parsing helpers, label constants extraction
-- Low-priority: Bulk script refactoring, batch operations, testability improvements
+**Completed Roadmap:**
+- ✅ All 24 backlog items complete (v1.4.9)
+- ✅ Test architecture for conflict detection implemented (MCP protocol, real API)
+- ✅ Email parsing helpers extracted (email-analyzer.mjs with 4 reusable exports)
+- ✅ Timezone utilities consolidated (19 lines reduced)
+- See [`docs/BACKLOG.md`](docs/BACKLOG.md) for detailed implementation notes and [`docs/CHANGELOG.md`](docs/CHANGELOG.md) for version history
 
 ## Testing Status
 

@@ -29,7 +29,8 @@ npm install | npm run build | npm run dev | npm test
 **Test Status:**
 - ✅ Core handler tests (CreateEventHandler, GetEventHandler, GetCurrentTimeHandler)
 - ✅ Type-safe content assertions using `{ type: 'text'; text: string }` instead of `as any`
-- ⚠️ Integration tests removed (referenced non-existent AuthenticationService)
+- ✅ Integration tests for conflict detection via MCP protocol (real server, real API)
+- ✅ 486/486 tests passing
 
 ## Script Development
 
@@ -96,19 +97,20 @@ node archive-signoz-dmarc.mjs         # Monitoring/DMARC auto-archive
 
 ## Backlog & Roadmap
 
-**Current Status:** 20/22 items complete (91%) - See [`docs/changelog/1.4.9/CHANGELOG.md`](docs/changelog/1.4.9/CHANGELOG.md)
+**Current Status:** 24/24 items complete (100%) ✅ - See [`docs/changelog/1.4.9/CHANGELOG.md`](docs/changelog/1.4.9/CHANGELOG.md)
 
-### Completed (v1.4.9)
+### Recently Completed (v1.4.9)
 ✅ **L1:** createGmailClient() refactoring (applied to 65+ scripts)
 ✅ **L2:** Batch filter operations (`lib/gmail-batch.mjs`)
 ✅ **L3:** TOCTOU risk mitigation in token handling
 ✅ **L4:** process.exit pattern documentation
 ✅ **L5:** Extract shared helpers (createLabels, applyPatterns)
 ✅ **L6:** Dynamic label ID resolution (new feature)
+✅ **L7:** Email analyzer module extraction & code quality audit
+✅ **Auth Refactor:** Replace validateTokens with isAuthenticated; implement getCredentials
+✅ **Timezone Utils:** Consolidate datetime utilities, eliminate duplication (19 lines reduced)
+✅ **Test Architecture:** Integration tests for conflict detection via MCP protocol
 ✅ **Medium Priority:** Sequential API optimization (~500ms latency reduction), loop isolation anti-patterns
 
-### Blocked (Require Design Discussion)
-🔴 **Blocked:** Test architecture refactor for conflict-detection-integration.test.ts (40-60 hours, awaiting architecture design)
-🔴 **Blocked:** UpdateEventHandler.recurring.test.ts refactor (16-24 hours, awaiting design review)
-
-See [`docs/BACKLOG.md`](docs/BACKLOG.md) for open items and [`docs/CHANGELOG.md`](docs/CHANGELOG.md) for version history.
+### Design Decision Log
+All originally blocked items now complete. See [`docs/BACKLOG.md`](docs/BACKLOG.md) for detailed implementation notes and [`docs/CHANGELOG.md`](docs/CHANGELOG.md) for version history.

@@ -3,7 +3,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { calendar_v3, google } from 'googleapis';
 import { UpdateEventHandler } from '../../../handlers/core/UpdateEventHandler.js';
 import { UpdateEventInput, ToolSchemas } from '../../../tools/registry.js';
-import { makeEvent } from '../helpers/factories.js';
+import { makeEvent, makeFutureDateString } from '../helpers/factories.js';
 
 vi.mock('googleapis', async () => {
   const actual = await vi.importActual('googleapis');
@@ -116,7 +116,7 @@ describe('UpdateEventHandler - Recurring Events', () => {
 
       const args: UpdateEventInput = buildUpdateEventInput({
         modificationScope: 'thisAndFollowing',
-        futureStartDate: '2026-04-01T10:00:00Z'
+        futureStartDate: makeFutureDateString(8)
       });
 
       const result = await handler.runTool(args, mockOAuth2Client);
@@ -291,7 +291,7 @@ describe('UpdateEventHandler - Recurring Events', () => {
       const args: UpdateEventInput = buildUpdateEventInput({
         eventId: 'event-with-count',
         modificationScope: 'thisAndFollowing',
-        futureStartDate: '2026-04-01T10:00:00Z'
+        futureStartDate: makeFutureDateString(8)
       });
 
       await handler.runTool(args, mockOAuth2Client);
@@ -302,7 +302,7 @@ describe('UpdateEventHandler - Recurring Events', () => {
     });
 
     it('should create new recurring event starting from futureStartDate', async () => {
-      const futureDate = '2026-04-01T10:00:00Z';
+      const futureDate = makeFutureDateString(8);
       setupMocks(
         createMockRecurringEvent({
           id: 'original123',
@@ -341,7 +341,7 @@ describe('UpdateEventHandler - Recurring Events', () => {
       const args: UpdateEventInput = buildUpdateEventInput({
         eventId: 'daily-event',
         modificationScope: 'thisAndFollowing',
-        futureStartDate: '2026-04-15T14:00:00Z'
+        futureStartDate: makeFutureDateString(22)
       });
 
       await handler.runTool(args, mockOAuth2Client);
@@ -363,7 +363,7 @@ describe('UpdateEventHandler - Recurring Events', () => {
       const args: UpdateEventInput = buildUpdateEventInput({
         eventId: 'complex123',
         modificationScope: 'thisAndFollowing',
-        futureStartDate: '2026-06-01T10:00:00Z'
+        futureStartDate: makeFutureDateString(69)
       });
 
       await handler.runTool(args, mockOAuth2Client);
@@ -422,7 +422,7 @@ describe('UpdateEventHandler - Recurring Events', () => {
       const args: UpdateEventInput = buildUpdateEventInput({
         eventId: 'single123',
         modificationScope: 'thisAndFollowing',
-        futureStartDate: '2026-04-01T10:00:00Z'
+        futureStartDate: makeFutureDateString(8)
       });
 
       await expect(() =>

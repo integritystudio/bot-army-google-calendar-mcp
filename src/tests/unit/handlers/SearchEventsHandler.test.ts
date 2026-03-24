@@ -26,12 +26,10 @@ vi.mock('../../../utils/field-mask-builder.js', () => ({
 }));
 
 vi.mock('../../../utils/timezone-utils.js', () => ({
-  convertToRFC3339: vi.fn((dateString, timezone) => {
-    if (dateString.includes('Z') || dateString.includes('+') || dateString.includes('-')) {
-      return dateString;
-    }
-    return `${dateString}Z`;
-  })
+  resolveTimeRange: vi.fn((timeMin, timeMax, _timezone) => ({
+    timeMin: timeMin ? (timeMin.includes('Z') || timeMin.includes('+') ? timeMin : `${timeMin}Z`) : undefined,
+    timeMax: timeMax ? (timeMax.includes('Z') || timeMax.includes('+') ? timeMax : `${timeMax}Z`) : undefined,
+  }))
 }));
 
 vi.mock('../../../handlers/utils.js', () => ({
@@ -140,12 +138,11 @@ describe('SearchEventsHandler', () => {
     });
 
     it('should use provided timeZone for conversion', async () => {
-      const { convertToRFC3339 } = await import('../../../utils/timezone-utils.js');
+      const { resolveTimeRange } = await import('../../../utils/timezone-utils.js');
 
       await handler.runTool({ ...BASE_ARGS, timeZone: 'Asia/Tokyo' }, mockOAuth2Client);
 
-      expect(vi.mocked(convertToRFC3339)).toHaveBeenCalledWith('2025-01-01T00:00:00', 'Asia/Tokyo');
-      expect(vi.mocked(convertToRFC3339)).toHaveBeenCalledWith('2025-01-31T23:59:59', 'Asia/Tokyo');
+      expect(vi.mocked(resolveTimeRange)).toHaveBeenCalledWith('2025-01-01T00:00:00', '2025-01-31T23:59:59', 'Asia/Tokyo');
     });
 
     it('should fallback to calendar timezone when timeZone not provided', async () => {

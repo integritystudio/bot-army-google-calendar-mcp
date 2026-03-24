@@ -11,7 +11,7 @@ import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
 export interface HandlerSetup {
   mockOAuth2Client: OAuth2Client;
   handler: ListEventsHandler;
-  mockCalendarApi: any;
+  mockCalendarApi: ReturnType<typeof makeCalendarMock>;
 }
 
 /**

@@ -102,21 +102,18 @@ describe('CreateEventHandler', () => {
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
-      const args = {
-        calendarId: 'primary',
+      const args = createCreateEventArgs('primary', {
         eventId: 'full-event',
         summary: 'Full Event',
         description: 'Event description',
         location: 'Conference Room A',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00',
         attendees: [{ email: 'test@example.com' }],
         colorId: '5',
         reminders: {
           useDefault: false,
           overrides: [{ method: 'email' as const, minutes: 30 }]
         }
-      };
+      });
 
       const result = await handler.runTool(args, mockOAuth2Client);
 
@@ -150,13 +147,9 @@ describe('CreateEventHandler', () => {
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
-      const args = {
-        calendarId: 'primary',
-        eventId: 'customevent2025',
-        summary: 'Test Event',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00'
-      };
+      const args = createCreateEventArgs('primary', {
+        eventId: 'customevent2025'
+      });
 
       const result = await handler.runTool(args, mockOAuth2Client);
 
@@ -253,13 +246,10 @@ describe('CreateEventHandler', () => {
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
-      const args = {
-        calendarId: 'primary',
+      const args = createCreateEventArgs('primary', {
         summary: 'Focus Time',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00',
         transparency: 'transparent' as const
-      };
+      });
 
       await handler.runTool(args, mockOAuth2Client);
 
@@ -280,13 +270,10 @@ describe('CreateEventHandler', () => {
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
-      const args = {
-        calendarId: 'primary',
+      const args = createCreateEventArgs('primary', {
         summary: 'Private Meeting',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00',
         visibility: 'private' as const
-      };
+      });
 
       await handler.runTool(args, mockOAuth2Client);
 

@@ -130,12 +130,12 @@ describe('Enhanced Conflict Response Formatting', () => {
             title: 'Sprint Planning',
             url: 'https://calendar.google.com/event?eid=work1'
           },
-          fullEvent: {
+          fullEvent: makeEvent({
             id: 'work1',
             summary: 'Sprint Planning',
             start: { dateTime: '2024-01-15T09:00:00Z' },
             end: { dateTime: '2024-01-15T10:00:00Z' }
-          },
+          }),
           overlap: {
             duration: '15 minutes',
             percentage: 25,

@@ -1,18 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { EventSimilarityChecker } from '../../../../services/conflict-detection/EventSimilarityChecker.js';
-import { calendar_v3 } from 'googleapis';
+import { makeEvent } from '../../helpers/factories.js';
 
 describe('EventSimilarityChecker', () => {
   const checker = new EventSimilarityChecker();
 
   describe('checkSimilarity', () => {
     it('should return 0.95 for identical events', () => {
-      const event1: calendar_v3.Schema$Event = {
+      const event1 = makeEvent({
         summary: 'Team Meeting',
         location: 'Conference Room A',
         start: { dateTime: '2024-01-01T10:00:00' },
         end: { dateTime: '2024-01-01T11:00:00' }
-      };
+      });
       const event2 = { ...event1 };
 
       const similarity = checker.checkSimilarity(event1, event2);
@@ -20,69 +20,68 @@ describe('EventSimilarityChecker', () => {
     });
 
     it('should detect high similarity for events with same title and time', () => {
-      const event1: calendar_v3.Schema$Event = {
+      const event1 = makeEvent({
         summary: 'Team Meeting',
         location: 'Conference Room A',
         start: { dateTime: '2024-01-01T10:00:00' },
         end: { dateTime: '2024-01-01T11:00:00' }
-      };
-      const event2: calendar_v3.Schema$Event = {
+      });
+      const event2 = makeEvent({
         summary: 'Team Meeting',
         location: 'Conference Room B', // Different location
         start: { dateTime: '2024-01-01T10:00:00' },
         end: { dateTime: '2024-01-01T11:00:00' }
-      };
+      });
 
       const similarity = checker.checkSimilarity(event1, event2);
       expect(similarity).toBeGreaterThan(0.8);
     });
 
     it('should detect moderate similarity for events with similar titles', () => {
-      const event1: calendar_v3.Schema$Event = {
+      const event1 = makeEvent({
         summary: 'Team Meeting',
         start: { dateTime: '2024-01-01T10:00:00' },
         end: { dateTime: '2024-01-01T11:00:00' }
-      };
-      const event2: calendar_v3.Schema$Event = {
+      });
+      const event2 = makeEvent({
         summary: 'Team Meeting Discussion',
         start: { dateTime: '2024-01-01T14:00:00' }, // Different time
         end: { dateTime: '2024-01-01T15:00:00' }
-      };
+      });
 
       const similarity = checker.checkSimilarity(event1, event2);
       expect(similarity).toBe(0.3); // Similar titles only = 0.3 in our simplified algorithm
     });
 
     it('should detect low similarity for completely different events', () => {
-      const event1: calendar_v3.Schema$Event = {
+      const event1 = makeEvent({
         summary: 'Team Meeting',
         location: 'Conference Room A',
         start: { dateTime: '2024-01-01T10:00:00' },
         end: { dateTime: '2024-01-01T11:00:00' }
-      };
-      const event2: calendar_v3.Schema$Event = {
+      });
+      const event2 = makeEvent({
         summary: 'Doctor Appointment',
         location: 'Medical Center',
         start: { dateTime: '2024-02-15T09:00:00' },
         end: { dateTime: '2024-02-15T09:30:00' }
-      };
+      });
 
       const similarity = checker.checkSimilarity(event1, event2);
       expect(similarity).toBeLessThan(0.3);
     });
 
     it('should handle events with missing fields', () => {
-      const event1: calendar_v3.Schema$Event = {
+      const event1 = makeEvent({
         summary: 'Meeting',
         start: { dateTime: '2024-01-01T10:00:00' },
         end: { dateTime: '2024-01-01T11:00:00' }
-      };
-      const event2: calendar_v3.Schema$Event = {
-        // No summary
+      });
+      const event2 = makeEvent({
         location: 'Room 101',
         start: { dateTime: '2024-01-01T10:00:00' },
         end: { dateTime: '2024-01-01T11:00:00' }
-      };
+      });
 
       const similarity = checker.checkSimilarity(event1, event2);
       expect(similarity).toBeGreaterThan(0); // Time matches
@@ -90,16 +89,16 @@ describe('EventSimilarityChecker', () => {
     });
 
     it('should handle all-day events', () => {
-      const event1: calendar_v3.Schema$Event = {
+      const event1 = makeEvent({
         summary: 'Conference',
         start: { date: '2024-01-01' },
         end: { date: '2024-01-02' }
-      };
-      const event2: calendar_v3.Schema$Event = {
+      });
+      const event2 = makeEvent({
         summary: 'Conference',
         start: { date: '2024-01-01' },
         end: { date: '2024-01-02' }
-      };
+      });
 
       const similarity = checker.checkSimilarity(event1, event2);
       expect(similarity).toBe(0.95); // Exact title + overlapping = 0.95

@@ -1,5 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID, GMAIL_INBOX, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES } from './lib/constants.mjs';
+import { GMAIL_INBOX, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES } from './lib/constants.mjs';
+
+const USER_ID = 'me';
 
 async function createRemainingFilters() {
   const gmail = createGmailClient();

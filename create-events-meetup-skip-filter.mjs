@@ -1,5 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID } from './lib/constants.mjs';
+
+const USER_ID = 'me';
 
 async function createEventsMeetupSkipFilter() {
   const gmail = createGmailClient();

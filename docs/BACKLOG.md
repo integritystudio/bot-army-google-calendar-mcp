@@ -395,24 +395,24 @@ describe('Conflict Detection', () => {
 ---
 
 ### M4: Standardize USER_ID constant approach across refactored scripts
-**Status:** 📋 NOTE
+**Status:** ✅ COMPLETED (2026-03-24)
 **Priority:** Medium
 **Date Added:** 2026-03-23
 **Source:** Batch refactor session (Unit 5 deviation)
 
-Unit 5 (remaining filters + unread filters) created `lib/constants.mjs` and exported `USER_ID` from there. Units 1-4 used local `const USER_ID = 'me'` in each file. This inconsistency should be resolved.
+Unit 5 (remaining filters + unread filters) created `lib/constants.mjs` and exported `USER_ID` from there. Units 1-4 used local `const USER_ID = 'me'` in each file. This inconsistency has been resolved per recommendation.
 
-**Current State:**
-- Units 1-4: Local constants (`const USER_ID = 'me'` in each file)
-- Unit 5: Shared export from `lib/constants.mjs`
+**Decision Made:** Option 2 (keep local approach) — Each script is independent CLI tool with no shared module dependency benefits. Local constants are simpler to debug and test.
 
-**Decision Needed:**
-1. **Consolidate to shared lib approach** — Move all USER_ID to `lib/constants.mjs`, import in all 22 files
-2. **Keep local approach** — Remove `lib/constants.mjs`, use local `const USER_ID = 'me'` in Units 5 files (simpler, no shared state)
-
-**Recommendation:** Option 2 (keep local) — each script is independent CLI tool, no shared module dependency benefits. Simpler to debug and test. CLAUDE.md already mentions `lib/constants.mjs` for label names/queries, not for USER_ID.
-
-**Action:** If moving to shared lib, update 22 scripts to `import { USER_ID } from './lib/constants.mjs'`. Otherwise, leave Unit 5 as-is.
+**Action Taken (Implemented):**
+1. Removed `USER_ID` export from `lib/constants.mjs` (kept label constants only per CLAUDE.md guidelines)
+2. Updated 5 Unit 5 files to use local `const USER_ID = 'me'`:
+   - create-promotions-filter.mjs
+   - describe-internal.mjs
+   - create-events-meetup-skip-filter.mjs
+   - create-newsletter-skip-inbox-filter.mjs
+   - create-remaining-filters.mjs (also updated import to remove USER_ID)
+3. All scripts now follow consistent local constant pattern
 
 ---
 

@@ -4,7 +4,7 @@ import { SearchEventsInput } from "../../tools/registry.js";
 import { BaseToolHandler } from "./BaseToolHandler.js";
 import { calendar_v3 } from 'googleapis';
 import { formatEventWithDetails } from "../utils.js";
-import { convertToRFC3339 } from "../../utils/timezone-utils.js";
+import { resolveTimeRange } from "../../utils/timezone-utils.js";
 import { buildListFieldMask } from "../../utils/field-mask-builder.js";
 
 export class SearchEventsHandler extends BaseToolHandler {
@@ -37,11 +37,7 @@ export class SearchEventsHandler extends BaseToolHandler {
             // 1. Explicit timeZone parameter (highest priority)
             // 2. Calendar's default timezone (fallback)
             const timezone = args.timeZone || await this.getCalendarTimezone(client, args.calendarId);
-            
-            // Convert time boundaries to RFC3339 format for Google Calendar API
-            // Note: convertToRFC3339 will still respect timezone in datetime string as highest priority
-            const timeMin = convertToRFC3339(args.timeMin, timezone);
-            const timeMax = convertToRFC3339(args.timeMax, timezone);
+            const { timeMin, timeMax } = resolveTimeRange(args.timeMin, args.timeMax, timezone);
             
             const fieldMask = buildListFieldMask(args.fields);
             

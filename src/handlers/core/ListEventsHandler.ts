@@ -4,7 +4,7 @@ import { BaseToolHandler } from "./BaseToolHandler.js";
 import { calendar_v3 } from 'googleapis';
 import { formatEventWithDetails } from "../utils.js";
 import { BatchRequestHandler } from "./BatchRequestHandler.js";
-import { convertToRFC3339 } from "../../utils/timezone-utils.js";
+import { resolveTimeRange } from "../../utils/timezone-utils.js";
 import { buildListFieldMask } from "../../utils/field-mask-builder.js";
 import { processBatchResponses } from "./batchUtils.js";
 
@@ -86,20 +86,14 @@ export class ListEventsHandler extends BaseToolHandler {
         return this.fetchMultipleCalendarEvents(client, calendarIds, options);
     }
 
-    // Resolve timeMin/timeMax to RFC3339, using options.timeZone or calendar default timezone
     private async resolveTimeRange(
         client: OAuth2Client,
         calendarId: string,
         options: { timeMin?: string; timeMax?: string; timeZone?: string }
     ): Promise<{ timeMin?: string; timeMax?: string }> {
-        let timeMin = options.timeMin;
-        let timeMax = options.timeMax;
-        if (timeMin || timeMax) {
-            const timezone = options.timeZone || await this.getCalendarTimezone(client, calendarId);
-            timeMin = timeMin ? convertToRFC3339(timeMin, timezone) : undefined;
-            timeMax = timeMax ? convertToRFC3339(timeMax, timezone) : undefined;
-        }
-        return { timeMin, timeMax };
+        if (!options.timeMin && !options.timeMax) return {};
+        const timezone = options.timeZone || await this.getCalendarTimezone(client, calendarId);
+        return resolveTimeRange(options.timeMin, options.timeMax, timezone);
     }
 
     private async fetchSingleCalendarEvents(

@@ -273,7 +273,7 @@ describe('UpdateEventHandler - Recurring Events', () => {
 
       const args: UpdateEventInput = buildUpdateEventInput({
         modificationScope: 'thisAndFollowing',
-        futureStartDate: '2026-04-01T10:00:00Z'
+        futureStartDate: makeFutureDateString(8)
       });
 
       await handler.runTool(args, mockOAuth2Client);

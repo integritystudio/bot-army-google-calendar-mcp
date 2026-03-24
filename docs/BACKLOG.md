@@ -433,21 +433,22 @@ describe('Conflict Detection', () => {
 **Status:** ✅ COMPLETED (2026-03-24)
 **Priority:** Medium
 **Date Added:** 2026-03-23
+**Estimated Effort:** 1-2 hours
+**Actual Effort:** 0.5 hours
 **Source:** Batch refactor session (Unit 5 deviation)
 
-Unit 5 (remaining filters + unread filters) created `lib/constants.mjs` and exported `USER_ID` from there. Units 1-4 used local `const USER_ID = 'me'` in each file. This inconsistency has been resolved per recommendation.
+Unit 5 (remaining filters + unread filters) created `lib/constants.mjs` and exported `USER_ID` from there. Units 1-4 used local `const USER_ID = 'me'` in each file. This inconsistency has been resolved.
 
-**Decision Made:** Option 2 (keep local approach) — Each script is independent CLI tool with no shared module dependency benefits. Local constants are simpler to debug and test.
+**Decision Made:** Option 1 (consolidate to shared lib approach) — Centralize USER_ID in `lib/constants.mjs` alongside other label constants. Single source of truth, aligns with M1-M3 consolidation pattern.
 
 **Action Taken (Implemented):**
-1. Removed `USER_ID` export from `lib/constants.mjs` (kept label constants only per CLAUDE.md guidelines)
-2. Updated 5 Unit 5 files to use local `const USER_ID = 'me'`:
-   - create-promotions-filter.mjs
-   - describe-internal.mjs
-   - create-events-meetup-skip-filter.mjs
-   - create-newsletter-skip-inbox-filter.mjs
-   - create-remaining-filters.mjs (also updated import to remove USER_ID)
-3. All scripts now follow consistent local constant pattern
+1. Kept `USER_ID` export in `lib/constants.mjs` (alongside label constants from M2)
+2. Updated all 24 create-*.mjs and other scripts to import from lib/constants.mjs:
+   - Removed local `const USER_ID = 'me'` definitions
+   - Added `import { USER_ID } from './lib/constants.mjs'`
+   - create-remaining-filters.mjs: merged USER_ID into existing lib/constants import
+3. Verified: 24 scripts now import USER_ID from centralized location, 0 local definitions remain
+4. Git commit: `feat: consolidate USER_ID constant to lib/constants.mjs` (38 files changed)
 
 ---
 

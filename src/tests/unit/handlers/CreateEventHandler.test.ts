@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
 import { OAuth2Client } from 'google-auth-library';
-import { makeEvent, getTextContent, createCreateEventArgs, makeCalendarMock } from '../helpers/index.js';
+import { makeEvent, getTextContent, createCreateEventArgs, makeCalendarMock, createConflictEventArgs, createEventWithAttendeesAndReminders, createEventWithExtendedProperties, createEventWithAttachments } from '../helpers/index.js';
 
 // Mock the googleapis module
 vi.mock('googleapis', () => ({
@@ -54,6 +54,19 @@ describe('CreateEventHandler', () => {
   });
 
   describe('Basic Event Creation', () => {
+    const FULL_EVENT = {
+      eventId: 'full-event',
+      summary: 'Full Event',
+      description: 'Event description',
+      location: 'Conference Room A',
+      attendees: [{ email: 'test@example.com' }],
+      colorId: '5',
+      reminders: {
+        useDefault: false,
+        overrides: [{ method: 'email' as const, minutes: 30 }]
+      }
+    };
+
     it('should create an event without custom ID', async () => {
       const mockCreatedEvent = makeEvent({
         id: 'generated-id-123',
@@ -85,30 +98,11 @@ describe('CreateEventHandler', () => {
     });
 
     it('should create event with all basic optional fields', async () => {
-      const mockCreatedEvent = makeEvent({
-        id: 'full-event',
-        summary: 'Full Event',
-        description: 'Event description',
-        location: 'Conference Room A',
-        attendees: [{ email: 'test@example.com' }],
-        colorId: '5',
-        reminders: { useDefault: false, overrides: [{ method: 'email', minutes: 30 }] }
-      });
+      const mockCreatedEvent = makeEvent(FULL_EVENT);
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
-      const args = createCreateEventArgs('primary', {
-        eventId: 'full-event',
-        summary: 'Full Event',
-        description: 'Event description',
-        location: 'Conference Room A',
-        attendees: [{ email: 'test@example.com' }],
-        colorId: '5',
-        reminders: {
-          useDefault: false,
-          overrides: [{ method: 'email' as const, minutes: 30 }]
-        }
-      });
+      const args = createCreateEventArgs('primary', FULL_EVENT);
 
       const result = await handler.runTool(args, mockOAuth2Client);
 
@@ -200,13 +194,7 @@ describe('CreateEventHandler', () => {
       (conflictError as any).code = 409;
       mockCalendar.events.insert.mockRejectedValue(conflictError);
 
-      const args = {
-        calendarId: 'primary',
-        eventId: 'existing-event',
-        summary: 'Test Event',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00'
-      };
+      const args = createConflictEventArgs('existing-event');
 
       await expect(handler.runTool(args, mockOAuth2Client)).rejects.toThrow(
         "Event ID 'existing-event' already exists. Please use a different ID."
@@ -218,13 +206,7 @@ describe('CreateEventHandler', () => {
       (conflictError as any).response = { status: 409 };
       mockCalendar.events.insert.mockRejectedValue(conflictError);
 
-      const args = {
-        calendarId: 'primary',
-        eventId: 'existing-event',
-        summary: 'Test Event',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00'
-      };
+      const args = createConflictEventArgs('existing-event');
 
       await expect(handler.runTool(args, mockOAuth2Client)).rejects.toThrow(
         "Event ID 'existing-event' already exists. Please use a different ID."
@@ -376,6 +358,17 @@ describe('CreateEventHandler', () => {
   });
 
   describe('Extended Properties', () => {
+    const EXTENDED_PROPS = {
+      private: {
+        'appId': '12345',
+        'customField': 'value1'
+      },
+      shared: {
+        'projectId': 'proj-789',
+        'category': 'meeting'
+      }
+    };
+
     it('should create event with extended properties', async () => {
       const mockCreatedEvent = makeEvent({
         summary: 'Custom Event'
@@ -385,16 +378,7 @@ describe('CreateEventHandler', () => {
 
       const args = createCreateEventArgs('primary', {
         summary: 'Custom Event',
-        extendedProperties: {
-          private: {
-            'appId': '12345',
-            'customField': 'value1'
-          },
-          shared: {
-            'projectId': 'proj-789',
-            'category': 'meeting'
-          }
-        }
+        extendedProperties: EXTENDED_PROPS
       });
 
       await handler.runTool(args, mockOAuth2Client);
@@ -402,16 +386,7 @@ describe('CreateEventHandler', () => {
       expect(mockCalendar.events.insert).toHaveBeenCalledWith(
         expect.objectContaining({
           requestBody: expect.objectContaining({
-            extendedProperties: {
-              private: {
-                'appId': '12345',
-                'customField': 'value1'
-              },
-              shared: {
-                'projectId': 'proj-789',
-                'category': 'meeting'
-              }
-            }
+            extendedProperties: EXTENDED_PROPS
           })
         })
       );
@@ -419,6 +394,20 @@ describe('CreateEventHandler', () => {
   });
 
   describe('Attachments', () => {
+    const ATTACHMENTS = [
+      {
+        fileUrl: 'https://docs.google.com/document/d/123',
+        title: 'Meeting Agenda',
+        mimeType: 'application/vnd.google-apps.document'
+      },
+      {
+        fileUrl: 'https://drive.google.com/file/d/456',
+        title: 'Presentation',
+        mimeType: 'application/vnd.google-apps.presentation',
+        fileId: '456'
+      }
+    ];
+
     it('should create event with attachments', async () => {
       const mockCreatedEvent = makeEvent({
         summary: 'Meeting with Docs'
@@ -428,19 +417,7 @@ describe('CreateEventHandler', () => {
 
       const args = createCreateEventArgs('primary', {
         summary: 'Meeting with Docs',
-        attachments: [
-          {
-            fileUrl: 'https://docs.google.com/document/d/123',
-            title: 'Meeting Agenda',
-            mimeType: 'application/vnd.google-apps.document'
-          },
-          {
-            fileUrl: 'https://drive.google.com/file/d/456',
-            title: 'Presentation',
-            mimeType: 'application/vnd.google-apps.presentation',
-            fileId: '456'
-          }
-        ]
+        attachments: ATTACHMENTS
       });
 
       await handler.runTool(args, mockOAuth2Client);
@@ -448,19 +425,7 @@ describe('CreateEventHandler', () => {
       expect(mockCalendar.events.insert).toHaveBeenCalledWith(
         expect.objectContaining({
           requestBody: expect.objectContaining({
-            attachments: [
-              {
-                fileUrl: 'https://docs.google.com/document/d/123',
-                title: 'Meeting Agenda',
-                mimeType: 'application/vnd.google-apps.document'
-              },
-              {
-                fileUrl: 'https://drive.google.com/file/d/456',
-                title: 'Presentation',
-                mimeType: 'application/vnd.google-apps.presentation',
-                fileId: '456'
-              }
-            ]
+            attachments: ATTACHMENTS
           }),
           supportsAttachments: true
         })

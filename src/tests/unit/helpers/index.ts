@@ -10,6 +10,10 @@ export {
   createUpdateEventArgsWithTimes,
   createUpdateEventArgsWithAttendees,
   createComplexUpdateEventArgs,
-  createCreateEventArgs
+  createCreateEventArgs,
+  createConflictEventArgs,
+  createEventWithAttendeesAndReminders,
+  createEventWithExtendedProperties,
+  createEventWithAttachments
 } from './event-test-data.js';
 export { setupListEventsHandler } from './handler-setup.js';

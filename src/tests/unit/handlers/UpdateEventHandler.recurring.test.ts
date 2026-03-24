@@ -3,7 +3,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { calendar_v3, google } from 'googleapis';
 import { UpdateEventHandler } from '../../../handlers/core/UpdateEventHandler.js';
 import { UpdateEventInput, ToolSchemas } from '../../../tools/registry.js';
-import { makeEvent, makeFutureDateString } from '../helpers/factories.js';
+import { makeEvent, makeFutureDateString, makeCalendarMock } from '../helpers/factories.js';
 
 vi.mock('googleapis', async () => {
   const actual = await vi.importActual('googleapis');
@@ -18,23 +18,16 @@ vi.mock('googleapis', async () => {
 
 describe('UpdateEventHandler - Recurring Events', () => {
   let handler: UpdateEventHandler;
-  let mockCalendar: Partial<calendar_v3.Calendar>;
+  let mockCalendar: ReturnType<typeof makeCalendarMock>;
   let mockOAuth2Client: OAuth2Client;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockCalendar = {
-      events: {
-        get: vi.fn(),
-        patch: vi.fn(),
-        insert: vi.fn(),
-        list: vi.fn().mockResolvedValue({ data: { items: [] } })
-      },
-      calendarList: {
-        get: vi.fn().mockResolvedValue({ data: { timeZone: 'UTC' } })
-      }
-    };
+    mockCalendar = makeCalendarMock({
+      list: vi.fn().mockResolvedValue({ data: { items: [] } }),
+      calendarListGet: vi.fn().mockResolvedValue({ data: { timeZone: 'UTC' } })
+    });
 
     vi.mocked(google.calendar).mockReturnValue(mockCalendar as calendar_v3.Calendar);
 

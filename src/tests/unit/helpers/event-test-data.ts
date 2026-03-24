@@ -191,3 +191,91 @@ export function createCreateEventArgs(
     ...overrides
   };
 }
+
+/**
+ * Create test arguments for conflict scenarios (duplicate event ID).
+ */
+export function createConflictEventArgs(
+  eventId: string = 'existing-event',
+  overrides: Record<string, any> = {}
+): Record<string, any> {
+  return {
+    calendarId: 'primary',
+    eventId,
+    summary: 'Test Event',
+    start: '2025-01-15T10:00:00',
+    end: '2025-01-15T11:00:00',
+    ...overrides
+  };
+}
+
+/**
+ * Create test event data with attendees and reminders.
+ */
+export function createEventWithAttendeesAndReminders(
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event {
+  return {
+    id: 'full-event',
+    summary: 'Full Event',
+    description: 'Event description',
+    location: 'Conference Room A',
+    attendees: [{ email: 'test@example.com' }],
+    colorId: '5',
+    reminders: {
+      useDefault: false,
+      overrides: [{ method: 'email', minutes: 30 }]
+    },
+    ...overrides
+  };
+}
+
+/**
+ * Create test event data with extended properties.
+ */
+export function createEventWithExtendedProperties(
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event {
+  return {
+    id: 'event-with-props',
+    summary: 'Event with Extended Properties',
+    extendedProperties: {
+      private: {
+        'appId': '12345',
+        'customField': 'value1'
+      },
+      shared: {
+        'projectId': 'proj-789',
+        'category': 'meeting'
+      }
+    },
+    ...overrides
+  };
+}
+
+/**
+ * Create test event data with attachments.
+ */
+export function createEventWithAttachments(
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event {
+  return {
+    id: 'event-with-attachments',
+    summary: 'Meeting with Documents',
+    attachments: [
+      {
+        fileUrl: 'https://docs.google.com/document/d/123',
+        title: 'Meeting Agenda',
+        mimeType: 'application/vnd.google-apps.document'
+      },
+      {
+        fileUrl: 'https://drive.google.com/file/d/456',
+        title: 'Presentation',
+        mimeType: 'application/vnd.google-apps.presentation',
+        fileId: '456'
+      }
+    ],
+    ...overrides
+  };
+}
+

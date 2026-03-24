@@ -2,6 +2,8 @@
  * Generic batch processing utilities for parallel operations with error aggregation
  */
 
+import { formatErrorMessage } from "../handlers/core/errorFormatting.js";
+
 export interface BatchResult<T> {
   results: T[];
   errors: Array<{ id: string; error: string }>;
@@ -15,9 +17,7 @@ export interface BatchProcessorOptions<T, TItem = string> {
 }
 
 const defaultErrorFormatter = (error: unknown): string => {
-  if (error instanceof Error) return error.message;
-  if (typeof error === 'string') return error;
-  return JSON.stringify(error);
+  return formatErrorMessage(error);
 };
 
 /**
@@ -123,7 +123,7 @@ export async function processBatchItemsChunked<T, TItem = string>(
         } else {
           errors.push({
             id: outcome.id,
-            error: outcome.error instanceof Error ? outcome.error.message : String(outcome.error)
+            error: formatErrorMessage(outcome.error)
           });
         }
       });

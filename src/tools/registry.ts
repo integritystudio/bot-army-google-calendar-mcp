@@ -4,6 +4,7 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import { BaseToolHandler } from "../handlers/core/BaseToolHandler.js";
 import { ALLOWED_EVENT_FIELDS } from "../utils/field-mask-builder.js";
 import { isValidISODateTime } from "../utils/date-utils.js";
+import { formatErrorMessage } from "../handlers/core/errorFormatting.js";
 
 // Import all handlers
 import { ListCalendarsHandler } from "../handlers/core/ListCalendarsHandler.js";
@@ -508,7 +509,7 @@ export class ToolRegistry {
             }
           } catch (error) {
             throw new Error(
-              `Invalid JSON format for calendarId: ${error instanceof Error ? error.message : 'Unknown parsing error'}`
+              `Invalid JSON format for calendarId: ${formatErrorMessage(error)}`
             );
           }
         }

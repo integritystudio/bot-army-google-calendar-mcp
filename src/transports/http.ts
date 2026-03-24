@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import http from "http";
+import { formatErrorMessage } from "../handlers/core/errorFormatting.js";
 
 export interface HttpTransportConfig {
   port?: number;
@@ -99,7 +100,7 @@ export class HttpTransportHandler {
       try {
         await transport.handleRequest(req, res);
       } catch (error) {
-        process.stderr.write(`Error handling request: ${error instanceof Error ? error.message : error}\n`);
+        process.stderr.write(`Error handling request: ${formatErrorMessage(error)}\n`);
         if (!res.headersSent) {
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({

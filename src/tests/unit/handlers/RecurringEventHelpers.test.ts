@@ -1,132 +1,120 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { calendar_v3 } from 'googleapis';
 import { RecurringEventHelpers } from '../../../handlers/core/RecurringEventHelpers.js';
+import { makeCalendarMock, makeEvent } from '../helpers/factories.js';
+
+// Test constants
+const CALENDAR_ID = 'primary';
+const EVENT_ID = 'event123';
+const SYSTEM_FIELDS = ['id', 'etag', 'iCalUID', 'created', 'updated', 'htmlLink', 'hangoutLink'] as const;
 
 describe('RecurringEventHelpers', () => {
   let helpers: RecurringEventHelpers;
-  let mockCalendar: any;
+  let mockCalendar: ReturnType<typeof makeCalendarMock>;
 
   beforeEach(() => {
-    mockCalendar = {
-      events: {
-        get: vi.fn(),
-        patch: vi.fn(),
-        insert: vi.fn()
-      }
-    };
-    helpers = new RecurringEventHelpers(mockCalendar);
+    mockCalendar = makeCalendarMock();
+    helpers = new RecurringEventHelpers(mockCalendar as unknown as calendar_v3.Calendar);
   });
 
   describe('detectEventType', () => {
-    it('should detect recurring events', async () => {
-      const mockEvent = {
-        data: {
-          id: 'event123',
-          summary: 'Weekly Meeting',
-          recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO']
-        }
-      };
-      mockCalendar.events.get.mockResolvedValue(mockEvent);
+    function resolveWith(overrides: Partial<calendar_v3.Schema$Event>) {
+      mockCalendar.events.get.mockResolvedValue({ data: makeEvent(overrides) });
+    }
 
-      const result = await helpers.detectEventType('event123', 'primary');
+    it('should detect recurring events', async () => {
+      resolveWith({
+        id: EVENT_ID,
+        summary: 'Weekly Meeting',
+        recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO']
+      });
+
+      const result = await helpers.detectEventType(EVENT_ID, CALENDAR_ID);
       expect(result).toBe('recurring');
       expect(mockCalendar.events.get).toHaveBeenCalledWith({
-        calendarId: 'primary',
-        eventId: 'event123'
+        calendarId: CALENDAR_ID,
+        eventId: EVENT_ID
       });
     });
 
     it('should detect single events', async () => {
-      const mockEvent = {
-        data: {
-          id: 'event123',
-          summary: 'One-time Meeting',
-          // no recurrence property
-        }
-      };
-      mockCalendar.events.get.mockResolvedValue(mockEvent);
+      resolveWith({
+        id: EVENT_ID,
+        summary: 'One-time Meeting'
+      });
 
-      const result = await helpers.detectEventType('event123', 'primary');
+      const result = await helpers.detectEventType(EVENT_ID, CALENDAR_ID);
       expect(result).toBe('single');
     });
 
     it('should detect single events with empty recurrence array', async () => {
-      const mockEvent = {
-        data: {
-          id: 'event123',
-          summary: 'One-time Meeting',
-          recurrence: []
-        }
-      };
-      mockCalendar.events.get.mockResolvedValue(mockEvent);
+      resolveWith({
+        id: EVENT_ID,
+        summary: 'One-time Meeting',
+        recurrence: []
+      });
 
-      const result = await helpers.detectEventType('event123', 'primary');
+      const result = await helpers.detectEventType(EVENT_ID, CALENDAR_ID);
       expect(result).toBe('single');
     });
 
     it('should handle API errors', async () => {
       mockCalendar.events.get.mockRejectedValue(new Error('Event not found'));
 
-      await expect(helpers.detectEventType('invalid123', 'primary'))
+      await expect(helpers.detectEventType('invalid123', CALENDAR_ID))
         .rejects.toThrow('Event not found');
     });
   });
 
   describe('formatInstanceId', () => {
-    const testCases = [
-      {
-        eventId: 'event123',
-        originalStartTime: '2024-06-15T10:00:00-07:00',
-        expected: 'event123_20240615T170000Z'
-      },
-      {
-        eventId: 'meeting456',
-        originalStartTime: '2024-12-31T23:59:59Z',
-        expected: 'meeting456_20241231T235959Z'
-      },
-      {
-        eventId: 'recurring_event',
-        originalStartTime: '2024-06-15T14:30:00+05:30',
-        expected: 'recurring_event_20240615T090000Z'
-      }
-    ];
-
-    testCases.forEach(({ eventId, originalStartTime, expected }) => {
-      it(`should format instance ID correctly for ${originalStartTime}`, () => {
-        const result = helpers.formatInstanceId(eventId, originalStartTime);
-        expect(result).toBe(expected);
-      });
+    it.each([
+      ['event123', '2024-06-15T10:00:00-07:00', 'event123_20240615T170000Z'],
+      ['meeting456', '2024-12-31T23:59:59Z', 'meeting456_20241231T235959Z'],
+      ['recurring_event', '2024-06-15T14:30:00+05:30', 'recurring_event_20240615T090000Z'],
+    ])('should format instance ID for %s at %s', (eventId, originalStartTime, expected) => {
+      const result = helpers.formatInstanceId(eventId, originalStartTime);
+      expect(result).toBe(expected);
     });
 
     it('should handle datetime with milliseconds', () => {
-      const result = helpers.formatInstanceId('event123', '2024-06-15T10:00:00.000Z');
+      const result = helpers.formatInstanceId(EVENT_ID, '2024-06-15T10:00:00.000Z');
       expect(result).toBe('event123_20240615T100000Z');
+    });
+
+    it.each([
+      ['leap123', '2024-02-29T10:00:00Z', 'leap123_20240229T100000Z'],
+      ['leap456', '2024-02-29T23:59:59-12:00', 'leap456_20240301T115959Z'],
+    ])('should handle leap year dates in %s', (eventId, originalStartTime, expected) => {
+      const result = helpers.formatInstanceId(eventId, originalStartTime);
+      expect(result).toBe(expected);
+    });
+
+    it.each([
+      ['extreme1', '2024-06-15T10:00:00+14:00', 'extreme1_20240614T200000Z'],
+      ['extreme2', '2024-06-15T10:00:00-12:00', 'extreme2_20240615T220000Z'],
+    ])('should handle extreme timezone offsets in %s', (eventId, originalStartTime, expected) => {
+      const result = helpers.formatInstanceId(eventId, originalStartTime);
+      expect(result).toBe(expected);
     });
   });
 
   describe('calculateUntilDate', () => {
-    it('should calculate UNTIL date one day before future start date', () => {
-      const futureStartDate = '2024-06-20T10:00:00-07:00';
+    it.each([
+      ['2024-06-20T10:00:00-07:00', '20240619T170000Z'],
+      ['2024-06-20T00:00:00Z', '20240619T000000Z'],
+      ['2024-06-20T10:00:00+05:30', '20240619T043000Z'],
+    ])('should calculate UNTIL date one day before %s', (futureStartDate, expected) => {
       const result = helpers.calculateUntilDate(futureStartDate);
-      
-      // Should be June 19th, 2024 at 10:00:00 in basic format
-      expect(result).toBe('20240619T170000Z');
+      expect(result).toBe(expected);
     });
 
-    it('should handle timezone conversions correctly', () => {
-      const futureStartDate = '2024-06-20T00:00:00Z';
+    it.each([
+      ['2024-01-01T00:00:00Z', '20231231T000000Z'],
+      ['2024-12-31T23:59:59Z', '20241230T235959Z'],
+      ['2024-03-01T00:00:00Z', '20240229T000000Z'],
+    ])('should handle edge dates like %s', (futureStartDate, expected) => {
       const result = helpers.calculateUntilDate(futureStartDate);
-      
-      // Should be June 19th, 2024 at 00:00:00 in basic format
-      expect(result).toBe('20240619T000000Z');
-    });
-
-    it('should handle different timezones', () => {
-      const futureStartDate = '2024-06-20T10:00:00+05:30';
-      const result = helpers.calculateUntilDate(futureStartDate);
-      
-      // Should be June 19th, 2024 at 04:30:00 UTC in basic format
-      expect(result).toBe('20240619T043000Z');
+      expect(result).toBe(expected);
     });
   });
 
@@ -139,21 +127,17 @@ describe('RecurringEventHelpers', () => {
       const newStartTime = '2024-06-15T14:00:00-07:00';
 
       const result = helpers.calculateEndTime(newStartTime, originalEvent);
-      
-      // Should preserve the 1 hour duration from original event
       expect(result).toBe('2024-06-15T22:00:00.000Z');
     });
 
     it('should handle different durations', () => {
       const originalEvent: calendar_v3.Schema$Event = {
         start: { dateTime: '2024-06-15T10:00:00Z' },
-        end: { dateTime: '2024-06-15T12:30:00Z' } // 2.5 hour duration
+        end: { dateTime: '2024-06-15T12:30:00Z' }
       };
       const newStartTime = '2024-06-16T09:00:00Z';
 
       const result = helpers.calculateEndTime(newStartTime, originalEvent);
-      
-      // Should be 2.5 hours later
       expect(result).toBe('2024-06-16T11:30:00.000Z');
     });
 
@@ -165,54 +149,51 @@ describe('RecurringEventHelpers', () => {
       const newStartTime = '2024-06-15T10:00:00+05:30';
 
       const result = helpers.calculateEndTime(newStartTime, originalEvent);
-      
-      // Should maintain 1 hour duration
       expect(result).toBe('2024-06-15T05:30:00.000Z');
+    });
+
+    it.each([
+      ['1 minute', '2024-06-15T10:00:00Z', '2024-06-15T10:01:00Z', '2024-06-16T15:30:00Z', '2024-06-16T15:31:00.000Z'],
+      ['8 hours', '2024-06-15T09:00:00Z', '2024-06-15T17:00:00Z', '2024-06-16T10:00:00Z', '2024-06-16T18:00:00.000Z'],
+      ['48 hours', '2024-06-15T10:00:00Z', '2024-06-17T10:00:00Z', '2024-06-20T10:00:00Z', '2024-06-22T10:00:00.000Z'],
+    ])('should preserve %s duration', (_, origStart, origEnd, newStart, expected) => {
+      const event = { start: { dateTime: origStart }, end: { dateTime: origEnd } };
+      expect(helpers.calculateEndTime(newStart, event)).toBe(expected);
     });
   });
 
   describe('updateRecurrenceWithUntil', () => {
+    const UNTIL_DATE = '20240630T170000Z';
+
     it('should add UNTIL clause to simple recurrence rule', () => {
       const recurrence = ['RRULE:FREQ=WEEKLY;BYDAY=MO'];
-      const untilDate = '20240630T170000Z';
-
-      const result = helpers.updateRecurrenceWithUntil(recurrence, untilDate);
-      
+      const result = helpers.updateRecurrenceWithUntil(recurrence, UNTIL_DATE);
       expect(result).toEqual(['RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20240630T170000Z']);
     });
 
     it('should replace existing UNTIL clause', () => {
       const recurrence = ['RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20240531T170000Z'];
-      const untilDate = '20240630T170000Z';
-
-      const result = helpers.updateRecurrenceWithUntil(recurrence, untilDate);
-      
+      const result = helpers.updateRecurrenceWithUntil(recurrence, UNTIL_DATE);
       expect(result).toEqual(['RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20240630T170000Z']);
     });
 
     it('should replace COUNT with UNTIL', () => {
       const recurrence = ['RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=10'];
-      const untilDate = '20240630T170000Z';
-
-      const result = helpers.updateRecurrenceWithUntil(recurrence, untilDate);
-      
+      const result = helpers.updateRecurrenceWithUntil(recurrence, UNTIL_DATE);
       expect(result).toEqual(['RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20240630T170000Z']);
     });
 
     it('should handle complex recurrence rules', () => {
       const recurrence = ['RRULE:FREQ=DAILY;INTERVAL=2;BYHOUR=10;BYMINUTE=0;COUNT=20'];
-      const untilDate = '20240630T170000Z';
-
-      const result = helpers.updateRecurrenceWithUntil(recurrence, untilDate);
-      
+      const result = helpers.updateRecurrenceWithUntil(recurrence, UNTIL_DATE);
       expect(result).toEqual(['RRULE:FREQ=DAILY;INTERVAL=2;BYHOUR=10;BYMINUTE=0;UNTIL=20240630T170000Z']);
     });
 
     it('should throw error for empty recurrence', () => {
-      expect(() => helpers.updateRecurrenceWithUntil([], '20240630T170000Z'))
+      expect(() => helpers.updateRecurrenceWithUntil([], UNTIL_DATE))
         .toThrow('No recurrence rule found');
-      
-      expect(() => helpers.updateRecurrenceWithUntil(undefined as any, '20240630T170000Z'))
+
+      expect(() => helpers.updateRecurrenceWithUntil(undefined as any, UNTIL_DATE))
         .toThrow('No recurrence rule found');
     });
 
@@ -222,10 +203,8 @@ describe('RecurringEventHelpers', () => {
         'EXDATE:20240610T100000Z',
         'EXDATE:20240612T100000Z'
       ];
-      const untilDate = '20240630T170000Z';
 
-      const result = helpers.updateRecurrenceWithUntil(recurrence, untilDate);
-      
+      const result = helpers.updateRecurrenceWithUntil(recurrence, UNTIL_DATE);
       expect(result).toEqual([
         'RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR;UNTIL=20240630T170000Z',
         'EXDATE:20240610T100000Z',
@@ -239,10 +218,8 @@ describe('RecurringEventHelpers', () => {
         'RRULE:FREQ=WEEKLY;BYDAY=MO',
         'EXDATE:20240612T100000Z'
       ];
-      const untilDate = '20240630T170000Z';
 
-      const result = helpers.updateRecurrenceWithUntil(recurrence, untilDate);
-      
+      const result = helpers.updateRecurrenceWithUntil(recurrence, UNTIL_DATE);
       expect(result).toEqual([
         'EXDATE:20240610T100000Z',
         'RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20240630T170000Z',
@@ -255,14 +232,12 @@ describe('RecurringEventHelpers', () => {
         'EXDATE:20240610T100000Z',
         'EXDATE:20240612T100000Z'
       ];
-      const untilDate = '20240630T170000Z';
 
-      expect(() => helpers.updateRecurrenceWithUntil(recurrence, untilDate))
+      expect(() => helpers.updateRecurrenceWithUntil(recurrence, UNTIL_DATE))
         .toThrow('No RRULE found in recurrence rules');
     });
 
-    it('should handle complex recurrence with multiple EXDATE rules as reported in user issue', () => {
-      // This test case reproduces the exact scenario from the user's error
+    it('should handle complex recurrence with multiple EXDATE rules', () => {
       const recurrence = [
         'EXDATE;TZID=America/Los_Angeles:20250702T130500',
         'EXDATE;TZID=America/Los_Angeles:20250704T130500',
@@ -271,11 +246,8 @@ describe('RecurringEventHelpers', () => {
         'EXDATE;TZID=America/Los_Angeles:20250709T130500',
         'EXDATE;TZID=America/Los_Angeles:20250711T130500'
       ];
-      const untilDate = '20251102T210500Z';
 
-      const result = helpers.updateRecurrenceWithUntil(recurrence, untilDate);
-      
-      // Should preserve all EXDATE rules and only modify the RRULE
+      const result = helpers.updateRecurrenceWithUntil(recurrence, '20251102T210500Z');
       expect(result).toEqual([
         'EXDATE;TZID=America/Los_Angeles:20250702T130500',
         'EXDATE;TZID=America/Los_Angeles:20250704T130500',
@@ -285,12 +257,27 @@ describe('RecurringEventHelpers', () => {
         'EXDATE;TZID=America/Los_Angeles:20250711T130500'
       ]);
     });
+
+    it.each([
+      [['RRULE:FREQ=MONTHLY;BYMONTHDAY=15;BYHOUR=10;BYMINUTE=30'], '20241215T103000Z', ['RRULE:FREQ=MONTHLY;BYMONTHDAY=15;BYHOUR=10;BYMINUTE=30;UNTIL=20241215T103000Z']],
+      [['RRULE:FREQ=YEARLY;BYMONTH=6;BYMONTHDAY=15;COUNT=5'], '20291215T103000Z', ['RRULE:FREQ=YEARLY;BYMONTH=6;BYMONTHDAY=15;UNTIL=20291215T103000Z']],
+      [['RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR;INTERVAL=2;UNTIL=20241201T100000Z'], '20241115T100000Z', ['RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR;INTERVAL=2;UNTIL=20241115T100000Z']],
+    ])('should handle various RRULE formats', (original, untilDate, expected) => {
+      const result = helpers.updateRecurrenceWithUntil(original, untilDate);
+      expect(result).toEqual(expected);
+    });
   });
 
   describe('cleanEventForDuplication', () => {
+    function expectSystemFieldsRemoved(result: calendar_v3.Schema$Event): void {
+      SYSTEM_FIELDS.forEach(field => {
+        expect(result[field as keyof typeof result]).toBeUndefined();
+      });
+    }
+
     it('should remove system-generated fields', () => {
       const originalEvent: calendar_v3.Schema$Event = {
-        id: 'event123',
+        id: EVENT_ID,
         etag: '"abc123"',
         iCalUID: 'uid123@google.com',
         created: '2024-01-01T00:00:00Z',
@@ -305,12 +292,7 @@ describe('RecurringEventHelpers', () => {
       };
 
       const result = helpers.cleanEventForDuplication(originalEvent);
-
-      const systemFields = ['id', 'etag', 'iCalUID', 'created', 'updated', 'htmlLink', 'hangoutLink'];
-      systemFields.forEach(field => {
-        expect(result[field as keyof typeof result]).toBeUndefined();
-      });
-
+      expectSystemFieldsRemoved(result);
       expect(result.summary).toBe('Meeting');
       expect(result.description).toBe('Meeting description');
       expect(result.location).toBe('Conference Room');
@@ -320,17 +302,49 @@ describe('RecurringEventHelpers', () => {
 
     it('should not modify original event object', () => {
       const originalEvent: calendar_v3.Schema$Event = {
-        id: 'event123',
+        id: EVENT_ID,
         summary: 'Meeting'
       };
 
       const result = helpers.cleanEventForDuplication(originalEvent);
 
-      // Original should be unchanged
-      expect(originalEvent.id).toBe('event123');
-      // Result should be cleaned
+      expect(originalEvent.id).toBe(EVENT_ID);
       expect(result.id).toBeUndefined();
       expect(result.summary).toBe('Meeting');
+    });
+
+    it('should handle all possible system fields', () => {
+      const eventWithAllSystemFields: calendar_v3.Schema$Event = {
+        id: EVENT_ID,
+        etag: '"abc123"',
+        iCalUID: 'uid123@google.com',
+        created: '2024-01-01T00:00:00Z',
+        updated: '2024-01-01T00:00:00Z',
+        htmlLink: 'https://calendar.google.com/event?eid=...',
+        hangoutLink: 'https://meet.google.com/...',
+        conferenceData: { entryPoints: [] },
+        creator: { email: 'creator@example.com' },
+        organizer: { email: 'organizer@example.com' },
+        sequence: 1,
+        status: 'confirmed',
+        transparency: 'opaque',
+        visibility: 'default',
+        summary: 'Meeting',
+        description: 'Meeting description',
+        location: 'Conference Room',
+        start: { dateTime: '2024-06-15T10:00:00Z' },
+        end: { dateTime: '2024-06-15T11:00:00Z' },
+        attendees: [{ email: 'attendee@example.com' }],
+        recurrence: ['RRULE:FREQ=WEEKLY']
+      };
+
+      const result = helpers.cleanEventForDuplication(eventWithAllSystemFields);
+      expectSystemFieldsRemoved(result);
+      expect(result.summary).toBe('Meeting');
+      expect(result.description).toBe('Meeting description');
+      expect(result.location).toBe('Conference Room');
+      expect(result.attendees).toEqual([{ email: 'attendee@example.com' }]);
+      expect(result.recurrence).toEqual(['RRULE:FREQ=WEEKLY']);
     });
   });
 
@@ -368,11 +382,11 @@ describe('RecurringEventHelpers', () => {
 
       expect(result).toEqual({
         summary: 'Meeting',
-        start: { 
+        start: {
           dateTime: '2024-06-15T10:00:00-07:00',
           timeZone: 'America/Los_Angeles'
         },
-        end: { 
+        end: {
           dateTime: '2024-06-15T11:00:00-07:00',
           timeZone: 'America/Los_Angeles'
         }
@@ -382,7 +396,6 @@ describe('RecurringEventHelpers', () => {
     it('should handle partial time changes', () => {
       const args = {
         start: '2024-06-15T10:00:00-07:00',
-        // no end provided
         timeZone: 'America/Los_Angeles',
         summary: 'Meeting'
       };
@@ -410,11 +423,11 @@ describe('RecurringEventHelpers', () => {
 
       expect(result).toEqual({
         summary: 'Meeting',
-        start: { 
+        start: {
           dateTime: '2024-06-15T10:00:00',
           timeZone: 'Europe/London'
         },
-        end: { 
+        end: {
           dateTime: '2024-06-15T11:00:00',
           timeZone: 'Europe/London'
         }
@@ -457,171 +470,17 @@ describe('RecurringEventHelpers', () => {
       expect('description' in result).toBe(false);
       expect('location' in result).toBe(false);
     });
-  });
 
-  describe('Edge Cases and Boundary Conditions', () => {
-    it('should handle leap year dates correctly in formatInstanceId', () => {
-      const leapYearCases = [
-        {
-          eventId: 'leap123',
-          originalStartTime: '2024-02-29T10:00:00Z', // Leap year
-          expected: 'leap123_20240229T100000Z'
-        },
-        {
-          eventId: 'leap456',
-          originalStartTime: '2024-02-29T23:59:59-12:00', // Edge timezone
-          expected: 'leap456_20240301T115959Z'
-        }
-      ];
-
-      leapYearCases.forEach(({ eventId, originalStartTime, expected }) => {
-        const result = helpers.formatInstanceId(eventId, originalStartTime);
-        expect(result).toBe(expected);
-      });
-    });
-
-    it('should handle extreme timezone offsets in formatInstanceId', () => {
-      const extremeTimezoneCases = [
-        {
-          eventId: 'extreme1',
-          originalStartTime: '2024-06-15T10:00:00+14:00', // UTC+14 (Kiribati)
-          expected: 'extreme1_20240614T200000Z'
-        },
-        {
-          eventId: 'extreme2',
-          originalStartTime: '2024-06-15T10:00:00-12:00', // UTC-12 (Baker Island)
-          expected: 'extreme2_20240615T220000Z'
-        }
-      ];
-
-      extremeTimezoneCases.forEach(({ eventId, originalStartTime, expected }) => {
-        const result = helpers.formatInstanceId(eventId, originalStartTime);
-        expect(result).toBe(expected);
-      });
-    });
-
-    it('should handle calculateUntilDate with edge dates', () => {
-      const edgeCases = [
-        {
-          futureStartDate: '2024-01-01T00:00:00Z', // New Year
-          expected: '20231231T000000Z'
-        },
-        {
-          futureStartDate: '2024-12-31T23:59:59Z', // End of year
-          expected: '20241230T235959Z'
-        },
-        {
-          futureStartDate: '2024-03-01T00:00:00Z', // Day after leap day
-          expected: '20240229T000000Z'
-        }
-      ];
-
-      edgeCases.forEach(({ futureStartDate, expected }) => {
-        const result = helpers.calculateUntilDate(futureStartDate);
-        expect(result).toBe(expected);
-      });
-    });
-
-    it('should handle calculateEndTime with very short and very long durations', () => {
-      // Very short duration (1 minute)
-      const shortDurationEvent: calendar_v3.Schema$Event = {
-        start: { dateTime: '2024-06-15T10:00:00Z' },
-        end: { dateTime: '2024-06-15T10:01:00Z' }
-      };
-      const shortResult = helpers.calculateEndTime('2024-06-16T15:30:00Z', shortDurationEvent);
-      expect(shortResult).toBe('2024-06-16T15:31:00.000Z');
-
-      // Very long duration (8 hours)
-      const longDurationEvent: calendar_v3.Schema$Event = {
-        start: { dateTime: '2024-06-15T09:00:00Z' },
-        end: { dateTime: '2024-06-15T17:00:00Z' }
-      };
-      const longResult = helpers.calculateEndTime('2024-06-16T10:00:00Z', longDurationEvent);
-      expect(longResult).toBe('2024-06-16T18:00:00.000Z');
-
-      // Multi-day duration
-      const multiDayEvent: calendar_v3.Schema$Event = {
-        start: { dateTime: '2024-06-15T10:00:00Z' },
-        end: { dateTime: '2024-06-17T10:00:00Z' } // 48 hours
-      };
-      const multiDayResult = helpers.calculateEndTime('2024-06-20T10:00:00Z', multiDayEvent);
-      expect(multiDayResult).toBe('2024-06-22T10:00:00.000Z');
-    });
-
-    it('should handle updateRecurrenceWithUntil with various RRULE formats', () => {
-      const complexRRuleCases = [
-        {
-          original: ['RRULE:FREQ=MONTHLY;BYMONTHDAY=15;BYHOUR=10;BYMINUTE=30'],
-          untilDate: '20241215T103000Z',
-          expected: ['RRULE:FREQ=MONTHLY;BYMONTHDAY=15;BYHOUR=10;BYMINUTE=30;UNTIL=20241215T103000Z']
-        },
-        {
-          original: ['RRULE:FREQ=YEARLY;BYMONTH=6;BYMONTHDAY=15;COUNT=5'],
-          untilDate: '20291215T103000Z',
-          expected: ['RRULE:FREQ=YEARLY;BYMONTH=6;BYMONTHDAY=15;UNTIL=20291215T103000Z']
-        },
-        {
-          original: ['RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR;INTERVAL=2;UNTIL=20241201T100000Z'],
-          untilDate: '20241115T100000Z',
-          expected: ['RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR;INTERVAL=2;UNTIL=20241115T100000Z']
-        }
-      ];
-
-      complexRRuleCases.forEach(({ original, untilDate, expected }) => {
-        const result = helpers.updateRecurrenceWithUntil(original, untilDate);
-        expect(result).toEqual(expected);
-      });
-    });
-
-    it('should handle cleanEventForDuplication with all possible system fields', () => {
-      const eventWithAllSystemFields: calendar_v3.Schema$Event = {
-        id: 'event123',
-        etag: '"abc123"',
-        iCalUID: 'uid123@google.com',
-        created: '2024-01-01T00:00:00Z',
-        updated: '2024-01-01T00:00:00Z',
-        htmlLink: 'https://calendar.google.com/event?eid=...',
-        hangoutLink: 'https://meet.google.com/...',
-        conferenceData: { entryPoints: [] },
-        creator: { email: 'creator@example.com' },
-        organizer: { email: 'organizer@example.com' },
-        sequence: 1,
-        status: 'confirmed',
-        transparency: 'opaque',
-        visibility: 'default',
-        summary: 'Meeting',
-        description: 'Meeting description',
-        location: 'Conference Room',
-        start: { dateTime: '2024-06-15T10:00:00Z' },
-        end: { dateTime: '2024-06-15T11:00:00Z' },
-        attendees: [{ email: 'attendee@example.com' }],
-        recurrence: ['RRULE:FREQ=WEEKLY']
-      };
-
-      const result = helpers.cleanEventForDuplication(eventWithAllSystemFields);
-
-      const systemFields = ['id', 'etag', 'iCalUID', 'created', 'updated', 'htmlLink', 'hangoutLink'];
-      systemFields.forEach(field => {
-        expect(result[field as keyof typeof result]).toBeUndefined();
-      });
-
-      expect(result.summary).toBe('Meeting');
-      expect(result.description).toBe('Meeting description');
-      expect(result.location).toBe('Conference Room');
-      expect(result.attendees).toEqual([{ email: 'attendee@example.com' }]);
-      expect(result.recurrence).toEqual(['RRULE:FREQ=WEEKLY']);
-    });
-
-    it('should handle buildUpdateRequestBody with complex nested objects', () => {
+    it('should handle complex nested objects', () => {
       const complexArgs = {
         summary: 'Complex Meeting',
         attendees: [
-          { 
+          {
             email: 'user1@example.com',
             displayName: 'User One',
             responseStatus: 'accepted'
           },
-          { 
+          {
             email: 'user2@example.com',
             displayName: 'User Two',
             responseStatus: 'tentative'
@@ -651,7 +510,7 @@ describe('RecurringEventHelpers', () => {
       expect(result.end).toEqual({ timeZone: 'America/Los_Angeles' });
     });
 
-    it('should handle buildUpdateRequestBody with mixed null, undefined, and valid values', () => {
+    it('should handle mixed null, undefined, and valid values', () => {
       const mixedArgs = {
         summary: 'Valid Summary',
         description: null,
@@ -669,14 +528,14 @@ describe('RecurringEventHelpers', () => {
       expect(result.summary).toBe('Valid Summary');
       expect('description' in result).toBe(false);
       expect('location' in result).toBe(false);
-      expect(result.colorId).toBe(''); // Empty string should be included
-      expect(result.attendees).toEqual([]); // Empty array should be included
+      expect(result.colorId).toBe('');
+      expect(result.attendees).toEqual([]);
       expect('reminders' in result).toBe(false);
-      expect(result.start).toEqual({ 
+      expect(result.start).toEqual({
         dateTime: '2024-06-15T10:00:00Z',
         timeZone: 'UTC'
       });
       expect(result.end).toEqual({ timeZone: 'UTC' });
     });
   });
-}); 
+});

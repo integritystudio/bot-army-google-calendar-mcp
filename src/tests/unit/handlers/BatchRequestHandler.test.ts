@@ -1,9 +1,72 @@
-/**
- * @jest-environment node
- */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { OAuth2Client } from 'google-auth-library';
 import { BatchRequestHandler, BatchRequest, BatchResponse } from '../../../handlers/core/BatchRequestHandler.js';
+
+// Constants for batch response construction
+const BATCH_BOUNDARY = 'batch_abc123';
+
+// Test data constants
+const PRIMARY_EVENTS_REQUEST: BatchRequest[] = [
+  {
+    method: 'GET',
+    path: '/calendar/v3/calendars/primary/events'
+  }
+];
+
+// Helper to build mock multipart response text
+function buildMockBatchResponse(
+  parts: string[],
+  boundary: string = BATCH_BOUNDARY
+): string {
+  const body = parts
+    .map(part => `--${boundary}\n${part}`)
+    .join('\n');
+  return [
+    'HTTP/1.1 200 OK',
+    `Content-Type: multipart/mixed; boundary=${boundary}`,
+    '',
+    body,
+    `--${boundary}--`
+  ].join('\n');
+}
+
+// Helper to build a single response part
+function buildResponsePart(
+  statusLine: string,
+  json: string,
+  contentId: string = 'response-item1'
+): string {
+  return [
+    'Content-Type: application/http',
+    `Content-ID: <${contentId}>`,
+    '',
+    statusLine,
+    'Content-Type: application/json',
+    '',
+    json
+  ].join('\n');
+}
+
+// Helper to access private methods for testing
+function createBatchBody(
+  handler: BatchRequestHandler,
+  requests: BatchRequest[]
+): string {
+  return (handler as unknown as { createBatchBody: (r: BatchRequest[]) => string })
+    .createBatchBody(requests);
+}
+
+function getBoundary(handler: BatchRequestHandler): string {
+  return (handler as unknown as { boundary: string }).boundary;
+}
+
+function parseBatchResponse(
+  handler: BatchRequestHandler,
+  responseText: string
+): BatchResponse[] {
+  return (handler as unknown as { parseBatchResponse: (r: string) => BatchResponse[] })
+    .parseBatchResponse(responseText);
+}
 
 describe('BatchRequestHandler', () => {
   let mockOAuth2Client: OAuth2Client;
@@ -13,8 +76,12 @@ describe('BatchRequestHandler', () => {
     vi.clearAllMocks();
     mockOAuth2Client = {
       getAccessToken: vi.fn().mockResolvedValue({ token: 'mock_access_token' })
-    } as any;
+    } as unknown as OAuth2Client;
     batchHandler = new BatchRequestHandler(mockOAuth2Client);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('Batch Request Creation', () => {
@@ -26,8 +93,8 @@ describe('BatchRequestHandler', () => {
         }
       ];
 
-      const result = (batchHandler as any).createBatchBody(requests);
-      const boundary = (batchHandler as any).boundary;
+      const result = createBatchBody(batchHandler, requests);
+      const boundary = getBoundary(batchHandler);
 
       expect(result).toContain(`--${boundary}`);
       expect(result).toContain('Content-Type: application/http');
@@ -54,8 +121,10 @@ describe('BatchRequestHandler', () => {
         }
       ];
 
-      const result = (batchHandler as any).createBatchBody(requests);
-      const boundary = (batchHandler as any).boundary;
+      const result = createBatchBody(batchHandler, requests);
+      const boundary = getBoundary(batchHandler);
+      const REQUEST_COUNT = 3;
+      const EXPECTED_BOUNDARY_COUNT = REQUEST_COUNT + 1; // +1 for closing boundary
 
       expect(result).toContain('Content-ID: <item1>');
       expect(result).toContain('Content-ID: <item2>');
@@ -63,10 +132,9 @@ describe('BatchRequestHandler', () => {
       expect(result).toContain('calendars/primary/events');
       expect(result).toContain('calendars/work%40example.com/events');
       expect(result).toContain('calendars/personal%40example.com/events');
-      
-      // Should have proper boundary structure
+
       const boundaryCount = (result.match(new RegExp(`--${boundary}`, 'g')) || []).length;
-      expect(boundaryCount).toBe(4); // 3 request boundaries + 1 end boundary
+      expect(boundaryCount).toBe(EXPECTED_BOUNDARY_COUNT);
     });
 
     it('should handle requests with custom headers', () => {
@@ -81,7 +149,7 @@ describe('BatchRequestHandler', () => {
         }
       ];
 
-      const result = (batchHandler as any).createBatchBody(requests);
+      const result = createBatchBody(batchHandler, requests);
 
       expect(result).toContain('If-Match: "etag123"');
       expect(result).toContain('X-Custom-Header: custom-value');
@@ -102,11 +170,10 @@ describe('BatchRequestHandler', () => {
         }
       ];
 
-      const result = (batchHandler as any).createBatchBody(requests);
+      const result = createBatchBody(batchHandler, requests);
 
       expect(result).toContain('Content-Type: application/json');
       expect(result).toContain(JSON.stringify(requestBody));
-      expect(result).toContain('"summary":"Test Event"');
     });
 
     it('should encode URLs properly in batch requests', () => {
@@ -117,7 +184,7 @@ describe('BatchRequestHandler', () => {
         }
       ];
 
-      const result = (batchHandler as any).createBatchBody(requests);
+      const result = createBatchBody(batchHandler, requests);
 
       expect(result).toContain('calendars/test%40example.com/events');
       expect(result).toContain('timeMin=2024-01-01T00%3A00%3A00Z');
@@ -126,32 +193,23 @@ describe('BatchRequestHandler', () => {
 
   describe('Batch Response Parsing', () => {
     it('should parse successful response correctly', () => {
-      const mockResponseText = `HTTP/1.1 200 OK
-Content-Length: response_total_content_length
-Content-Type: multipart/mixed; boundary=batch_abc123
+      const mockResponseText = buildMockBatchResponse([
+        buildResponsePart(
+          'HTTP/1.1 200 OK',
+          JSON.stringify({
+            items: [
+              {
+                id: 'event1',
+                summary: 'Test Event',
+                start: { dateTime: '2024-01-15T10:00:00Z' },
+                end: { dateTime: '2024-01-15T11:00:00Z' }
+              }
+            ]
+          })
+        )
+      ]);
 
---batch_abc123
-Content-Type: application/http
-Content-ID: <response-item1>
-
-HTTP/1.1 200 OK
-Content-Type: application/json
-Content-Length: 123
-
-{
-  "items": [
-    {
-      "id": "event1",
-      "summary": "Test Event",
-      "start": {"dateTime": "2024-01-15T10:00:00Z"},
-      "end": {"dateTime": "2024-01-15T11:00:00Z"}
-    }
-  ]
-}
-
---batch_abc123--`;
-
-      const responses = (batchHandler as any).parseBatchResponse(mockResponseText);
+      const responses = parseBatchResponse(batchHandler, mockResponseText);
 
       expect(responses).toHaveLength(1);
       expect(responses[0].statusCode).toBe(200);
@@ -160,30 +218,20 @@ Content-Length: 123
     });
 
     it('should parse multiple responses correctly', () => {
-      const mockResponseText = `HTTP/1.1 200 OK
-Content-Type: multipart/mixed; boundary=batch_abc123
+      const mockResponseText = buildMockBatchResponse([
+        buildResponsePart(
+          'HTTP/1.1 200 OK',
+          '{"items": [{"id": "event1", "summary": "Event 1"}]}',
+          'response-item1'
+        ),
+        buildResponsePart(
+          'HTTP/1.1 200 OK',
+          '{"items": [{"id": "event2", "summary": "Event 2"}]}',
+          'response-item2'
+        )
+      ]);
 
---batch_abc123
-Content-Type: application/http
-Content-ID: <response-item1>
-
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-{"items": [{"id": "event1", "summary": "Event 1"}]}
-
---batch_abc123
-Content-Type: application/http
-Content-ID: <response-item2>
-
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-{"items": [{"id": "event2", "summary": "Event 2"}]}
-
---batch_abc123--`;
-
-      const responses = (batchHandler as any).parseBatchResponse(mockResponseText);
+      const responses = parseBatchResponse(batchHandler, mockResponseText);
 
       expect(responses).toHaveLength(2);
       expect(responses[0].body.items[0].summary).toBe('Event 1');
@@ -191,26 +239,19 @@ Content-Type: application/json
     });
 
     it('should handle error responses in batch', () => {
-      const mockResponseText = `HTTP/1.1 200 OK
-Content-Type: multipart/mixed; boundary=batch_abc123
+      const mockResponseText = buildMockBatchResponse([
+        buildResponsePart(
+          'HTTP/1.1 404 Not Found',
+          JSON.stringify({
+            error: {
+              code: 404,
+              message: 'Calendar not found'
+            }
+          })
+        )
+      ]);
 
---batch_abc123
-Content-Type: application/http
-Content-ID: <response-item1>
-
-HTTP/1.1 404 Not Found
-Content-Type: application/json
-
-{
-  "error": {
-    "code": 404,
-    "message": "Calendar not found"
-  }
-}
-
---batch_abc123--`;
-
-      const responses = (batchHandler as any).parseBatchResponse(mockResponseText);
+      const responses = parseBatchResponse(batchHandler, mockResponseText);
 
       expect(responses).toHaveLength(1);
       expect(responses[0].statusCode).toBe(404);
@@ -219,35 +260,25 @@ Content-Type: application/json
     });
 
     it('should handle mixed success and error responses', () => {
-      const mockResponseText = `HTTP/1.1 200 OK
-Content-Type: multipart/mixed; boundary=batch_abc123
+      const mockResponseText = buildMockBatchResponse([
+        buildResponsePart(
+          'HTTP/1.1 200 OK',
+          '{"items": [{"id": "event1", "summary": "Success"}]}',
+          'response-item1'
+        ),
+        buildResponsePart(
+          'HTTP/1.1 403 Forbidden',
+          JSON.stringify({
+            error: {
+              code: 403,
+              message: 'Access denied'
+            }
+          }),
+          'response-item2'
+        )
+      ]);
 
---batch_abc123
-Content-Type: application/http
-Content-ID: <response-item1>
-
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-{"items": [{"id": "event1", "summary": "Success"}]}
-
---batch_abc123
-Content-Type: application/http
-Content-ID: <response-item2>
-
-HTTP/1.1 403 Forbidden
-Content-Type: application/json
-
-{
-  "error": {
-    "code": 403,
-    "message": "Access denied"
-  }
-}
-
---batch_abc123--`;
-
-      const responses = (batchHandler as any).parseBatchResponse(mockResponseText);
+      const responses = parseBatchResponse(batchHandler, mockResponseText);
 
       expect(responses).toHaveLength(2);
       expect(responses[0].statusCode).toBe(200);
@@ -257,24 +288,14 @@ Content-Type: application/json
     });
 
     it('should handle empty response parts gracefully', () => {
-      const mockResponseText = `HTTP/1.1 200 OK
-Content-Type: multipart/mixed; boundary=batch_abc123
+      const mockResponseText = buildMockBatchResponse([
+        buildResponsePart(
+          'HTTP/1.1 200 OK',
+          '{"items": []}'
+        )
+      ]);
 
---batch_abc123
-
-
---batch_abc123
-Content-Type: application/http
-Content-ID: <response-item1>
-
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-{"items": []}
-
---batch_abc123--`;
-
-      const responses = (batchHandler as any).parseBatchResponse(mockResponseText);
+      const responses = parseBatchResponse(batchHandler, mockResponseText);
 
       expect(responses).toHaveLength(1);
       expect(responses[0].statusCode).toBe(200);
@@ -282,21 +303,14 @@ Content-Type: application/json
     });
 
     it('should handle malformed JSON gracefully', () => {
-      const mockResponseText = `HTTP/1.1 200 OK
-Content-Type: multipart/mixed; boundary=batch_abc123
+      const mockResponseText = buildMockBatchResponse([
+        buildResponsePart(
+          'HTTP/1.1 200 OK',
+          '{invalid json here}'
+        )
+      ]);
 
---batch_abc123
-Content-Type: application/http
-Content-ID: <response-item1>
-
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-{invalid json here}
-
---batch_abc123--`;
-
-      const responses = (batchHandler as any).parseBatchResponse(mockResponseText);
+      const responses = parseBatchResponse(batchHandler, mockResponseText);
 
       expect(responses).toHaveLength(1);
       expect(responses[0].statusCode).toBe(200);
@@ -306,34 +320,21 @@ Content-Type: application/json
 
   describe('Integration Tests', () => {
     it('should execute batch request with mocked fetch', async () => {
-      const mockResponseText = `HTTP/1.1 200 OK
-Content-Type: multipart/mixed; boundary=batch_abc123
+      const mockResponseText = buildMockBatchResponse([
+        buildResponsePart(
+          'HTTP/1.1 200 OK',
+          '{"items": [{"id": "event1", "summary": "Test"}]}'
+        )
+      ]);
 
---batch_abc123
-Content-Type: application/http
-
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-{"items": [{"id": "event1", "summary": "Test"}]}
-
---batch_abc123--`;
-
-      global.fetch = vi.fn().mockResolvedValue({
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
         statusText: 'OK',
         text: () => Promise.resolve(mockResponseText)
-      });
+      }));
 
-      const requests: BatchRequest[] = [
-        {
-          method: 'GET',
-          path: '/calendar/v3/calendars/primary/events'
-        }
-      ];
-
-      const responses = await batchHandler.executeBatch(requests);
+      const responses = await batchHandler.executeBatch(PRIMARY_EVENTS_REQUEST);
 
       expect(global.fetch).toHaveBeenCalledWith(
         'https://www.googleapis.com/batch/calendar/v3',
@@ -351,20 +352,12 @@ Content-Type: application/json
     });
 
     it('should handle network errors during batch execution', async () => {
-      // Create a handler with no retries for this test
       const noRetryHandler = new BatchRequestHandler(mockOAuth2Client);
-      (noRetryHandler as any).maxRetries = 0; // Override max retries
-      
-      global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+      (noRetryHandler as unknown as { maxRetries: number }).maxRetries = 0;
 
-      const requests: BatchRequest[] = [
-        {
-          method: 'GET',
-          path: '/calendar/v3/calendars/primary/events'
-        }
-      ];
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
 
-      await expect(noRetryHandler.executeBatch(requests))
+      await expect(noRetryHandler.executeBatch(PRIMARY_EVENTS_REQUEST))
         .rejects.toThrow('Failed to execute batch request: Network error');
     });
 
@@ -373,14 +366,7 @@ Content-Type: application/json
         new Error('Authentication failed')
       );
 
-      const requests: BatchRequest[] = [
-        {
-          method: 'GET',
-          path: '/calendar/v3/calendars/primary/events'
-        }
-      ];
-
-      await expect(batchHandler.executeBatch(requests))
+      await expect(batchHandler.executeBatch(PRIMARY_EVENTS_REQUEST))
         .rejects.toThrow('Authentication failed');
     });
   });

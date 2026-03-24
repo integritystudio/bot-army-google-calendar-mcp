@@ -11,6 +11,7 @@ import { ToolSchemas } from '../../../tools/registry.js';
 // Get the schema for validation testing
 const ListEventsArgumentsSchema = ToolSchemas['list-events'];
 import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
+import { processBatchResponses } from '../../../handlers/core/batchUtils.js';
 
 // Mock the BatchRequestHandler that we'll implement
 class MockBatchRequestHandler {
@@ -294,34 +295,16 @@ describe('Batch List Events Functionality', () => {
       ];
 
       const calendarIds = ['work@example.com', 'personal@example.com'];
-      
-      // Simulate processing batch responses
-      const allEvents: ExtendedEvent[] = [];
-      const errors: Array<{ calendarId: string; error: any }> = [];
 
-      mockBatchResponses.forEach((response, index) => {
-        const calendarId = calendarIds[index];
-        
-        if (response.statusCode === 200 && response.body.items) {
-          const events = response.body.items.map((event: any) => ({
-            ...event,
-            calendarId
-          }));
-          allEvents.push(...events);
-        } else {
-          errors.push({
-            calendarId,
-            error: response.body
-          });
-        }
-      });
+      // Simulate processing batch responses
+      const { events, errors } = processBatchResponses(mockBatchResponses, calendarIds, { includeErrors: true });
 
       // Assert results
-      expect(allEvents).toHaveLength(2);
-      expect(allEvents[0].calendarId).toBe('work@example.com');
-      expect(allEvents[0].summary).toBe('Work Meeting');
-      expect(allEvents[1].calendarId).toBe('personal@example.com');
-      expect(allEvents[1].summary).toBe('Gym');
+      expect(events).toHaveLength(2);
+      expect(events[0].calendarId).toBe('work@example.com');
+      expect(events[0].summary).toBe('Work Meeting');
+      expect(events[1].calendarId).toBe('personal@example.com');
+      expect(events[1].summary).toBe('Gym');
       expect(errors).toHaveLength(0);
     });
 
@@ -365,31 +348,13 @@ describe('Batch List Events Functionality', () => {
       ];
 
       const calendarIds = ['primary', 'nonexistent@example.com', 'noaccess@example.com'];
-      
-      // Simulate processing
-      const allEvents: ExtendedEvent[] = [];
-      const errors: Array<{ calendarId: string; error: any }> = [];
 
-      mockBatchResponses.forEach((response, index) => {
-        const calendarId = calendarIds[index];
-        
-        if (response.statusCode === 200 && response.body.items) {
-          const events = response.body.items.map((event: any) => ({
-            ...event,
-            calendarId
-          }));
-          allEvents.push(...events);
-        } else {
-          errors.push({
-            calendarId,
-            error: response.body
-          });
-        }
-      });
+      // Simulate processing
+      const { events, errors } = processBatchResponses(mockBatchResponses, calendarIds, { includeErrors: true });
 
       // Assert partial success
-      expect(allEvents).toHaveLength(1);
-      expect(allEvents[0].summary).toBe('Success Event');
+      expect(events).toHaveLength(1);
+      expect(events[0].summary).toBe('Success Event');
       expect(errors).toHaveLength(2);
       expect(errors[0].calendarId).toBe('nonexistent@example.com');
       expect(errors[1].calendarId).toBe('noaccess@example.com');
@@ -419,23 +384,11 @@ describe('Batch List Events Functionality', () => {
       ];
 
       const calendarIds = ['empty@example.com', 'busy@example.com'];
-      
-      const allEvents: ExtendedEvent[] = [];
-      
-      mockBatchResponses.forEach((response, index) => {
-        const calendarId = calendarIds[index];
-        
-        if (response.statusCode === 200 && response.body.items) {
-          const events = response.body.items.map((event: any) => ({
-            ...event,
-            calendarId
-          }));
-          allEvents.push(...events);
-        }
-      });
 
-      expect(allEvents).toHaveLength(1);
-      expect(allEvents[0].calendarId).toBe('busy@example.com');
+      const { events } = processBatchResponses(mockBatchResponses, calendarIds);
+
+      expect(events).toHaveLength(1);
+      expect(events[0].calendarId).toBe('busy@example.com');
     });
   });
 

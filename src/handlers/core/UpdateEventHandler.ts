@@ -183,20 +183,14 @@ export class UpdateEventHandler extends BaseToolHandler {
         });
 
         // 2. Create new recurring event starting from future date
-        const requestBody = helpers.buildUpdateRequestBody(args, defaultTimeZone);
-
-        // Calculate end time if start time is changing
-        let endTime = args.end;
-        if (args.start || args.futureStartDate) {
-            const newStartTime = args.start || args.futureStartDate;
-            endTime = endTime || helpers.calculateEndTime(newStartTime, eventData);
-        }
+        const newStartTime = args.start || args.futureStartDate;
+        const newEndTime = args.end || helpers.calculateEndTime(newStartTime, eventData);
 
         const newEvent = {
             ...helpers.cleanEventForDuplication(eventData),
-            ...requestBody,
-            start: createTimeObject(args.start || args.futureStartDate, effectiveTimeZone),
-            end: createTimeObject(endTime!, effectiveTimeZone)
+            ...helpers.buildUpdateRequestBody(args, defaultTimeZone),
+            start: createTimeObject(newStartTime, effectiveTimeZone),
+            end: createTimeObject(newEndTime, effectiveTimeZone)
         };
 
         const response = await calendar.events.insert({

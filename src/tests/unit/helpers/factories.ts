@@ -1,5 +1,6 @@
 import { calendar_v3 } from 'googleapis';
 import { GaxiosError } from 'gaxios';
+import { vi } from 'vitest';
 import {
   getFutureDate,
   getPastDate,
@@ -324,4 +325,37 @@ export function makeRecurringEventInstances(
       summary: `Occurrence ${i + 1}`,
     });
   });
+}
+
+// ============================================================================
+// MOCK BUILDERS - Create mocks for Google Calendar API responses
+// ============================================================================
+
+/**
+ * Create a typed mock calendar object for testing handlers.
+ * Provides the minimal calendar_v3.Calendar interface needed by handlers.
+ * @param overrides Custom mock implementations for specific methods
+ * @returns Typed mock calendar with get/patch/insert/list methods
+ */
+export function makeCalendarMock(overrides: {
+  get?: ReturnType<typeof vi.fn>;
+  patch?: ReturnType<typeof vi.fn>;
+  insert?: ReturnType<typeof vi.fn>;
+  list?: ReturnType<typeof vi.fn>;
+} = {}): Pick<calendar_v3.Calendar, 'events'> & {
+  events: {
+    get: ReturnType<typeof vi.fn>;
+    patch: ReturnType<typeof vi.fn>;
+    insert: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+  };
+} {
+  return {
+    events: {
+      get: overrides.get ?? vi.fn(),
+      patch: overrides.patch ?? vi.fn(),
+      insert: overrides.insert ?? vi.fn(),
+      list: overrides.list ?? vi.fn(),
+    },
+  };
 }

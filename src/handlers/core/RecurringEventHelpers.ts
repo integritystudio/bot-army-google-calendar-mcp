@@ -8,6 +8,8 @@ import {
   isRRuleString,
 } from '../../utils/date-utils.js';
 import { createTimeObject } from '../../utils/timezone-utils.js';
+import { buildCoreEvent, buildOptionalEventFields } from './eventManipulationUtils.js';
+import { UpdateEventInput } from '../../tools/registry.js';
 
 export class RecurringEventHelpers {
   private calendar: calendar_v3.Calendar;
@@ -130,30 +132,25 @@ export class RecurringEventHelpers {
   /**
    * Builds request body for event updates
    */
-  buildUpdateRequestBody(args: any, defaultTimeZone?: string): calendar_v3.Schema$Event {
-    const requestBody: calendar_v3.Schema$Event = {};
-
-    this.setIfPresent(requestBody, 'summary', args.summary);
-    this.setIfPresent(requestBody, 'description', args.description);
-    this.setIfPresent(requestBody, 'location', args.location);
-    this.setIfPresent(requestBody, 'colorId', args.colorId);
-    this.setIfPresent(requestBody, 'attendees', args.attendees);
-    this.setIfPresent(requestBody, 'reminders', args.reminders);
-    this.setIfPresent(requestBody, 'recurrence', args.recurrence);
-
-    let timeChanged = false;
+  buildUpdateRequestBody(args: UpdateEventInput, defaultTimeZone?: string): calendar_v3.Schema$Event {
     const effectiveTimeZone = args.timeZone || defaultTimeZone;
+    const coreFields = buildCoreEvent(args, effectiveTimeZone);
+    const optionalFields = buildOptionalEventFields(args);
 
-    if (args.start !== undefined && args.start !== null) {
-      requestBody.start = createTimeObject(args.start, effectiveTimeZone);
-      timeChanged = true;
-    }
-    if (args.end !== undefined && args.end !== null) {
-      requestBody.end = createTimeObject(args.end, effectiveTimeZone);
-      timeChanged = true;
-    }
+    const requestBody: calendar_v3.Schema$Event = {
+      ...coreFields,
+      ...optionalFields,
+    };
 
-    if (timeChanged || (!args.start && !args.end && effectiveTimeZone)) {
+    // Remove undefined and null values, but keep empty strings/arrays
+    Object.keys(requestBody).forEach(key => {
+      if (requestBody[key] === undefined || requestBody[key] === null) {
+        delete requestBody[key];
+      }
+    });
+
+    // Ensure start/end objects exist with timezone if timeZone is provided
+    if (effectiveTimeZone) {
       requestBody.start = requestBody.start || {};
       requestBody.end = requestBody.end || {};
       requestBody.start.timeZone = effectiveTimeZone;
@@ -161,12 +158,6 @@ export class RecurringEventHelpers {
     }
 
     return requestBody;
-  }
-
-  private setIfPresent(obj: any, key: string, value: any): void {
-    if (value !== undefined && value !== null) {
-      obj[key] = value;
-    }
   }
 }
 

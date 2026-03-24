@@ -5,18 +5,55 @@ import { createTimeObject } from '../../utils/timezone-utils.js';
 import { ConflictDetectionService } from '../../services/conflict-detection/index.js';
 import { CONFLICT_DETECTION_CONFIG } from '../../services/conflict-detection/config.js';
 
+export function buildCoreEvent(
+  input: CreateEventInput | UpdateEventInput,
+  timezone: string,
+  existingEvent?: calendar_v3.Schema$Event
+): Pick<calendar_v3.Schema$Event, 'summary' | 'description' | 'start' | 'end' | 'attendees' | 'location'> {
+  const summary = 'summary' in input ? input.summary : (input.summary || existingEvent?.summary);
+  const description = 'description' in input ? input.description : (input.description || existingEvent?.description);
+  const start = ('start' in input && input.start) ? createTimeObject(input.start, timezone) : existingEvent?.start;
+  const end = ('end' in input && input.end) ? createTimeObject(input.end, timezone) : existingEvent?.end;
+  const attendees = 'attendees' in input ? input.attendees : undefined;
+  const location = 'location' in input ? input.location : (input.location || existingEvent?.location);
+
+  return {
+    summary,
+    description,
+    start,
+    end,
+    attendees,
+    location,
+  };
+}
+
+export function buildOptionalEventFields(
+  input: CreateEventInput | UpdateEventInput
+): Pick<calendar_v3.Schema$Event, 'colorId' | 'reminders' | 'recurrence' | 'transparency' | 'visibility' | 'guestsCanInviteOthers' | 'guestsCanModify' | 'guestsCanSeeOtherGuests' | 'anyoneCanAddSelf' | 'conferenceData' | 'extendedProperties' | 'attachments' | 'source'> {
+  const fields: any = {};
+
+  if ('colorId' in input && input.colorId !== undefined) fields.colorId = input.colorId;
+  if ('reminders' in input && input.reminders !== undefined) fields.reminders = input.reminders;
+  if ('recurrence' in input && input.recurrence !== undefined) fields.recurrence = input.recurrence;
+  if ('transparency' in input && input.transparency !== undefined) fields.transparency = input.transparency;
+  if ('visibility' in input && input.visibility !== undefined) fields.visibility = input.visibility;
+  if ('guestsCanInviteOthers' in input && input.guestsCanInviteOthers !== undefined) fields.guestsCanInviteOthers = input.guestsCanInviteOthers;
+  if ('guestsCanModify' in input && input.guestsCanModify !== undefined) fields.guestsCanModify = input.guestsCanModify;
+  if ('guestsCanSeeOtherGuests' in input && input.guestsCanSeeOtherGuests !== undefined) fields.guestsCanSeeOtherGuests = input.guestsCanSeeOtherGuests;
+  if ('anyoneCanAddSelf' in input && input.anyoneCanAddSelf !== undefined) fields.anyoneCanAddSelf = input.anyoneCanAddSelf;
+  if ('conferenceData' in input && input.conferenceData !== undefined) fields.conferenceData = input.conferenceData;
+  if ('extendedProperties' in input && input.extendedProperties !== undefined) fields.extendedProperties = input.extendedProperties;
+  if ('attachments' in input && input.attachments !== undefined) fields.attachments = input.attachments;
+  if ('source' in input && input.source !== undefined) fields.source = input.source;
+
+  return fields;
+}
+
 export function buildEventForConflictCheckCreate(
   input: CreateEventInput,
   timezone: string
 ): calendar_v3.Schema$Event {
-  return {
-    summary: input.summary,
-    description: input.description,
-    start: createTimeObject(input.start, timezone),
-    end: createTimeObject(input.end, timezone),
-    attendees: input.attendees,
-    location: input.location,
-  };
+  return buildCoreEvent(input, timezone) as calendar_v3.Schema$Event;
 }
 
 export function buildEventForConflictCheckUpdate(
@@ -27,12 +64,8 @@ export function buildEventForConflictCheckUpdate(
   return {
     ...existingEvent,
     id: input.eventId,
-    summary: input.summary || existingEvent.summary,
-    description: input.description || existingEvent.description,
-    start: input.start ? createTimeObject(input.start, timezone) : existingEvent.start,
-    end: input.end ? createTimeObject(input.end, timezone) : existingEvent.end,
-    location: input.location || existingEvent.location,
-  };
+    ...buildCoreEvent(input, timezone, existingEvent),
+  } as calendar_v3.Schema$Event;
 }
 
 export function buildEventRequestBodyCreate(
@@ -40,26 +73,9 @@ export function buildEventRequestBodyCreate(
   timezone: string
 ): calendar_v3.Schema$Event {
   return {
-    summary: input.summary,
-    description: input.description,
-    start: createTimeObject(input.start, timezone),
-    end: createTimeObject(input.end, timezone),
-    attendees: input.attendees,
-    location: input.location,
-    colorId: input.colorId,
-    reminders: input.reminders,
-    recurrence: input.recurrence,
-    transparency: input.transparency,
-    visibility: input.visibility,
-    guestsCanInviteOthers: input.guestsCanInviteOthers,
-    guestsCanModify: input.guestsCanModify,
-    guestsCanSeeOtherGuests: input.guestsCanSeeOtherGuests,
-    anyoneCanAddSelf: input.anyoneCanAddSelf,
-    conferenceData: input.conferenceData,
-    extendedProperties: input.extendedProperties,
-    attachments: input.attachments,
-    source: input.source,
-  };
+    ...buildCoreEvent(input, timezone),
+    ...buildOptionalEventFields(input),
+  } as calendar_v3.Schema$Event;
 }
 
 export interface ConflictCheckOptions {

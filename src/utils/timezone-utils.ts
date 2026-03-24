@@ -294,3 +294,22 @@ export function createTimeObject(
     return { dateTime: datetime, timeZone: fallbackTimezone };
   }
 }
+
+/**
+ * Convert optional timeMin/timeMax strings to RFC3339 using a resolved timezone.
+ * Returns undefined for absent fields without calling convertToRFC3339.
+ * @param timeMin Optional start boundary (ISO 8601 or RFC3339)
+ * @param timeMax Optional end boundary (ISO 8601 or RFC3339)
+ * @param timezone IANA timezone to use for naive datetime strings
+ * @returns Object with RFC3339-formatted timeMin and timeMax
+ */
+export function resolveTimeRange(
+  timeMin: string | undefined,
+  timeMax: string | undefined,
+  timezone: string
+): { timeMin?: string; timeMax?: string } {
+  return {
+    timeMin: timeMin ? convertToRFC3339(timeMin, timezone) : undefined,
+    timeMax: timeMax ? convertToRFC3339(timeMax, timezone) : undefined,
+  };
+}

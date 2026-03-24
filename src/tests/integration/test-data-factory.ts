@@ -1,5 +1,7 @@
 // Test data factory utilities for integration tests
 import { tryGetTextContent } from '../unit/helpers/index.js';
+import { formatTZNaiveDateTime, formatRFC3339 } from '../../utils/date-utils.js';
+import { extractEventIdFromResponse as extractEventIdFromResponseShared } from '../../testing/test-utils.js';
 
 export interface TestEvent {
   id?: string;
@@ -42,17 +44,13 @@ export class TestDataFactory {
     return TestDataFactory.TEST_CALENDAR_ID;
   }
 
-  // Helper method to format dates in RFC3339 format without milliseconds
-  // For events with a timeZone field, use timezone-naive format to avoid conflicts
-  public static formatDateTimeRFC3339(date: Date): string {
-    const isoString = date.toISOString();
-    // Return timezone-naive format (without Z suffix) to work better with timeZone field
-    return isoString.replace(/\.\d{3}Z$/, '');
+  // Date formatting wrappers (delegate to date-utils)
+  static formatDateTimeRFC3339(date: Date): string {
+    return formatTZNaiveDateTime(date);
   }
 
-  // Helper method to format dates in RFC3339 format with timezone (for search operations)
-  public static formatDateTimeRFC3339WithTimezone(date: Date): string {
-    return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
+  static formatDateTimeRFC3339WithTimezone(date: Date): string {
+    return formatRFC3339(date);
   }
 
   // Event data generators
@@ -64,8 +62,8 @@ export class TestDataFactory {
     return {
       summary: 'Test Integration Event',
       description: 'Created by integration test suite',
-      start: this.formatDateTimeRFC3339(start),
-      end: this.formatDateTimeRFC3339(end),
+      start: formatTZNaiveDateTime(start),
+      end: formatTZNaiveDateTime(end),
       timeZone: 'America/Los_Angeles',
       location: 'Test Conference Room',
       reminders: {
@@ -108,8 +106,8 @@ export class TestDataFactory {
     return {
       summary: 'Test Recurring Meeting',
       description: 'Weekly recurring test meeting',
-      start: this.formatDateTimeRFC3339(start),
-      end: this.formatDateTimeRFC3339(end),
+      start: formatTZNaiveDateTime(start),
+      end: formatTZNaiveDateTime(end),
       timeZone: 'America/Los_Angeles',
       location: 'Recurring Meeting Room',
       recurrence: ['RRULE:FREQ=WEEKLY;COUNT=5'], // 5 weeks
@@ -154,23 +152,23 @@ export class TestDataFactory {
     return {
       // Past week
       pastWeek: {
-        timeMin: this.formatDateTimeRFC3339WithTimezone(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)),
-        timeMax: this.formatDateTimeRFC3339WithTimezone(now)
+        timeMin: formatRFC3339(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)),
+        timeMax: formatRFC3339(now)
       },
       // Next week
       nextWeek: {
-        timeMin: this.formatDateTimeRFC3339WithTimezone(now),
-        timeMax: this.formatDateTimeRFC3339WithTimezone(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000))
+        timeMin: formatRFC3339(now),
+        timeMax: formatRFC3339(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000))
       },
       // Next month
       nextMonth: {
-        timeMin: this.formatDateTimeRFC3339WithTimezone(now),
-        timeMax: this.formatDateTimeRFC3339WithTimezone(new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000))
+        timeMin: formatRFC3339(now),
+        timeMax: formatRFC3339(new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000))
       },
       // Large range (3 months)
       threeMonths: {
-        timeMin: this.formatDateTimeRFC3339WithTimezone(now),
-        timeMax: this.formatDateTimeRFC3339WithTimezone(new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000))
+        timeMin: formatRFC3339(now),
+        timeMax: formatRFC3339(new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000))
       }
     };
   }
@@ -238,40 +236,12 @@ export class TestDataFactory {
     return typeof text === 'string';
   }
 
+  /**
+   * Extract event ID from response.
+   * Delegates to shared utility in src/testing/test-utils.ts
+   */
   static extractEventIdFromResponse(response: any): string | null {
-    const text = tryGetTextContent(response);
-    if (!text) return null;
-    
-    // Look for various event ID patterns in the response
-    // Google Calendar event IDs can contain letters, numbers, underscores, and special characters
-    const patterns = [
-      /Event created: .* \(([^)]+)\)/, // Legacy format - Match anything within parentheses after "Event created:"
-      /Event updated: .* \(([^)]+)\)/, // Legacy format - Match anything within parentheses after "Event updated:"
-      /✅ Event created successfully[\s\S]*?([^\s\(]+) \(([^)]+)\)/, // New format - Extract ID from parentheses in event details
-      /✅ Event updated successfully[\s\S]*?([^\s\(]+) \(([^)]+)\)/, // New format - Extract ID from parentheses in event details
-      /Event ID: ([^\s]+)/, // Match non-whitespace characters after "Event ID:"
-      /Created event: .* \(ID: ([^)]+)\)/, // Match anything within parentheses after "ID:"
-      /\(([a-zA-Z0-9_@.-]{10,})\)/, // Specific pattern for Google Calendar IDs with common characters
-    ];
-    
-    for (const pattern of patterns) {
-      const match = text.match(pattern);
-      if (match) {
-        // For patterns with multiple capture groups, we want the event ID
-        // which is typically in the last parentheses
-        let eventId = match[match.length - 1] || match[1];
-        if (eventId) {
-          // Clean up the captured ID (trim whitespace)
-          eventId = eventId.trim();
-          // Basic validation - should be at least 10 characters
-          if (eventId.length >= 10) {
-            return eventId;
-          }
-        }
-      }
-    }
-    
-    return null;
+    return extractEventIdFromResponseShared(response);
   }
 
   static extractAllEventIds(response: any): string[] {

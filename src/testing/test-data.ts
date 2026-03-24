@@ -33,25 +33,12 @@ export class TestConfigFactory {
 }
 
 /**
- * OAuth configuration factory with environment and defaults support
+ * OAuth configuration factory with defaults support.
+ * For loading from environment, use auth utilities directly:
+ * @see src/auth/tokenManager.ts TokenManager class
+ * @see src/auth/utils.ts getAccountMode(), getSecureTokenPath()
  */
 export class TestOAuthFactory {
-  /**
-   * Create OAuth config from environment variables
-   */
-  static fromEnv(): TestOAuthConfig {
-    return TestOAuthConfigSchema.parse({
-      clientId: process.env.GOOGLE_OAUTH_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
-      redirectUrl: process.env.GOOGLE_OAUTH_REDIRECT_URL,
-      tokenPath: process.env.CALENDARMCP_TOKEN_PATH,
-      accountMode: process.env.GOOGLE_ACCOUNT_MODE as
-        | 'test'
-        | 'normal'
-        | undefined
-    });
-  }
-
   /**
    * Create test OAuth config with defaults
    */

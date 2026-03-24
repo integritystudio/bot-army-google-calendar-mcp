@@ -1,5 +1,6 @@
 import type { TestContext } from './types.js';
 import { TypedTestContext } from './types.js';
+import { tryGetTextContent } from '../tests/unit/helpers/index.js';
 
 /**
  * Wrap test function with proper async context type
@@ -144,4 +145,46 @@ export class ResourceTracker {
       throw new AggregateError(errors, 'Cleanup failed for some events');
     }
   }
+}
+
+/**
+ * Extract event ID from MCP tool response text.
+ * Handles multiple response formats (legacy and current).
+ * @param response MCP tool result object
+ * @returns Event ID string or null if not found
+ */
+export function extractEventIdFromResponse(response: any): string | null {
+  const text = tryGetTextContent(response);
+  if (!text) return null;
+
+  // Look for various event ID patterns in the response
+  // Google Calendar event IDs can contain letters, numbers, underscores, and special characters
+  const patterns = [
+    /Event created: .* \(([^)]+)\)/, // Legacy format - Match anything within parentheses after "Event created:"
+    /Event updated: .* \(([^)]+)\)/, // Legacy format - Match anything within parentheses after "Event updated:"
+    /✅ Event created successfully[\s\S]*?([^\s\(]+) \(([^)]+)\)/, // New format - Extract ID from parentheses in event details
+    /✅ Event updated successfully[\s\S]*?([^\s\(]+) \(([^)]+)\)/, // New format - Extract ID from parentheses in event details
+    /Event ID: ([^\s]+)/, // Match non-whitespace characters after "Event ID:"
+    /Created event: .* \(ID: ([^)]+)\)/, // Match anything within parentheses after "ID:"
+    /\(([a-zA-Z0-9_@.-]{10,})\)/, // Specific pattern for Google Calendar IDs with common characters
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      // For patterns with multiple capture groups, we want the event ID
+      // which is typically in the last parentheses
+      let eventId = match[match.length - 1] || match[1];
+      if (eventId) {
+        // Clean up the captured ID (trim whitespace)
+        eventId = eventId.trim();
+        // Google Calendar IDs are typically at least 10 chars
+        if (eventId.length >= 10) {
+          return eventId;
+        }
+      }
+    }
+  }
+
+  return null;
 }

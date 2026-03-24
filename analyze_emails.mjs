@@ -1,20 +1,39 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { extractDisplayName } from './lib/email-utils.mjs';
+
+const FROM_MAX = 45;
+const SUBJECT_MAX = 60;
+const SNIPPET_MAX = 65;
+const MAX_RESULTS = 100;
+
+const DEFAULT_SCORE = 5;
+const HIGH_SCORE = 9;
+const LOW_SCORE = 2;
+const HIGH_THRESHOLD = 7;
+const LOW_THRESHOLD = 3;
+
+const HIGH_URGENCY_KEYWORDS = ['urgent', 'asap', 'immediate', 'critical', 'emergency', 'alert'];
+const LOW_URGENCY_KEYWORDS = ['fyi', 'newsletter', 'digest', 'weekly', 'monthly', 'notification'];
+const HIGH_IMPORTANCE_KEYWORDS = ['manager', 'boss', 'ceo', 'invoice', 'payment', 'contract', 'approved', 'rejected', 'decision'];
+const LOW_IMPORTANCE_KEYWORDS = ['marketing', 'promotion', 'sale', 'discount', 'follow', 'subscribe'];
+
+const SECTION_DIVIDER = '═'.repeat(80);
+const ROW_DIVIDER = '─'.repeat(76);
 
 async function analyzeUnreadEmails() {
   try {
     const gmail = createGmailClient();
 
-    // Fetch unread messages
     const response = await gmail.users.messages.list({
       userId: "me",
       q: "is:unread",
-      maxResults: 100
+      maxResults: MAX_RESULTS
     });
 
     const messageIds = response.data.messages || [];
     console.log(`\n📧 FOUND ${messageIds.length} UNREAD MESSAGES\n`);
 
-    // Fetch details for each message
+    const headers = ['Subject', 'From'];
     const messages = await Promise.all(
       messageIds.map(async (msg) => {
         try {
@@ -22,175 +41,64 @@ async function analyzeUnreadEmails() {
             userId: "me",
             id: msg.id,
             format: "metadata",
-            metadataHeaders: ["Subject", "From", "Date"]
+            metadataHeaders: headers
           });
 
-          const headers = fullMsg.data.payload?.headers || [];
+          const headerList = fullMsg.data.payload?.headers || [];
+          const getHeader = (name) => headerList.find((h) => h.name === name)?.value || '';
+
           return {
             id: msg.id,
-            subject: headers.find((h) => h.name === "Subject")?.value || "(No subject)",
-            from: headers.find((h) => h.name === "From")?.value || "(Unknown sender)",
-            date: headers.find((h) => h.name === "Date")?.value || "",
+            subject: getHeader('Subject') || "(No subject)",
+            from: extractDisplayName(getHeader('From')) || "(Unknown sender)",
             snippet: fullMsg.data.snippet || ""
           };
         } catch (error) {
+          console.warn(`Failed to fetch message ${msg.id}: ${error.message}`);
           return null;
         }
       })
     );
 
-    const validMessages = messages.filter(m => m !== null);
+    const validMessages = messages.filter(Boolean);
 
-    // Categorize with scoring
-    const categorized = {};
-    
+    const matrix = {
+      'HighHigh': [], 'HighMedium': [], 'HighLow': [],
+      'MediumHigh': [], 'MediumMedium': [], 'MediumLow': [],
+      'LowHigh': [], 'LowMedium': [], 'LowLow': []
+    };
+
     validMessages.forEach(msg => {
-      const { urgencyScore, importanceScore, urgency, importance } = categorizeEmail(msg);
-      
-      const category = `${urgency}${importance}`;
-      if (!categorized[category]) {
-        categorized[category] = [];
-      }
-      categorized[category].push({ ...msg, urgencyScore, importanceScore });
+      const { urgency, importance } = categorizeEmail(msg);
+      const key = `${urgency}${importance}`;
+      matrix[key].push(msg);
     });
 
-    // Output organized by urgency/importance matrix
     console.log("╔════════════════════════════════════════════════════════════════════════════════╗");
     console.log("║            UNREAD EMAIL MATRIX: URGENCY (rows) × IMPORTANCE (cols)            ║");
     console.log("╚════════════════════════════════════════════════════════════════════════════════╝\n");
 
-    // Create matrix
-    const matrix = {
-      'HighHigh': categorized['HighHigh'] || [],
-      'HighMedium': categorized['HighMedium'] || [],
-      'HighLow': categorized['HighLow'] || [],
-      'MediumHigh': categorized['MediumHigh'] || [],
-      'MediumMedium': categorized['MediumMedium'] || [],
-      'MediumLow': categorized['MediumLow'] || [],
-      'LowHigh': categorized['LowHigh'] || [],
-      'LowMedium': categorized['LowMedium'] || [],
-      'LowLow': categorized['LowLow'] || []
-    };
+    printSection('🔴 HIGH URGENCY EMAILS (ACT IMMEDIATELY!)', [
+      { label: '⚠️  HIGH IMPORTANCE - CRITICAL (DO THIS NOW!)', emails: matrix.HighHigh },
+      { label: '⚡ MEDIUM IMPORTANCE - IMPORTANT (HANDLE SOON)', emails: matrix.HighMedium },
+      { label: '💨 LOW IMPORTANCE - QUICK ATTENTION (BRIEF)', emails: matrix.HighLow }
+    ]);
 
-    // Section 1: HIGH URGENCY
-    if (matrix.HighHigh.length > 0 || matrix.HighMedium.length > 0 || matrix.HighLow.length > 0) {
-      console.log("🔴 HIGH URGENCY EMAILS (ACT IMMEDIATELY!)");
-      console.log("═".repeat(80) + "\n");
+    printSection('🟠 MEDIUM URGENCY EMAILS (ADDRESS TODAY)', [
+      { label: '💼 HIGH IMPORTANCE - IMPORTANT (PRIORITIZE)', emails: matrix.MediumHigh },
+      { label: '📧 MEDIUM IMPORTANCE - STANDARD (ROUTINE)', emails: matrix.MediumMedium },
+      { label: '⏳ LOW IMPORTANCE - NOT URGENT (BACKLOG)', emails: matrix.MediumLow }
+    ]);
 
-      if (matrix.HighHigh.length > 0) {
-        console.log("  ⚠️  HIGH IMPORTANCE - CRITICAL (DO THIS NOW!)");
-        console.log("  " + "─".repeat(76));
-        matrix.HighHigh.forEach((email, idx) => {
-          console.log(`  ${idx + 1}. 👤 ${email.from.substring(0, 45)}`);
-          console.log(`     📌 ${email.subject.substring(0, 60)}`);
-          console.log(`     📝 ${email.snippet.substring(0, 65)}...`);
-          console.log();
-        });
-      }
+    printSection('🟡 LOW URGENCY EMAILS (READ WHEN YOU HAVE TIME)', [
+      { label: '📚 HIGH IMPORTANCE - READ LATER (VALUABLE)', emails: matrix.LowHigh },
+      { label: '📰 MEDIUM IMPORTANCE - FYI (INFORMATIONAL)', emails: matrix.LowMedium, limit: 5 },
+      { label: '🗑️  LOW IMPORTANCE - ARCHIVE? (PROMOTIONAL)', emails: matrix.LowLow, count: true }
+    ]);
 
-      if (matrix.HighMedium.length > 0) {
-        console.log("  ⚡ MEDIUM IMPORTANCE - IMPORTANT (HANDLE SOON)");
-        console.log("  " + "─".repeat(76));
-        matrix.HighMedium.forEach((email, idx) => {
-          console.log(`  ${idx + 1}. 👤 ${email.from.substring(0, 45)}`);
-          console.log(`     📌 ${email.subject.substring(0, 60)}`);
-          console.log(`     📝 ${email.snippet.substring(0, 65)}...`);
-          console.log();
-        });
-      }
-
-      if (matrix.HighLow.length > 0) {
-        console.log("  💨 LOW IMPORTANCE - QUICK ATTENTION (BRIEF)");
-        console.log("  " + "─".repeat(76));
-        matrix.HighLow.forEach((email, idx) => {
-          console.log(`  ${idx + 1}. 👤 ${email.from.substring(0, 45)}`);
-          console.log(`     📌 ${email.subject.substring(0, 60)}`);
-          console.log(`     📝 ${email.snippet.substring(0, 65)}...`);
-          console.log();
-        });
-      }
-    }
-
-    // Section 2: MEDIUM URGENCY
-    if (matrix.MediumHigh.length > 0 || matrix.MediumMedium.length > 0 || matrix.MediumLow.length > 0) {
-      console.log("\n🟠 MEDIUM URGENCY EMAILS (ADDRESS TODAY)");
-      console.log("═".repeat(80) + "\n");
-
-      if (matrix.MediumHigh.length > 0) {
-        console.log("  💼 HIGH IMPORTANCE - IMPORTANT (PRIORITIZE)");
-        console.log("  " + "─".repeat(76));
-        matrix.MediumHigh.forEach((email, idx) => {
-          console.log(`  ${idx + 1}. 👤 ${email.from.substring(0, 45)}`);
-          console.log(`     📌 ${email.subject.substring(0, 60)}`);
-          console.log(`     📝 ${email.snippet.substring(0, 65)}...`);
-          console.log();
-        });
-      }
-
-      if (matrix.MediumMedium.length > 0) {
-        console.log("  📧 MEDIUM IMPORTANCE - STANDARD (ROUTINE)");
-        console.log("  " + "─".repeat(76));
-        matrix.MediumMedium.forEach((email, idx) => {
-          console.log(`  ${idx + 1}. 👤 ${email.from.substring(0, 45)}`);
-          console.log(`     📌 ${email.subject.substring(0, 60)}`);
-          console.log(`     📝 ${email.snippet.substring(0, 65)}...`);
-          console.log();
-        });
-      }
-
-      if (matrix.MediumLow.length > 0) {
-        console.log("  ⏳ LOW IMPORTANCE - NOT URGENT (BACKLOG)");
-        console.log("  " + "─".repeat(76));
-        matrix.MediumLow.forEach((email, idx) => {
-          console.log(`  ${idx + 1}. 👤 ${email.from.substring(0, 45)}`);
-          console.log(`     📌 ${email.subject.substring(0, 60)}`);
-          console.log(`     📝 ${email.snippet.substring(0, 65)}...`);
-          console.log();
-        });
-      }
-    }
-
-    // Section 3: LOW URGENCY
-    if (matrix.LowHigh.length > 0 || matrix.LowMedium.length > 0 || matrix.LowLow.length > 0) {
-      console.log("\n🟡 LOW URGENCY EMAILS (READ WHEN YOU HAVE TIME)");
-      console.log("═".repeat(80) + "\n");
-
-      if (matrix.LowHigh.length > 0) {
-        console.log("  📚 HIGH IMPORTANCE - READ LATER (VALUABLE)");
-        console.log("  " + "─".repeat(76));
-        matrix.LowHigh.forEach((email, idx) => {
-          console.log(`  ${idx + 1}. 👤 ${email.from.substring(0, 45)}`);
-          console.log(`     📌 ${email.subject.substring(0, 60)}`);
-          console.log(`     📝 ${email.snippet.substring(0, 65)}...`);
-          console.log();
-        });
-      }
-
-      if (matrix.LowMedium.length > 0) {
-        console.log("  📰 MEDIUM IMPORTANCE - FYI (INFORMATIONAL)");
-        console.log("  " + "─".repeat(76));
-        matrix.LowMedium.slice(0, 5).forEach((email, idx) => {
-          console.log(`  ${idx + 1}. 👤 ${email.from.substring(0, 45)}`);
-          console.log(`     📌 ${email.subject.substring(0, 60)}`);
-          console.log(`     📝 ${email.snippet.substring(0, 65)}...`);
-          console.log();
-        });
-        if (matrix.LowMedium.length > 5) {
-          console.log(`  ... and ${matrix.LowMedium.length - 5} more\n`);
-        }
-      }
-
-      if (matrix.LowLow.length > 0) {
-        console.log("  🗑️  LOW IMPORTANCE - ARCHIVE? (PROMOTIONAL)");
-        console.log("  " + "─".repeat(76));
-        console.log(`  ${matrix.LowLow.length} promotional/newsletter emails\n`);
-      }
-    }
-
-    // Summary Statistics
-    console.log("\n" + "═".repeat(80));
+    console.log("\n" + SECTION_DIVIDER);
     console.log("ACTIONABLE SUMMARY");
-    console.log("═".repeat(80) + "\n");
+    console.log(SECTION_DIVIDER + "\n");
 
     const stats = {
       critical: matrix.HighHigh.length,
@@ -213,37 +121,55 @@ async function analyzeUnreadEmails() {
   }
 }
 
+function scoreContent(content, highKeywords, lowKeywords) {
+  if (highKeywords.some(k => content.includes(k))) return HIGH_SCORE;
+  if (lowKeywords.some(k => content.includes(k))) return LOW_SCORE;
+  return DEFAULT_SCORE;
+}
+
 function categorizeEmail(msg) {
   const subject = msg.subject.toLowerCase();
   const from = msg.from.toLowerCase();
   const snippet = msg.snippet.toLowerCase();
-  const content = `${subject} ${from} ${snippet}`;
 
-  // Urgency scoring
-  let urgencyScore = 5; // default medium
-  if (content.includes('urgent') || content.includes('asap') || content.includes('immediate') || 
-      content.includes('critical') || content.includes('emergency') || content.includes('alert')) {
-    urgencyScore = 9; // high
-  } else if (content.includes('fyi') || content.includes('newsletter') || content.includes('digest') ||
-             content.includes('weekly') || content.includes('monthly') || content.includes('notification')) {
-    urgencyScore = 2; // low
-  }
+  const urgencyScore = scoreContent(`${subject} ${from} ${snippet}`, HIGH_URGENCY_KEYWORDS, LOW_URGENCY_KEYWORDS);
+  const importanceScore = scoreContent(`${subject} ${from} ${snippet}`, HIGH_IMPORTANCE_KEYWORDS, LOW_IMPORTANCE_KEYWORDS);
 
-  // Importance scoring  
-  let importanceScore = 5; // default medium
-  if (content.includes('manager') || content.includes('boss') || content.includes('ceo') ||
-      content.includes('invoice') || content.includes('payment') || content.includes('contract') ||
-      content.includes('approved') || content.includes('rejected') || content.includes('decision')) {
-    importanceScore = 9; // high
-  } else if (content.includes('marketing') || content.includes('promotion') || content.includes('sale') ||
-             content.includes('discount') || content.includes('follow') || content.includes('subscribe')) {
-    importanceScore = 2; // low
-  }
+  const urgency = urgencyScore >= HIGH_THRESHOLD ? 'High' : (urgencyScore <= LOW_THRESHOLD ? 'Low' : 'Medium');
+  const importance = importanceScore >= HIGH_THRESHOLD ? 'High' : (importanceScore <= LOW_THRESHOLD ? 'Low' : 'Medium');
 
-  const urgency = urgencyScore >= 7 ? 'High' : (urgencyScore <= 3 ? 'Low' : 'Medium');
-  const importance = importanceScore >= 7 ? 'High' : (importanceScore <= 3 ? 'Low' : 'Medium');
+  return { urgency, importance };
+}
 
-  return { urgencyScore, importanceScore, urgency, importance };
+function printSection(title, subsections) {
+  const hasContent = subsections.some(s => s.emails.length > 0);
+  if (!hasContent) return;
+
+  console.log(`\n${title}`);
+  console.log(SECTION_DIVIDER + "\n");
+
+  subsections.forEach(({ label, emails, limit, count }) => {
+    if (emails.length === 0) return;
+
+    console.log(`  ${label}`);
+    console.log('  ' + ROW_DIVIDER);
+
+    if (count) {
+      console.log(`  ${emails.length} promotional/newsletter emails\n`);
+      return;
+    }
+
+    emails.slice(0, limit || Infinity).forEach((email, idx) => {
+      console.log(`  ${idx + 1}. 👤 ${email.from.substring(0, FROM_MAX)}`);
+      console.log(`     📌 ${email.subject.substring(0, SUBJECT_MAX)}`);
+      console.log(`     📝 ${email.snippet.substring(0, SNIPPET_MAX)}...`);
+      console.log();
+    });
+
+    if (limit && emails.length > limit) {
+      console.log(`  ... and ${emails.length - limit} more\n`);
+    }
+  });
 }
 
 analyzeUnreadEmails().catch(error => {

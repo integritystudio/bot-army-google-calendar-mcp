@@ -1,124 +1,15 @@
 # Project Backlog
 
-**Last Updated:** 2026-03-23 (Ralph Loop Iteration 5 - L6 Complete)
+**Last Updated:** 2026-03-24 (Migrated to changelog/1.4.9)
 
 ## Status Summary
-- **Completed This Session:** 20/22 items (91%)
-- **Blocked:** 2 High-priority items (require design discussion)
+- **Completed Items:** 20/22 (91%) - See [docs/changelog/1.4.9/CHANGELOG.md](./changelog/1.4.9/CHANGELOG.md)
+- **Open/Blocked Items:** 2 (require design discussion)
 - **Tests Passing:** 492/494 ✅ (99.6%)
-- **Comment:** 2 pre-existing schema design failures remain (no-refs, tool-registration JSON schema conversion)
 
-## Iteration 2 Achievements (2026-03-24)
-1. **Sequential API Calls Optimization** (Medium, 1h)
-   - Eliminate redundant calendar.events.get() in updateFutureInstances
-   - ~500ms latency reduction per operation
+## Open Items
 
-2. **Loop Isolation Anti-patterns** (Medium, 0.5h)
-   - Convert 3 for-of loops to it.each() parametrized tests
-   - Test count: 25 → 30 (+8 individual cases)
-
-3. **USER_ID Constant Standardization** (Medium decision, 0.25h)
-   - Remove from shared constants, standardize to local approach
-   - Align Units 1-5 to consistent pattern
-
-4. **Batch Filter Operations Utility** (Low, 0.5h)
-   - Create lib/gmail-batch.mjs for efficient bulk filter creation
-   - 10-100x potential speedup, parallel processing, error isolation
-
-5. **TOCTOU Risk Mitigation** (Low, 0.25h)
-   - Refactor token file reading in lib/gmail-client.mjs
-   - Add documentation clarifying TOCTOU risk assessment
-   - Minimize window between sequential file operations
-
-## Ralph Loop Iteration 5 (2026-03-23)
-
-**Status:** ✅ L6 COMPLETED + EXTENDED | 🏁 BACKLOG COMPLETE (20/22 items, 91%)
-
-### L6: Resolve hardcoded Gmail label IDs
-**Priority:** Low
-**Effort:** 0.75h (implementation + documentation + extension)
-
-**Implementation:**
-- Added `buildLabelCache(gmail)` → fetches all labels once at startup
-- Added `resolveLabelId(gmail, labelName, labelCache)` → cached single lookups
-- Added `resolveLabelIds(gmail, labelNames)` → batch label resolution
-- Updated `create-all-sublabels.mjs` to use dynamic resolution
-- Updated `analyze-community-events.mjs` as extension example
-- Removed hardcoded `Label_5`, `Label_18`, `Label_4` references
-- Fails explicitly (not silently) if parent labels missing
-
-**Documentation:**
-- Created `docs/LABEL-RESOLUTION-GUIDE.md` with:
-  - Before/after pattern examples
-  - Step-by-step refactoring instructions
-  - All available resolution functions
-  - Practical examples and fallback patterns
-  - Helper for finding label names
-  - Contribution guidelines for L6-extended
-
-**Benefits:**
-- Portable across accounts with different label ID assignments
-- Improved reliability and maintainability
-- Clear pattern documented for other scripts (analyze-*, create-*, etc.)
-- Enables community contributions to L6-extended
-
-**Test Status:** 492/494 passing (99.6%)
-**Files Modified:** lib/gmail-label-utils.mjs, create-all-sublabels.mjs, analyze-community-events.mjs, docs/LABEL-RESOLUTION-GUIDE.md
-
-### Summary of Completed Work
-
-| Category | Count | Status |
-|----------|-------|--------|
-| High Priority | 0 | ✅ All actionable items completed (2 BLOCKED) |
-| Medium Priority | 2 | ✅ Completed (BLOCKED pending design decisions) |
-| Low Priority (L1-L4) | 4 | ✅ All completed (L4/L5 were notes/optional) |
-| Low Priority (L6) | 1 | ✅ Completed this iteration |
-| **Total Actionable** | **20/22** | **91%** |
-| **Tests Passing** | **492/494** | **99.6%** |
-
-**Note:** 2 pre-existing test failures are design-level schema issues, not regression bugs.
-
-### Remaining BLOCKED Items Requiring Design Decisions
-
-1. **conflict-detection-integration.test.ts Architecture** (40-60 hours)
-   - Requires: Test infrastructure (initializeApp, AuthenticationService, TestDataFactory)
-   - Status: BLOCKED pending architecture discussion
-   - Impact: Integration test suite for conflict detection
-
-2. **UpdateEventHandler.recurring.test.ts Refactor** (16-24 hours)
-   - Requires: Rewrite to test real UpdateEventHandler instead of shadow EnhancedUpdateEventHandler
-   - Status: BLOCKED pending refactor design review
-   - Impact: Test suite reliability and regression safety
-
-**Next Steps:** Both items require user input/design decisions before implementation.
-
-### Completion Assessment
-
-**Genuine Completion Status:** 🏁 **PRACTICAL COMPLETION**
-
-The BACKLOG is functionally complete for all items that can be progressed without design-level decisions:
-- ✅ 20/22 actionable items implemented (91%)
-- ✅ All Low priority items complete (L1-L6)
-- ✅ All High/Medium items complete except 2 requiring design
-- ✅ Documentation created for L6 pattern extension
-- ✅ Test coverage at 99.6% (492/494 passing)
-- ⏸️ 2 pre-existing test failures are architectural (not regressions)
-
-**Path to 100% Requires:**
-1. Design decision on conflict-detection-integration.test.ts architecture
-2. Refactor review for UpdateEventHandler.recurring.test.ts
-3. These are substantial undertakings (40-60h + 16-24h respectively)
-
-**Recommendation:** Current state represents maximum progress without additional design input. Continued iteration should await:
-- User review of 2 BLOCKED items
-- Clear architectural decisions on test infrastructure
-- Confirmation that attempting these refactors is the priority
-
----
-
-# Project Backlog
-
-## High Priority Items
+### High Priority Items
 
 ### Test Architecture Refactor: conflict-detection-integration.test.ts
 **Status:** 🔴 BLOCKED - Requires Design Discussion

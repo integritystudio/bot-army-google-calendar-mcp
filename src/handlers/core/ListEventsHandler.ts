@@ -2,11 +2,11 @@ import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OAuth2Client } from "google-auth-library";
 import { BaseToolHandler } from "./BaseToolHandler.js";
 import { calendar_v3 } from 'googleapis';
-import { formatEventWithDetails } from "../utils.js";
 import { BatchRequestHandler } from "./BatchRequestHandler.js";
 import { resolveTimeRange } from "../../utils/timezone-utils.js";
 import { buildListFieldMask } from "../../utils/field-mask-builder.js";
 import { processBatchResponses } from "./batchUtils.js";
+import { formatEventsList } from "./eventFormatting.js";
 
 // Extended event type to include calendar ID for tracking source
 interface ExtendedEvent extends calendar_v3.Schema$Event {
@@ -46,32 +46,12 @@ export class ListEventsHandler extends BaseToolHandler {
         if (allEvents.length === 0) {
             return this.textResult(`No events found in ${calendarIds.length} calendar(s).`);
         }
-        
-        let text = calendarIds.length === 1 
-            ? `Found ${allEvents.length} event(s):\n\n`
-            : `Found ${allEvents.length} event(s) across ${calendarIds.length} calendars:\n\n`;
-        
-        if (calendarIds.length === 1) {
-            // Single calendar - simple list
-            allEvents.forEach((event, index) => {
-                const eventDetails = formatEventWithDetails(event, event.calendarId);
-                text += `${index + 1}. ${eventDetails}\n\n`;
-            });
-        } else {
-            // Multiple calendars - group by calendar
-            const grouped = this.groupEventsByCalendar(allEvents);
-            
-            for (const [calendarId, events] of Object.entries(grouped)) {
-                text += `Calendar: ${calendarId}\n\n`;
-                events.forEach((event, index) => {
-                    const eventDetails = formatEventWithDetails(event, event.calendarId);
-                    text += `${index + 1}. ${eventDetails}\n\n`;
-                });
-                text += "\n";
-            }
-        }
-        
-        return this.textResult(text.trim());
+
+        const text = formatEventsList(allEvents, {
+            groupByCalendar: calendarIds.length > 1
+        });
+
+        return this.textResult(text);
     }
 
     private async fetchEvents(
@@ -180,15 +160,6 @@ export class ListEventsHandler extends BaseToolHandler {
             const bStart = b.start?.dateTime || b.start?.date || "";
             return aStart.localeCompare(bStart);
         });
-    }
-
-    private groupEventsByCalendar(events: ExtendedEvent[]): Record<string, ExtendedEvent[]> {
-        return events.reduce((acc, event) => {
-            const calId = event.calendarId;
-            if (!acc[calId]) acc[calId] = [];
-            acc[calId].push(event);
-            return acc;
-        }, {} as Record<string, ExtendedEvent[]>);
     }
 
 }

@@ -1385,3 +1385,51 @@ BatchRequestHandler.test.ts extracted four reusable testing patterns that should
 
 ---
 
+### L7: Migrate remaining handler tests to makeCalendarMock factory
+**Status:** Open
+**Priority:** Low
+**Date Added:** 2026-03-24
+**Source:** RecurringEventHelpers.test.ts refactor session
+
+`makeCalendarMock()` was added to `src/tests/unit/helpers/factories.ts` to provide a typed, reusable calendar mock. Four handler test files still declare `mockCalendar: any` inline, bypassing type checking.
+
+**Files with `mockCalendar: any`:**
+- `src/tests/unit/handlers/CreateEventHandler.test.ts`
+- `src/tests/unit/handlers/GetEventHandler.test.ts`
+- `src/tests/unit/handlers/ListEventsHandler.test.ts`
+- `src/tests/unit/handlers/SearchEventsHandler.test.ts`
+
+**Action Items:**
+1. Replace `let mockCalendar: any` with `let mockCalendar: ReturnType<typeof makeCalendarMock>`
+2. Replace inline `{ events: { get: vi.fn(), ... } }` constructions with `makeCalendarMock()`
+3. Cast at construction: `new Handler(mockCalendar as unknown as calendar_v3.Calendar)`
+
+**Benefits:** Removes `any` escape hatch; mock method mismatches caught at compile time.
+**Risk:** Low (test-only changes)
+**Estimated Effort:** 1 hour
+
+---
+
+### L8: Identify overlap between resolveTimeRange and existing handler methods
+**Status:** Open
+**Priority:** Low
+**Date Added:** 2026-03-24
+**Source:** timezone-utils refactor session
+
+`resolveTimeRange(timeMin, timeMax, timezone)` was extracted to `src/utils/timezone-utils.ts` and adopted by `ListEventsHandler` and `SearchEventsHandler`. Review other handlers for the same inline pattern.
+
+**Overlap candidates to audit:**
+- Any handler calling `convertToRFC3339` on optional fields with ternary guards
+- `BatchListEvents` or other handlers that accept `timeMin`/`timeMax` args
+- Search: `grep -r "convertToRFC3339" src/handlers/`
+
+**Action Items:**
+1. Run `grep -r "convertToRFC3339" src/handlers/` to find remaining callers
+2. Replace inline `timeMin ? convertToRFC3339(timeMin, tz) : undefined` patterns with `resolveTimeRange()`
+3. Check if `resolveTimeRange` should move to a handler-focused utility module vs `timezone-utils.ts`
+
+**Risk:** Low (pure utility refactor, same behavior)
+**Estimated Effort:** 30 min
+
+---
+

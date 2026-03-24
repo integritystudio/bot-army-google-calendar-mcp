@@ -8,6 +8,20 @@ import { getAccountMode, isNodeError } from './utils.js';
 
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
 const PORT_RANGE = { start: 3500, end: 3505 };
+
+function buildAuthHtml(title: string, body: string): string {
+  return `<!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>${title}</title>
+            </head>
+            <body>
+                ${body}
+            </body>
+            </html>`;
+}
 const AUTH_SERVER_TIMEOUT_MS = 10000;
 
 export class AuthServer {
@@ -71,23 +85,13 @@ export class AuthServer {
           const accountMode = this.tokenManager.getAccountMode();
 
           res.writeHead(200, { 'Content-Type': 'text/html' });
-          res.end(`
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Authentication Successful</title>
-            </head>
-            <body>
+          res.end(buildAuthHtml('Authentication Successful', `
                 <h1>Authentication Successful!</h1>
                 <p><strong>Account Mode:</strong> ${accountMode}</p>
                 <p>Your authentication tokens have been saved for the <strong>${accountMode}</strong> account.</p>
                 <p>Tokens saved to: ${tokenPath}</p>
                 <p>You can now close this browser window.</p>
-            </body>
-            </html>
-          `);
+          `));
         } catch (error: unknown) {
           this.authCompletedSuccessfully = false;
           const message = error instanceof Error ? error.message : 'Unknown error';
@@ -96,22 +100,12 @@ export class AuthServer {
           const escapedMessage = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
 
           res.writeHead(500, { 'Content-Type': 'text/html' });
-          res.end(`
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Authentication Failed</title>
-            </head>
-            <body>
+          res.end(buildAuthHtml('Authentication Failed', `
                 <h1>Authentication Failed</h1>
                 <p>An error occurred during authentication:</p>
                 <p>${escapedMessage}</p>
                 <p>Please try again or check the server logs.</p>
-            </body>
-            </html>
-          `);
+          `));
         }
       } else {
         // 404 for other routes

@@ -38,6 +38,7 @@
     "auth": "node build/auth-server.js",
     "verify-tokens": "GOOGLE_OAUTH_CREDENTIALS=./credentials.json npx vite-node src/verify-tokens.ts",
     "dev": "node scripts/dev.js",
+    "check-duplicates": "node scripts/check-duplicates.mjs src 6",
     "lint": "tsc --noEmit -p tsconfig.lint.json",
     "test": "vitest run src/tests/unit",
     "test:watch": "vitest src/tests/unit",

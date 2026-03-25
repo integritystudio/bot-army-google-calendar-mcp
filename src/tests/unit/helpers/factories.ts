@@ -1,7 +1,7 @@
 import { calendar_v3 } from 'googleapis';
 import { GaxiosError } from 'gaxios';
 import { vi } from 'vitest';
-import { addHours, addMinutes } from 'simple-rrule';
+import { addHours, addMinutes } from 'date-fns';
 import {
   addDays,
   getFutureDate,

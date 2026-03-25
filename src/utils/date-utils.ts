@@ -17,8 +17,8 @@ import {
   getDaysInMonth,
   isBefore,
   isLastDayOfMonth,
-  toRRuleDateString,
-} from 'simple-rrule';
+} from 'date-fns';
+import { toRRuleDateString } from 'simple-rrule';
 
 // Time duration constants (in milliseconds)
 export const TIME_DURATIONS = {

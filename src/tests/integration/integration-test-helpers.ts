@@ -3,6 +3,7 @@
  * Consolidates repeated patterns for conflict detection and event lifecycle tests.
  */
 
+import { expect } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { TestDataFactory } from './test-data-factory.js';
 import { getTextContent } from '../unit/helpers/content.js';
@@ -156,4 +157,31 @@ export async function createOverlappingEventPair(
   );
 
   return { event1Id, event2Id };
+}
+
+/**
+ * Test that a modification scope error is thrown with appropriate message.
+ * Consolidates repeated error testing patterns in UpdateEventHandler tests.
+ */
+export async function expectModificationScopeError(
+  handlerRunTool: (args: Record<string, any>) => Promise<any>,
+  updateArgs: Record<string, any>,
+  expectedErrorMessage?: string | RegExp
+): Promise<void> {
+  await expect(handlerRunTool(updateArgs)).rejects.toThrow(
+    expectedErrorMessage || /error/i
+  );
+}
+
+/**
+ * Test that an event update succeeds and returns expected content.
+ * Consolidates repeated success verification patterns.
+ */
+export async function expectEventUpdateSuccess(
+  result: unknown,
+  expectedContent: string | RegExp
+): Promise<void> {
+  expect(result).toBeDefined();
+  const text = getTextContent(result);
+  expect(text).toContain(expectedContent);
 }

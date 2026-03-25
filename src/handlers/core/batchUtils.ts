@@ -2,10 +2,7 @@
  * Batch response processing utilities for multi-calendar operations
  */
 
-export interface ExtendedEvent {
-  calendarId: string;
-  [key: string]: any;
-}
+import { ExtendedEvent } from './types.js';
 
 export interface BatchResponseResult<T extends ExtendedEvent = ExtendedEvent> {
   events: T[];

@@ -2,13 +2,11 @@
  * Event list formatting utilities for consistent output across handlers
  */
 
-import { calendar_v3 } from 'googleapis';
 import { formatEventWithDetails } from '../utils.js';
 import { groupBy } from 'lodash-es';
+import { ExtendedEvent } from './types.js';
 
-export interface ExtendedEvent extends calendar_v3.Schema$Event {
-  calendarId?: string;
-}
+export type { ExtendedEvent };
 
 export interface FormatEventsListOptions {
   groupByCalendar?: boolean;

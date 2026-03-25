@@ -3,6 +3,8 @@
  * Provides semantic, type-safe abstractions for common date calculations.
  */
 
+import { addDays as _addDays, addMilliseconds as _addMilliseconds } from 'simple-rrule';
+
 // Time duration constants (in milliseconds)
 export const TIME_DURATIONS = {
   HOUR: 1000 * 60 * 60,
@@ -18,9 +20,7 @@ export const TIME_DURATIONS = {
  * @returns New Date object offset by days
  */
 export function addDays(date: Date, days: number): Date {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
+  return _addDays(date, days);
 }
 
 /**
@@ -30,7 +30,7 @@ export function addDays(date: Date, days: number): Date {
  * @returns New Date object offset by milliseconds
  */
 export function addMilliseconds(date: Date, ms: number): Date {
-  return new Date(date.getTime() + ms);
+  return _addMilliseconds(date, ms);
 }
 
 /**

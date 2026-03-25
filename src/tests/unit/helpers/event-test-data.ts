@@ -177,24 +177,6 @@ export function createConflictEventArgs(
   });
 }
 
-export function createEventWithAttendeesAndReminders(
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event {
-  return {
-    id: 'full-event',
-    summary: 'Full Event',
-    description: 'Event description',
-    location: 'Conference Room A',
-    attendees: [{ email: 'test@example.com' }],
-    colorId: '5',
-    reminders: {
-      useDefault: false,
-      overrides: [{ method: 'email', minutes: 30 }]
-    },
-    ...overrides
-  };
-}
-
 export function createEventWithExtendedProperties(
   overrides: Partial<calendar_v3.Schema$Event> = {}
 ): calendar_v3.Schema$Event {
@@ -211,29 +193,6 @@ export function createEventWithExtendedProperties(
         category: 'meeting'
       }
     },
-    ...overrides
-  };
-}
-
-export function createEventWithAttachments(
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event {
-  return {
-    id: 'event-with-attachments',
-    summary: 'Meeting with Documents',
-    attachments: [
-      {
-        fileUrl: 'https://docs.google.com/document/d/123',
-        title: 'Meeting Agenda',
-        mimeType: 'application/vnd.google-apps.document'
-      },
-      {
-        fileUrl: 'https://drive.google.com/file/d/456',
-        title: 'Presentation',
-        mimeType: 'application/vnd.google-apps.presentation',
-        fileId: '456'
-      }
-    ],
     ...overrides
   };
 }

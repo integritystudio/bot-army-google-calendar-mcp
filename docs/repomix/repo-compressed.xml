@@ -563,6 +563,14 @@ echo -e "\n✅ HTTP testing completed!"
 echo -e "\n💡 To test with different server URL: $0 http://your-server:port"
 </file>
 
+<file path="lib/constants.mjs">
+/** Gmail user ID (special value 'me' = authenticated user) */
+⋮----
+/** System label IDs */
+⋮----
+/** Gmail label names for email categories */
+</file>
+
 <file path="lib/date-based-filter.mjs">
 /**
  * Date-based email filter utility
@@ -771,6 +779,36 @@ function main()
 <file path="scripts/dev.js">
 function showHelp()
 async function runCommand(commandName)
+</file>
+
+<file path="scripts/setup-doppler-tests.sh">
+set -e
+PROJECT="integrity-studio"
+CONFIG="dev"
+echo "Checking Doppler setup for $PROJECT/$CONFIG..."
+if doppler projects get --project "$PROJECT" &>/dev/null; then
+  echo "✓ Project '$PROJECT' exists"
+else
+  echo "✗ Project '$PROJECT' not found"
+  exit 1
+fi
+if doppler configs --project "$PROJECT" | grep -q "$CONFIG"; then
+  echo "✓ Config '$CONFIG' exists"
+else
+  echo "✗ Config '$CONFIG' not found"
+  exit 1
+fi
+echo ""
+echo "Current secrets in $PROJECT/$CONFIG:"
+doppler secrets --project "$PROJECT" --config "$CONFIG" | grep -E "GOOGLE_OAUTH|CALENDAR|TEST_"
+echo ""
+echo "✓ Doppler setup verified!"
+echo ""
+echo "Run tests with:"
+echo "   doppler run npm test"
+echo "   doppler run npm run test:integration"
+echo "   npm run test:doppler"
+echo "   npm run test:integration:doppler"
 </file>
 
 <file path="src/auth/client.ts">
@@ -1095,6 +1133,17 @@ import {
 import { getFutureDate, oneDayBefore, formatBasicDateTime } from '../../../utils/date-utils.js';
 </file>
 
+<file path="src/tests/unit/schemas/no-refs.test.ts">
+import { describe, it, expect } from 'vitest';
+import { ToolRegistry } from '../../../tools/registry.js';
+</file>
+
+<file path="src/tests/unit/schemas/tool-registration.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ToolRegistry, ToolSchemas } from '../../../tools/registry.js';
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+</file>
+
 <file path="src/tests/unit/utils/event-id-validator.test.ts">
 import { describe, it, expect } from 'vitest';
 import {
@@ -1288,6 +1337,12 @@ Thumbs.db
 - Implement handler in `src/handlers/core/YourToolHandler.ts` extending `BaseToolHandler`.
 - Define/extend Zod schema in `src/schemas/` and add unit + integration tests.
 - Handlers are auto‑registered; update docs if adding public tool names.
+</file>
+
+<file path="analyze_emails.mjs">
+async function analyzeUnreadEmails()
+⋮----
+const getHeader = (name)
 </file>
 
 <file path="analyze-ccv-newsletter.mjs">
@@ -1697,6 +1752,11 @@ async function deleteSentryFilter()
 const getHeader = (headers, name)
 </file>
 
+<file path="doppler.yaml">
+project: integrity-studio
+config: dev
+</file>
+
 <file path="filter-events-by-date.mjs">
 async function filterEventsByDate()
 ⋮----
@@ -2045,6 +2105,84 @@ async function organizeNewsletters()
 // Step 2: Create filter for future newsletters
 </file>
 
+<file path="package.json">
+{
+  "name": "@cocal/google-calendar-mcp",
+  "version": "1.4.9",
+  "description": "Google Calendar MCP Server with extensive support for calendar management",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "google-calendar-mcp": "build/index.js"
+  },
+  "files": [
+    "build/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "google-calendar",
+    "calendar",
+    "ai",
+    "llm",
+    "integration"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nspady/google-calendar-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nspady/google-calendar-mcp/issues"
+  },
+  "homepage": "https://github.com/nspady/google-calendar-mcp#readme",
+  "author": "nspady",
+  "license": "MIT",
+  "scripts": {
+    "start": "node build/index.js",
+    "build": "node scripts/build.js",
+    "auth": "node build/auth-server.js",
+    "verify-tokens": "GOOGLE_OAUTH_CREDENTIALS=./credentials.json npx vite-node src/verify-tokens.ts",
+    "dev": "node scripts/dev.js",
+    "check-duplicates": "node scripts/check-duplicates.mjs src 6",
+    "lint": "tsc --noEmit -p tsconfig.lint.json",
+    "test": "vitest run src/tests/unit",
+    "test:watch": "vitest src/tests/unit",
+    "test:integration": "vitest run src/tests/integration",
+    "test:all": "vitest run src/tests",
+    "test:coverage": "vitest run src/tests/unit --coverage",
+    "test:integration:doppler": "GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json doppler run --project integrity-studio --config dev -- npm run test:integration",
+    "test:doppler": "GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json doppler run --project integrity-studio --config dev -- npm test",
+    "test:all:doppler": "GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json doppler run --project integrity-studio --config dev -- npm run test:all",
+    "start:http": "node build/index.js --transport http --port 3000",
+    "start:http:public": "node build/index.js --transport http --port 3000 --host 0.0.0.0",
+    "repomix": "bash scripts/repomix/repomix-regen.sh"
+  },
+  "dependencies": {
+    "@google-cloud/local-auth": "^3.0.1",
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@sentry/node": "^8.0.0",
+    "esbuild": "^0.25.0",
+    "google-auth-library": "^9.15.0",
+    "googleapis": "^144.0.0",
+    "open": "^7.4.2",
+    "simple-rrule": "^1.8.1",
+    "zod": "^4.3.6",
+    "zod-to-json-schema": "^3.24.5"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "@types/node": "^20.10.4",
+    "@vitest/coverage-v8": "^3.1.1",
+    "openai": "^4.104.0",
+    "typescript": "^5.3.3",
+    "vitest": "^3.1.1"
+  }
+}
+</file>
+
 <file path="protect-important-inbox.mjs">
 async function protectImportantItems()
 ⋮----
@@ -2192,12 +2330,32 @@ import { loadEnv } from 'vite'
 // Increase timeout for AI API calls
 </file>
 
-<file path="lib/constants.mjs">
-/** Gmail user ID (special value 'me' = authenticated user) */
+<file path="lib/email-analyzer.mjs">
+/**
+ * Score content against keyword lists
+ * @param {string} content - Text to score
+ * @param {string[]} highKeywords - Keywords indicating high score
+ * @param {string[]} lowKeywords - Keywords indicating low score
+ * @returns {number} Score value (2, 5, or 9)
+ */
+export function scoreContent(content, highKeywords, lowKeywords)
 ⋮----
-/** System label IDs */
+/**
+ * Categorize an email by urgency and importance
+ * @param {Object} msg - Email message object
+ * @returns {Object} Categorization with urgency and importance levels
+ */
+export function categorizeEmail(msg)
 ⋮----
-/** Gmail label names for email categories */
+/**
+ * Print email subsections with configurable truncation
+ * @param {string} title - Section title
+ * @param {Object[]} subsections - Email subsections with labels and emails
+ * @param {Object} displayConfig - Display configuration (fromMax, subjectMax, snippetMax)
+ */
+export function printSection(title, subsections, displayConfig =
+⋮----
+// Validate subsections
 </file>
 
 <file path="lib/gmail-batch.mjs">
@@ -2384,36 +2542,6 @@ export async function resolveLabelIds(gmail, labelNames)
 }
 </file>
 
-<file path="scripts/setup-doppler-tests.sh">
-set -e
-PROJECT="integrity-studio"
-CONFIG="dev"
-echo "Checking Doppler setup for $PROJECT/$CONFIG..."
-if doppler projects get --project "$PROJECT" &>/dev/null; then
-  echo "✓ Project '$PROJECT' exists"
-else
-  echo "✗ Project '$PROJECT' not found"
-  exit 1
-fi
-if doppler configs --project "$PROJECT" | grep -q "$CONFIG"; then
-  echo "✓ Config '$CONFIG' exists"
-else
-  echo "✗ Config '$CONFIG' not found"
-  exit 1
-fi
-echo ""
-echo "Current secrets in $PROJECT/$CONFIG:"
-doppler secrets --project "$PROJECT" --config "$CONFIG" | grep -E "GOOGLE_OAUTH|CALENDAR|TEST_"
-echo ""
-echo "✓ Doppler setup verified!"
-echo ""
-echo "Run tests with:"
-echo "   doppler run npm test"
-echo "   doppler run npm run test:integration"
-echo "   npm run test:doppler"
-echo "   npm run test:integration:doppler"
-</file>
-
 <file path="src/auth/tokenManager.ts">
 import { OAuth2Client, Credentials } from 'google-auth-library';
 import fs from 'fs/promises';
@@ -2499,27 +2627,6 @@ private parseResponsePart(part: string): BatchResponse | null
 // Collect all body lines, filtering out empty lines at the end
 ⋮----
 // Remove trailing empty lines
-</file>
-
-<file path="src/handlers/core/batchUtils.ts">
-export interface ExtendedEvent {
-  calendarId?: string;
-  [key: string]: any;
-}
-export interface BatchResponseResult<T extends ExtendedEvent = ExtendedEvent> {
-  events: T[];
-  errors: Array<{ calendarId: string; error: string }>;
-}
-export interface ProcessBatchResponsesOptions {
-  includeErrors?: boolean;
-  errorFormatter?: (statusCode: number, body: any) => string;
-}
-const defaultErrorFormatter = (statusCode: number, body: any): string =>
-export function processBatchResponses<T extends ExtendedEvent = ExtendedEvent>(
-  responses: any[],
-  calendarIds: string[],
-  options: ProcessBatchResponsesOptions = {}
-): BatchResponseResult<T>
 </file>
 
 <file path="src/handlers/core/CreateEventHandler.ts">
@@ -2849,6 +2956,17 @@ export async function createOverlappingEventPair(
 ): Promise<
 </file>
 
+<file path="src/tests/integration/UpdateEventHandler.recurring.integration.test.ts">
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { OAuth2Client } from 'google-auth-library';
+import { google, calendar_v3 } from 'googleapis';
+import { initializeOAuth2Client } from '../../auth/client.js';
+import { TokenManager } from '../../auth/tokenManager.js';
+import { UpdateEventHandler } from '../../handlers/core/UpdateEventHandler.js';
+⋮----
+async function createTestEvent(overrides: any =
+</file>
+
 <file path="src/tests/unit/handlers/BatchRequestHandler.test.ts">
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { OAuth2Client } from 'google-auth-library';
@@ -2907,17 +3025,6 @@ buildMany(count: number, variantFn?: (index: number) => Partial<T>): T[]
 import { describe, it, expect } from 'vitest';
 import { ToolSchemas } from '../../../tools/registry.js';
 import { TEST_EVENT_DEFAULTS } from '../../../testing/constants.js';
-</file>
-
-<file path="src/tests/unit/schemas/no-refs.test.ts">
-import { describe, it, expect } from 'vitest';
-import { ToolRegistry } from '../../../tools/registry.js';
-</file>
-
-<file path="src/tests/unit/schemas/tool-registration.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ToolRegistry, ToolSchemas } from '../../../tools/registry.js';
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 </file>
 
 <file path="src/tests/unit/types/gmail-batch-types.test.ts">
@@ -3025,12 +3132,6 @@ GOOGLE_ACCOUNT_MODE=normal
 GOOGLE_OAUTH_CREDENTIALS=/Users/alyshialedlie/code/is-internal/bot-army-google-calendar-mcp/gcp-oauth.keys.json
 </file>
 
-<file path="analyze_emails.mjs">
-async function analyzeUnreadEmails()
-⋮----
-const getHeader = (name)
-</file>
-
 <file path="create-ccv-newsletter-sublabel.mjs">
 async function createCCVNewsletterSubLabel()
 ⋮----
@@ -3115,89 +3216,6 @@ async function createSubjectNewslettersSubLabel()
 
 </file>
 
-<file path="doppler.yaml">
-project: integrity-studio
-config: dev
-</file>
-
-<file path="package.json">
-{
-  "name": "@cocal/google-calendar-mcp",
-  "version": "1.4.9",
-  "description": "Google Calendar MCP Server with extensive support for calendar management",
-  "type": "module",
-  "main": "build/index.js",
-  "bin": {
-    "google-calendar-mcp": "build/index.js"
-  },
-  "files": [
-    "build/",
-    "README.md",
-    "LICENSE"
-  ],
-  "keywords": [
-    "mcp",
-    "model-context-protocol",
-    "claude",
-    "google-calendar",
-    "calendar",
-    "ai",
-    "llm",
-    "integration"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/nspady/google-calendar-mcp.git"
-  },
-  "bugs": {
-    "url": "https://github.com/nspady/google-calendar-mcp/issues"
-  },
-  "homepage": "https://github.com/nspady/google-calendar-mcp#readme",
-  "author": "nspady",
-  "license": "MIT",
-  "scripts": {
-    "start": "node build/index.js",
-    "build": "node scripts/build.js",
-    "auth": "node build/auth-server.js",
-    "verify-tokens": "GOOGLE_OAUTH_CREDENTIALS=./credentials.json npx vite-node src/verify-tokens.ts",
-    "dev": "node scripts/dev.js",
-    "check-duplicates": "node scripts/check-duplicates.mjs src 6",
-    "lint": "tsc --noEmit -p tsconfig.lint.json",
-    "test": "vitest run src/tests/unit",
-    "test:watch": "vitest src/tests/unit",
-    "test:integration": "vitest run src/tests/integration",
-    "test:all": "vitest run src/tests",
-    "test:coverage": "vitest run src/tests/unit --coverage",
-    "test:integration:doppler": "GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json doppler run --project integrity-studio --config dev -- npm run test:integration",
-    "test:doppler": "GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json doppler run --project integrity-studio --config dev -- npm test",
-    "test:all:doppler": "GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json doppler run --project integrity-studio --config dev -- npm run test:all",
-    "start:http": "node build/index.js --transport http --port 3000",
-    "start:http:public": "node build/index.js --transport http --port 3000 --host 0.0.0.0",
-    "repomix": "bash scripts/repomix/repomix-regen.sh"
-  },
-  "dependencies": {
-    "@google-cloud/local-auth": "^3.0.1",
-    "@modelcontextprotocol/sdk": "^1.12.1",
-    "@sentry/node": "^8.0.0",
-    "esbuild": "^0.25.0",
-    "google-auth-library": "^9.15.0",
-    "googleapis": "^144.0.0",
-    "open": "^7.4.2",
-    "simple-rrule": "^1.8.1",
-    "zod": "^4.3.6",
-    "zod-to-json-schema": "^3.24.5"
-  },
-  "devDependencies": {
-    "@anthropic-ai/sdk": "^0.52.0",
-    "@types/node": "^20.10.4",
-    "@vitest/coverage-v8": "^3.1.1",
-    "openai": "^4.104.0",
-    "typescript": "^5.3.3",
-    "vitest": "^3.1.1"
-  }
-}
-</file>
-
 <file path="search-events.ts">
 import { initializeOAuth2Client } from './src/auth/client.js';
 import { TokenManager } from './src/auth/tokenManager.js';
@@ -3222,34 +3240,6 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 import { ToolSchemas } from './src/tools/registry.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import z from 'zod';
-</file>
-
-<file path="lib/email-analyzer.mjs">
-/**
- * Score content against keyword lists
- * @param {string} content - Text to score
- * @param {string[]} highKeywords - Keywords indicating high score
- * @param {string[]} lowKeywords - Keywords indicating low score
- * @returns {number} Score value (2, 5, or 9)
- */
-export function scoreContent(content, highKeywords, lowKeywords)
-⋮----
-/**
- * Categorize an email by urgency and importance
- * @param {Object} msg - Email message object
- * @returns {Object} Categorization with urgency and importance levels
- */
-export function categorizeEmail(msg)
-⋮----
-/**
- * Print email subsections with configurable truncation
- * @param {string} title - Section title
- * @param {Object[]} subsections - Email subsections with labels and emails
- * @param {Object} displayConfig - Display configuration (fromMax, subjectMax, snippetMax)
- */
-export function printSection(title, subsections, displayConfig =
-⋮----
-// Validate subsections
 </file>
 
 <file path="src/auth/server.ts">
@@ -3292,6 +3282,27 @@ protected textResult(text: string): CallToolResult
 protected async withTimeout<T>(promise: Promise<T>, timeoutMs: number = 30000): Promise<T>
 protected async getCalendarDetails(client: OAuth2Client, calendarId: string): Promise<calendar_v3.Schema$CalendarListEntry>
 protected async getCalendarTimezone(client: OAuth2Client, calendarId: string): Promise<string>
+</file>
+
+<file path="src/handlers/core/batchUtils.ts">
+export interface ExtendedEvent {
+  calendarId: string;
+  [key: string]: any;
+}
+export interface BatchResponseResult<T extends ExtendedEvent = ExtendedEvent> {
+  events: T[];
+  errors: Array<{ calendarId: string; error: string }>;
+}
+export interface ProcessBatchResponsesOptions {
+  includeErrors?: boolean;
+  errorFormatter?: (statusCode: number, body: any) => string;
+}
+const defaultErrorFormatter = (statusCode: number, body: any): string =>
+export function processBatchResponses<T extends ExtendedEvent = ExtendedEvent>(
+  responses: any[],
+  calendarIds: string[],
+  options: ProcessBatchResponsesOptions = {}
+): BatchResponseResult<T>
 </file>
 
 <file path="src/handlers/core/eventFormatting.ts">
@@ -3392,17 +3403,6 @@ export class GmailCreateLabelHandler extends BaseToolHandler
 ⋮----
 async runTool(args: GmailCreateLabelInput, oauth2Client: OAuth2Client): Promise<CallToolResult>
 async execute(input: GmailCreateLabelInput, oauth2Client: OAuth2Client): Promise<any>
-</file>
-
-<file path="src/tests/integration/UpdateEventHandler.recurring.integration.test.ts">
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { OAuth2Client } from 'google-auth-library';
-import { google, calendar_v3 } from 'googleapis';
-import { initializeOAuth2Client } from '../../auth/client.js';
-import { TokenManager } from '../../auth/tokenManager.js';
-import { UpdateEventHandler } from '../../handlers/core/UpdateEventHandler.js';
-⋮----
-async function createTestEvent(overrides: any =
 </file>
 
 <file path="src/tests/unit/handlers/duplicate-event-display.test.ts">
@@ -3641,56 +3641,6 @@ export function createEventResponseWithConflicts(
 ): string
 </file>
 
-<file path="src/services/conflict-detection/ConflictDetectionService.ts">
-import { OAuth2Client } from "google-auth-library";
-import { google, calendar_v3 } from "googleapis";
-import {
-  ConflictCheckResult,
-  ConflictInfo,
-  DuplicateInfo,
-  ConflictDetectionOptions
-} from "./types.js";
-import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
-import { ConflictAnalyzer } from "./ConflictAnalyzer.js";
-import { CONFLICT_DETECTION_CONFIG } from "./config.js";
-import { getEventUrl } from "../../handlers/utils.js";
-import { resolveTimeRange, hasTimezoneInDatetime } from "../../utils/timezone-utils.js";
-export class ConflictDetectionService
-⋮----
-constructor()
-async checkConflicts(
-    oauth2Client: OAuth2Client,
-    event: calendar_v3.Schema$Event,
-    calendarId: string,
-    options: ConflictDetectionOptions = {}
-): Promise<ConflictCheckResult>
-private async getEventsInTimeRange(
-    oauth2Client: OAuth2Client,
-    calendarId: string,
-    timeMin: string,
-    timeMax: string,
-    timeZone?: string
-): Promise<calendar_v3.Schema$Event[]>
-private findDuplicates(
-    newEvent: calendar_v3.Schema$Event,
-    existingEvents: calendar_v3.Schema$Event[],
-    calendarId: string,
-    threshold: number
-): DuplicateInfo[]
-private findConflicts(
-    newEvent: calendar_v3.Schema$Event,
-    existingEvents: calendar_v3.Schema$Event[],
-    calendarId: string,
-    includeDeclinedEvents: boolean
-): ConflictInfo[]
-private isEventDeclined(_event: calendar_v3.Schema$Event): boolean
-async checkConflictsWithFreeBusy(
-    oauth2Client: OAuth2Client,
-    eventToCheck: calendar_v3.Schema$Event,
-    calendarsToCheck: string[]
-): Promise<ConflictInfo[]>
-</file>
-
 <file path="src/testing/test-data.ts">
 import { z } from 'zod';
 import type { calendar_v3 } from 'googleapis';
@@ -3850,6 +3800,71 @@ import { LIST_EVENTS_API_DEFAULTS } from "../unit/helpers/test-configs.js";
 import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from "../../testing/constants.js";
 </file>
 
+<file path="src/tools/registry.ts">
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
+import { BaseToolHandler } from "../handlers/core/BaseToolHandler.js";
+import { ALLOWED_EVENT_FIELDS } from "../utils/field-mask-builder.js";
+import { isValidISODateTime } from "../utils/date-utils.js";
+import { formatErrorMessage } from "../handlers/core/errorFormatting.js";
+import { ListCalendarsHandler } from "../handlers/core/ListCalendarsHandler.js";
+import { ListEventsHandler } from "../handlers/core/ListEventsHandler.js";
+import { SearchEventsHandler } from "../handlers/core/SearchEventsHandler.js";
+import { GetEventHandler } from "../handlers/core/GetEventHandler.js";
+import { ListColorsHandler } from "../handlers/core/ListColorsHandler.js";
+import { CreateEventHandler } from "../handlers/core/CreateEventHandler.js";
+import { UpdateEventHandler } from "../handlers/core/UpdateEventHandler.js";
+import { DeleteEventHandler } from "../handlers/core/DeleteEventHandler.js";
+import { FreeBusyEventHandler } from "../handlers/core/FreeBusyEventHandler.js";
+import { GetCurrentTimeHandler } from "../handlers/core/GetCurrentTimeHandler.js";
+import { GmailSearchHandler } from "../handlers/gmail/GmailSearchHandler.js";
+import { GmailGetProfileHandler } from "../handlers/gmail/GmailGetProfileHandler.js";
+import { GmailModifyHandler } from "../handlers/gmail/GmailModifyHandler.js";
+import { GmailCreateLabelHandler } from "../handlers/gmail/GmailCreateLabelHandler.js";
+import { GmailCreateFilterHandler } from "../handlers/gmail/GmailCreateFilterHandler.js";
+import { GmailApplyFiltersHandler } from "../handlers/gmail/GmailApplyFiltersHandler.js";
+⋮----
+export type ToolInputs = {
+  [K in keyof typeof ToolSchemas]: z.infer<typeof ToolSchemas[K]>
+};
+export type ListCalendarsInput = ToolInputs['list-calendars'];
+export type ListEventsInput = ToolInputs['list-events'];
+export type SearchEventsInput = ToolInputs['search-events'];
+export type GetEventInput = ToolInputs['get-event'];
+export type ListColorsInput = ToolInputs['list-colors'];
+export type CreateEventInput = ToolInputs['create-event'];
+export type UpdateEventInput = ToolInputs['update-event'];
+export type DeleteEventInput = ToolInputs['delete-event'];
+export type GetFreeBusyInput = ToolInputs['get-freebusy'];
+export type GetCurrentTimeInput = ToolInputs['get-current-time'];
+export type GmailSearchInput = ToolInputs['gmail-search-messages'];
+export type GmailGetProfileInput = ToolInputs['gmail-get-profile'];
+export type GmailModifyInput = ToolInputs['gmail-modify-messages'];
+export type GmailCreateLabelInput = ToolInputs['gmail-create-label'];
+export type GmailCreateFilterInput = ToolInputs['gmail-create-filter'];
+export type GmailApplyFiltersInput = ToolInputs['gmail-apply-filters'];
+interface ToolDefinition {
+  name: keyof typeof ToolSchemas;
+  description: string;
+  schema: z.ZodType<any>;
+  handler: new () => BaseToolHandler;
+  handlerFunction?: (args: any) => Promise<any>;
+}
+export class ToolRegistry
+⋮----
+private static extractSchemaShape(schema: z.ZodType<any>): any
+⋮----
+static getToolsWithSchemas()
+static async registerAll(
+    server: McpServer,
+    executeWithHandler: (
+      handler: any,
+      args: any
+    ) => Promise<{ content: Array<{ type: "text"; text: string }> }>
+)
+</file>
+
 <file path="src/utils/batchProcessor.ts">
 import { formatErrorMessage } from "../handlers/core/errorFormatting.js";
 export interface BatchResult<T> {
@@ -3872,38 +3887,6 @@ export async function processBatchItemsChunked<T, TItem = string>(
   batchSize: number = 5,
   continueOnError: boolean = true
 ): Promise<BatchResult<T>>
-</file>
-
-<file path="src/handlers/core/RecurringEventHelpers.ts">
-import { calendar_v3 } from 'googleapis';
-import {
-  TIME_DURATIONS,
-  formatBasicDateTime,
-  oneDayBefore,
-  stripUntilAndCount,
-  buildUntilClause,
-  isRRuleString,
-  durationMs,
-} from '../../utils/date-utils.js';
-import { createTimeObject, applyTimezone } from '../../utils/timezone-utils.js';
-import { buildCoreEvent, buildOptionalEventFields } from './eventManipulationUtils.js';
-import { UpdateEventInput } from '../../tools/registry.js';
-export class RecurringEventHelpers
-⋮----
-constructor(calendar: calendar_v3.Calendar)
-getCalendar(): calendar_v3.Calendar
-async detectEventType(eventId: string, calendarId: string): Promise<'recurring' | 'single'>
-async getEventAndType(eventId: string, calendarId: string): Promise<
-formatInstanceId(eventId: string, originalStartTime: string): string
-calculateUntilDate(futureStartDate: string): string
-calculateEndTime(newStartTime: string, originalEvent: calendar_v3.Schema$Event): string
-updateRecurrenceWithUntil(recurrence: string[], untilDate: string): string[]
-cleanEventForDuplication(event: calendar_v3.Schema$Event): calendar_v3.Schema$Event
-buildUpdateRequestBody(args: UpdateEventInput, defaultTimeZone?: string): calendar_v3.Schema$Event
-⋮----
-export class RecurringEventError extends Error
-⋮----
-constructor(message: string, code: string)
 </file>
 
 <file path="src/handlers/core/SearchEventsHandler.ts">
@@ -4025,71 +4008,6 @@ import { getTextContent, makeEvent, makeGaxiosError, makeCalendarMock } from '..
 import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
 </file>
 
-<file path="src/tools/registry.ts">
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
-import { BaseToolHandler } from "../handlers/core/BaseToolHandler.js";
-import { ALLOWED_EVENT_FIELDS } from "../utils/field-mask-builder.js";
-import { isValidISODateTime } from "../utils/date-utils.js";
-import { formatErrorMessage } from "../handlers/core/errorFormatting.js";
-import { ListCalendarsHandler } from "../handlers/core/ListCalendarsHandler.js";
-import { ListEventsHandler } from "../handlers/core/ListEventsHandler.js";
-import { SearchEventsHandler } from "../handlers/core/SearchEventsHandler.js";
-import { GetEventHandler } from "../handlers/core/GetEventHandler.js";
-import { ListColorsHandler } from "../handlers/core/ListColorsHandler.js";
-import { CreateEventHandler } from "../handlers/core/CreateEventHandler.js";
-import { UpdateEventHandler } from "../handlers/core/UpdateEventHandler.js";
-import { DeleteEventHandler } from "../handlers/core/DeleteEventHandler.js";
-import { FreeBusyEventHandler } from "../handlers/core/FreeBusyEventHandler.js";
-import { GetCurrentTimeHandler } from "../handlers/core/GetCurrentTimeHandler.js";
-import { GmailSearchHandler } from "../handlers/gmail/GmailSearchHandler.js";
-import { GmailGetProfileHandler } from "../handlers/gmail/GmailGetProfileHandler.js";
-import { GmailModifyHandler } from "../handlers/gmail/GmailModifyHandler.js";
-import { GmailCreateLabelHandler } from "../handlers/gmail/GmailCreateLabelHandler.js";
-import { GmailCreateFilterHandler } from "../handlers/gmail/GmailCreateFilterHandler.js";
-import { GmailApplyFiltersHandler } from "../handlers/gmail/GmailApplyFiltersHandler.js";
-⋮----
-export type ToolInputs = {
-  [K in keyof typeof ToolSchemas]: z.infer<typeof ToolSchemas[K]>
-};
-export type ListCalendarsInput = ToolInputs['list-calendars'];
-export type ListEventsInput = ToolInputs['list-events'];
-export type SearchEventsInput = ToolInputs['search-events'];
-export type GetEventInput = ToolInputs['get-event'];
-export type ListColorsInput = ToolInputs['list-colors'];
-export type CreateEventInput = ToolInputs['create-event'];
-export type UpdateEventInput = ToolInputs['update-event'];
-export type DeleteEventInput = ToolInputs['delete-event'];
-export type GetFreeBusyInput = ToolInputs['get-freebusy'];
-export type GetCurrentTimeInput = ToolInputs['get-current-time'];
-export type GmailSearchInput = ToolInputs['gmail-search-messages'];
-export type GmailGetProfileInput = ToolInputs['gmail-get-profile'];
-export type GmailModifyInput = ToolInputs['gmail-modify-messages'];
-export type GmailCreateLabelInput = ToolInputs['gmail-create-label'];
-export type GmailCreateFilterInput = ToolInputs['gmail-create-filter'];
-export type GmailApplyFiltersInput = ToolInputs['gmail-apply-filters'];
-interface ToolDefinition {
-  name: keyof typeof ToolSchemas;
-  description: string;
-  schema: z.ZodType<any>;
-  handler: new () => BaseToolHandler;
-  handlerFunction?: (args: any) => Promise<any>;
-}
-export class ToolRegistry
-⋮----
-private static extractSchemaShape(schema: z.ZodType<any>): any
-⋮----
-static getToolsWithSchemas()
-static async registerAll(
-    server: McpServer,
-    executeWithHandler: (
-      handler: any,
-      args: any
-    ) => Promise<{ content: Array<{ type: "text"; text: string }> }>
-)
-</file>
-
 <file path="src/utils/timezone-utils.ts">
 import { formatRFC3339 } from './date-utils.js';
 ⋮----
@@ -4179,6 +4097,63 @@ private async buildEventsPath(client: OAuth2Client, calendarId: string, options:
 private sortEventsByStartTime(events: ExtendedEvent[]): ExtendedEvent[]
 </file>
 
+<file path="src/services/conflict-detection/ConflictDetectionService.ts">
+import { OAuth2Client } from "google-auth-library";
+import { google, calendar_v3 } from "googleapis";
+import {
+  ConflictCheckResult,
+  ConflictInfo,
+  DuplicateInfo,
+  ConflictDetectionOptions
+} from "./types.js";
+import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
+import { ConflictAnalyzer } from "./ConflictAnalyzer.js";
+import { CONFLICT_DETECTION_CONFIG } from "./config.js";
+import { getEventUrl } from "../../handlers/utils.js";
+import {
+  resolveTimeRange,
+  hasTimezoneInDatetime,
+  resolveTimeZone,
+  isValidIANATimeZone
+} from "../../utils/timezone-utils.js";
+function getEventDateTime(event: calendar_v3.Schema$Event):
+function formatEventTimesForInfo(event: calendar_v3.Schema$Event):
+export class ConflictDetectionService
+⋮----
+constructor()
+async checkConflicts(
+    oauth2Client: OAuth2Client,
+    event: calendar_v3.Schema$Event,
+    calendarId: string,
+    options: ConflictDetectionOptions = {}
+): Promise<ConflictCheckResult>
+private async getEventsInTimeRange(
+    oauth2Client: OAuth2Client,
+    calendarId: string,
+    timeMin: string,
+    timeMax: string,
+    timeZone?: string
+): Promise<calendar_v3.Schema$Event[]>
+private findDuplicates(
+    newEvent: calendar_v3.Schema$Event,
+    existingEvents: calendar_v3.Schema$Event[],
+    calendarId: string,
+    threshold: number
+): DuplicateInfo[]
+private findConflicts(
+    newEvent: calendar_v3.Schema$Event,
+    existingEvents: calendar_v3.Schema$Event[],
+    calendarId: string,
+    includeDeclinedEvents: boolean
+): ConflictInfo[]
+private isEventDeclined(_event: calendar_v3.Schema$Event): boolean
+async checkConflictsWithFreeBusy(
+    oauth2Client: OAuth2Client,
+    eventToCheck: calendar_v3.Schema$Event,
+    calendarsToCheck: string[]
+): Promise<ConflictInfo[]>
+</file>
+
 <file path="src/tests/integration/conflict-detection-integration.test.ts">
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -4252,6 +4227,40 @@ export function createEventWithExtendedProperties(
 export function createEventWithAttachments(
   overrides: Partial<calendar_v3.Schema$Event> = {}
 ): calendar_v3.Schema$Event
+</file>
+
+<file path="src/handlers/core/RecurringEventHelpers.ts">
+import { calendar_v3 } from 'googleapis';
+import {
+  TIME_DURATIONS,
+  formatBasicDateTime,
+  oneDayBefore,
+  stripUntilAndCount,
+  buildUntilClause,
+  isRRuleString,
+  durationMs,
+  addMilliseconds,
+  formatRFC3339,
+} from '../../utils/date-utils.js';
+import { createTimeObject, applyTimezone } from '../../utils/timezone-utils.js';
+import { buildCoreEvent, buildOptionalEventFields } from './eventManipulationUtils.js';
+import { UpdateEventInput } from '../../tools/registry.js';
+export class RecurringEventHelpers
+⋮----
+constructor(calendar: calendar_v3.Calendar)
+getCalendar(): calendar_v3.Calendar
+async detectEventType(eventId: string, calendarId: string): Promise<'recurring' | 'single'>
+async getEventAndType(eventId: string, calendarId: string): Promise<
+formatInstanceId(eventId: string, originalStartTime: string): string
+calculateUntilDate(futureStartDate: string): string
+calculateEndTime(newStartTime: string, originalEvent: calendar_v3.Schema$Event): string
+updateRecurrenceWithUntil(recurrence: string[], untilDate: string): string[]
+cleanEventForDuplication(event: calendar_v3.Schema$Event): calendar_v3.Schema$Event
+buildUpdateRequestBody(args: UpdateEventInput, defaultTimeZone?: string): calendar_v3.Schema$Event
+⋮----
+export class RecurringEventError extends Error
+⋮----
+constructor(message: string, code: string)
 </file>
 
 <file path="src/tests/unit/helpers/factories.ts">

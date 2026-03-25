@@ -1195,6 +1195,123 @@ This section contains the contents of the repository's files.
 37: See existing handlers for patterns.
 </file>
 
+<file path="docs/DOPPLER_SETUP.md">
+  1: # Doppler Setup for Integration Tests
+  2: 
+  3: This guide explains how to use Doppler to provide real Google OAuth credentials to integration tests, avoiding the need for mocking.
+  4: 
+  5: ## Why Doppler?
+  6: 
+  7: - **Real credentials**: Tests run against actual Google APIs without mocks
+  8: - **No secrets in repo**: Credentials stored securely in Doppler, not checked into git
+  9: - **Environment isolation**: Separate dev, staging, and production credentials
+ 10: - **Secure by default**: Doppler encrypts secrets and audits access
+ 11: 
+ 12: ## Prerequisites
+ 13: 
+ 14: - Doppler CLI installed: `doppler --version` (should show v3.x+)
+ 15: - Authenticated to IntegrityStudio workspace: `doppler me`
+ 16: - Already configured: `doppler.yaml` points to `integrity-studio/dev`
+ 17: 
+ 18: ## Setup Status: ✅ READY
+ 19: 
+ 20: The `integrity-studio` project is already configured with Google OAuth secrets in the `dev` config:
+ 21: - `GOOGLE_OAUTH_CLIENT_ID`
+ 22: - `GOOGLE_OAUTH_CLIENT_SECRET`
+ 23: - `GOOGLE_OAUTH_REDIRECT_URIS`
+ 24: - `GOOGLE_CALENDAR_ACCESS_TOKEN`
+ 25: - `GOOGLE_CALENDAR_REFRESH_TOKEN`
+ 26: - Plus additional configuration keys
+ 27: 
+ 28: Verify setup:
+ 29: ```bash
+ 30: bash scripts/setup-doppler-tests.sh
+ 31: ```
+ 32: 
+ 33: ## Running Tests with Doppler
+ 34: 
+ 35: ### Unit Tests (mocked)
+ 36: ```bash
+ 37: npm test
+ 38: ```
+ 39: 
+ 40: ### Integration Tests (real Google APIs)
+ 41: ```bash
+ 42: npm run test:integration:doppler
+ 43: ```
+ 44: 
+ 45: ### All Tests
+ 46: ```bash
+ 47: npm run test:all:doppler
+ 48: ```
+ 49: 
+ 50: ## How It Works
+ 51: 
+ 52: The `doppler run` command:
+ 53: 1. Loads all secrets from the `test` config
+ 54: 2. Injects them into the environment
+ 55: 3. Runs vitest
+ 56: 4. Vitest loads environment variables via `loadEnv()` in `vitest.config.ts`
+ 57: 5. Tests can access credentials via `process.env.GOOGLE_OAUTH_CREDENTIALS`, etc.
+ 58: 
+ 59: ## Refactoring UpdateEventHandler Tests
+ 60: 
+ 61: With Doppler in place, the `UpdateEventHandler.recurring.test.ts` can be refactored to use real credentials:
+ 62: 
+ 63: ```typescript
+ 64: // Before: Mock setup
+ 65: const mockCalendar = { events: { get: vi.fn(), patch: vi.fn() } };
+ 66: const handler = new EnhancedUpdateEventHandler(mockCalendar);
+ 67: 
+ 68: // After: Real handler with real Google API
+ 69: const oauth2Client = await initializeOAuth2Client();
+ 70: const handler = new UpdateEventHandler();
+ 71: const result = await handler.runTool(args, oauth2Client);
+ 72: ```
+ 73: 
+ 74: Since tests run with `doppler run`, real credentials are available from `GOOGLE_OAUTH_CREDENTIALS`.
+ 75: 
+ 76: ## Troubleshooting
+ 77: 
+ 78: ### "Project not found" error
+ 79: ```bash
+ 80: doppler projects create --name bot-army-google-calendar-mcp
+ 81: doppler configs create --project bot-army-google-calendar-mcp --config test
+ 82: ```
+ 83: 
+ 84: ### "Unauthorized" error
+ 85: Ensure you're authenticated:
+ 86: ```bash
+ 87: doppler login
+ 88: doppler me
+ 89: ```
+ 90: 
+ 91: ### Environment variables not loaded
+ 92: Verify secrets are set:
+ 93: ```bash
+ 94: doppler secrets --project bot-army-google-calendar-mcp --config test
+ 95: ```
+ 96: 
+ 97: ### Tests still failing
+ 98: Check vitest.config.ts is loading env vars:
+ 99: ```bash
+100: doppler run -- node -e "console.log(process.env.GOOGLE_OAUTH_CREDENTIALS)" | head -c 50
+101: ```
+102: 
+103: ## Security
+104: 
+105: - ✅ Credentials never committed to git
+106: - ✅ Doppler audit logs track all access
+107: - ✅ Secrets encrypted at rest
+108: - ✅ Multiple configs per project (test, staging, prod)
+109: - ⚠️ Never share your doppler CLI token (in `.doppler/` directory)
+110: 
+111: ## See Also
+112: 
+113: - [Doppler Docs](https://docs.doppler.com)
+114: - [UpdateEventHandler.recurring.test.ts Refactor Plan](../CLAUDE.md#blocked-items)
+</file>
+
 <file path="docs/IMPLEMENTATION-GUIDE.md">
    1: # Schema.org Type Alignment - Implementation Guide
    2: ## Phase 1: CalendarEvent → Event Mapping
@@ -3174,6 +3291,287 @@ This section contains the contents of the repository's files.
 49: 
 50: - [GitHub Issues](https://github.com/nspady/google-calendar-mcp/issues)
 51: - [GitHub Discussions](https://github.com/nspady/google-calendar-mcp/discussions)
+</file>
+
+<file path="docs/REFACTOR_RECURRING_TESTS.md">
+  1: # Refactoring UpdateEventHandler.recurring.test.ts with Doppler
+  2: 
+  3: ## Overview
+  4: 
+  5: Instead of testing a shadow implementation, we'll refactor `UpdateEventHandler.recurring.test.ts` to:
+  6: 1. Use real `UpdateEventHandler` and `RecurringEventHelpers` from source
+  7: 2. Load real Google OAuth credentials from Doppler
+  8: 3. Test actual Google Calendar API interactions
+  9: 4. Run with `npm run test:integration:doppler`
+ 10: 
+ 11: ## Current State
+ 12: 
+ 13: **File:** `src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts`
+ 14: 
+ 15: **Problems:**
+ 16: - Tests a fake `EnhancedUpdateEventHandler` class (lines 6–199)
+ 17: - Wrong scope values: `'single'` vs `'thisEventOnly'`, `'future'` vs `'thisAndFollowing'`
+ 18: - Cannot catch regressions in real handler
+ 19: - No error code validation
+ 20: 
+ 21: ## Proposed Refactor
+ 22: 
+ 23: ### Step 1: Move to Integration Tests
+ 24: 
+ 25: ```bash
+ 26: mv src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts \
+ 27:    src/tests/integration/UpdateEventHandler.recurring.test.ts
+ 28: ```
+ 29: 
+ 30: Rationale: Integration tests expect real credentials and run against real APIs.
+ 31: 
+ 32: ### Step 2: Import Real Handler
+ 33: 
+ 34: ```typescript
+ 35: // BEFORE (shadow class)
+ 36: class EnhancedUpdateEventHandler { /* ... */ }
+ 37: 
+ 38: // AFTER (real handler)
+ 39: import { UpdateEventHandler } from '../../../handlers/core/UpdateEventHandler.js';
+ 40: import { RecurringEventHelpers } from '../../../handlers/core/RecurringEventHelpers.js';
+ 41: import { OAuth2Client } from 'google-auth-library';
+ 42: import { initializeOAuth2Client } from '../../../auth/client.js';
+ 43: import { TokenManager } from '../../../auth/tokenManager.js';
+ 44: ```
+ 45: 
+ 46: ### Step 3: Setup Real OAuth Client
+ 47: 
+ 48: ```typescript
+ 49: describe('UpdateEventHandler - Recurring Events', () => {
+ 50:   let handler: UpdateEventHandler;
+ 51:   let oauth2Client: OAuth2Client;
+ 52: 
+ 53:   beforeAll(async () => {
+ 54:     // Load real credentials from Doppler
+ 55:     oauth2Client = await initializeOAuth2Client();
+ 56:     const tokenManager = new TokenManager(oauth2Client);
+ 57:     const hasValidTokens = await tokenManager.validateTokens();
+ 58: 
+ 59:     if (!hasValidTokens) {
+ 60:       throw new Error('No valid tokens found. Run: npm run auth');
+ 61:     }
+ 62:   });
+ 63: 
+ 64:   beforeEach(() => {
+ 65:     handler = new UpdateEventHandler();
+ 66:   });
+ 67: 
+ 68:   afterAll(async () => {
+ 69:     // Optional: cleanup
+ 70:   });
+ 71: });
+ 72: ```
+ 73: 
+ 74: ### Step 4: Replace Mock-Based Tests with Real API Tests
+ 75: 
+ 76: **BEFORE (mock-based, wrong scope values):**
+ 77: ```typescript
+ 78: it('should detect event type and route to appropriate method', async () => {
+ 79:   const recurringEvent = {
+ 80:     data: {
+ 81:       id: 'recurring123',
+ 82:       summary: 'Weekly Meeting',
+ 83:       recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO']
+ 84:     }
+ 85:   };
+ 86:   mockCalendar.events.get.mockResolvedValue(recurringEvent);
+ 87:   mockCalendar.events.patch.mockResolvedValue({ data: recurringEvent.data });
+ 88: 
+ 89:   const args = {
+ 90:     calendarId: 'primary',
+ 91:     eventId: 'recurring123',
+ 92:     timeZone: 'America/Los_Angeles',
+ 93:     modificationScope: 'all', // ← shadow uses this, not needed for 'all'
+ 94:     summary: 'Updated Meeting'
+ 95:   };
+ 96: 
+ 97:   await handler.updateEventWithScope(args);
+ 98:   expect(mockCalendar.events.patch).toHaveBeenCalled();
+ 99: });
+100: ```
+101: 
+102: **AFTER (real API test, correct scope values):**
+103: ```typescript
+104: it('should update all instances of a recurring event', async () => {
+105:   // 1. Create a test recurring event
+106:   const testEvent = {
+107:     summary: 'Test Recurring - Update All',
+108:     description: 'Integration test event',
+109:     start: { dateTime: new Date(Date.now() + 86400000).toISOString(), timeZone: 'UTC' },
+110:     end: { dateTime: new Date(Date.now() + 90000000).toISOString(), timeZone: 'UTC' },
+111:     recurrence: ['RRULE:FREQ=DAILY;COUNT=5']
+112:   };
+113: 
+114:   const calendar = new google.calendar_v3.Calendar({ auth: oauth2Client });
+115:   const createResp = await calendar.events.insert({
+116:     calendarId: 'primary',
+117:     requestBody: testEvent
+118:   });
+119:   const eventId = createResp.data.id!;
+120: 
+121:   // 2. Update all instances with correct scope
+122:   const result = await handler.runTool({
+123:     calendarId: 'primary',
+124:     eventId: eventId,
+125:     modificationScope: 'all', // ← correct value
+126:     summary: 'Updated Recurring Event',
+127:     timeZone: 'UTC'
+128:   }, oauth2Client);
+129: 
+130:   // 3. Assert on real response format
+131:   expect(result.content[0].type).toBe('text');
+132:   expect(result.content[0].text).toContain('Updated Recurring Event');
+133: 
+134:   // 4. Cleanup
+135:   await calendar.events.delete({
+136:     calendarId: 'primary',
+137:     eventId: eventId
+138:   });
+139: });
+140: ```
+141: 
+142: ### Step 5: Add Tests for Real Error Codes
+143: 
+144: ```typescript
+145: it('should throw RecurringEventError when using thisEventOnly on non-recurring event', async () => {
+146:   // 1. Create a single (non-recurring) event
+147:   const testEvent = {
+148:     summary: 'Single Event',
+149:     start: { dateTime: new Date(Date.now() + 86400000).toISOString(), timeZone: 'UTC' },
+150:     end: { dateTime: new Date(Date.now() + 90000000).toISOString(), timeZone: 'UTC' }
+151:   };
+152: 
+153:   const calendar = new google.calendar_v3.Calendar({ auth: oauth2Client });
+154:   const createResp = await calendar.events.insert({
+155:     calendarId: 'primary',
+156:     requestBody: testEvent
+157:   });
+158:   const eventId = createResp.data.id!;
+159: 
+160:   // 2. Try to use thisEventOnly on single event
+161:   await expect(handler.runTool({
+162:     calendarId: 'primary',
+163:     eventId: eventId,
+164:     modificationScope: 'thisEventOnly', // ← correct value, should error
+165:     originalStartTime: new Date().toISOString(),
+166:     summary: 'Updated'
+167:   }, oauth2Client)).rejects.toThrow('Scope other than "all" only applies to recurring events');
+168: 
+169:   // 3. Cleanup
+170:   await calendar.events.delete({
+171:     calendarId: 'primary',
+172:     eventId: eventId
+173:   });
+174: });
+175: ```
+176: 
+177: ### Step 6: Test All Modification Scopes
+178: 
+179: ```typescript
+180: describe('modificationScope behavior', () => {
+181:   let testEventId: string;
+182: 
+183:   beforeAll(async () => {
+184:     // Create recurring test event
+185:     const calendar = new google.calendar_v3.Calendar({ auth: oauth2Client });
+186:     const resp = await calendar.events.insert({
+187:       calendarId: 'primary',
+188:       requestBody: {
+189:         summary: 'Scope Test Event',
+190:         recurrence: ['RRULE:FREQ=DAILY;COUNT=10'],
+191:         start: { dateTime: new Date(Date.now() + 86400000).toISOString(), timeZone: 'UTC' },
+192:         end: { dateTime: new Date(Date.now() + 90000000).toISOString(), timeZone: 'UTC' }
+193:       }
+194:     });
+195:     testEventId = resp.data.id!;
+196:   });
+197: 
+198:   it('should update all instances with scope "all"', async () => {
+199:     const result = await handler.runTool({
+200:       calendarId: 'primary',
+201:       eventId: testEventId,
+202:       modificationScope: 'all',
+203:       summary: 'All Updated'
+204:     }, oauth2Client);
+205: 
+206:     expect(result.content[0].text).toContain('All Updated');
+207:   });
+208: 
+209:   it('should update single instance with scope "thisEventOnly"', async () => {
+210:     const now = new Date();
+211:     const result = await handler.runTool({
+212:       calendarId: 'primary',
+213:       eventId: testEventId,
+214:       modificationScope: 'thisEventOnly',
+215:       originalStartTime: now.toISOString(),
+216:       summary: 'Single Instance Updated'
+217:     }, oauth2Client);
+218: 
+219:     expect(result.content[0].text).toContain('Single Instance Updated');
+220:   });
+221: 
+222:   it('should update future instances with scope "thisAndFollowing"', async () => {
+223:     const futureDate = new Date(Date.now() + 5 * 86400000);
+224:     const result = await handler.runTool({
+225:       calendarId: 'primary',
+226:       eventId: testEventId,
+227:       modificationScope: 'thisAndFollowing',
+228:       futureStartDate: futureDate.toISOString(),
+229:       summary: 'Future Updated'
+230:     }, oauth2Client);
+231: 
+232:     expect(result.content[0].text).toContain('Future Updated');
+233:   });
+234: 
+235:   afterAll(async () => {
+236:     const calendar = new google.calendar_v3.Calendar({ auth: oauth2Client });
+237:     await calendar.events.delete({
+238:       calendarId: 'primary',
+239:       eventId: testEventId
+240:     });
+241:   });
+242: });
+243: ```
+244: 
+245: ## Running the Refactored Tests
+246: 
+247: ```bash
+248: # Run with Doppler credentials loaded
+249: npm run test:integration:doppler
+250: 
+251: # Or manually
+252: doppler run -- npm run test:integration
+253: ```
+254: 
+255: ## Benefits
+256: 
+257: ✅ **Real implementation tested** - No shadow class duplication
+258: ✅ **Correct scope values** - `'thisEventOnly'` and `'thisAndFollowing'`
+259: ✅ **Error code validation** - Tests verify `RecurringEventError` codes
+260: ✅ **Conflict detection tested** - Full request pipeline validated
+261: ✅ **Regression detection** - Any API changes caught immediately
+262: ✅ **No mocking complexity** - Real Google APIs, real tokens from Doppler
+263: 
+264: ## Timeline
+265: 
+266: - **Phase 1 (4–6h):** Extract and analyze existing test cases
+267: - **Phase 2 (6–8h):** Implement new real-API test structure
+268: - **Phase 3 (4–6h):** Add additional edge cases (DST, RRULE formats, timezone handling)
+269: - **Phase 4 (2–4h):** Verify all tests pass with real Google Calendar API
+270: 
+271: **Total: 16–24 hours** (consistent with original estimate, but now with real integration testing)
+272: 
+273: ## See Also
+274: 
+275: - [Doppler Setup Guide](./DOPPLER_SETUP.md)
+276: - [Code Review Results](../CLAUDE.md#code-review-updateeventhandler-recurring-tests)
+277: - `src/handlers/core/RecurringEventHelpers.ts` - Implementation to test
+278: - `src/handlers/core/UpdateEventHandler.ts` - Handler to test
 </file>
 
 <file path="docs/SCHEMA-ORG-ALIGNMENT.md">
@@ -6487,123 +6885,6 @@ This section contains the contents of the repository's files.
 20: See [detailed changelog](./changelog/1.4.9/CHANGELOG.md) for complete list of changes, commits, and migration notes.
 </file>
 
-<file path="docs/DOPPLER_SETUP.md">
-  1: # Doppler Setup for Integration Tests
-  2: 
-  3: This guide explains how to use Doppler to provide real Google OAuth credentials to integration tests, avoiding the need for mocking.
-  4: 
-  5: ## Why Doppler?
-  6: 
-  7: - **Real credentials**: Tests run against actual Google APIs without mocks
-  8: - **No secrets in repo**: Credentials stored securely in Doppler, not checked into git
-  9: - **Environment isolation**: Separate dev, staging, and production credentials
- 10: - **Secure by default**: Doppler encrypts secrets and audits access
- 11: 
- 12: ## Prerequisites
- 13: 
- 14: - Doppler CLI installed: `doppler --version` (should show v3.x+)
- 15: - Authenticated to IntegrityStudio workspace: `doppler me`
- 16: - Already configured: `doppler.yaml` points to `integrity-studio/dev`
- 17: 
- 18: ## Setup Status: ✅ READY
- 19: 
- 20: The `integrity-studio` project is already configured with Google OAuth secrets in the `dev` config:
- 21: - `GOOGLE_OAUTH_CLIENT_ID`
- 22: - `GOOGLE_OAUTH_CLIENT_SECRET`
- 23: - `GOOGLE_OAUTH_REDIRECT_URIS`
- 24: - `GOOGLE_CALENDAR_ACCESS_TOKEN`
- 25: - `GOOGLE_CALENDAR_REFRESH_TOKEN`
- 26: - Plus additional configuration keys
- 27: 
- 28: Verify setup:
- 29: ```bash
- 30: bash scripts/setup-doppler-tests.sh
- 31: ```
- 32: 
- 33: ## Running Tests with Doppler
- 34: 
- 35: ### Unit Tests (mocked)
- 36: ```bash
- 37: npm test
- 38: ```
- 39: 
- 40: ### Integration Tests (real Google APIs)
- 41: ```bash
- 42: npm run test:integration:doppler
- 43: ```
- 44: 
- 45: ### All Tests
- 46: ```bash
- 47: npm run test:all:doppler
- 48: ```
- 49: 
- 50: ## How It Works
- 51: 
- 52: The `doppler run` command:
- 53: 1. Loads all secrets from the `test` config
- 54: 2. Injects them into the environment
- 55: 3. Runs vitest
- 56: 4. Vitest loads environment variables via `loadEnv()` in `vitest.config.ts`
- 57: 5. Tests can access credentials via `process.env.GOOGLE_OAUTH_CREDENTIALS`, etc.
- 58: 
- 59: ## Refactoring UpdateEventHandler Tests
- 60: 
- 61: With Doppler in place, the `UpdateEventHandler.recurring.test.ts` can be refactored to use real credentials:
- 62: 
- 63: ```typescript
- 64: // Before: Mock setup
- 65: const mockCalendar = { events: { get: vi.fn(), patch: vi.fn() } };
- 66: const handler = new EnhancedUpdateEventHandler(mockCalendar);
- 67: 
- 68: // After: Real handler with real Google API
- 69: const oauth2Client = await initializeOAuth2Client();
- 70: const handler = new UpdateEventHandler();
- 71: const result = await handler.runTool(args, oauth2Client);
- 72: ```
- 73: 
- 74: Since tests run with `doppler run`, real credentials are available from `GOOGLE_OAUTH_CREDENTIALS`.
- 75: 
- 76: ## Troubleshooting
- 77: 
- 78: ### "Project not found" error
- 79: ```bash
- 80: doppler projects create --name bot-army-google-calendar-mcp
- 81: doppler configs create --project bot-army-google-calendar-mcp --config test
- 82: ```
- 83: 
- 84: ### "Unauthorized" error
- 85: Ensure you're authenticated:
- 86: ```bash
- 87: doppler login
- 88: doppler me
- 89: ```
- 90: 
- 91: ### Environment variables not loaded
- 92: Verify secrets are set:
- 93: ```bash
- 94: doppler secrets --project bot-army-google-calendar-mcp --config test
- 95: ```
- 96: 
- 97: ### Tests still failing
- 98: Check vitest.config.ts is loading env vars:
- 99: ```bash
-100: doppler run -- node -e "console.log(process.env.GOOGLE_OAUTH_CREDENTIALS)" | head -c 50
-101: ```
-102: 
-103: ## Security
-104: 
-105: - ✅ Credentials never committed to git
-106: - ✅ Doppler audit logs track all access
-107: - ✅ Secrets encrypted at rest
-108: - ✅ Multiple configs per project (test, staging, prod)
-109: - ⚠️ Never share your doppler CLI token (in `.doppler/` directory)
-110: 
-111: ## See Also
-112: 
-113: - [Doppler Docs](https://docs.doppler.com)
-114: - [UpdateEventHandler.recurring.test.ts Refactor Plan](../CLAUDE.md#blocked-items)
-</file>
-
 <file path="docs/EVENT_HELPERS_ANALYSIS.md">
   1: # Analysis: Applying event-test-data.ts Helpers Across Test Suite
   2: 
@@ -7918,287 +8199,6 @@ This section contains the contents of the repository's files.
 651: - [Gmail Labels](https://support.google.com/mail/answer/6078)
 652: - [CLAUDE.md](../CLAUDE.md) - Project guidelines
 653: - [README.md](../README.md) - MCP server overview
-</file>
-
-<file path="docs/REFACTOR_RECURRING_TESTS.md">
-  1: # Refactoring UpdateEventHandler.recurring.test.ts with Doppler
-  2: 
-  3: ## Overview
-  4: 
-  5: Instead of testing a shadow implementation, we'll refactor `UpdateEventHandler.recurring.test.ts` to:
-  6: 1. Use real `UpdateEventHandler` and `RecurringEventHelpers` from source
-  7: 2. Load real Google OAuth credentials from Doppler
-  8: 3. Test actual Google Calendar API interactions
-  9: 4. Run with `npm run test:integration:doppler`
- 10: 
- 11: ## Current State
- 12: 
- 13: **File:** `src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts`
- 14: 
- 15: **Problems:**
- 16: - Tests a fake `EnhancedUpdateEventHandler` class (lines 6–199)
- 17: - Wrong scope values: `'single'` vs `'thisEventOnly'`, `'future'` vs `'thisAndFollowing'`
- 18: - Cannot catch regressions in real handler
- 19: - No error code validation
- 20: 
- 21: ## Proposed Refactor
- 22: 
- 23: ### Step 1: Move to Integration Tests
- 24: 
- 25: ```bash
- 26: mv src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts \
- 27:    src/tests/integration/UpdateEventHandler.recurring.test.ts
- 28: ```
- 29: 
- 30: Rationale: Integration tests expect real credentials and run against real APIs.
- 31: 
- 32: ### Step 2: Import Real Handler
- 33: 
- 34: ```typescript
- 35: // BEFORE (shadow class)
- 36: class EnhancedUpdateEventHandler { /* ... */ }
- 37: 
- 38: // AFTER (real handler)
- 39: import { UpdateEventHandler } from '../../../handlers/core/UpdateEventHandler.js';
- 40: import { RecurringEventHelpers } from '../../../handlers/core/RecurringEventHelpers.js';
- 41: import { OAuth2Client } from 'google-auth-library';
- 42: import { initializeOAuth2Client } from '../../../auth/client.js';
- 43: import { TokenManager } from '../../../auth/tokenManager.js';
- 44: ```
- 45: 
- 46: ### Step 3: Setup Real OAuth Client
- 47: 
- 48: ```typescript
- 49: describe('UpdateEventHandler - Recurring Events', () => {
- 50:   let handler: UpdateEventHandler;
- 51:   let oauth2Client: OAuth2Client;
- 52: 
- 53:   beforeAll(async () => {
- 54:     // Load real credentials from Doppler
- 55:     oauth2Client = await initializeOAuth2Client();
- 56:     const tokenManager = new TokenManager(oauth2Client);
- 57:     const hasValidTokens = await tokenManager.validateTokens();
- 58: 
- 59:     if (!hasValidTokens) {
- 60:       throw new Error('No valid tokens found. Run: npm run auth');
- 61:     }
- 62:   });
- 63: 
- 64:   beforeEach(() => {
- 65:     handler = new UpdateEventHandler();
- 66:   });
- 67: 
- 68:   afterAll(async () => {
- 69:     // Optional: cleanup
- 70:   });
- 71: });
- 72: ```
- 73: 
- 74: ### Step 4: Replace Mock-Based Tests with Real API Tests
- 75: 
- 76: **BEFORE (mock-based, wrong scope values):**
- 77: ```typescript
- 78: it('should detect event type and route to appropriate method', async () => {
- 79:   const recurringEvent = {
- 80:     data: {
- 81:       id: 'recurring123',
- 82:       summary: 'Weekly Meeting',
- 83:       recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO']
- 84:     }
- 85:   };
- 86:   mockCalendar.events.get.mockResolvedValue(recurringEvent);
- 87:   mockCalendar.events.patch.mockResolvedValue({ data: recurringEvent.data });
- 88: 
- 89:   const args = {
- 90:     calendarId: 'primary',
- 91:     eventId: 'recurring123',
- 92:     timeZone: 'America/Los_Angeles',
- 93:     modificationScope: 'all', // ← shadow uses this, not needed for 'all'
- 94:     summary: 'Updated Meeting'
- 95:   };
- 96: 
- 97:   await handler.updateEventWithScope(args);
- 98:   expect(mockCalendar.events.patch).toHaveBeenCalled();
- 99: });
-100: ```
-101: 
-102: **AFTER (real API test, correct scope values):**
-103: ```typescript
-104: it('should update all instances of a recurring event', async () => {
-105:   // 1. Create a test recurring event
-106:   const testEvent = {
-107:     summary: 'Test Recurring - Update All',
-108:     description: 'Integration test event',
-109:     start: { dateTime: new Date(Date.now() + 86400000).toISOString(), timeZone: 'UTC' },
-110:     end: { dateTime: new Date(Date.now() + 90000000).toISOString(), timeZone: 'UTC' },
-111:     recurrence: ['RRULE:FREQ=DAILY;COUNT=5']
-112:   };
-113: 
-114:   const calendar = new google.calendar_v3.Calendar({ auth: oauth2Client });
-115:   const createResp = await calendar.events.insert({
-116:     calendarId: 'primary',
-117:     requestBody: testEvent
-118:   });
-119:   const eventId = createResp.data.id!;
-120: 
-121:   // 2. Update all instances with correct scope
-122:   const result = await handler.runTool({
-123:     calendarId: 'primary',
-124:     eventId: eventId,
-125:     modificationScope: 'all', // ← correct value
-126:     summary: 'Updated Recurring Event',
-127:     timeZone: 'UTC'
-128:   }, oauth2Client);
-129: 
-130:   // 3. Assert on real response format
-131:   expect(result.content[0].type).toBe('text');
-132:   expect(result.content[0].text).toContain('Updated Recurring Event');
-133: 
-134:   // 4. Cleanup
-135:   await calendar.events.delete({
-136:     calendarId: 'primary',
-137:     eventId: eventId
-138:   });
-139: });
-140: ```
-141: 
-142: ### Step 5: Add Tests for Real Error Codes
-143: 
-144: ```typescript
-145: it('should throw RecurringEventError when using thisEventOnly on non-recurring event', async () => {
-146:   // 1. Create a single (non-recurring) event
-147:   const testEvent = {
-148:     summary: 'Single Event',
-149:     start: { dateTime: new Date(Date.now() + 86400000).toISOString(), timeZone: 'UTC' },
-150:     end: { dateTime: new Date(Date.now() + 90000000).toISOString(), timeZone: 'UTC' }
-151:   };
-152: 
-153:   const calendar = new google.calendar_v3.Calendar({ auth: oauth2Client });
-154:   const createResp = await calendar.events.insert({
-155:     calendarId: 'primary',
-156:     requestBody: testEvent
-157:   });
-158:   const eventId = createResp.data.id!;
-159: 
-160:   // 2. Try to use thisEventOnly on single event
-161:   await expect(handler.runTool({
-162:     calendarId: 'primary',
-163:     eventId: eventId,
-164:     modificationScope: 'thisEventOnly', // ← correct value, should error
-165:     originalStartTime: new Date().toISOString(),
-166:     summary: 'Updated'
-167:   }, oauth2Client)).rejects.toThrow('Scope other than "all" only applies to recurring events');
-168: 
-169:   // 3. Cleanup
-170:   await calendar.events.delete({
-171:     calendarId: 'primary',
-172:     eventId: eventId
-173:   });
-174: });
-175: ```
-176: 
-177: ### Step 6: Test All Modification Scopes
-178: 
-179: ```typescript
-180: describe('modificationScope behavior', () => {
-181:   let testEventId: string;
-182: 
-183:   beforeAll(async () => {
-184:     // Create recurring test event
-185:     const calendar = new google.calendar_v3.Calendar({ auth: oauth2Client });
-186:     const resp = await calendar.events.insert({
-187:       calendarId: 'primary',
-188:       requestBody: {
-189:         summary: 'Scope Test Event',
-190:         recurrence: ['RRULE:FREQ=DAILY;COUNT=10'],
-191:         start: { dateTime: new Date(Date.now() + 86400000).toISOString(), timeZone: 'UTC' },
-192:         end: { dateTime: new Date(Date.now() + 90000000).toISOString(), timeZone: 'UTC' }
-193:       }
-194:     });
-195:     testEventId = resp.data.id!;
-196:   });
-197: 
-198:   it('should update all instances with scope "all"', async () => {
-199:     const result = await handler.runTool({
-200:       calendarId: 'primary',
-201:       eventId: testEventId,
-202:       modificationScope: 'all',
-203:       summary: 'All Updated'
-204:     }, oauth2Client);
-205: 
-206:     expect(result.content[0].text).toContain('All Updated');
-207:   });
-208: 
-209:   it('should update single instance with scope "thisEventOnly"', async () => {
-210:     const now = new Date();
-211:     const result = await handler.runTool({
-212:       calendarId: 'primary',
-213:       eventId: testEventId,
-214:       modificationScope: 'thisEventOnly',
-215:       originalStartTime: now.toISOString(),
-216:       summary: 'Single Instance Updated'
-217:     }, oauth2Client);
-218: 
-219:     expect(result.content[0].text).toContain('Single Instance Updated');
-220:   });
-221: 
-222:   it('should update future instances with scope "thisAndFollowing"', async () => {
-223:     const futureDate = new Date(Date.now() + 5 * 86400000);
-224:     const result = await handler.runTool({
-225:       calendarId: 'primary',
-226:       eventId: testEventId,
-227:       modificationScope: 'thisAndFollowing',
-228:       futureStartDate: futureDate.toISOString(),
-229:       summary: 'Future Updated'
-230:     }, oauth2Client);
-231: 
-232:     expect(result.content[0].text).toContain('Future Updated');
-233:   });
-234: 
-235:   afterAll(async () => {
-236:     const calendar = new google.calendar_v3.Calendar({ auth: oauth2Client });
-237:     await calendar.events.delete({
-238:       calendarId: 'primary',
-239:       eventId: testEventId
-240:     });
-241:   });
-242: });
-243: ```
-244: 
-245: ## Running the Refactored Tests
-246: 
-247: ```bash
-248: # Run with Doppler credentials loaded
-249: npm run test:integration:doppler
-250: 
-251: # Or manually
-252: doppler run -- npm run test:integration
-253: ```
-254: 
-255: ## Benefits
-256: 
-257: ✅ **Real implementation tested** - No shadow class duplication
-258: ✅ **Correct scope values** - `'thisEventOnly'` and `'thisAndFollowing'`
-259: ✅ **Error code validation** - Tests verify `RecurringEventError` codes
-260: ✅ **Conflict detection tested** - Full request pipeline validated
-261: ✅ **Regression detection** - Any API changes caught immediately
-262: ✅ **No mocking complexity** - Real Google APIs, real tokens from Doppler
-263: 
-264: ## Timeline
-265: 
-266: - **Phase 1 (4–6h):** Extract and analyze existing test cases
-267: - **Phase 2 (6–8h):** Implement new real-API test structure
-268: - **Phase 3 (4–6h):** Add additional edge cases (DST, RRULE formats, timezone handling)
-269: - **Phase 4 (2–4h):** Verify all tests pass with real Google Calendar API
-270: 
-271: **Total: 16–24 hours** (consistent with original estimate, but now with real integration testing)
-272: 
-273: ## See Also
-274: 
-275: - [Doppler Setup Guide](./DOPPLER_SETUP.md)
-276: - [Code Review Results](../CLAUDE.md#code-review-updateeventhandler-recurring-tests)
-277: - `src/handlers/core/RecurringEventHelpers.ts` - Implementation to test
-278: - `src/handlers/core/UpdateEventHandler.ts` - Handler to test
 </file>
 
 <file path="README.md">

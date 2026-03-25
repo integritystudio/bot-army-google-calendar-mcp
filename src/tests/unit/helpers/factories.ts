@@ -417,7 +417,16 @@ export function makeCalendarMock(overrides: {
 }
 
 /**
- * Create event creation args with attendees and reminders (full event fixture).
+ * Attachment IDs for standard test fixtures.
+ * Named constants prevent magic strings and enable reuse.
+ */
+export const ATTACHMENT_IDS = {
+  DOCUMENT: '123',
+  PRESENTATION: '456'
+} as const;
+
+/**
+ * Create event creation args with attendees and reminders.
  * Used for testing event creation with all common fields populated.
  */
 export function createFullEventArgs(
@@ -445,14 +454,14 @@ export function createFullEventArgs(
  */
 export const STANDARD_ATTACHMENTS = [
   {
-    fileUrl: 'https://docs.google.com/document/d/123',
+    fileUrl: `https://docs.google.com/document/d/${ATTACHMENT_IDS.DOCUMENT}`,
     title: 'Meeting Agenda',
     mimeType: 'application/vnd.google-apps.document'
   },
   {
-    fileUrl: 'https://drive.google.com/file/d/456',
+    fileUrl: `https://drive.google.com/file/d/${ATTACHMENT_IDS.PRESENTATION}`,
     title: 'Presentation',
     mimeType: 'application/vnd.google-apps.presentation',
-    fileId: '456'
+    fileId: ATTACHMENT_IDS.PRESENTATION
   }
 ] as const satisfies readonly calendar_v3.Schema$EventAttachment[];

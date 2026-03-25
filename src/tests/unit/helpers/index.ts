@@ -1,5 +1,5 @@
 export { getTextContent, tryGetTextContent, assertTextContentContains } from './content.js';
-export { makeEvent, makeEventWithCalendarId, makeEvents, makeGaxiosError, makeCalendarMock, createFullEventArgs, STANDARD_ATTACHMENTS } from './factories.js';
+export { makeEvent, makeEventWithCalendarId, makeEvents, makeGaxiosError, makeCalendarMock, createFullEventArgs, ATTACHMENT_IDS, STANDARD_ATTACHMENTS } from './factories.js';
 export { createBuilder } from './testBuilder.js';
 export {
   SYSTEM_FIELDS,
@@ -12,8 +12,6 @@ export {
   createComplexUpdateEventArgs,
   createCreateEventArgs,
   createConflictEventArgs,
-  createEventWithAttendeesAndReminders,
-  createEventWithExtendedProperties,
-  createEventWithAttachments
+  createEventWithExtendedProperties
 } from './event-test-data.js';
 export { setupListEventsHandler } from './handler-setup.js';

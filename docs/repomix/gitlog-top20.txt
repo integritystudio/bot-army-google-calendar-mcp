@@ -1,3 +1,11 @@
+de7958a 2026-03-25 refactor(recurring-event): use addMilliseconds and formatRFC3339 in calculateEndTime
+  docs/repomix/gitlog-top20.txt
+  docs/repomix/repo-compressed.xml
+  docs/repomix/repomix-docs.xml
+  docs/repomix/repomix-git-ranked.xml
+  docs/repomix/repomix.xml
+  docs/repomix/token-tree.txt
+
 4d13b70 2026-03-25 chore(repomix): add compressed config and clean up stale root files
   docs/GMAIL_TOOLS_GUIDE.md
   docs/repomix/gitlog-top20.txt

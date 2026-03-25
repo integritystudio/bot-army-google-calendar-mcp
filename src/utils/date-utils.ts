@@ -8,8 +8,11 @@ import {
   addMilliseconds as _addMilliseconds,
   addMonths as _addMonths,
   addYears as _addYears,
-  differenceInDays,
+  differenceInDays as _differenceInDays,
+  differenceInHours as _differenceInHours,
   differenceInMilliseconds,
+  differenceInMinutes as _differenceInMinutes,
+  differenceInSeconds as _differenceInSeconds,
   isBefore,
   toRRuleDateString,
 } from 'simple-rrule';
@@ -71,6 +74,46 @@ export function addYears(date: Date, years: number): Date {
  */
 export function durationMs(from: Date, to: Date): number {
   return differenceInMilliseconds(to, from);
+}
+
+/**
+ * Calculate the duration between two dates in days.
+ * @param from Start date
+ * @param to End date
+ * @returns Duration in days (negative if from > to)
+ */
+export function durationDays(from: Date, to: Date): number {
+  return _differenceInDays(to, from);
+}
+
+/**
+ * Calculate the duration between two dates in hours.
+ * @param from Start date
+ * @param to End date
+ * @returns Duration in hours (negative if from > to)
+ */
+export function durationHours(from: Date, to: Date): number {
+  return _differenceInHours(to, from);
+}
+
+/**
+ * Calculate the duration between two dates in minutes.
+ * @param from Start date
+ * @param to End date
+ * @returns Duration in minutes (negative if from > to)
+ */
+export function durationMinutes(from: Date, to: Date): number {
+  return _differenceInMinutes(to, from);
+}
+
+/**
+ * Calculate the duration between two dates in seconds.
+ * @param from Start date
+ * @param to End date
+ * @returns Duration in seconds (negative if from > to)
+ */
+export function durationSeconds(from: Date, to: Date): number {
+  return _differenceInSeconds(to, from);
 }
 
 /**

@@ -10,22 +10,51 @@ import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
 import { ConflictAnalyzer } from "./ConflictAnalyzer.js";
 import { CONFLICT_DETECTION_CONFIG } from "./config.js";
 import { getEventUrl } from "../../handlers/utils.js";
-import { resolveTimeRange, hasTimezoneInDatetime } from "../../utils/timezone-utils.js";
+import {
+  resolveTimeRange,
+  hasTimezoneInDatetime,
+  resolveTimeZone,
+  isValidIANATimeZone
+} from "../../utils/timezone-utils.js";
+
+/**
+ * Extract datetime and date from event start/end objects.
+ * Returns the dateTime if available, falls back to date for all-day events.
+ * Handles null values from Google Calendar API.
+ */
+function getEventDateTime(event: calendar_v3.Schema$Event): { start?: string; end?: string } {
+  return {
+    start: event.start?.dateTime || event.start?.date || undefined,
+    end: event.end?.dateTime || event.end?.date || undefined,
+  };
+}
+
+/**
+ * Format event times for conflict/overlap info.
+ * Safely extracts both dateTime and date fields from event objects.
+ * Handles null values from Google Calendar API.
+ */
+function formatEventTimesForInfo(event: calendar_v3.Schema$Event): { start?: string; end?: string } {
+  return {
+    start: event.start?.dateTime || event.start?.date || undefined,
+    end: event.end?.dateTime || event.end?.date || undefined,
+  };
+}
 
 /**
  * Service for detecting event conflicts and duplicates.
- * 
+ *
  * IMPORTANT: This service relies on Google Calendar's list API to find existing events.
  * Due to eventual consistency in Google Calendar, recently created events may not
  * immediately appear in list queries. This is a known limitation of the Google Calendar API
  * and affects duplicate detection for events created in quick succession.
- * 
+ *
  * In real-world usage, this is rarely an issue as there's natural time between event creation.
  */
 export class ConflictDetectionService {
   private similarityChecker: EventSimilarityChecker;
   private conflictAnalyzer: ConflictAnalyzer;
-  
+
   constructor() {
     this.similarityChecker = new EventSimilarityChecker();
     this.conflictAnalyzer = new ConflictAnalyzer();
@@ -59,15 +88,17 @@ export class ConflictDetectionService {
     }
 
     // Get the time range for checking
-    let timeMin = event.start.dateTime || event.start.date;
-    let timeMax = event.end.dateTime || event.end.date;
+    const { start: timeMin, end: timeMax } = getEventDateTime(event);
 
     if (!timeMin || !timeMax) {
       return result;
     }
 
-    // Extract timezone if present (prefer start time's timezone)
-    const timezone = event.start.timeZone || event.end.timeZone;
+    // Extract and validate timezone with proper fallback chain
+    const rawTimezone = event.start?.timeZone || event.end?.timeZone;
+    const timezone = rawTimezone && isValidIANATimeZone(rawTimezone)
+      ? rawTimezone
+      : undefined;
 
     // The Google Calendar API requires RFC3339 format for timeMin/timeMax
     // If we have timezone-naive datetimes with a timezone field, convert them to proper RFC3339
@@ -232,8 +263,9 @@ export class ConflictDetectionService {
       }
 
       const overlap = this.conflictAnalyzer.analyzeOverlap(newEvent, conflictingEvent);
-      
+
       if (overlap.hasOverlap) {
+        const { start, end } = formatEventTimesForInfo(conflictingEvent);
         conflicts.push({
           type: 'overlap',
           calendar: calendarId,
@@ -241,8 +273,8 @@ export class ConflictDetectionService {
             id: conflictingEvent.id!,
             title: conflictingEvent.summary || 'Untitled Event',
             url: getEventUrl(conflictingEvent, calendarId) || undefined,
-            start: conflictingEvent.start?.dateTime || conflictingEvent.start?.date || undefined,
-            end: conflictingEvent.end?.dateTime || conflictingEvent.end?.date || undefined
+            start,
+            end
           },
           fullEvent: conflictingEvent,
           overlap: {
@@ -276,12 +308,11 @@ export class ConflictDetectionService {
     calendarsToCheck: string[]
   ): Promise<ConflictInfo[]> {
     const conflicts: ConflictInfo[] = [];
-    
+
     if (!eventToCheck.start || !eventToCheck.end) return conflicts;
-    
-    const timeMin = eventToCheck.start.dateTime || eventToCheck.start.date;
-    const timeMax = eventToCheck.end.dateTime || eventToCheck.end.date;
-    
+
+    const { start: timeMin, end: timeMax } = getEventDateTime(eventToCheck);
+
     if (!timeMin || !timeMax) return conflicts;
 
     const calendar = google.calendar({ version: "v3", auth: oauth2Client });

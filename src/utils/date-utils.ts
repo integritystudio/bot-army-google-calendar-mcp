@@ -6,8 +6,11 @@
 import {
   addDays as _addDays,
   addMilliseconds as _addMilliseconds,
+  addMonths as _addMonths,
+  addYears as _addYears,
   differenceInDays,
   differenceInMilliseconds,
+  isBefore,
   toRRuleDateString,
 } from 'simple-rrule';
 
@@ -38,6 +41,26 @@ export function addDays(date: Date, days: number): Date {
  */
 export function addMilliseconds(date: Date, ms: number): Date {
   return _addMilliseconds(date, ms);
+}
+
+/**
+ * Add months to a date, returning a new Date object.
+ * @param date Base date
+ * @param months Number of months to add (can be negative)
+ * @returns New Date object offset by months
+ */
+export function addMonths(date: Date, months: number): Date {
+  return _addMonths(date, months);
+}
+
+/**
+ * Add years to a date, returning a new Date object.
+ * @param date Base date
+ * @param years Number of years to add (can be negative)
+ * @returns New Date object offset by years
+ */
+export function addYears(date: Date, years: number): Date {
+  return _addYears(date, years);
 }
 
 /**
@@ -116,7 +139,7 @@ export function getPastDate(daysAgo: number): Date {
  */
 export function isFutureDate(dateString: string): boolean {
   const date = new Date(dateString);
-  return date.getTime() > new Date().getTime();
+  return isBefore(new Date(), date);
 }
 
 /**
@@ -126,7 +149,7 @@ export function isFutureDate(dateString: string): boolean {
  */
 export function isPastDate(dateString: string): boolean {
   const date = new Date(dateString);
-  return date.getTime() < new Date().getTime();
+  return isBefore(date, new Date());
 }
 
 /**

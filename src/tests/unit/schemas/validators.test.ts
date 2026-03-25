@@ -4,13 +4,31 @@ import { makeFutureDateString, makePastDateString } from '../helpers/factories.j
 import { TIME_MIN, TIME_MAX } from '../helpers/test-configs.js';
 import {
   createUpdateEventArgs,
-  createUpdateEventArgsWithTimes,
-  createComplexUpdateEventArgs
+  createComplexUpdateEventArgs,
+  DEFAULT_CALENDAR_ID,
+  DEFAULT_EVENT_ID
 } from '../helpers/event-test-data.js';
 import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from '../../../testing/constants.js';
 
 const UpdateEventArgumentsSchema = ToolSchemas['update-event'];
 const ListEventsArgumentsSchema = ToolSchemas['list-events'];
+
+const MODIFICATION_SCOPES = ['thisEventOnly', 'all', 'thisAndFollowing'] as const;
+const VALID_DATETIMES = [
+  '2024-06-15T10:00:00',
+  '2024-12-31T23:59:59',
+  '2024-01-01T00:00:00',
+  '2024-06-15T10:00:00Z',
+  '2024-06-15T10:00:00-07:00',
+  '2024-06-15T10:00:00+05:30'
+] as const;
+
+const INVALID_DATETIMES = [
+  '2024-06-15 10:00:00',
+  '24-06-15T10:00:00',
+  '2024-6-15T10:00:00',
+  '2024-06-15T10:00'
+] as const;
 
 describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
   describe('Basic Validation', () => {
@@ -60,20 +78,16 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
     });
 
     it('should accept valid modificationScope values', () => {
-      const validScopes = ['thisEventOnly', 'all', 'thisAndFollowing'] as const;
+      MODIFICATION_SCOPES.forEach(scope => {
+        const scopeOverrides: Record<string, any> = { modificationScope: scope };
 
-      validScopes.forEach(scope => {
-        const args: any = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
-          modificationScope: scope
-        });
-
-        // Add required fields for each scope
         if (scope === 'thisEventOnly') {
-          args.originalStartTime = '2024-06-15T10:00:00';
+          scopeOverrides.originalStartTime = '2024-06-15T10:00:00';
         } else if (scope === 'thisAndFollowing') {
-          args.futureStartDate = makeFutureDateString(90); // 90 days from now
+          scopeOverrides.futureStartDate = makeFutureDateString(90);
         }
 
+        const args = createUpdateEventArgs(DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID, TEST_TIMEZONE, scopeOverrides);
         const result = UpdateEventArgumentsSchema.parse(args);
         expect(result.modificationScope).toBe(scope);
       });
@@ -179,41 +193,19 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
   });
 
   describe('Datetime Format Validation', () => {
-    const validDatetimes = [
-      '2024-06-15T10:00:00',      // timezone-naive (preferred)
-      '2024-12-31T23:59:59',      // timezone-naive (preferred)
-      '2024-01-01T00:00:00',      // timezone-naive (preferred)
-      '2024-06-15T10:00:00Z',     // timezone-aware (accepted)
-      '2024-06-15T10:00:00-07:00', // timezone-aware (accepted)
-      '2024-06-15T10:00:00+05:30'  // timezone-aware (accepted)
-    ];
-
-    const invalidDatetimes = [
-      '2024-06-15 10:00:00',     // space instead of T
-      '24-06-15T10:00:00',       // short year
-      '2024-6-15T10:00:00',      // single digit month
-      '2024-06-15T10:00'         // missing seconds
-    ];
-
-    it.each(validDatetimes)('should accept valid datetime format: %s', (datetime) => {
-      const args = {
-        calendarId: 'primary',
-        eventId: 'event123',
-        timeZone: TEST_TIMEZONE,
+    it.each(VALID_DATETIMES)('should accept valid datetime format: %s', (datetime) => {
+      const args = createUpdateEventArgs(DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID, TEST_TIMEZONE, {
         start: datetime,
         end: datetime
-      };
+      });
 
       expect(() => UpdateEventArgumentsSchema.parse(args)).not.toThrow();
     });
 
-    it.each(invalidDatetimes)('should reject invalid datetime format: %s', (datetime) => {
-      const args = {
-        calendarId: 'primary',
-        eventId: 'event123',
-        timeZone: TEST_TIMEZONE,
+    it.each(INVALID_DATETIMES)('should reject invalid datetime format: %s', (datetime) => {
+      const args = createUpdateEventArgs(DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID, TEST_TIMEZONE, {
         start: datetime
-      };
+      });
 
       expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow();
     });

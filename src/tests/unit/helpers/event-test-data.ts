@@ -15,9 +15,14 @@ export const SYSTEM_FIELDS = [
   'hangoutLink'
 ] as const;
 
+export const DEFAULT_CALENDAR_ID = 'primary';
+export const DEFAULT_EVENT_ID = 'event123';
+export const DEFAULT_POPUP_REMINDER_MINUTES = 10;
+
 /**
  * Create a test event with standard start/end datetime.
  * Default: 2024-06-15, 1-hour duration.
+ * Pass TZ-offset in startTime/endTime as needed (e.g., '2024-06-15T10:00:00-07:00').
  */
 export function createTestEventWithDateTime(
   startTime: string = '2024-06-15T10:00:00Z',
@@ -32,7 +37,7 @@ export function createTestEventWithDateTime(
 }
 
 /**
- * Create a test event with timezone-aware datetime (with offset).
+ * Convenience alias for createTestEventWithDateTime with TZ-offset defaults.
  * Used for testing timezone handling in RecurringEventHelpers.
  */
 export function createTestEventWithTZOffset(
@@ -40,16 +45,9 @@ export function createTestEventWithTZOffset(
   endTime: string = '2024-06-15T11:00:00-07:00',
   overrides: Partial<calendar_v3.Schema$Event> = {}
 ): calendar_v3.Schema$Event {
-  return {
-    start: { dateTime: startTime },
-    end: { dateTime: endTime },
-    ...overrides
-  };
+  return createTestEventWithDateTime(startTime, endTime, overrides);
 }
 
-/**
- * Create a complete test event with all standard fields for duplication tests.
- */
 export function createCompleteTestEvent(overrides: Partial<calendar_v3.Schema$Event> = {}): calendar_v3.Schema$Event {
   return {
     id: 'event123',
@@ -77,12 +75,9 @@ export function createCompleteTestEvent(overrides: Partial<calendar_v3.Schema$Ev
   };
 }
 
-/**
- * Create test UpdateEvent arguments with all required fields.
- */
 export function createUpdateEventArgs(
-  calendarId: string = 'primary',
-  eventId: string = 'event123',
+  calendarId: string = DEFAULT_CALENDAR_ID,
+  eventId: string = DEFAULT_EVENT_ID,
   timeZone: string = 'America/Los_Angeles',
   overrides: Record<string, any> = {}
 ): Record<string, any> {
@@ -94,34 +89,23 @@ export function createUpdateEventArgs(
   };
 }
 
-/**
- * Create test UpdateEvent arguments with time changes.
- */
 export function createUpdateEventArgsWithTimes(
   start: string = '2024-06-15T10:00:00-07:00',
   end: string = '2024-06-15T11:00:00-07:00',
   timeZone: string = 'America/Los_Angeles',
   overrides: Record<string, any> = {}
 ): Record<string, any> {
-  return {
-    calendarId: 'primary',
-    eventId: 'event123',
+  return createUpdateEventArgs(DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID, timeZone, {
     start,
     end,
-    timeZone,
     ...overrides
-  };
+  });
 }
 
-/**
- * Create test UpdateEvent arguments with attendees and reminders.
- */
 export function createUpdateEventArgsWithAttendees(
   overrides: Record<string, any> = {}
 ): Record<string, any> {
-  return {
-    calendarId: 'primary',
-    eventId: 'event123',
+  return createUpdateEventArgs(DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID, 'UTC', {
     attendees: [
       { email: 'user1@example.com' },
       { email: 'user2@example.com' }
@@ -130,21 +114,17 @@ export function createUpdateEventArgsWithAttendees(
       useDefault: false,
       overrides: [
         { method: 'email', minutes: TEST_EVENT_DEFAULTS.RECURRING_EMAIL_REMINDER_MINUTES },
-        { method: 'popup', minutes: 10 }
+        { method: 'popup', minutes: DEFAULT_POPUP_REMINDER_MINUTES }
       ]
     },
-    timeZone: 'UTC',
     ...overrides
-  };
+  });
 }
 
-/**
- * Create test UpdateEvent arguments with complex nested objects.
- */
 export function createComplexUpdateEventArgs(
   overrides: Record<string, any> = {}
 ): Record<string, any> {
-  return {
+  return createUpdateEventArgs(DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID, 'America/Los_Angeles', {
     summary: 'Complex Meeting',
     attendees: [
       {
@@ -162,7 +142,7 @@ export function createComplexUpdateEventArgs(
       useDefault: false,
       overrides: [
         { method: 'email', minutes: TEST_EVENT_DEFAULTS.RECURRING_EMAIL_REMINDER_MINUTES },
-        { method: 'popup', minutes: 10 },
+        { method: 'popup', minutes: DEFAULT_POPUP_REMINDER_MINUTES },
         { method: 'sms', minutes: 60 }
       ]
     },
@@ -170,17 +150,12 @@ export function createComplexUpdateEventArgs(
       'RRULE:FREQ=WEEKLY;BYDAY=MO',
       'EXDATE:20240610T100000Z'
     ],
-    timeZone: 'America/Los_Angeles',
     ...overrides
-  };
+  });
 }
 
-/**
- * Create test arguments for CreateEvent handler.
- * Base pattern for handler tests with standard calendar, summary, start/end times.
- */
 export function createCreateEventArgs(
-  calendarId: string = 'primary',
+  calendarId: string = DEFAULT_CALENDAR_ID,
   overrides: Record<string, any> = {}
 ): Record<string, any> {
   return {
@@ -192,26 +167,16 @@ export function createCreateEventArgs(
   };
 }
 
-/**
- * Create test arguments for conflict scenarios (duplicate event ID).
- */
 export function createConflictEventArgs(
   eventId: string = 'existing-event',
   overrides: Record<string, any> = {}
 ): Record<string, any> {
-  return {
-    calendarId: 'primary',
+  return createCreateEventArgs(DEFAULT_CALENDAR_ID, {
     eventId,
-    summary: 'Test Event',
-    start: '2025-01-15T10:00:00',
-    end: '2025-01-15T11:00:00',
     ...overrides
-  };
+  });
 }
 
-/**
- * Create test event data with attendees and reminders.
- */
 export function createEventWithAttendeesAndReminders(
   overrides: Partial<calendar_v3.Schema$Event> = {}
 ): calendar_v3.Schema$Event {
@@ -230,9 +195,6 @@ export function createEventWithAttendeesAndReminders(
   };
 }
 
-/**
- * Create test event data with extended properties.
- */
 export function createEventWithExtendedProperties(
   overrides: Partial<calendar_v3.Schema$Event> = {}
 ): calendar_v3.Schema$Event {
@@ -241,21 +203,18 @@ export function createEventWithExtendedProperties(
     summary: 'Event with Extended Properties',
     extendedProperties: {
       private: {
-        'appId': '12345',
-        'customField': 'value1'
+        appId: '12345',
+        customField: 'value1'
       },
       shared: {
-        'projectId': 'proj-789',
-        'category': 'meeting'
+        projectId: 'proj-789',
+        category: 'meeting'
       }
     },
     ...overrides
   };
 }
 
-/**
- * Create test event data with attachments.
- */
 export function createEventWithAttachments(
   overrides: Partial<calendar_v3.Schema$Event> = {}
 ): calendar_v3.Schema$Event {

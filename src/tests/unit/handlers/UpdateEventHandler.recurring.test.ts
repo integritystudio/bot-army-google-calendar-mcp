@@ -3,7 +3,8 @@ import { OAuth2Client } from 'google-auth-library';
 import { calendar_v3, google } from 'googleapis';
 import { UpdateEventHandler } from '../../../handlers/core/UpdateEventHandler.js';
 import { UpdateEventInput, ToolSchemas } from '../../../tools/registry.js';
-import { makeEvent, makeFutureDateString, makeCalendarMock } from '../helpers/factories.js';
+import { makeEvent, makeCalendarMock } from '../helpers/factories.js';
+import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
 
 vi.mock('googleapis', async () => {
   const actual = await vi.importActual('googleapis');
@@ -109,7 +110,7 @@ describe('UpdateEventHandler - Recurring Events', () => {
 
       const args: UpdateEventInput = buildUpdateEventInput({
         modificationScope: 'thisAndFollowing',
-        futureStartDate: makeFutureDateString(8)
+        futureStartDate: formatTZNaiveDateTime(getFutureDate(8))
       });
 
       const result = await handler.runTool(args, mockOAuth2Client);
@@ -266,7 +267,7 @@ describe('UpdateEventHandler - Recurring Events', () => {
 
       const args: UpdateEventInput = buildUpdateEventInput({
         modificationScope: 'thisAndFollowing',
-        futureStartDate: makeFutureDateString(8)
+        futureStartDate: formatTZNaiveDateTime(getFutureDate(8))
       });
 
       await handler.runTool(args, mockOAuth2Client);
@@ -284,7 +285,7 @@ describe('UpdateEventHandler - Recurring Events', () => {
       const args: UpdateEventInput = buildUpdateEventInput({
         eventId: 'event-with-count',
         modificationScope: 'thisAndFollowing',
-        futureStartDate: makeFutureDateString(8)
+        futureStartDate: formatTZNaiveDateTime(getFutureDate(8))
       });
 
       await handler.runTool(args, mockOAuth2Client);
@@ -295,7 +296,7 @@ describe('UpdateEventHandler - Recurring Events', () => {
     });
 
     it('should create new recurring event starting from futureStartDate', async () => {
-      const futureDate = makeFutureDateString(8);
+      const futureDate = formatTZNaiveDateTime(getFutureDate(8));
       setupMocks(
         createMockRecurringEvent({
           id: 'original123',
@@ -334,7 +335,7 @@ describe('UpdateEventHandler - Recurring Events', () => {
       const args: UpdateEventInput = buildUpdateEventInput({
         eventId: 'daily-event',
         modificationScope: 'thisAndFollowing',
-        futureStartDate: makeFutureDateString(22)
+        futureStartDate: formatTZNaiveDateTime(getFutureDate(22))
       });
 
       await handler.runTool(args, mockOAuth2Client);
@@ -356,7 +357,7 @@ describe('UpdateEventHandler - Recurring Events', () => {
       const args: UpdateEventInput = buildUpdateEventInput({
         eventId: 'complex123',
         modificationScope: 'thisAndFollowing',
-        futureStartDate: makeFutureDateString(69)
+        futureStartDate: formatTZNaiveDateTime(getFutureDate(69))
       });
 
       await handler.runTool(args, mockOAuth2Client);
@@ -415,7 +416,7 @@ describe('UpdateEventHandler - Recurring Events', () => {
       const args: UpdateEventInput = buildUpdateEventInput({
         eventId: 'single123',
         modificationScope: 'thisAndFollowing',
-        futureStartDate: makeFutureDateString(8)
+        futureStartDate: formatTZNaiveDateTime(getFutureDate(8))
       });
 
       await expect(() =>

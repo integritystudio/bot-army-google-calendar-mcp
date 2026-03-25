@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { ToolSchemas } from '../../../tools/registry.js';
-import { makeFutureDateString, makePastDateString } from '../helpers/factories.js';
+import { makePastDateString } from '../helpers/factories.js';
 import { TIME_MIN, TIME_MAX } from '../helpers/test-configs.js';
+import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
 import {
   createUpdateEventArgs,
   createComplexUpdateEventArgs,
@@ -84,7 +85,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
         if (scope === 'thisEventOnly') {
           scopeOverrides.originalStartTime = '2024-06-15T10:00:00';
         } else if (scope === 'thisAndFollowing') {
-          scopeOverrides.futureStartDate = makeFutureDateString(90);
+          scopeOverrides.futureStartDate = formatTZNaiveDateTime(getFutureDate(90));
         }
 
         const args = createUpdateEventArgs(DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID, TEST_TIMEZONE, scopeOverrides);
@@ -157,7 +158,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
     });
 
     it('should accept valid futureStartDate for thisAndFollowing scope', () => {
-      const futureDateString = makeFutureDateString(30); // 30 days from now
+      const futureDateString = formatTZNaiveDateTime(getFutureDate(30));
 
       const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
         modificationScope: 'thisAndFollowing',
@@ -215,7 +216,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
     it('should validate complete update with all fields', () => {
       const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
         modificationScope: 'thisAndFollowing',
-        futureStartDate: makeFutureDateString(60), // 60 days from now
+        futureStartDate: formatTZNaiveDateTime(getFutureDate(60)),
         summary: 'Updated Meeting',
         description: 'Updated description',
         location: 'New Conference Room',

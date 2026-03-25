@@ -5,6 +5,22 @@ import { createTimeObject } from '../../utils/timezone-utils.js';
 import { ConflictDetectionService } from '../../services/conflict-detection/index.js';
 import { CONFLICT_DETECTION_CONFIG } from '../../services/conflict-detection/config.js';
 
+/**
+ * Copy properties from source to target if they exist in source and are not undefined.
+ * Used to conditionally build event fields without boilerplate if-checks.
+ */
+function conditionallyAddFields<T extends Record<string, any>>(
+  source: T,
+  target: Record<string, any>,
+  fieldNames: (keyof T)[]
+): void {
+  for (const field of fieldNames) {
+    if (field in source && source[field] !== undefined) {
+      target[field] = source[field];
+    }
+  }
+}
+
 export function buildCoreEvent(
   input: CreateEventInput | UpdateEventInput,
   timezone: string,
@@ -31,21 +47,23 @@ export function buildOptionalEventFields(
   input: CreateEventInput | UpdateEventInput
 ): Pick<calendar_v3.Schema$Event, 'colorId' | 'reminders' | 'recurrence' | 'transparency' | 'visibility' | 'guestsCanInviteOthers' | 'guestsCanModify' | 'guestsCanSeeOtherGuests' | 'anyoneCanAddSelf' | 'conferenceData' | 'extendedProperties' | 'attachments' | 'source'> {
   const fields: any = {};
+  const optionalFieldNames = [
+    'colorId',
+    'reminders',
+    'recurrence',
+    'transparency',
+    'visibility',
+    'guestsCanInviteOthers',
+    'guestsCanModify',
+    'guestsCanSeeOtherGuests',
+    'anyoneCanAddSelf',
+    'conferenceData',
+    'extendedProperties',
+    'attachments',
+    'source'
+  ] as const;
 
-  if ('colorId' in input && input.colorId !== undefined) fields.colorId = input.colorId;
-  if ('reminders' in input && input.reminders !== undefined) fields.reminders = input.reminders;
-  if ('recurrence' in input && input.recurrence !== undefined) fields.recurrence = input.recurrence;
-  if ('transparency' in input && input.transparency !== undefined) fields.transparency = input.transparency;
-  if ('visibility' in input && input.visibility !== undefined) fields.visibility = input.visibility;
-  if ('guestsCanInviteOthers' in input && input.guestsCanInviteOthers !== undefined) fields.guestsCanInviteOthers = input.guestsCanInviteOthers;
-  if ('guestsCanModify' in input && input.guestsCanModify !== undefined) fields.guestsCanModify = input.guestsCanModify;
-  if ('guestsCanSeeOtherGuests' in input && input.guestsCanSeeOtherGuests !== undefined) fields.guestsCanSeeOtherGuests = input.guestsCanSeeOtherGuests;
-  if ('anyoneCanAddSelf' in input && input.anyoneCanAddSelf !== undefined) fields.anyoneCanAddSelf = input.anyoneCanAddSelf;
-  if ('conferenceData' in input && input.conferenceData !== undefined) fields.conferenceData = input.conferenceData;
-  if ('extendedProperties' in input && input.extendedProperties !== undefined) fields.extendedProperties = input.extendedProperties;
-  if ('attachments' in input && input.attachments !== undefined) fields.attachments = input.attachments;
-  if ('source' in input && input.source !== undefined) fields.source = input.source;
-
+  conditionallyAddFields(input, fields, optionalFieldNames);
   return fields;
 }
 

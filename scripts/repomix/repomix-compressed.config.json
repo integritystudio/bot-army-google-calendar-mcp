@@ -18,7 +18,10 @@
       ".env.*.local",
       ".cache/**",
       "**/README.md",
-      "instructions/**"
+      "instructions/**",
+      ".claude/settings.local.json",
+      "AGENTS.md",
+      "CLAUDE.md"
     ]
   },
   "security": {

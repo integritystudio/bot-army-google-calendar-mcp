@@ -8201,441 +8201,6 @@ This section contains the contents of the repository's files.
 653: - [README.md](../README.md) - MCP server overview
 </file>
 
-<file path="README.md">
-  1: # Google Calendar & Gmail MCP Server
-  2: 
-  3: A Model Context Protocol (MCP) server that provides Google Calendar and Gmail integration for AI assistants like Claude.
-  4: 
-  5: ## Features
-  6: 
-  7: ### Calendar
-  8: - **Multi-Calendar Support**: List events from multiple calendars simultaneously
-  9: - **Event Management**: Create, update, delete, and search calendar events
- 10: - **Recurring Events**: Advanced modification capabilities for recurring events
- 11: - **Free/Busy Queries**: Check availability across calendars
- 12: - **Smart Scheduling**: Natural language understanding for dates and times
- 13: - **Inteligent Import**: Add calendar events from images, PDFs or web links
- 14: 
- 15: ### Gmail
- 16: - **Message Search**: Query Gmail with flexible search filters (is:unread, from:, subject:, etc.)
- 17: - **Profile Management**: Get account information (message count, thread count, email address)
- 18: - **Multi-Account Support**: Use multiple Gmail accounts with separate OAuth tokens
- 19: 
- 20: ## Recent Updates (v1.4.9)
- 21: 
- 22: **Performance & Reliability:**
- 23: - 🚀 Dynamic label ID resolution (L6) - Scripts now work across accounts with different label hierarchies
- 24: - ⚡ Sequential API optimization - ~500ms latency reduction per operation
- 25: - 📦 Batch filter operations - 10-100x speedup for bulk Gmail tasks
- 26: - 🔧 Timezone utilities consolidation - Reduced codebase by 19 lines, eliminated duplicate datetime logic
- 27: 
- 28: **Tooling & Infrastructure:**
- 29: - ✅ Comprehensive label resolution guide ([docs/LABEL-RESOLUTION-GUIDE.md](docs/LABEL-RESOLUTION-GUIDE.md))
- 30: - 🧪 Parametrized test expansion (25 → 30+ test cases)
- 31: - 📋 New changelog system ([docs/changelog/](docs/changelog/)) tracking all improvements
- 32: - 🔐 Auth refactor: new `isAuthenticated()` and `getCredentials()` methods
- 33: 
- 34: **Testing:**
- 35: - 486/486 tests passing (100%) ✅
- 36: - Integration tests for conflict detection via MCP protocol (real server, real API)
- 37: - Reduced technical debt with shared utilities in `lib/gmail-*.mjs`
- 38: - CLAUDE.md updated with latest patterns and utilities
- 39: 
- 40: See [CHANGELOG](docs/CHANGELOG.md) for complete v1.4.9 release notes.
- 41: 
- 42: ## Quick Start
- 43: 
- 44: ### Prerequisites
- 45: 
- 46: 1. A Google Cloud project with the Calendar API enabled
- 47: 2. OAuth 2.0 credentials (Desktop app type)
- 48: 
- 49: ### Google Cloud Setup
- 50: 
- 51: 1. Go to the [Google Cloud Console](https://console.cloud.google.com)
- 52: 2. Create a new project or select an existing one.
- 53: 3. Enable the [Google Calendar API](https://console.cloud.google.com/apis/library/calendar-json.googleapis.com) for your project. Ensure that the right project is selected from the top bar before enabling the API.
- 54: 4. Create OAuth 2.0 credentials:
- 55:    - Go to Credentials
- 56:    - Click "Create Credentials" > "OAuth client ID"
- 57:    - Choose "User data" for the type of data that the app will be accessing
- 58:    - Add your app name and contact information
- 59:    - Add the following scopes (optional):
- 60:      - `https://www.googleapis.com/auth/calendar.events` and `https://www.googleapis.com/auth/calendar`
- 61:    - Select "Desktop app" as the application type (Important!)
- 62:    - Save the auth key, you'll need to add its path to the JSON in the next step
- 63:    - Add your email address as a test user under the [Audience screen](https://console.cloud.google.com/auth/audience)
- 64:       - Note: it might take a few minutes for the test user to be added. The OAuth consent will not allow you to proceed until the test user has propagated.
- 65:       - Note about test mode: While an app is in test mode the auth tokens will expire after 1 week and need to be refreshed (see Re-authentication section below).
- 66: 
- 67: ### Installation
- 68: 
- 69: **Option 1: Use with npx (Recommended)**
- 70: 
- 71: Add to your Claude Desktop configuration:
- 72: 
- 73: **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
- 74: **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
- 75: ```json
- 76: {
- 77:   "mcpServers": {
- 78:     "google-calendar": {
- 79:       "command": "npx",
- 80:       "args": ["@cocal/google-calendar-mcp"],
- 81:       "env": {
- 82:         "GOOGLE_OAUTH_CREDENTIALS": "/path/to/your/gcp-oauth.keys.json"
- 83:       }
- 84:     }
- 85:   }
- 86: }
- 87: ```
- 88: 
- 89: **⚠️ Important Note for npx Users**: When using npx, you **must** specify the credentials file path using the `GOOGLE_OAUTH_CREDENTIALS` environment variable.
- 90: 
- 91: **Option 2: Local Installation**
- 92: 
- 93: ```bash
- 94: git clone https://github.com/nspady/google-calendar-mcp.git
- 95: cd google-calendar-mcp
- 96: npm install
- 97: npm run build
- 98: ```
- 99: 
-100: Then add to Claude Desktop config using the local path or by specifying the path with the `GOOGLE_OAUTH_CREDENTIALS` environment variable.
-101: 
-102: ### First Run
-103: 
-104: 1. Start Claude Desktop
-105: 2. The server will prompt for authentication on first use
-106: 3. Complete the OAuth flow in your browser
-107: 4. You're ready to use calendar features!
-108: 
-109: ### Multi-Account Support (Test Mode)
-110: 
-111: This server supports multiple Google accounts in test mode with automatic token management.
-112: 
-113: **Setup both accounts:**
-114: 
-115: Account 1 (Initial):
-116: ```bash
-117: export ACCOUNT_MODE=test
-118: export CALENDARMCP_TOKEN_PATH=~/.config/google-calendar-mcp/tokens.json
-119: npm run auth
-120: ```
-121: 
-122: Account 2 (Same file, different account key):
-123: ```bash
-124: export ACCOUNT_MODE=test
-125: export CALENDARMCP_TOKEN_PATH=~/.config/google-calendar-mcp/tokens.json
-126: npm run auth  # Authenticates second account in same tokens.json
-127: ```
-128: 
-129: **Verify both accounts:**
-130: ```bash
-131: export GOOGLE_OAUTH_CREDENTIALS="./credentials.json"
-132: npm run verify-tokens
-133: ```
-134: 
-135: Outputs token status, expiry times, and account validity for all authenticated accounts.
-136: 
-137: **Important Notes:**
-138: - Both accounts stored in single `tokens.json` file with separate keys
-139: - Tokens expire after 7 days in test mode (Google requirement)
-140: - TokenManager auto-refreshes tokens 5 minutes before expiry
-141: - Set `ACCOUNT_MODE` environment variable before running the server to select which account is active
-142: 
-143: ### Re-authentication
-144: 
-145: If you're in test mode (default), tokens expire after 7 days. If you are using a client like Claude Desktop it should open up a browser window to automatically re-auth. However, if you see authentication errors you can also resolve by following these steps:
-146: 
-147: **For npx users:**
-148: ```bash
-149: export GOOGLE_OAUTH_CREDENTIALS="/path/to/your/gcp-oauth.keys.json"
-150: export ACCOUNT_MODE=test
-151: npx @cocal/google-calendar-mcp auth
-152: ```
-153: 
-154: **For local installation:**
-155: ```bash
-156: export ACCOUNT_MODE=test
-157: npm run auth
-158: ```
-159: 
-160: **To avoid weekly re-authentication**, publish your app to production mode (without verification):
-161: 1. Go to Google Cloud Console → "APIs & Services" → "OAuth consent screen"
-162: 2. Click "PUBLISH APP" and confirm
-163: 3. Your tokens will no longer expire after 7 days but Google will show a more threatning warning when connecting to the app about it being unverified.
-164: 
-165: See [Authentication Guide](docs/authentication.md#moving-to-production-mode-recommended) for details.
-166: 
-167: ### Gmail OAuth Setup
-168: 
-169: To enable Gmail features, authenticate with Gmail scopes:
-170: 
-171: ```bash
-172: # Using the provided auth script
-173: node auth-gmail.mjs
-174: ```
-175: 
-176: This will:
-177: 1. Open your browser for OAuth authentication
-178: 2. Request Gmail access (read and modify permissions)
-179: 3. Save tokens to `~/.config/google-calendar-mcp/tokens-gmail.json`
-180: 
-181: **Quick Check:**
-182: ```bash
-183: # Check unread message count
-184: node check-gmail.mjs
-185: ```
-186: 
-187: **Important Notes:**
-188: - Gmail and Calendar tokens are stored separately
-189: - Gmail scopes: `gmail.readonly`, `gmail.modify`
-190: - Tokens expire after 7 days in test mode
-191: - Re-authenticate as needed with `node auth-gmail.mjs`
-192: 
-193: ### Email Organization & Filtering Scripts
-194: 
-195: Automated scripts for organizing and filtering large volumes of Gmail with focus on correctness and efficiency.
-196: 
-197: **Management Scripts:** (use shared `createGmailClient()` for OAuth, error handling, and multi-account support)
-198: - `list-unread-emails.mjs` - Categorize and summarize unread emails by label/sender patterns; clean fallback categorization
-199: - `summarize-remaining.mjs` - Summary of uncategorized/remaining unread emails (internal work, forums, misc); parallel fetching
-200: - `describe-internal.mjs` - Detailed breakdown of internal team emails with subjects and dates; hardcoded summary removed
-201: - `apply-filters-to-unread.mjs` - Apply existing filters to current unread emails
-202: - `create-remaining-filters.mjs` - Batch create filters for multiple categories (Product Updates, Communities, Services)
-203: 
-204: **Specialized Filters:**
-205: - `create-billing-filter.mjs` - Smart billing filter with conditional rate-limit detection
-206: - `create-signoz-filter.mjs` - Archive SigNoz monitoring alerts automatically
-207: - `create-dmarc-filter.mjs` - Organize DMARC authentication reports
-208: - `create-eventbrite-filter.mjs` - Label and archive Eventbrite event emails
-209: - `create-meet-notes-filter.mjs` - Label Google Meet notes
-210: - `delete-sentry-filter.mjs` - Remove outdated filters
-211: 
-212: **Archive & Processing Scripts:**
-213: - `archive-signoz-dmarc.mjs` - Batch archive monitoring and DMARC report emails using Gmail batch API
-214: - `mark-signoz-read.mjs` - Mark SigNoz alerts as read in bulk
-215: - `mark-past-events-read.mjs` - Classify event emails by date and mark past events as read
-216: - `protect-important-inbox.mjs` - Label critical items to prevent archiving (payments, rate limits, services)
-217: 
-218: **Event Management:**
-219: - `filter-events-by-date.mjs` - Classify event emails as future (label + keep) or past (label + archive)
-220: - `organize-international-house.mjs` - Label and organize International House event emails
-221: 
-222: **Utilities:**
-223: - `lib/gmail-client.mjs` - Authenticated Gmail API client factory. Centralizes OAuth2 init, token validation, and multi-account support:
-224:   ```js
-225:   import { createGmailClient } from './lib/gmail-client.mjs';
-226:   const gmail = createGmailClient(); // Uses ACCOUNT_MODE env var, throws on missing tokens
-227:   ```
-228: - `lib/gmail-label-utils.mjs` - Label ID resolution (NEW in v1.4.9). Resolves hardcoded label IDs dynamically for account portability:
-229:   ```js
-230:   import { buildLabelCache, resolveLabelId } from './lib/gmail-label-utils.mjs';
-231:   const labelCache = await buildLabelCache(gmail);
-232:   const labelId = labelCache.get('Events/Community'); // Dynamic instead of hardcoded Label_N
-233:   ```
-234:   See [`docs/LABEL-RESOLUTION-GUIDE.md`](docs/LABEL-RESOLUTION-GUIDE.md) for complete documentation.
-235: - `lib/gmail-batch.mjs` - Batch filter operations for bulk Gmail tasks (10-100x speedup)
-236: - `lib/date-based-filter.mjs` - Pure utility for date-based email classification: extracts dates (ISO, US format, text dates, weekday patterns), compares to today, classifies as past/future/unknown. Does not mutate input. Handles dates without year by inferring current or next year.
-237: 
-238: ## Example Usage
-239: 
-240: Along with the normal capabilities you would expect for a calendar integration you can also do really dynamic, multi-step processes like:
-241: 
-242: 1. **Cross-calendar availability**:
-243:    ```
-244:    Please provide availability looking at both my personal and work calendar for this upcoming week.
-245:    I am looking for a good time to meet with someone in London for 1 hr.
-246:    ```
-247: 
-248: 2. Add events from screenshots, images and other data sources:
-249:    ```
-250:    Add this event to my calendar based on the attached screenshot.
-251:    ```
-252:    Supported image formats: PNG, JPEG, GIF
-253:    Images can contain event details like date, time, location, and description
-254: 
-255: 3. Calendar analysis:
-256:    ```
-257:    What events do I have coming up this week that aren't part of my usual routine?
-258:    ```
-259: 4. Check attendance:
-260:    ```
-261:    Which events tomorrow have attendees who have not accepted the invitation?
-262:    ```
-263: 5. Auto coordinate events:
-264:    ```
-265:    Here's some available that was provided to me by someone. {available times}
-266:    Take a look at the times provided and let me know which ones are open on my calendar.
-267:    ```
-268: 
-269: 6. **Gmail workflows**:
-270:    ```
-271:    How many unread emails do I have from my work account?
-272:    ```
-273:    ```
-274:    Search for all emails from john@company.com that I haven't replied to yet.
-275:    ```
-276:    ```
-277:    Show me all unread messages from the past week.
-278:    ```
-279:    ```
-280:    Mark all unread emails from my boss as read.
-281:    ```
-282:    ```
-283:    Archive all promotional emails from marketing.
-284:    ```
-285:    ```
-286:    Delete these 5 spam messages (provide IDs).
-287:    ```
-288: 
-289: ## Date Parsing
-290: 
-291: The email organization system uses intelligent date parsing (`lib/date-based-filter.mjs`) to classify event emails:
-292: 
-293: **Supported Formats:**
-294: - ISO 8601: `2026-03-25`, `2026/03/25`
-295: - US format: `03/25/2026`, `3/25/2026`
-296: - Text format: `March 25, 2026`, `March 25` (infers year)
-297: - Weekday patterns: `@ Mon, Mar 23`, `@ Friday Mar 22`
-298: - Returns `null` for unparseable dates
-299: 
-300: **Classification:**
-301: - Past events (date < today): archive from inbox, keep label
-302: - Future events (date ≥ today): label and keep in inbox
-303: - Unknown: marked for manual review
-304: 
-305: **Implementation Notes:**
-306: - Pure function: does not mutate input dates
-307: - Handles missing years by inferring current or next year
-308: - Used by `mark-past-events-read.mjs` to auto-archive old events
-309: 
-310: ## Available Tools
-311: 
-312: ### Calendar Tools
-313: | Tool | Description |
-314: |------|-------------|
-315: | `list-calendars` | List all available calendars |
-316: | `list-events` | List events with date filtering |
-317: | `search-events` | Search events by text query |
-318: | `create-event` | Create new calendar events |
-319: | `update-event` | Update existing events |
-320: | `delete-event` | Delete events |
-321: | `get-freebusy` | Check availability across calendars, including external calendars |
-322: | `list-colors` | List available event colors |
-323: 
-324: ### Gmail Tools
-325: | Tool | Description |
-326: |------|-------------|
-327: | `gmail-search-messages` | Search Gmail messages (e.g., `is:unread`, `from:user@example.com`) |
-328: | `gmail-get-profile` | Get Gmail profile info (email, message count, thread count) |
-329: | `gmail-modify-messages` | Modify messages: mark read/unread, archive, delete, add/remove labels |
-330: | `gmail-create-label` | Create new labels for organizing emails |
-331: | `gmail-create-filter` | Create filters to auto-organize emails (auto-label, archive, delete, etc.) |
-332: 
-333: ## Documentation
-334: 
-335: - [Authentication Setup](docs/authentication.md) - Detailed Google Cloud setup
-336: - [Advanced Usage](docs/advanced-usage.md) - Multi-account, batch operations
-337: - [Deployment Guide](docs/deployment.md) - Remote access and integration
-338: - [OAuth Verification](docs/oauth-verification.md) - Moving from test to production mode
-339: - [Architecture](docs/architecture.md) - Technical architecture overview
-340: - [Development](docs/development.md) - Contributing and testing
-341: - [Backlog & Roadmap](docs/BACKLOG.md) - Future work, refactoring targets, design decisions
-342: 
-343: ## Development
-344: 
-345: **Project Guidelines:**
-346: - See [`CLAUDE.md`](CLAUDE.md) for code quality standards, script patterns, and refactoring guidelines
-347: - OAuth extraction pattern: use `createGmailClient()` from `lib/gmail-client.mjs`
-348: - Established patterns: error handling with try/catch, named constants, parallel API fetches with `Promise.all`
-349: - TypeScript, ES modules, 2-space indent, no magic strings
-350: 
-351: **Code Quality Tools:**
-352: - Detect duplicated code blocks: `node scripts/check-duplicates.mjs src 6` (reports suspicious file pairs, overlapping logic)
-353: - Consolidated: `GmailCreateHandler.ts` unifies filter and label creation logic (single source of truth)
-354: 
-355: **Completed Roadmap:**
-356: - ✅ All 24 backlog items complete (v1.4.9)
-357: - ✅ Test architecture for conflict detection implemented (MCP protocol, real API)
-358: - ✅ Email parsing helpers extracted (email-analyzer.mjs with 4 reusable exports)
-359: - ✅ Timezone utilities consolidated (19 lines reduced)
-360: - See [`docs/BACKLOG.md`](docs/BACKLOG.md) for detailed implementation notes and [`docs/CHANGELOG.md`](docs/CHANGELOG.md) for version history
-361: 
-362: ## Testing Status
-363: 
-364: Run tests with `npm test`. Current test suite includes:
-365: - **Handler Tests**: Core functionality for create, get, list, search, update, and delete operations; content assertions use narrower `{ type: 'text'; text: string }` type instead of `as any`
-366: - **Service Tests**: Conflict detection and event similarity analysis
-367: - **Schema Tests**: Tool schema validation and compatibility
-368: 
-369: **Note**: Integration tests referencing non-existent `AuthenticationService` and `initializeApp` exports were removed. Re-implement when the authentication service architecture is finalized.
-370: 
-371: ## Configuration
-372: 
-373: **Environment Variables:**
-374: - `GOOGLE_OAUTH_CREDENTIALS` - Path to OAuth credentials file
-375: - `CALENDARMCP_TOKEN_PATH` - Custom token storage location for Calendar tokens (optional)
-376: - `ACCOUNT_MODE` - Account mode selection (normal or test; default: test)
-377: 
-378: **Token Storage:**
-379: - Calendar tokens: `~/.config/google-calendar-mcp/tokens.json`
-380: - Gmail tokens: `~/.config/google-calendar-mcp/tokens-gmail.json`
-381: - Both stored with secure permissions (0600)
-382: 
-383: **Claude Desktop Config Location:**
-384: - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-385: - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-386: 
-387: 
-388: ## Security
-389: 
-390: - OAuth tokens are stored securely in your system's config directory
-391: - Credentials never leave your local machine
-392: - All calendar operations require explicit user consent
-393: 
-394: ### Troubleshooting
-395: 
-396: 1. **OAuth Credentials File Not Found:**
-397:    - For npx users: You **must** specify the credentials file path using `GOOGLE_OAUTH_CREDENTIALS`
-398:    - Verify file paths are absolute and accessible
-399: 
-400: 2. **Authentication Errors:**
-401:    - Ensure your credentials file contains credentials for a **Desktop App** type
-402:    - Verify your user email is added as a **Test User** in the Google Cloud OAuth Consent screen
-403:    - Try deleting saved tokens and re-authenticating
-404:    - Check that no other process is blocking ports 3000-3004
-405: 
-406: 3. **Build Errors:**
-407:    - Run `npm install && npm run build` again
-408:    - Check Node.js version (use LTS)
-409:    - Delete the `build/` directory and run `npm run build`
-410: 4. **"Something went wrong" screen during browser authentication**
-411:    - Perform manual authentication per the below steps
-412:    - Use a Chromium-based browser to open the authentication URL. Test app authentication may not be supported on some non-Chromium browsers.
-413: 
-414: ### Manual Authentication
-415: For re-authentication or troubleshooting:
-416: ```bash
-417: # For npx installations
-418: export GOOGLE_OAUTH_CREDENTIALS="/path/to/your/credentials.json"
-419: npx @cocal/google-calendar-mcp auth
-420: 
-421: # For local installations
-422: npm run auth
-423: ```
-424: 
-425: ## License
-426: 
-427: MIT
-428: 
-429: ## Support
-430: 
-431: - [GitHub Issues](https://github.com/nspady/google-calendar-mcp/issues)
-432: - [Documentation](docs/)
-</file>
-
 <file path="docs/changelog/1.4.9/CHANGELOG.md">
   1: # Changelog - Version 1.4.9
   2: 
@@ -8837,6 +8402,448 @@ This section contains the contents of the repository's files.
 198: - **Tests passing:** 486/486 (100%)
 </file>
 
+<file path="README.md">
+  1: # Google Calendar & Gmail MCP Server
+  2: 
+  3: A Model Context Protocol (MCP) server that provides Google Calendar and Gmail integration for AI assistants like Claude.
+  4: 
+  5: ## Features
+  6: 
+  7: ### Calendar
+  8: - **Multi-Calendar Support**: List events from multiple calendars simultaneously
+  9: - **Event Management**: Create, update, delete, and search calendar events
+ 10: - **Recurring Events**: Advanced modification capabilities for recurring events
+ 11: - **Free/Busy Queries**: Check availability across calendars
+ 12: - **Smart Scheduling**: Natural language understanding for dates and times
+ 13: - **Inteligent Import**: Add calendar events from images, PDFs or web links
+ 14: 
+ 15: ### Gmail
+ 16: - **Message Search**: Query Gmail with flexible search filters (is:unread, from:, subject:, etc.)
+ 17: - **Profile Management**: Get account information (message count, thread count, email address)
+ 18: - **Multi-Account Support**: Use multiple Gmail accounts with separate OAuth tokens
+ 19: 
+ 20: ## Recent Updates (v1.4.9)
+ 21: 
+ 22: **Code Quality & Maintainability:**
+ 23: - 🧹 **Test Fixture Consolidation** - Extracted 9+ duplicate fixtures into shared factories (70% reduction in test boilerplate)
+ 24: - 🛠️ **Test Helper Utilities** - Added assertion helpers (`expectValidToolResponse`, `expectJsonResponse`) and error pattern extractors
+ 25: - 🎯 **Runtime Optimization** - Refactored `buildOptionalEventFields()` to eliminate 13 repetitive if-checks with `conditionallyAddFields()` utility (85% reduction)
+ 26: - 🔄 **Mock Setup Consolidation** - Created `createGoogleCalendarMocks()` factory to eliminate vi.mock duplication across handler tests
+ 27: 
+ 28: **Performance & Reliability:**
+ 29: - 🚀 Dynamic label ID resolution (L6) - Scripts now work across accounts with different label hierarchies
+ 30: - ⚡ Sequential API optimization - ~500ms latency reduction per operation
+ 31: - 📦 Batch filter operations - 10-100x speedup for bulk Gmail tasks
+ 32: - 🔧 Timezone utilities consolidation - Reduced codebase by 19 lines, eliminated duplicate datetime logic
+ 33: 
+ 34: **Tooling & Infrastructure:**
+ 35: - ✅ Comprehensive label resolution guide ([docs/LABEL-RESOLUTION-GUIDE.md](docs/LABEL-RESOLUTION-GUIDE.md))
+ 36: - 🧪 Parametrized test expansion (25 → 30+ test cases)
+ 37: - 📋 New changelog system ([docs/changelog/](docs/changelog/)) tracking all improvements
+ 38: - 🔐 Auth refactor: new `isAuthenticated()` and `getCredentials()` methods
+ 39: 
+ 40: **Testing:**
+ 41: - 486/486 tests passing (100%) ✅
+ 42: - Integration tests for conflict detection via MCP protocol (real server, real API)
+ 43: - Reduced technical debt with shared utilities in `lib/gmail-*.mjs`
+ 44: - Consolidated test helpers reduce maintenance burden across 30+ test files
+ 45: - CLAUDE.md updated with test utilities and patterns documentation
+ 46: 
+ 47: See [CHANGELOG](docs/CHANGELOG.md) for complete v1.4.9 release notes.
+ 48: 
+ 49: ## Quick Start
+ 50: 
+ 51: ### Prerequisites
+ 52: 
+ 53: 1. A Google Cloud project with the Calendar API enabled
+ 54: 2. OAuth 2.0 credentials (Desktop app type)
+ 55: 
+ 56: ### Google Cloud Setup
+ 57: 
+ 58: 1. Go to the [Google Cloud Console](https://console.cloud.google.com)
+ 59: 2. Create a new project or select an existing one.
+ 60: 3. Enable the [Google Calendar API](https://console.cloud.google.com/apis/library/calendar-json.googleapis.com) for your project. Ensure that the right project is selected from the top bar before enabling the API.
+ 61: 4. Create OAuth 2.0 credentials:
+ 62:    - Go to Credentials
+ 63:    - Click "Create Credentials" > "OAuth client ID"
+ 64:    - Choose "User data" for the type of data that the app will be accessing
+ 65:    - Add your app name and contact information
+ 66:    - Add the following scopes (optional):
+ 67:      - `https://www.googleapis.com/auth/calendar.events` and `https://www.googleapis.com/auth/calendar`
+ 68:    - Select "Desktop app" as the application type (Important!)
+ 69:    - Save the auth key, you'll need to add its path to the JSON in the next step
+ 70:    - Add your email address as a test user under the [Audience screen](https://console.cloud.google.com/auth/audience)
+ 71:       - Note: it might take a few minutes for the test user to be added. The OAuth consent will not allow you to proceed until the test user has propagated.
+ 72:       - Note about test mode: While an app is in test mode the auth tokens will expire after 1 week and need to be refreshed (see Re-authentication section below).
+ 73: 
+ 74: ### Installation
+ 75: 
+ 76: **Option 1: Use with npx (Recommended)**
+ 77: 
+ 78: Add to your Claude Desktop configuration:
+ 79: 
+ 80: **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+ 81: **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+ 82: ```json
+ 83: {
+ 84:   "mcpServers": {
+ 85:     "google-calendar": {
+ 86:       "command": "npx",
+ 87:       "args": ["@cocal/google-calendar-mcp"],
+ 88:       "env": {
+ 89:         "GOOGLE_OAUTH_CREDENTIALS": "/path/to/your/gcp-oauth.keys.json"
+ 90:       }
+ 91:     }
+ 92:   }
+ 93: }
+ 94: ```
+ 95: 
+ 96: **⚠️ Important Note for npx Users**: When using npx, you **must** specify the credentials file path using the `GOOGLE_OAUTH_CREDENTIALS` environment variable.
+ 97: 
+ 98: **Option 2: Local Installation**
+ 99: 
+100: ```bash
+101: git clone https://github.com/nspady/google-calendar-mcp.git
+102: cd google-calendar-mcp
+103: npm install
+104: npm run build
+105: ```
+106: 
+107: Then add to Claude Desktop config using the local path or by specifying the path with the `GOOGLE_OAUTH_CREDENTIALS` environment variable.
+108: 
+109: ### First Run
+110: 
+111: 1. Start Claude Desktop
+112: 2. The server will prompt for authentication on first use
+113: 3. Complete the OAuth flow in your browser
+114: 4. You're ready to use calendar features!
+115: 
+116: ### Multi-Account Support (Test Mode)
+117: 
+118: This server supports multiple Google accounts in test mode with automatic token management.
+119: 
+120: **Setup both accounts:**
+121: 
+122: Account 1 (Initial):
+123: ```bash
+124: export ACCOUNT_MODE=test
+125: export CALENDARMCP_TOKEN_PATH=~/.config/google-calendar-mcp/tokens.json
+126: npm run auth
+127: ```
+128: 
+129: Account 2 (Same file, different account key):
+130: ```bash
+131: export ACCOUNT_MODE=test
+132: export CALENDARMCP_TOKEN_PATH=~/.config/google-calendar-mcp/tokens.json
+133: npm run auth  # Authenticates second account in same tokens.json
+134: ```
+135: 
+136: **Verify both accounts:**
+137: ```bash
+138: export GOOGLE_OAUTH_CREDENTIALS="./credentials.json"
+139: npm run verify-tokens
+140: ```
+141: 
+142: Outputs token status, expiry times, and account validity for all authenticated accounts.
+143: 
+144: **Important Notes:**
+145: - Both accounts stored in single `tokens.json` file with separate keys
+146: - Tokens expire after 7 days in test mode (Google requirement)
+147: - TokenManager auto-refreshes tokens 5 minutes before expiry
+148: - Set `ACCOUNT_MODE` environment variable before running the server to select which account is active
+149: 
+150: ### Re-authentication
+151: 
+152: If you're in test mode (default), tokens expire after 7 days. If you are using a client like Claude Desktop it should open up a browser window to automatically re-auth. However, if you see authentication errors you can also resolve by following these steps:
+153: 
+154: **For npx users:**
+155: ```bash
+156: export GOOGLE_OAUTH_CREDENTIALS="/path/to/your/gcp-oauth.keys.json"
+157: export ACCOUNT_MODE=test
+158: npx @cocal/google-calendar-mcp auth
+159: ```
+160: 
+161: **For local installation:**
+162: ```bash
+163: export ACCOUNT_MODE=test
+164: npm run auth
+165: ```
+166: 
+167: **To avoid weekly re-authentication**, publish your app to production mode (without verification):
+168: 1. Go to Google Cloud Console → "APIs & Services" → "OAuth consent screen"
+169: 2. Click "PUBLISH APP" and confirm
+170: 3. Your tokens will no longer expire after 7 days but Google will show a more threatning warning when connecting to the app about it being unverified.
+171: 
+172: See [Authentication Guide](docs/authentication.md#moving-to-production-mode-recommended) for details.
+173: 
+174: ### Gmail OAuth Setup
+175: 
+176: To enable Gmail features, authenticate with Gmail scopes:
+177: 
+178: ```bash
+179: # Using the provided auth script
+180: node auth-gmail.mjs
+181: ```
+182: 
+183: This will:
+184: 1. Open your browser for OAuth authentication
+185: 2. Request Gmail access (read and modify permissions)
+186: 3. Save tokens to `~/.config/google-calendar-mcp/tokens-gmail.json`
+187: 
+188: **Quick Check:**
+189: ```bash
+190: # Check unread message count
+191: node check-gmail.mjs
+192: ```
+193: 
+194: **Important Notes:**
+195: - Gmail and Calendar tokens are stored separately
+196: - Gmail scopes: `gmail.readonly`, `gmail.modify`
+197: - Tokens expire after 7 days in test mode
+198: - Re-authenticate as needed with `node auth-gmail.mjs`
+199: 
+200: ### Email Organization & Filtering Scripts
+201: 
+202: Automated scripts for organizing and filtering large volumes of Gmail with focus on correctness and efficiency.
+203: 
+204: **Management Scripts:** (use shared `createGmailClient()` for OAuth, error handling, and multi-account support)
+205: - `list-unread-emails.mjs` - Categorize and summarize unread emails by label/sender patterns; clean fallback categorization
+206: - `summarize-remaining.mjs` - Summary of uncategorized/remaining unread emails (internal work, forums, misc); parallel fetching
+207: - `describe-internal.mjs` - Detailed breakdown of internal team emails with subjects and dates; hardcoded summary removed
+208: - `apply-filters-to-unread.mjs` - Apply existing filters to current unread emails
+209: - `create-remaining-filters.mjs` - Batch create filters for multiple categories (Product Updates, Communities, Services)
+210: 
+211: **Specialized Filters:**
+212: - `create-billing-filter.mjs` - Smart billing filter with conditional rate-limit detection
+213: - `create-signoz-filter.mjs` - Archive SigNoz monitoring alerts automatically
+214: - `create-dmarc-filter.mjs` - Organize DMARC authentication reports
+215: - `create-eventbrite-filter.mjs` - Label and archive Eventbrite event emails
+216: - `create-meet-notes-filter.mjs` - Label Google Meet notes
+217: - `delete-sentry-filter.mjs` - Remove outdated filters
+218: 
+219: **Archive & Processing Scripts:**
+220: - `archive-signoz-dmarc.mjs` - Batch archive monitoring and DMARC report emails using Gmail batch API
+221: - `mark-signoz-read.mjs` - Mark SigNoz alerts as read in bulk
+222: - `mark-past-events-read.mjs` - Classify event emails by date and mark past events as read
+223: - `protect-important-inbox.mjs` - Label critical items to prevent archiving (payments, rate limits, services)
+224: 
+225: **Event Management:**
+226: - `filter-events-by-date.mjs` - Classify event emails as future (label + keep) or past (label + archive)
+227: - `organize-international-house.mjs` - Label and organize International House event emails
+228: 
+229: **Utilities:**
+230: - `lib/gmail-client.mjs` - Authenticated Gmail API client factory. Centralizes OAuth2 init, token validation, and multi-account support:
+231:   ```js
+232:   import { createGmailClient } from './lib/gmail-client.mjs';
+233:   const gmail = createGmailClient(); // Uses ACCOUNT_MODE env var, throws on missing tokens
+234:   ```
+235: - `lib/gmail-label-utils.mjs` - Label ID resolution (NEW in v1.4.9). Resolves hardcoded label IDs dynamically for account portability:
+236:   ```js
+237:   import { buildLabelCache, resolveLabelId } from './lib/gmail-label-utils.mjs';
+238:   const labelCache = await buildLabelCache(gmail);
+239:   const labelId = labelCache.get('Events/Community'); // Dynamic instead of hardcoded Label_N
+240:   ```
+241:   See [`docs/LABEL-RESOLUTION-GUIDE.md`](docs/LABEL-RESOLUTION-GUIDE.md) for complete documentation.
+242: - `lib/gmail-batch.mjs` - Batch filter operations for bulk Gmail tasks (10-100x speedup)
+243: - `lib/date-based-filter.mjs` - Pure utility for date-based email classification: extracts dates (ISO, US format, text dates, weekday patterns), compares to today, classifies as past/future/unknown. Does not mutate input. Handles dates without year by inferring current or next year.
+244: 
+245: ## Example Usage
+246: 
+247: Along with the normal capabilities you would expect for a calendar integration you can also do really dynamic, multi-step processes like:
+248: 
+249: 1. **Cross-calendar availability**:
+250:    ```
+251:    Please provide availability looking at both my personal and work calendar for this upcoming week.
+252:    I am looking for a good time to meet with someone in London for 1 hr.
+253:    ```
+254: 
+255: 2. Add events from screenshots, images and other data sources:
+256:    ```
+257:    Add this event to my calendar based on the attached screenshot.
+258:    ```
+259:    Supported image formats: PNG, JPEG, GIF
+260:    Images can contain event details like date, time, location, and description
+261: 
+262: 3. Calendar analysis:
+263:    ```
+264:    What events do I have coming up this week that aren't part of my usual routine?
+265:    ```
+266: 4. Check attendance:
+267:    ```
+268:    Which events tomorrow have attendees who have not accepted the invitation?
+269:    ```
+270: 5. Auto coordinate events:
+271:    ```
+272:    Here's some available that was provided to me by someone. {available times}
+273:    Take a look at the times provided and let me know which ones are open on my calendar.
+274:    ```
+275: 
+276: 6. **Gmail workflows**:
+277:    ```
+278:    How many unread emails do I have from my work account?
+279:    ```
+280:    ```
+281:    Search for all emails from john@company.com that I haven't replied to yet.
+282:    ```
+283:    ```
+284:    Show me all unread messages from the past week.
+285:    ```
+286:    ```
+287:    Mark all unread emails from my boss as read.
+288:    ```
+289:    ```
+290:    Archive all promotional emails from marketing.
+291:    ```
+292:    ```
+293:    Delete these 5 spam messages (provide IDs).
+294:    ```
+295: 
+296: ## Date Parsing
+297: 
+298: The email organization system uses intelligent date parsing (`lib/date-based-filter.mjs`) to classify event emails:
+299: 
+300: **Supported Formats:**
+301: - ISO 8601: `2026-03-25`, `2026/03/25`
+302: - US format: `03/25/2026`, `3/25/2026`
+303: - Text format: `March 25, 2026`, `March 25` (infers year)
+304: - Weekday patterns: `@ Mon, Mar 23`, `@ Friday Mar 22`
+305: - Returns `null` for unparseable dates
+306: 
+307: **Classification:**
+308: - Past events (date < today): archive from inbox, keep label
+309: - Future events (date ≥ today): label and keep in inbox
+310: - Unknown: marked for manual review
+311: 
+312: **Implementation Notes:**
+313: - Pure function: does not mutate input dates
+314: - Handles missing years by inferring current or next year
+315: - Used by `mark-past-events-read.mjs` to auto-archive old events
+316: 
+317: ## Available Tools
+318: 
+319: ### Calendar Tools
+320: | Tool | Description |
+321: |------|-------------|
+322: | `list-calendars` | List all available calendars |
+323: | `list-events` | List events with date filtering |
+324: | `search-events` | Search events by text query |
+325: | `create-event` | Create new calendar events |
+326: | `update-event` | Update existing events |
+327: | `delete-event` | Delete events |
+328: | `get-freebusy` | Check availability across calendars, including external calendars |
+329: | `list-colors` | List available event colors |
+330: 
+331: ### Gmail Tools
+332: | Tool | Description |
+333: |------|-------------|
+334: | `gmail-search-messages` | Search Gmail messages (e.g., `is:unread`, `from:user@example.com`) |
+335: | `gmail-get-profile` | Get Gmail profile info (email, message count, thread count) |
+336: | `gmail-modify-messages` | Modify messages: mark read/unread, archive, delete, add/remove labels |
+337: | `gmail-create-label` | Create new labels for organizing emails |
+338: | `gmail-create-filter` | Create filters to auto-organize emails (auto-label, archive, delete, etc.) |
+339: 
+340: ## Documentation
+341: 
+342: - [Authentication Setup](docs/authentication.md) - Detailed Google Cloud setup
+343: - [Advanced Usage](docs/advanced-usage.md) - Multi-account, batch operations
+344: - [Deployment Guide](docs/deployment.md) - Remote access and integration
+345: - [OAuth Verification](docs/oauth-verification.md) - Moving from test to production mode
+346: - [Architecture](docs/architecture.md) - Technical architecture overview
+347: - [Development](docs/development.md) - Contributing and testing
+348: - [Backlog & Roadmap](docs/BACKLOG.md) - Future work, refactoring targets, design decisions
+349: 
+350: ## Development
+351: 
+352: **Project Guidelines:**
+353: - See [`CLAUDE.md`](CLAUDE.md) for code quality standards, script patterns, and refactoring guidelines
+354: - OAuth extraction pattern: use `createGmailClient()` from `lib/gmail-client.mjs`
+355: - Established patterns: error handling with try/catch, named constants, parallel API fetches with `Promise.all`
+356: - TypeScript, ES modules, 2-space indent, no magic strings
+357: 
+358: **Code Quality Tools:**
+359: - Detect duplicated code blocks: `node scripts/check-duplicates.mjs src 6` (reports suspicious file pairs, overlapping logic)
+360: - Consolidated: `GmailCreateHandler.ts` unifies filter and label creation logic (single source of truth)
+361: 
+362: **Completed Roadmap:**
+363: - ✅ All 24 backlog items complete (v1.4.9)
+364: - ✅ Test architecture for conflict detection implemented (MCP protocol, real API)
+365: - ✅ Email parsing helpers extracted (email-analyzer.mjs with 4 reusable exports)
+366: - ✅ Timezone utilities consolidated (19 lines reduced)
+367: - See [`docs/BACKLOG.md`](docs/BACKLOG.md) for detailed implementation notes and [`docs/CHANGELOG.md`](docs/CHANGELOG.md) for version history
+368: 
+369: ## Testing Status
+370: 
+371: Run tests with `npm test`. Current test suite includes:
+372: - **Handler Tests**: Core functionality for create, get, list, search, update, and delete operations; content assertions use narrower `{ type: 'text'; text: string }` type instead of `as any`
+373: - **Service Tests**: Conflict detection and event similarity analysis
+374: - **Schema Tests**: Tool schema validation and compatibility
+375: 
+376: **Note**: Integration tests referencing non-existent `AuthenticationService` and `initializeApp` exports were removed. Re-implement when the authentication service architecture is finalized.
+377: 
+378: ## Configuration
+379: 
+380: **Environment Variables:**
+381: - `GOOGLE_OAUTH_CREDENTIALS` - Path to OAuth credentials file
+382: - `CALENDARMCP_TOKEN_PATH` - Custom token storage location for Calendar tokens (optional)
+383: - `ACCOUNT_MODE` - Account mode selection (normal or test; default: test)
+384: 
+385: **Token Storage:**
+386: - Calendar tokens: `~/.config/google-calendar-mcp/tokens.json`
+387: - Gmail tokens: `~/.config/google-calendar-mcp/tokens-gmail.json`
+388: - Both stored with secure permissions (0600)
+389: 
+390: **Claude Desktop Config Location:**
+391: - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+392: - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+393: 
+394: 
+395: ## Security
+396: 
+397: - OAuth tokens are stored securely in your system's config directory
+398: - Credentials never leave your local machine
+399: - All calendar operations require explicit user consent
+400: 
+401: ### Troubleshooting
+402: 
+403: 1. **OAuth Credentials File Not Found:**
+404:    - For npx users: You **must** specify the credentials file path using `GOOGLE_OAUTH_CREDENTIALS`
+405:    - Verify file paths are absolute and accessible
+406: 
+407: 2. **Authentication Errors:**
+408:    - Ensure your credentials file contains credentials for a **Desktop App** type
+409:    - Verify your user email is added as a **Test User** in the Google Cloud OAuth Consent screen
+410:    - Try deleting saved tokens and re-authenticating
+411:    - Check that no other process is blocking ports 3000-3004
+412: 
+413: 3. **Build Errors:**
+414:    - Run `npm install && npm run build` again
+415:    - Check Node.js version (use LTS)
+416:    - Delete the `build/` directory and run `npm run build`
+417: 4. **"Something went wrong" screen during browser authentication**
+418:    - Perform manual authentication per the below steps
+419:    - Use a Chromium-based browser to open the authentication URL. Test app authentication may not be supported on some non-Chromium browsers.
+420: 
+421: ### Manual Authentication
+422: For re-authentication or troubleshooting:
+423: ```bash
+424: # For npx installations
+425: export GOOGLE_OAUTH_CREDENTIALS="/path/to/your/credentials.json"
+426: npx @cocal/google-calendar-mcp auth
+427: 
+428: # For local installations
+429: npm run auth
+430: ```
+431: 
+432: ## License
+433: 
+434: MIT
+435: 
+436: ## Support
+437: 
+438: - [GitHub Issues](https://github.com/nspady/google-calendar-mcp/issues)
+439: - [Documentation](docs/)
+</file>
+
 <file path="CLAUDE.md">
  1: # Google Calendar & Gmail MCP - Project Guidelines
  2: 
@@ -8872,68 +8879,50 @@ This section contains the contents of the repository's files.
 32: - ✅ Integration tests for conflict detection via MCP protocol (real server, real API)
 33: - ✅ 486/486 tests passing
 34: 
-35: ## Script Development
-36: 
-37: **Code Quality:**
-38: - `npm run check-duplicates` — Detect repeated code blocks (scans src/ with 6-line window)
-39: 
-40: **Avoid bash heredocs with pipes** (causes "parse error near |'"):
-41: - Use Write tool or create `.mjs` files in project root instead of `/tmp`
-42: - `/tmp` scripts can't access `node_modules`; use project root for npm imports
-43: - If using heredoc, keep it simple (no pipes, special chars, or complex syntax)
-44: 
-45: **Code Quality:**
-46: - Avoid dead variables; use derived values instead
-47: - Remove comments that duplicate code (keep only non-obvious WHY)
-48: - Extract repeated patterns into shared utilities
-49: - Use named constants instead of magic strings
-50: - Don't mutate input params; create local copies
-51: - Prefer direct operations over redundant existence checks (TOCTOU)
+35: **Test Helpers & Fixtures:**
+36: Consolidated utilities reduce boilerplate across 30+ test files:
+37: - `factories.ts` - Event fixtures (makeEvent, makeTeamMeetingEvent, createFullEventArgs, STANDARD_ATTACHMENTS, ATTACHMENT_IDS)
+38: - `content.ts` - Response helpers (getTextContent, expectValidToolResponse, expectJsonResponse, assertTextContentContains)
+39: - `handler-setup.ts` - Mock setup (setupListEventsHandler, createGoogleCalendarMocks)
+40: - `integration-test-helpers.ts` - Lifecycle helpers (createAndVerifyEvent, updateAndVerifyEvent, expectModificationScopeError, expectEventUpdateSuccess)
+41: 
+42: ## Script Development
+43: 
+44: **Tools & Code Quality:**
+45: - `npm run check-duplicates` — Detect repeated code blocks (scans src/ with 6-line window)
+46: - Avoid bash heredocs with pipes — use Write tool or `.mjs` files in project root (not `/tmp`)
+47: 
+48: **Code Principles:**
+49: - Avoid dead variables; extract repeated patterns into utilities
+50: - Use named constants instead of magic strings; keep only non-obvious WHY in comments
+51: - Don't mutate input params; prefer direct operations over TOCTOU existence checks
 52: - Array.slice() naturally clamps; Math.min unnecessary
 53: 
-54: ## Email Organization System
-55: 
-56: Core pattern: Label → conditional archive (keep future events, important items, archive routine notifications).
-57: 
-58: **Key Scripts:**
-59: ```bash
-60: node list-unread-emails.mjs           # Summary by category/sender
-61: node summarize-remaining.mjs          # Remaining uncategorized (internal work, forums)
-62: node describe-internal.mjs            # Detailed breakdown of internal team emails (Chandra, Jordan, John, Alex)
-63: node create-remaining-filters.mjs     # Create filters (Product Updates, Communities, Services)
-64: node apply-filters-to-unread.mjs      # Apply filters to current unread
-65: node protect-important-inbox.mjs      # Protect: Cloudflare alerts, Calendly, Capital City Village, Investment Banking
-66: node filter-events-by-date.mjs        # Events: future=keep, past=archive
-67: node archive-signoz-dmarc.mjs         # Monitoring/DMARC auto-archive
-68: ```
+54: **Key Utilities:**
+55: - `eventManipulationUtils.ts` — `conditionallyAddFields()`, `buildCoreEvent()`, `buildOptionalEventFields()`
+56: - `date-utils.ts` — `formatRFC3339()`, `addMilliseconds()`, `oneDayBefore()`, etc.
+57: - `timezone-utils.ts` — `createTimeObject()`, `resolveTimeZone()`, etc.
+58: 
+59: ## Email Organization System
+60: 
+61: Core pattern: Label → conditional archive (keep future events, important items, archive notifications).
+62: 
+63: **Key Scripts:**
+64: - `list-unread-emails.mjs`, `summarize-remaining.mjs` — Email analysis
+65: - `apply-filters-to-unread.mjs`, `protect-important-inbox.mjs`, `filter-events-by-date.mjs` — Filtering & organization
+66: - `create-remaining-filters.mjs` — Filter setup
+67: 
+68: **Categories:** Protected (never archive) | Events (future=keep, past=archive) | Monitoring (archive) | Product Updates (label+archive) | Communities (keep) | Services (archive) | Billing (conditional)
 69: 
-70: **Categories:**
-71: | Type | Treatment | Senders/Items |
-72: |------|-----------|---|
-73: | Protected | Never archive | Cloudflare rate limits, Calendly support, CCV services, IB meetings |
-74: | Events | Future keep, past archive | International House, Meetup, Eventbrite, Calendly reminders |
-75: | Monitoring | Archive | SigNoz alerts, DMARC reports |
-76: | Product Updates | Label + archive | Google Cloud/Workspace, HubSpot, OpenAI, Postman, Resend, Yodlee, Adapty, DataHub |
-77: | Communities | Keep | Women Techmakers |
-78: | Services | Archive | FoundersCard, Link, Heroku, Zapier, Zillow |
-79: | Billing | Conditional | GW invoices, GC charges (rate-limit aware) |
-80: 
-81: **Shared Utilities:**
-82: - `lib/gmail-client.mjs` - Authenticated Gmail client factory; use `createGmailClient()` in all scripts (✅ Applied to 65+ scripts)
-83: - `lib/gmail-label-utils.mjs` - Label resolution utilities (NEW - see L6 below)
-84:   - `buildLabelCache(gmail)` - Fetch all labels once at startup
-85:   - `resolveLabelId(gmail, labelName, labelCache)` - Cached single label lookup
-86:   - `resolveLabelIds(gmail, labelNames)` - Batch label resolution
-87: - `lib/gmail-batch.mjs` - Batch filter operations for 10-100x speedup
-88: - `lib/date-based-filter.mjs` - Pure utility for date parsing (ISO, US, text, weekday patterns; no mutations)
-89: 
-90: **Code Quality:**
-91: - **Established patterns:** Refactored scripts use best practices (error handling, named constants, getHeader() helpers, parallel `Promise.all` for list + detail fetches)
-92: - **Performance:** Use `Promise.all` for concurrent list + detail fetches (not serial loops)
-93: - **L6 Pattern (NEW):** Dynamic label ID resolution for portability across accounts
-94:   - See `docs/LABEL-RESOLUTION-GUIDE.md` for complete pattern documentation
-95:   - Replace hardcoded `Label_N` IDs with `labelCache.get('Label/Name')`
-96:   - Enables scripts to work across different Gmail accounts with different label IDs
+70: **Shared Utilities:**
+71: - `gmail-client.mjs` — Authenticated client factory (✅ 65+ scripts)
+72: - `gmail-label-utils.mjs` — Label caching: `buildLabelCache()`, `resolveLabelId()`, `resolveLabelIds()`
+73: - `gmail-batch.mjs` — Batch operations (10-100x speedup)
+74: - `date-based-filter.mjs` — Date parsing utility (ISO, US, text formats; no mutations)
+75: 
+76: **Patterns:**
+77: - Use `Promise.all` for concurrent fetches (not serial loops)
+78: - Dynamic label resolution (L6) — `labelCache.get('Label/Name')` instead of hardcoded IDs (see `docs/LABEL-RESOLUTION-GUIDE.md`)
 </file>
 
 <file path="docs/BACKLOG.md">
@@ -10762,68 +10751,50 @@ npm install | npm run build | npm run dev | npm test
 - ✅ Integration tests for conflict detection via MCP protocol (real server, real API)
 - ✅ 486/486 tests passing
 
+**Test Helpers & Fixtures:**
+Consolidated utilities reduce boilerplate across 30+ test files:
+- `factories.ts` - Event fixtures (makeEvent, makeTeamMeetingEvent, createFullEventArgs, STANDARD_ATTACHMENTS, ATTACHMENT_IDS)
+- `content.ts` - Response helpers (getTextContent, expectValidToolResponse, expectJsonResponse, assertTextContentContains)
+- `handler-setup.ts` - Mock setup (setupListEventsHandler, createGoogleCalendarMocks)
+- `integration-test-helpers.ts` - Lifecycle helpers (createAndVerifyEvent, updateAndVerifyEvent, expectModificationScopeError, expectEventUpdateSuccess)
+
 ## Script Development
 
-**Code Quality:**
+**Tools & Code Quality:**
 - `npm run check-duplicates` — Detect repeated code blocks (scans src/ with 6-line window)
+- Avoid bash heredocs with pipes — use Write tool or `.mjs` files in project root (not `/tmp`)
 
-**Avoid bash heredocs with pipes** (causes "parse error near |'"):
-- Use Write tool or create `.mjs` files in project root instead of `/tmp`
-- `/tmp` scripts can't access `node_modules`; use project root for npm imports
-- If using heredoc, keep it simple (no pipes, special chars, or complex syntax)
-
-**Code Quality:**
-- Avoid dead variables; use derived values instead
-- Remove comments that duplicate code (keep only non-obvious WHY)
-- Extract repeated patterns into shared utilities
-- Use named constants instead of magic strings
-- Don't mutate input params; create local copies
-- Prefer direct operations over redundant existence checks (TOCTOU)
+**Code Principles:**
+- Avoid dead variables; extract repeated patterns into utilities
+- Use named constants instead of magic strings; keep only non-obvious WHY in comments
+- Don't mutate input params; prefer direct operations over TOCTOU existence checks
 - Array.slice() naturally clamps; Math.min unnecessary
+
+**Key Utilities:**
+- `eventManipulationUtils.ts` — `conditionallyAddFields()`, `buildCoreEvent()`, `buildOptionalEventFields()`
+- `date-utils.ts` — `formatRFC3339()`, `addMilliseconds()`, `oneDayBefore()`, etc.
+- `timezone-utils.ts` — `createTimeObject()`, `resolveTimeZone()`, etc.
 
 ## Email Organization System
 
-Core pattern: Label → conditional archive (keep future events, important items, archive routine notifications).
+Core pattern: Label → conditional archive (keep future events, important items, archive notifications).
 
 **Key Scripts:**
-```bash
-node list-unread-emails.mjs           # Summary by category/sender
-node summarize-remaining.mjs          # Remaining uncategorized (internal work, forums)
-node describe-internal.mjs            # Detailed breakdown of internal team emails (Chandra, Jordan, John, Alex)
-node create-remaining-filters.mjs     # Create filters (Product Updates, Communities, Services)
-node apply-filters-to-unread.mjs      # Apply filters to current unread
-node protect-important-inbox.mjs      # Protect: Cloudflare alerts, Calendly, Capital City Village, Investment Banking
-node filter-events-by-date.mjs        # Events: future=keep, past=archive
-node archive-signoz-dmarc.mjs         # Monitoring/DMARC auto-archive
-```
+- `list-unread-emails.mjs`, `summarize-remaining.mjs` — Email analysis
+- `apply-filters-to-unread.mjs`, `protect-important-inbox.mjs`, `filter-events-by-date.mjs` — Filtering & organization
+- `create-remaining-filters.mjs` — Filter setup
 
-**Categories:**
-| Type | Treatment | Senders/Items |
-|------|-----------|---|
-| Protected | Never archive | Cloudflare rate limits, Calendly support, CCV services, IB meetings |
-| Events | Future keep, past archive | International House, Meetup, Eventbrite, Calendly reminders |
-| Monitoring | Archive | SigNoz alerts, DMARC reports |
-| Product Updates | Label + archive | Google Cloud/Workspace, HubSpot, OpenAI, Postman, Resend, Yodlee, Adapty, DataHub |
-| Communities | Keep | Women Techmakers |
-| Services | Archive | FoundersCard, Link, Heroku, Zapier, Zillow |
-| Billing | Conditional | GW invoices, GC charges (rate-limit aware) |
+**Categories:** Protected (never archive) | Events (future=keep, past=archive) | Monitoring (archive) | Product Updates (label+archive) | Communities (keep) | Services (archive) | Billing (conditional)
 
 **Shared Utilities:**
-- `lib/gmail-client.mjs` - Authenticated Gmail client factory; use `createGmailClient()` in all scripts (✅ Applied to 65+ scripts)
-- `lib/gmail-label-utils.mjs` - Label resolution utilities (NEW - see L6 below)
-  - `buildLabelCache(gmail)` - Fetch all labels once at startup
-  - `resolveLabelId(gmail, labelName, labelCache)` - Cached single label lookup
-  - `resolveLabelIds(gmail, labelNames)` - Batch label resolution
-- `lib/gmail-batch.mjs` - Batch filter operations for 10-100x speedup
-- `lib/date-based-filter.mjs` - Pure utility for date parsing (ISO, US, text, weekday patterns; no mutations)
+- `gmail-client.mjs` — Authenticated client factory (✅ 65+ scripts)
+- `gmail-label-utils.mjs` — Label caching: `buildLabelCache()`, `resolveLabelId()`, `resolveLabelIds()`
+- `gmail-batch.mjs` — Batch operations (10-100x speedup)
+- `date-based-filter.mjs` — Date parsing utility (ISO, US, text formats; no mutations)
 
-**Code Quality:**
-- **Established patterns:** Refactored scripts use best practices (error handling, named constants, getHeader() helpers, parallel `Promise.all` for list + detail fetches)
-- **Performance:** Use `Promise.all` for concurrent list + detail fetches (not serial loops)
-- **L6 Pattern (NEW):** Dynamic label ID resolution for portability across accounts
-  - See `docs/LABEL-RESOLUTION-GUIDE.md` for complete pattern documentation
-  - Replace hardcoded `Label_N` IDs with `labelCache.get('Label/Name')`
-  - Enables scripts to work across different Gmail accounts with different label IDs
+**Patterns:**
+- Use `Promise.all` for concurrent fetches (not serial loops)
+- Dynamic label resolution (L6) — `labelCache.get('Label/Name')` instead of hardcoded IDs (see `docs/LABEL-RESOLUTION-GUIDE.md`)
 
 
 </instruction>

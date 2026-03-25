@@ -33,7 +33,7 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Files matching these patterns are excluded: docs/**, scripts/repomix/*.sh, *.tsbuildinfo, .env.*.local, .cache/**, **/README.md, instructions/**
+- Files matching these patterns are excluded: docs/**, scripts/repomix/*.sh, *.tsbuildinfo, .env.*.local, .cache/**, **/README.md, instructions/**, .claude/settings.local.json, AGENTS.md, CLAUDE.md
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Code comments have been removed from supported file types
@@ -46,8 +46,6 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
-.claude/
-  settings.local.json
 examples/
   http-client.js
   http-with-curl.sh
@@ -198,7 +196,6 @@ src/
   verify-tokens.ts
 .env.test
 .gitignore
-AGENTS.md
 analyze_emails.mjs
 analyze-ccv-newsletter.mjs
 analyze-community-events.mjs
@@ -218,7 +215,6 @@ check_emails.mjs
 check-gmail.mjs
 check-google-dev-labels.mjs
 check-status.mjs
-CLAUDE.md
 cleanup-and-push.mjs
 count-unread.mjs
 create-all-sublabels.mjs
@@ -297,132 +293,6 @@ vitest.config.ts
 
 <files>
 This section contains the contents of the repository's files.
-
-<file path=".claude/settings.local.json">
-{
-  "permissions": {
-    "allow": [
-      "Bash(npm test:*)",
-      "Bash(npm run:*)",
-      "Bash(doppler projects:*)",
-      "Bash(doppler configs:*)",
-      "Bash(doppler secrets:*)",
-      "mcp__claude_ai_Gmail__gmail_search_messages",
-      "mcp__claude_ai_Gmail__gmail_get_profile",
-      "Bash(node:*)",
-      "Bash(sh -c \"node scripts/build.js\")",
-      "Bash(npx vite-node:*)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json npx vite-node src/verify-tokens.ts)",
-      "Bash(ls:*)",
-      "Bash(/ls-tools)",
-      "Bash(ACCOUNT_MODE=test node check-gmail.mjs)",
-      "Bash(npx tsc:*)",
-      "Bash(curl -s http://localhost:3000/tools)",
-      "Bash(pkill:*)",
-      "Bash(ACCOUNT_MODE=test node create-community-sublabels.mjs)",
-      "Bash(ACCOUNT_MODE=test node -e \"\nimport fs from 'fs';\nimport path from 'path';\nimport { google } from 'googleapis';\nimport { OAuth2Client } from 'google-auth-library';\n\nconst TOKEN_PATH = path.join\\(process.env.HOME, '.config/google-calendar-mcp/tokens-gmail.json'\\);\nconst tokenFileData = JSON.parse\\(fs.readFileSync\\(TOKEN_PATH, 'utf-8'\\)\\);\nconst tokenData = tokenFileData['test'];\n\nconst credPath = './credentials.json';\nconst credData = JSON.parse\\(fs.readFileSync\\(credPath, 'utf-8'\\)\\);\nconst oauth2Client = new OAuth2Client\\(\n  credData.installed.client_id,\n  credData.installed.client_secret,\n  credData.installed.redirect_uris[0]\n\\);\noauth2Client.setCredentials\\(tokenData\\);\n\nconst gmail = google.gmail\\({ version: 'v1', auth: oauth2Client }\\);\nconst labels = await gmail.users.labels.list\\({ userId: 'me' }\\);\nconst communityLabels = labels.data.labels.filter\\(l => l.name.includes\\('Events/Community'\\)\\);\nconsole.log\\('Community labels:', communityLabels.map\\(l => \\({ name: l.name, id: l.id }\\)\\)\\);\n\")",
-      "Bash(ACCOUNT_MODE=normal node create-community-sublabels.mjs)",
-      "Bash(ACCOUNT_MODE=normal node -e \"\nimport fs from 'fs';\nimport path from 'path';\nimport { google } from 'googleapis';\nimport { OAuth2Client } from 'google-auth-library';\n\nconst TOKEN_PATH = path.join\\(process.env.HOME, '.config/google-calendar-mcp/tokens-gmail.json'\\);\nconst tokenFileData = JSON.parse\\(fs.readFileSync\\(TOKEN_PATH, 'utf-8'\\)\\);\nconst tokenData = tokenFileData['normal'];\n\nconst credPath = './credentials.json';\nconst credData = JSON.parse\\(fs.readFileSync\\(credPath, 'utf-8'\\)\\);\nconst oauth2Client = new OAuth2Client\\(\n  credData.installed.client_id,\n  credData.installed.client_secret,\n  credData.installed.redirect_uris[0]\n\\);\noauth2Client.setCredentials\\(tokenData\\);\n\nconst gmail = google.gmail\\({ version: 'v1', auth: oauth2Client }\\);\n\n// Get the Events/Community label ID\nconst labels = await gmail.users.labels.list\\({ userId: 'me' }\\);\nconst communityLabel = labels.data.labels.find\\(l => l.name === 'Events/Community'\\);\n\nif \\(communityLabel\\) {\n  console.log\\('Found Community label:', communityLabel.id\\);\n  \n  // List emails in this label\n  const messages = await gmail.users.messages.list\\({\n    userId: 'me',\n    labelIds: [communityLabel.id],\n    maxResults: 20\n  }\\);\n  \n  if \\(messages.data.messages\\) {\n    console.log\\('Sample emails:'\\);\n    for \\(const msg of messages.data.messages.slice\\(0, 5\\)\\) {\n      const details = await gmail.users.messages.get\\({\n        userId: 'me',\n        id: msg.id,\n        format: 'metadata',\n        metadataHeaders: ['Subject']\n      }\\);\n      const subject = details.data.payload.headers.find\\(h => h.name === 'Subject'\\)?.value;\n      console.log\\('  -', subject\\);\n    }\n  }\n} else {\n  console.log\\('Community label not found'\\);\n}\n\")",
-      "Bash(ACCOUNT_MODE=normal node -e \"\nimport fs from 'fs';\nimport path from 'path';\nimport { google } from 'googleapis';\nimport { OAuth2Client } from 'google-auth-library';\n\nconst TOKEN_PATH = path.join\\(process.env.HOME, '.config/google-calendar-mcp/tokens-gmail.json'\\);\nconst tokenFileData = JSON.parse\\(fs.readFileSync\\(TOKEN_PATH, 'utf-8'\\)\\);\nconst tokenData = tokenFileData['normal'];\n\nconst credPath = './credentials.json';\nconst credData = JSON.parse\\(fs.readFileSync\\(credPath, 'utf-8'\\)\\);\nconst oauth2Client = new OAuth2Client\\(\n  credData.installed.client_id,\n  credData.installed.client_secret,\n  credData.installed.redirect_uris[0]\n\\);\noauth2Client.setCredentials\\(tokenData\\);\n\nconst gmail = google.gmail\\({ version: 'v1', auth: oauth2Client }\\);\n\n// Test a search query that should match\nconst testQuery = 'label:Label_4 AND subject:drawing';\nconsole.log\\('Testing query:', testQuery\\);\n\nconst result = await gmail.users.messages.list\\({\n  userId: 'me',\n  q: testQuery,\n  maxResults: 10\n}\\);\n\nconsole.log\\('Results:', result.data.messages?.length || 0, 'emails found'\\);\nif \\(result.data.messages?.length > 0\\) {\n  result.data.messages.slice\\(0, 3\\).forEach\\(m => {\n    console.log\\('  - Message ID:', m.id\\);\n  }\\);\n}\n\")",
-      "Bash(ACCOUNT_MODE=normal node label-remaining-community.mjs)",
-      "Bash(ACCOUNT_MODE=normal node -e \"\nimport fs from 'fs';\nimport path from 'path';\nimport { google } from 'googleapis';\nimport { OAuth2Client } from 'google-auth-library';\n\nconst TOKEN_PATH = path.join\\(process.env.HOME, '.config/google-calendar-mcp/tokens-gmail.json'\\);\nconst tokenFileData = JSON.parse\\(fs.readFileSync\\(TOKEN_PATH, 'utf-8'\\)\\);\nconst tokenData = tokenFileData['normal'];\n\nconst credPath = './credentials.json';\nconst credData = JSON.parse\\(fs.readFileSync\\(credPath, 'utf-8'\\)\\);\nconst oauth2Client = new OAuth2Client\\(\n  credData.installed.client_id,\n  credData.installed.client_secret,\n  credData.installed.redirect_uris[0]\n\\);\noauth2Client.setCredentials\\(tokenData\\);\n\nconst gmail = google.gmail\\({ version: 'v1', auth: oauth2Client }\\);\n\n// Get all Community emails\nconst allMessages = await gmail.users.messages.list\\({\n  userId: 'me',\n  labelIds: ['Label_4'],\n  maxResults: 500\n}\\);\n\n// Get emails already labeled\nconst subLabelIds = ['Label_31', 'Label_32', 'Label_33', 'Label_34', 'Label_35', 'Label_36', 'Label_37'];\nconst labeledMessages = await Promise.all\\(\n  subLabelIds.map\\(id =>\n    gmail.users.messages.list\\({ userId: 'me', labelIds: [id], maxResults: 500 }\\)\n  \\)\n\\);\n\nconst labeledIds = new Set\\(\\);\nlabeledMessages.forEach\\(result => {\n  result.data.messages?.forEach\\(m => labeledIds.add\\(m.id\\)\\);\n}\\);\n\nconst unlabeled = allMessages.data.messages?.filter\\(m => !labeledIds.has\\(m.id\\)\\) || [];\n\nconsole.log\\('Remaining unlabeled Community emails:'\\);\nfor \\(const msg of unlabeled\\) {\n  const details = await gmail.users.messages.get\\({\n    userId: 'me',\n    id: msg.id,\n    format: 'metadata',\n    metadataHeaders: ['Subject']\n  }\\);\n  const subject = details.data.payload.headers.find\\(h => h.name === 'Subject'\\)?.value || '\\(no subject\\)';\n  console.log\\('  -', subject\\);\n}\n\")",
-      "Bash(ACCOUNT_MODE=normal node label-final-community.mjs)",
-      "Bash(git init:*)",
-      "Bash(git config:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git checkout:*)",
-      "Bash(git remote:*)",
-      "Bash(git merge:*)",
-      "Bash(git push:*)",
-      "Bash(git rm:*)",
-      "Bash(git filter-repo:*)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node list-unread-emails.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node create-remaining-filters.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node mark-past-events-read.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node mark-archived-as-read.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node analyze-unread.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node mark-signoz-read.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node count-unread.mjs)",
-      "Bash(find:*)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node mark-product-updates-read.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node mark-product-updates-read-v2.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal timeout 30 node analyze-unread.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node quick-status.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node show-remaining-unread.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node label-remaining-unread.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node verify-labels.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node status-all-labels.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node mark-all-labeled-read.mjs)",
-      "Bash(git diff:*)",
-      "Bash(grep -l \"OAuth2Client\\\\|google.gmail\\\\|TOKEN_PATH\" /Users/alyshialedlie/code/is-internal/bot-army-google-calendar-mcp/*.mjs)",
-      "Bash(grep -n \"batchModify\\\\|batchSize\\\\|Promise.all\" mark-*.mjs apply-*.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal timeout 30 node show-remaining-unread.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node final-cleanup.mjs)",
-      "Bash(git reset:*)",
-      "Skill(git-commit-smart)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node check-google-dev-labels.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node label-google-dev-forums.mjs)",
-      "Bash(grep:*)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node summarize-remaining.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node archive-old-meeting-responses.mjs)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=./credentials.json ACCOUNT_MODE=normal node describe-internal.mjs)",
-      "Bash(git check-ignore:*)",
-      "Bash(git clean:*)",
-      "Bash(git filter-branch:*)",
-      "Bash(git stash:*)",
-      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch --tree-filter 'rm -f credentials.json' -f HEAD)",
-      "Bash(chmod +x scripts/check-duplicates.mjs)",
-      "Bash(npm install:*)",
-      "Bash(npm info:*)",
-      "Bash(npm search:*)",
-      "Bash(npm ls:*)",
-      "Bash(for f:*)",
-      "Bash(do echo:*)",
-      "Bash(grep -l \"const USER_ID = ''''me''''\" *.mjs)",
-      "Bash(do)",
-      "Bash(echo \"=== $f ===\")",
-      "Read(//Users/alyshialedlie/code/is-internal/bot-army-google-calendar-mcp/**)",
-      "Bash(done)",
-      "Bash(do if:*)",
-      "Bash(then echo:*)",
-      "Bash(/tmp/backlog-summary.txt:*)",
-      "Read(//tmp/**)",
-      "Bash(for file:*)",
-      "Skill(ralph-loop:cancel-ralph)",
-      "Bash(sort -k2 -hr)",
-      "Bash(du -sh /Users/alyshialedlie/code/is-internal/bot-army-google-calendar-mcp/*)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=/Users/alyshialedlie/code/is-internal/bot-army-google-calendar-mcp/gcp-oauth.keys.json npx vite-node search-events.ts)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=/Users/alyshialedlie/code/is-internal/bot-army-google-calendar-mcp/gcp-oauth.keys.json npm run auth)",
-      "Bash(doppler -v)",
-      "Bash(doppler auth:*)",
-      "Bash(doppler me:*)",
-      "Bash(bash /Users/alyshialedlie/code/is-internal/bot-army-google-calendar-mcp/scripts/setup-doppler-tests.sh)",
-      "Bash(doppler run:*)",
-      "Bash(GOOGLE_OAUTH_CREDENTIALS=/Users/alyshialedlie/code/is-internal/bot-army-google-calendar-mcp/gcp-oauth.keys.json doppler run --project integrity-studio --config dev -- npm run test:integration)",
-      "Bash(ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=/Users/alyshialedlie/code/is-internal/bot-army-google-calendar-mcp/gcp-oauth.keys.json doppler run --project integrity-studio --config dev -- npm run test:integration)",
-      "Bash(GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=/Users/alyshialedlie/code/is-internal/bot-army-google-calendar-mcp/gcp-oauth.keys.json doppler run --project integrity-studio --config dev -- npm run test:integration)",
-      "Bash(xargs -I {} basename {})",
-      "Skill(ralph-loop:ralph-loop)",
-      "Bash(echo \"Exit code: $?\")",
-      "Skill(session-backlog)",
-      "mcp__plugin_repomix-mcp_repomix__pack_codebase",
-      "mcp__plugin_repomix-mcp_repomix__grep_repomix_output",
-      "Read(//Users/alyshialedlie/.claude/tsc-cache/**)",
-      "Bash(npx vitest:*)",
-      "mcp__plugin_repomix-mcp_repomix__pack_remote_repository",
-      "mcp__plugin_repomix-mcp_repomix__read_repomix_output",
-      "Bash(docs/BACKLOG.md:*)",
-      "Bash(cat node_modules/simple-rrule/dist/dates/*.d.ts)",
-      "Bash(npm list:*)",
-      "mcp__plugin_repomix-mcp_repomix__attach_packed_output",
-      "Bash(npx repomix:*)",
-      "Bash(bash scripts/repomix/generate-repo-compressed.sh . docs/repomix/repo-compressed.xml)",
-      "Bash(git restore:*)"
-    ]
-  }
-}
-</file>
 
 <file path="examples/http-client.js">
 async function main()
@@ -1291,58 +1161,6 @@ Thumbs.db
 *.tmp
 *.temp
 .cache/
-</file>
-
-<file path="AGENTS.md">
-# Repository Guidelines
-
-## Project Structure & Modules
-- Source: `src/` (entry `index.ts`), builds to `build/` via esbuild.
-- Handlers: `src/handlers/core/` (tool implementations), utilities in `src/handlers/utils/`.
-- Schemas: `src/schemas/` (Zod definitions shared between server and tests).
-- Services: `src/services/` (conflict detection, helpers), transports in `src/transports/`.
-- Auth: `src/auth/`, OAuth helper `src/auth-server.ts`.
-- Tests: `src/tests/unit/` and `src/tests/integration/`.
-- Docs: `docs/` (auth, testing, deployment, architecture).
-
-## Build, Test, and Dev
-- `npm run build`: Bundle to `build/index.js` and `build/auth-server.js` (Node 18 ESM).
-- `npm start`: Run stdio transport (for Claude Desktop). Example: `npx @cocal/google-calendar-mcp`.
-- `npm run start:http`: HTTP transport on `:3000` (use `start:http:public` for `0.0.0.0`).
-- `npm test`: Vitest unit tests. `npm run test:integration` for Google/LLM integration.
-- `npm run dev`: Helper menu (auth, http, docker, targeted test runs).
-- `npm run auth`: Launch local OAuth flow (stores tokens in `~/.config/google-calendar-mcp`).
-
-## Coding Style & Naming
-- TypeScript, strict typing (avoid `any`). 2‑space indentation.
-- Files: PascalCase for handlers/services (e.g., `GetEventHandler.ts`), camelCase for functions/vars.
-- ESM modules with `type: module`; prefer named exports.
-- Validation with Zod in `src/schemas/`; validate inputs at handler boundaries.
-- Linting: `npm run lint` (TypeScript no‑emit checks).
-
-## Testing Guidelines
-- Framework: Vitest with V8 coverage (`npm run test:coverage`).
-- Unit test names: `*.test.ts` mirroring source paths (e.g., `src/tests/unit/handlers/...`).
-- Integration requires env: `GOOGLE_OAUTH_CREDENTIALS`, `TEST_CALENDAR_ID`; authenticate with `npm run dev auth:test`.
-- Use `src/tests/integration/test-data-factory.ts` utilities; ensure tests clean up created events.
-
-## Commit & PRs
-- Commits: Imperative mood, concise subject, optional scope. Examples:
-  - `Fix timezone handling for list-events`
-  - `services(conflict): improve duplicate detection`
-- Reference issues/PRs with `(#NN)` when applicable.
-- PRs: clear description, rationale, screenshots/log snippets when debugging; link issues; list notable env/config changes.
-- Required before PR: `npm run lint && npm test && npm run build` (and relevant integration tests if affected).
-
-## Security & Config
-- Keep credentials out of git; use `.env` and `GOOGLE_OAUTH_CREDENTIALS` path.
-- Test vs normal accounts controlled via `GOOGLE_ACCOUNT_MODE`; prefer `test` for integration.
-- Tokens stored locally in `~/.config/google-calendar-mcp/tokens.json`.
-
-## Adding New Tools (MCP)
-- Implement handler in `src/handlers/core/YourToolHandler.ts` extending `BaseToolHandler`.
-- Define/extend Zod schema in `src/schemas/` and add unit + integration tests.
-- Handlers are auto‑registered; update docs if adding public tool names.
 </file>
 
 <file path="analyze_emails.mjs">
@@ -2618,7 +2436,10 @@ export async function resolveLabelIds(gmail, labelNames)
       ".env.*.local",
       ".cache/**",
       "**/README.md",
-      "instructions/**"
+      "instructions/**",
+      ".claude/settings.local.json",
+      "AGENTS.md",
+      "CLAUDE.md"
     ]
   },
   "security": {
@@ -3444,105 +3265,6 @@ import {
   createTimeObject,
   applyTimezone,
 } from '../../../utils/timezone-utils.js';
-</file>
-
-<file path="CLAUDE.md">
-# Google Calendar & Gmail MCP - Project Guidelines
-
-## Auth & Development
-
-**OAuth Setup** (test mode):
-```bash
-export ACCOUNT_MODE=test CALENDARMCP_TOKEN_PATH=~/.config/google-calendar-mcp/tokens.json
-npm run auth  # Creates tokens.json; repeat for multiple accounts
-npm run verify-tokens  # Verify auth status
-```
-
-**Gmail Tokens:**
-```bash
-node auth-gmail.mjs  # Creates tokens-gmail.json (separate from calendar)
-node check-gmail.mjs  # Quick unread count
-```
-
-**Development:**
-```bash
-npm install | npm run build | npm run dev | npm test
-```
-
-**Auth Details:**
-- Tokens stored in `~/.config/google-calendar-mcp/tokens.json` (calendar) and `tokens-gmail.json` (Gmail)
-- `ACCOUNT_MODE` selects which account; TokenManager auto-refreshes 5 min before expiry
-- Test tokens expire after 7 days; set env vars before `npm run auth` or in `claude_desktop_config.json`
-- Token files use 0600 permissions; TokenManager (src/auth/tokenManager.ts) handles multi-account lifecycle
-
-**Test Status:**
-- ✅ Core handler tests (CreateEventHandler, GetEventHandler, GetCurrentTimeHandler)
-- ✅ Type-safe content assertions using `{ type: 'text'; text: string }` instead of `as any`
-- ✅ Integration tests for conflict detection via MCP protocol (real server, real API)
-- ✅ 486/486 tests passing
-
-## Script Development
-
-**Code Quality:**
-- `npm run check-duplicates` — Detect repeated code blocks (scans src/ with 6-line window)
-
-**Avoid bash heredocs with pipes** (causes "parse error near |'"):
-- Use Write tool or create `.mjs` files in project root instead of `/tmp`
-- `/tmp` scripts can't access `node_modules`; use project root for npm imports
-- If using heredoc, keep it simple (no pipes, special chars, or complex syntax)
-
-**Code Quality:**
-- Avoid dead variables; use derived values instead
-- Remove comments that duplicate code (keep only non-obvious WHY)
-- Extract repeated patterns into shared utilities
-- Use named constants instead of magic strings
-- Don't mutate input params; create local copies
-- Prefer direct operations over redundant existence checks (TOCTOU)
-- Array.slice() naturally clamps; Math.min unnecessary
-
-## Email Organization System
-
-Core pattern: Label → conditional archive (keep future events, important items, archive routine notifications).
-
-**Key Scripts:**
-```bash
-node list-unread-emails.mjs           # Summary by category/sender
-node summarize-remaining.mjs          # Remaining uncategorized (internal work, forums)
-node describe-internal.mjs            # Detailed breakdown of internal team emails (Chandra, Jordan, John, Alex)
-node create-remaining-filters.mjs     # Create filters (Product Updates, Communities, Services)
-node apply-filters-to-unread.mjs      # Apply filters to current unread
-node protect-important-inbox.mjs      # Protect: Cloudflare alerts, Calendly, Capital City Village, Investment Banking
-node filter-events-by-date.mjs        # Events: future=keep, past=archive
-node archive-signoz-dmarc.mjs         # Monitoring/DMARC auto-archive
-```
-
-**Categories:**
-| Type | Treatment | Senders/Items |
-|------|-----------|---|
-| Protected | Never archive | Cloudflare rate limits, Calendly support, CCV services, IB meetings |
-| Events | Future keep, past archive | International House, Meetup, Eventbrite, Calendly reminders |
-| Monitoring | Archive | SigNoz alerts, DMARC reports |
-| Product Updates | Label + archive | Google Cloud/Workspace, HubSpot, OpenAI, Postman, Resend, Yodlee, Adapty, DataHub |
-| Communities | Keep | Women Techmakers |
-| Services | Archive | FoundersCard, Link, Heroku, Zapier, Zillow |
-| Billing | Conditional | GW invoices, GC charges (rate-limit aware) |
-
-**Shared Utilities:**
-- `lib/gmail-client.mjs` - Authenticated Gmail client factory; use `createGmailClient()` in all scripts (✅ Applied to 65+ scripts)
-- `lib/gmail-label-utils.mjs` - Label resolution utilities (NEW - see L6 below)
-  - `buildLabelCache(gmail)` - Fetch all labels once at startup
-  - `resolveLabelId(gmail, labelName, labelCache)` - Cached single label lookup
-  - `resolveLabelIds(gmail, labelNames)` - Batch label resolution
-- `lib/gmail-batch.mjs` - Batch filter operations for 10-100x speedup
-- `lib/date-based-filter.mjs` - Pure utility for date parsing (ISO, US, text, weekday patterns; no mutations)
-
-**Code Quality:**
-- **Established patterns:** Refactored scripts use best practices (error handling, named constants, getHeader() helpers, parallel `Promise.all` for list + detail fetches)
-- **Performance:** Use `Promise.all` for concurrent list + detail fetches (not serial loops)
-- **L6 Pattern (NEW):** Dynamic label ID resolution for portability across accounts
-  - See `docs/LABEL-RESOLUTION-GUIDE.md` for complete pattern documentation
-  - Replace hardcoded `Label_N` IDs with `labelCache.get('Label/Name')`
-  - Enables scripts to work across different Gmail accounts with different label IDs
 </file>
 
 <file path="src/handlers/core/eventManipulationUtils.ts">
@@ -4393,6 +4115,24 @@ import { OAuth2Client } from 'google-auth-library';
 import { makeEvent, getTextContent, createCreateEventArgs, makeCalendarMock, createConflictEventArgs, createEventWithExtendedProperties, createFullEventArgs, STANDARD_ATTACHMENTS } from '../helpers/index.js';
 </file>
 
+<file path="src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { OAuth2Client } from 'google-auth-library';
+import { calendar_v3, google } from 'googleapis';
+import { UpdateEventHandler } from '../../../handlers/core/UpdateEventHandler.js';
+import { UpdateEventInput, ToolSchemas } from '../../../tools/registry.js';
+import { makeEvent, makeCalendarMock } from '../helpers/factories.js';
+import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
+⋮----
+function createMockEvent(overrides: Partial<calendar_v3.Schema$Event> =
+function createMockRecurringEvent(overrides: Partial<calendar_v3.Schema$Event> =
+function buildUpdateEventInput(overrides: Partial<UpdateEventInput> =
+function setupMocks(
+    eventData: calendar_v3.Schema$Event,
+    insertData?: calendar_v3.Schema$Event
+): void
+</file>
+
 <file path="src/tests/unit/schemas/validators.test.ts">
 import { describe, it, expect } from 'vitest';
 import { ToolSchemas } from '../../../tools/registry.js';
@@ -4499,24 +4239,6 @@ export function makeCalendarMock(overrides: {
 export function createFullEventArgs(
   overrides: Record<string, any> = {}
 ): Record<string, any>
-</file>
-
-<file path="src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { OAuth2Client } from 'google-auth-library';
-import { calendar_v3, google } from 'googleapis';
-import { UpdateEventHandler } from '../../../handlers/core/UpdateEventHandler.js';
-import { UpdateEventInput, ToolSchemas } from '../../../tools/registry.js';
-import { makeEvent, makeCalendarMock } from '../helpers/factories.js';
-import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
-⋮----
-function createMockEvent(overrides: Partial<calendar_v3.Schema$Event> =
-function createMockRecurringEvent(overrides: Partial<calendar_v3.Schema$Event> =
-function buildUpdateEventInput(overrides: Partial<UpdateEventInput> =
-function setupMocks(
-    eventData: calendar_v3.Schema$Event,
-    insertData?: calendar_v3.Schema$Event
-): void
 </file>
 
 <file path="src/tests/unit/helpers/index.ts">

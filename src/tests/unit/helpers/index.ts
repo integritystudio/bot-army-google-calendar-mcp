@@ -1,5 +1,5 @@
 export { getTextContent, tryGetTextContent, assertTextContentContains } from './content.js';
-export { makeEvent, makeEventWithCalendarId, makeEvents, makeGaxiosError, makeCalendarMock } from './factories.js';
+export { makeEvent, makeEventWithCalendarId, makeEvents, makeGaxiosError, makeCalendarMock, makeFullEventWithAttendeesAndReminders, makeEventWithAttachments, STANDARD_ATTACHMENTS } from './factories.js';
 export { createBuilder } from './testBuilder.js';
 export {
   SYSTEM_FIELDS,

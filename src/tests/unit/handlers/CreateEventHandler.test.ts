@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
 import { OAuth2Client } from 'google-auth-library';
-import { makeEvent, getTextContent, createCreateEventArgs, makeCalendarMock, createConflictEventArgs, createEventWithAttendeesAndReminders, createEventWithExtendedProperties, createEventWithAttachments } from '../helpers/index.js';
+import { makeEvent, getTextContent, createCreateEventArgs, makeCalendarMock, createConflictEventArgs, createEventWithExtendedProperties, makeFullEventWithAttendeesAndReminders, makeEventWithAttachments, STANDARD_ATTACHMENTS } from '../helpers/index.js';
 
 // Mock the googleapis module
 vi.mock('googleapis', () => ({
@@ -54,18 +54,7 @@ describe('CreateEventHandler', () => {
   });
 
   describe('Basic Event Creation', () => {
-    const FULL_EVENT = {
-      eventId: 'full-event',
-      summary: 'Full Event',
-      description: 'Event description',
-      location: 'Conference Room A',
-      attendees: [{ email: 'test@example.com' }],
-      colorId: '5',
-      reminders: {
-        useDefault: false,
-        overrides: [{ method: 'email' as const, minutes: 30 }]
-      }
-    };
+    const FULL_EVENT = makeFullEventWithAttendeesAndReminders();
 
     it('should create an event without custom ID', async () => {
       const mockCreatedEvent = makeEvent({
@@ -394,19 +383,7 @@ describe('CreateEventHandler', () => {
   });
 
   describe('Attachments', () => {
-    const ATTACHMENTS = [
-      {
-        fileUrl: 'https://docs.google.com/document/d/123',
-        title: 'Meeting Agenda',
-        mimeType: 'application/vnd.google-apps.document'
-      },
-      {
-        fileUrl: 'https://drive.google.com/file/d/456',
-        title: 'Presentation',
-        mimeType: 'application/vnd.google-apps.presentation',
-        fileId: '456'
-      }
-    ];
+    const ATTACHMENTS = STANDARD_ATTACHMENTS;
 
     it('should create event with attachments', async () => {
       const mockCreatedEvent = makeEvent({

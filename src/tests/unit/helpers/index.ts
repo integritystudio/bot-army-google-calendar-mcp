@@ -14,4 +14,4 @@ export {
   createConflictEventArgs,
   createEventWithExtendedProperties
 } from './event-test-data.js';
-export { setupListEventsHandler } from './handler-setup.js';
+export { setupListEventsHandler, createGoogleCalendarMocks } from './handler-setup.js';

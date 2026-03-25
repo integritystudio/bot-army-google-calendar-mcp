@@ -678,36 +678,6 @@ export function createGmailClient()
 // are coherent at the time of OAuth2Client creation.
 </file>
 
-<file path="scripts/repomix/repomix-compressed.config.json">
-{
-  "output": {
-    "filePath": "docs/repomix/repo-compressed.xml",
-    "style": "xml",
-    "removeComments": true,
-    "removeEmptyLines": true,
-    "showLineNumbers": true,
-    "topFilesLength": 10,
-    "copyToClipboard": false
-  },
-  "ignore": {
-    "useGitignore": true,
-    "useDefaultPatterns": true,
-    "customPatterns": [
-      "docs/**",
-      "scripts/repomix/*.sh",
-      "*.tsbuildinfo",
-      ".env.*.local",
-      ".cache/**",
-      "**/README.md",
-      "instructions/**"
-    ]
-  },
-  "security": {
-    "enableSecurityCheck": true
-  }
-}
-</file>
-
 <file path="scripts/repomix/repomix-docs.config.json">
 {
   "output": {
@@ -734,60 +704,6 @@ export function createGmailClient()
       "venv/**",
       "node_modules/**",
       "docs/repomix/**"
-    ]
-  },
-  "security": {
-    "enableSecurityCheck": true
-  }
-}
-</file>
-
-<file path="scripts/repomix/repomix.config.json">
-{
-  "output": {
-    "filePath": "repomix-output.xml",
-    "style": "xml",
-    "removeComments": false,
-    "removeEmptyLines": false,
-    "showLineNumbers": true,
-    "topFilesLength": 20,
-    "copyToClipboard": false,
-    "instructionFilePath": "CLAUDE.md"
-  },
-  "include": [
-    "src/**/*.py",
-    "scripts/**/*.py",
-    "tests/**/*.py",
-    "examples/**/*.py",
-"docs/**/*.md",
-    "pyproject.toml",
-    "requirements.txt",
-    "CLAUDE.md",
-    "README.md",
-    "playwright.config.ts",
-    "tests/e2e/**/*.ts"
-  ],
-  "ignore": {
-    "useGitignore": true,
-    "useDefaultPatterns": true,
-    "customPatterns": [
-      "venv/**",
-      "node_modules/**",
-      ".ast-grep-backups/**",
-      "src/.ast-grep-backups/**",
-      "repomix-output.xml",
-      "scripts/repomix/**",
-      "results/**",
-      "logs/**",
-      "playwright-report/**",
-      "test-results/**",
-      "*.egg-info/**",
-      "**/__pycache__/**",
-      "*.pyc",
-      "lib/**",
-      "bin/**",
-      "schema_org_file_system.egg-info/**",
-      "_site/**"
     ]
   },
   "security": {
@@ -2405,6 +2321,67 @@ export async function resolveLabelId(gmail, labelName, labelCache)
  * @returns {Promise<Map<string, string>>} Map of label names to their IDs
  */
 export async function resolveLabelIds(gmail, labelNames)
+</file>
+
+<file path="scripts/repomix/repomix-compressed.config.json">
+{
+  "output": {
+    "filePath": "docs/repomix/repo-compressed.xml",
+    "style": "xml",
+    "removeComments": true,
+    "removeEmptyLines": true,
+    "showLineNumbers": true,
+    "topFilesLength": 10,
+    "copyToClipboard": false
+  },
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "docs/**",
+      "scripts/repomix/*.sh",
+      "*.tsbuildinfo",
+      ".env.*.local",
+      ".cache/**",
+      "**/README.md",
+      "instructions/**"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}
+</file>
+
+<file path="scripts/repomix/repomix.config.json">
+{
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "removeComments": true,
+    "removeEmptyLines": true,
+    "showLineNumbers": true,
+    "topFilesLength": 20,
+    "copyToClipboard": false,
+    "instructionFilePath": "CLAUDE.md"
+  },
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "docs/**",
+      "scripts/repomix/*.sh",
+      "*.tsbuildinfo",
+      ".env.*.local",
+      ".cache/**",
+      "**/README.md",
+      "instructions/**"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}
 </file>
 
 <file path="scripts/setup-doppler-tests.sh">

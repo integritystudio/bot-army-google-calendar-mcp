@@ -1,3 +1,12 @@
+4d13b70 2026-03-25 chore(repomix): add compressed config and clean up stale root files
+  docs/GMAIL_TOOLS_GUIDE.md
+  docs/repomix/gitlog-top20.txt
+  docs/repomix/repo-compressed.xml
+  docs/repomix/repomix-docs.xml
+  docs/repomix/repomix-git-ranked.xml
+  docs/repomix/repomix.xml
+  docs/repomix/token-tree.txt
+
 f467d79 2026-03-25 docs: add M5 backlog item for simple-rrule wrapper pattern audit
   docs/BACKLOG.md
 
@@ -23,7 +32,6 @@ d3511ea 2026-03-25 refactor(tests): import date-utils directly instead of via fa
   src/utils/date-utils.ts
 
 9813cd5 2026-03-24 refactor(tests): extract assertion and date-time constants to reduce duplication
-  src/tests/unit/handlers/BatchListEvents.test.ts
   src/tests/unit/utils/date-utils.test.ts
 
 ea42f67 2026-03-24 refactor(tests): consolidate test data factories and remove duplication
@@ -37,7 +45,6 @@ ca55c5d 2026-03-24 refactor(tests): export TIME_MIN/TIME_MAX from test-configs a
   docs/BACKLOG.md
 
 8f0af48 2026-03-24 refactor(tests): eliminate duplicate setup and parameterize test tables
-  src/tests/unit/handlers/BatchListEvents.test.ts
   src/tests/unit/utils/date-utils.test.ts
 
 77e1bcc 2026-03-24 refactor(tests): migrate handler tests to makeCalendarMock factory
@@ -47,21 +54,15 @@ d1e7c1d 2026-03-24 refactor(tests): consolidate integration test helpers and han
   docs/BACKLOG.md
 
 5c97b59 2026-03-24 fix: export makeCalendarMock and correct makeEvent API calls in BatchListEvents tests
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
   docs/repomix/token-tree.txt
-  src/tests/unit/handlers/BatchListEvents.test.ts
 
 5613fc5 2026-03-24 docs(backlog): record test infrastructure consolidation opportunities
   docs/BACKLOG.md
-
-6cda351 2026-03-24 refactor(tests): extract LIST_EVENTS_API_DEFAULTS and DUPLICATE_SUGGESTION constants
-  src/tests/unit/handlers/BatchListEvents.test.ts
-
-9389b88 2026-03-24 refactor(test): simplify batch list events unit tests
-  src/tests/unit/handlers/BatchListEvents.test.ts
 
 22f1932 2026-03-24 docs(backlog): record errorFormatting utilities refactoring completion
   docs/BACKLOG.md
@@ -79,7 +80,6 @@ da985e2 2026-03-24 refactor(tests): apply factory pattern to handler and service
   src/tests/unit/handlers/CreateEventHandler.test.ts
 
 538ca17 2026-03-24 refactor(tests): use groupBy utility in BatchListEvents test
-  src/tests/unit/handlers/BatchListEvents.test.ts
   src/tests/unit/handlers/CreateEventHandler.test.ts
 
 1eb9c88 2026-03-24 docs(backlog): add L11 event building consolidation tracking
@@ -100,6 +100,7 @@ f89bdf8 2026-03-24 feat(tests): add generic test builder factory and consolidate
 
 5fd9ad7 2026-03-24 docs: update CLAUDE.md, BACKLOG, and repomix snapshots
   docs/BACKLOG.md
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -107,7 +108,6 @@ f89bdf8 2026-03-24 feat(tests): add generic test builder factory and consolidate
   docs/repomix/token-tree.txt
 
 6065ecc 2026-03-24 refactor(handlers): extract batchUtils, unify event building in RecurringEventHelpers
-  src/tests/unit/handlers/BatchListEvents.test.ts
   src/tests/unit/handlers/RecurringEventHelpers.test.ts
 
 c1413f5 2026-03-24 refactor(schemas): move ISO 8601 validation to date-utils
@@ -142,6 +142,7 @@ e9a1d5f 2026-03-24 docs(backlog): update status to reflect test architecture com
 
 74a15a0 2026-03-24 docs(backlog): mark issues 3, 4, 5 resolved with Option A implementation
   docs/BACKLOG.md
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -149,6 +150,7 @@ e9a1d5f 2026-03-24 docs(backlog): update status to reflect test architecture com
   docs/repomix/token-tree.txt
 
 b9cae30 2026-03-24 test(integration): add conflict detection integration tests via MCP protocol
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -206,6 +208,7 @@ b33938a 2026-03-24 refactor(tests): implement mock strategy with realistic API r
   src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts
 
 e0fb9d1 2026-03-24 refactor(gmail-labels): apply shared lib helpers to create-* scripts
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -244,9 +247,6 @@ ba96d9d 2026-03-24 docs(BACKLOG): Final completion assessment - 91% done, 2 item
 
 18961de 2026-03-24 docs(BACKLOG): update test suite status (492/494 passing, 99.6%)
   docs/BACKLOG.md
-
-d15ac9b 2026-03-24 fix: BatchListEvents test error message assertion
-  src/tests/unit/handlers/BatchListEvents.test.ts
 
 9d5ea3c 2026-03-24 docs(BACKLOG): clarify L4 completion at practical limit (80%)
   docs/BACKLOG.md
@@ -316,7 +316,6 @@ bac1531 2026-03-23 refactor(CreateEventHandler.test): consolidate getTextContent
 02fada6 2026-03-23 refactor(tests): consolidate text content access with shared helper
   scripts/repomix/deploy-traditional-server.sh
   scripts/repomix/verify-bugfixes.sh
-  src/tests/unit/handlers/BatchListEvents.test.ts
 
 83385e5 2026-03-23 refactor(gmail): apply DRY principles across all Gmail handlers
   src/tools/registry.ts
@@ -373,11 +372,9 @@ cb2d2f4 2026-03-23 feat: add label verification and bulk labeling scripts
   README.md
 
 ed920d0 2026-03-23 chore: initial commit with google calendar mcp project
-  GMAIL_TOOLS_GUIDE.md
   README.md
   docs/BACKLOG.md
   package-lock.json
-  src/tests/unit/handlers/BatchListEvents.test.ts
   src/tests/unit/handlers/CreateEventHandler.test.ts
   src/tests/unit/handlers/RecurringEventHelpers.test.ts
   src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts

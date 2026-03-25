@@ -3,7 +3,7 @@
  */
 
 export interface ExtendedEvent {
-  calendarId?: string;
+  calendarId: string;
   [key: string]: any;
 }
 

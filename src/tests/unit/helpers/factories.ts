@@ -409,7 +409,7 @@ export function makeCalendarMock(overrides: {
       patch: overrides.patch ?? vi.fn(),
       insert: overrides.insert ?? vi.fn(),
       list: overrides.list ?? vi.fn(),
-    },
+    } as any,
     calendarList: {
       get: overrides.calendarListGet ?? vi.fn(),
     },

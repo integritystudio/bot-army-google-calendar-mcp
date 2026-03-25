@@ -135,7 +135,7 @@ export class RecurringEventHelpers {
    */
   buildUpdateRequestBody(args: UpdateEventInput, defaultTimeZone?: string): calendar_v3.Schema$Event {
     const effectiveTimeZone = args.timeZone || defaultTimeZone;
-    const coreFields = buildCoreEvent(args, effectiveTimeZone);
+    const coreFields = buildCoreEvent(args, effectiveTimeZone || 'UTC');
     const optionalFields = buildOptionalEventFields(args);
 
     const requestBody: calendar_v3.Schema$Event = {
@@ -145,14 +145,18 @@ export class RecurringEventHelpers {
 
     // Remove undefined and null values, but keep empty strings/arrays
     Object.keys(requestBody).forEach(key => {
-      if (requestBody[key] === undefined || requestBody[key] === null) {
-        delete requestBody[key];
+      if ((requestBody as any)[key] === undefined || (requestBody as any)[key] === null) {
+        delete (requestBody as any)[key];
       }
     });
 
     // Apply timezone if provided, ensures start/end objects exist with timezone set
     if (effectiveTimeZone) {
-      const { start, end } = applyTimezone(requestBody.start, requestBody.end, effectiveTimeZone);
+      const { start, end } = applyTimezone(
+        requestBody.start as any,
+        requestBody.end as any,
+        effectiveTimeZone
+      );
       requestBody.start = start;
       requestBody.end = end;
     }

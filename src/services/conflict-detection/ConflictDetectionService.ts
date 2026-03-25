@@ -73,16 +73,23 @@ export class ConflictDetectionService {
     // If we have timezone-naive datetimes with a timezone field, convert them to proper RFC3339
     const needsConversion = timezone && timeMin && !hasTimezoneInDatetime(timeMin);
 
-    let searchTimeMin = timeMin;
-    let searchTimeMax = timeMax;
+    let searchTimeMin: string | undefined = timeMin;
+    let searchTimeMax: string | undefined = timeMax;
 
     if (needsConversion) {
-      ({ timeMin: searchTimeMin, timeMax: searchTimeMax } = resolveTimeRange(timeMin, timeMax, timezone));
+      const timeRange = resolveTimeRange(timeMin!, timeMax!, timezone!);
+      searchTimeMin = timeRange.timeMin;
+      searchTimeMax = timeRange.timeMax;
     }
 
     // Check each calendar
     for (const checkCalendarId of calendarsToCheck) {
       try {
+        // Only search if we have valid time bounds
+        if (!searchTimeMin || !searchTimeMax) {
+          continue;
+        }
+
         // Get events in the search time range, passing timezone for proper interpretation
         const events = await this.getEventsInTimeRange(
           oauth2Client,

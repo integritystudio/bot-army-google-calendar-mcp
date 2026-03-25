@@ -417,16 +417,14 @@ export function makeCalendarMock(overrides: {
 }
 
 /**
- * Create an event with attendees and reminders (full event fixture).
- * Common pattern used across multiple test files for consistency.
- * @param overrides Additional properties
- * @returns Event with attendees, reminders, location, and description
+ * Create event creation args with attendees and reminders (full event fixture).
+ * Used for testing event creation with all common fields populated.
  */
-export function makeFullEventWithAttendeesAndReminders(
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event {
-  return makeEvent({
-    id: 'full-event',
+export function createFullEventArgs(
+  overrides: Record<string, any> = {}
+): Record<string, any> {
+  return {
+    eventId: 'full-event',
     summary: 'Full Event',
     description: 'Event description',
     location: 'Conference Room A',
@@ -437,31 +435,15 @@ export function makeFullEventWithAttendeesAndReminders(
       overrides: [{ method: 'email', minutes: 30 }]
     },
     ...overrides
-  });
+  };
 }
 
-/**
- * Create an event with multiple attachments.
- * Used for testing attachment handling in event operations.
- * @param overrides Additional properties
- * @returns Event with document and presentation attachments
- */
-export function makeEventWithAttachments(
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event {
-  return makeEvent({
-    id: 'event-with-attachments',
-    summary: 'Meeting with Documents',
-    attachments: STANDARD_ATTACHMENTS,
-    ...overrides
-  });
-}
 
 /**
  * Standard attachments fixture for testing.
- * Reusable across multiple tests that need consistent attachment data.
+ * Immutable constant reusable across multiple tests.
  */
-export const STANDARD_ATTACHMENTS: calendar_v3.Schema$EventAttachment[] = [
+export const STANDARD_ATTACHMENTS = [
   {
     fileUrl: 'https://docs.google.com/document/d/123',
     title: 'Meeting Agenda',
@@ -473,4 +455,4 @@ export const STANDARD_ATTACHMENTS: calendar_v3.Schema$EventAttachment[] = [
     mimeType: 'application/vnd.google-apps.presentation',
     fileId: '456'
   }
-];
+] as const satisfies readonly calendar_v3.Schema$EventAttachment[];

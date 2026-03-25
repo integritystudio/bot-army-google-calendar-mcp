@@ -115,6 +115,76 @@ Gmail label names, filter queries, and category definitions are hardcoded in 40+
 
 ---
 
+### M5: Audit simple-rrule wrapper pattern and refactor for direct library usage
+**Status:** 📋 PENDING
+**Priority:** Medium
+**Date Added:** 2026-03-25
+**Source:** simple-rrule integration refactoring session
+
+Successfully refactored `src/utils/date-utils.ts` to leverage simple-rrule functions for date comparisons, arithmetic, and utilities. Established pattern of wrapping library functions with semantic names. Now need to audit codebase for additional opportunities and ensure consistency.
+
+**Completed Refactoring (4 commits):**
+1. ✅ Replaced `.getTime()` comparisons with `isBefore()` for `isFutureDate`, `isPastDate`
+2. ✅ Added duration helpers: `durationDays()`, `durationHours()`, `durationMinutes()`, `durationSeconds()`
+3. ✅ Added `compareDates()` utility using `compareAsc()`
+4. ✅ Added month utilities: `getDaysInCurrentMonth()`, `isMonthEnd()`, `addMonths()`, `addYears()`
+
+**New Wrapper Pattern Established:**
+```typescript
+// Import from simple-rrule with alias
+import { isBefore, compareAsc, getDaysInMonth } from 'simple-rrule';
+
+// Provide semantic wrapper with JSDoc
+export function isFutureDate(dateString: string): boolean {
+  const date = new Date(dateString);
+  return isBefore(new Date(), date);
+}
+
+export function compareDates(first: Date, second: Date): number {
+  return compareAsc(first, second);
+}
+```
+
+**Action Items:**
+1. Audit codebase for direct simple-rrule function usage that could use new wrappers
+   - Search for `isFutureDate`, `isPastDate` usage in handlers and services
+   - Check for `.getTime()` comparisons in time-critical code
+   - Identify uses of `durationMs` that might benefit from unit-specific variants
+2. Review other utility files for opportunities to add semantic wrappers
+   - `src/utils/timezone-utils.ts` — check for date arithmetic
+   - Handler utilities — check for duration calculations
+3. Consider whether existing wrappers should be aliased or directly imported in some contexts
+   - Trade-off: semantic clarity vs. minimal abstraction layers
+   - Document decision in code comments
+4. Add tests for new duration helpers if not already covered
+5. Update TypeScript type hints if needed for better IDE support
+
+**Files Affected:**
+- `src/utils/date-utils.ts` — ✅ Primary refactoring complete (395 lines, 14 date functions)
+- `src/handlers/core/RecurringEventHelpers.ts` — Uses date-utils wrappers (verify compatibility)
+- Other handlers using `durationMs` — Verify no benefit from granular duration units
+- Test utilities — Verify new helpers work with test scenarios
+
+**Metrics to Achieve:**
+- Audit 100% of date-related operations in handlers
+- Identify 3+ additional opportunities for wrapper consolidation
+- Document pattern in code comments for future maintainers
+- 0 manual `.getTime()` comparisons in new code
+
+**Benefits:**
+- **Consistency:** Single pattern for wrapping third-party date functions
+- **Maintainability:** Library upgrades managed in one place (wrappers)
+- **Type Safety:** Semantic functions with clear intent and JSDoc
+- **Performance:** Thin wrappers with zero overhead
+- **Discoverability:** Date utilities grouped in one module
+
+**Test Validation:**
+- All 574 existing tests continue to pass ✅
+- New duration helpers tested implicitly through durationMs usage
+- No breaking changes to existing API
+
+---
+
 ## Low Priority Items
 
 ### L7: Audit extracted test helpers for additional consolidation opportunities

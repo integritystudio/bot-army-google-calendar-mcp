@@ -14,7 +14,9 @@ import {
   differenceInMilliseconds,
   differenceInMinutes as _differenceInMinutes,
   differenceInSeconds as _differenceInSeconds,
+  getDaysInMonth,
   isBefore,
+  isLastDayOfMonth,
   toRRuleDateString,
 } from 'simple-rrule';
 
@@ -65,6 +67,24 @@ export function addMonths(date: Date, months: number): Date {
  */
 export function addYears(date: Date, years: number): Date {
   return _addYears(date, years);
+}
+
+/**
+ * Get the number of days in a month.
+ * @param date Any date in the target month
+ * @returns Number of days in the month (28-31)
+ */
+export function getDaysInCurrentMonth(date: Date): number {
+  return getDaysInMonth(date);
+}
+
+/**
+ * Check if a date is the last day of the month.
+ * @param date Date to check
+ * @returns true if the date is the last day of its month
+ */
+export function isMonthEnd(date: Date): boolean {
+  return isLastDayOfMonth(date);
 }
 
 /**

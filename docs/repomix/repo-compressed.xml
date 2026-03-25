@@ -417,7 +417,8 @@ This section contains the contents of the repository's files.
       "Bash(npm list:*)",
       "mcp__plugin_repomix-mcp_repomix__attach_packed_output",
       "Bash(npx repomix:*)",
-      "Bash(bash scripts/repomix/generate-repo-compressed.sh . docs/repomix/repo-compressed.xml)"
+      "Bash(bash scripts/repomix/generate-repo-compressed.sh . docs/repomix/repo-compressed.xml)",
+      "Bash(git restore:*)"
     ]
   }
 }
@@ -1233,6 +1234,11 @@ import { AuthServer } from './auth/server.js';
 async function runAuthServer()
 </file>
 
+<file path=".env.test">
+GOOGLE_ACCOUNT_MODE=normal
+GOOGLE_OAUTH_CREDENTIALS=/Users/alyshialedlie/code/is-internal/bot-army-google-calendar-mcp/gcp-oauth.keys.json
+</file>
+
 <file path=".gitignore">
 # Dependencies
 node_modules/
@@ -1598,6 +1604,18 @@ async function createBillingFilter()
 // Apply to existing billing emails WITHOUT rate limit
 </file>
 
+<file path="create-ccv-newsletter-sublabel.mjs">
+async function createCCVNewsletterSubLabel()
+⋮----
+// Pre-fetch existing labels to avoid N+1 queries
+⋮----
+// Step 1: Create sub-label
+⋮----
+// Step 2: Apply label to existing CCV newsletter emails
+⋮----
+// Step 3: Create filter for future CCV newsletter emails
+</file>
+
 <file path="create-community-sublabels.mjs">
 async function createCommunitySubLabels()
 ⋮----
@@ -1636,6 +1654,14 @@ async function createEventbriteFilter()
 // Apply label and archive in batches
 </file>
 
+<file path="create-events-label.mjs">
+async function createEventsLabel()
+⋮----
+// Pre-fetch existing labels to avoid N+1 queries
+⋮----
+// Get full label details for display
+</file>
+
 <file path="create-events-meetup-skip-filter.mjs">
 async function createEventsMeetupSkipFilter()
 </file>
@@ -1660,8 +1686,32 @@ async function createMeetNotesFilter()
 // Apply to existing unread emails
 </file>
 
+<file path="create-newsletter-label.mjs">
+async function createNewsletterLabel()
+⋮----
+// Pre-fetch existing labels to avoid N+1 queries
+⋮----
+// Get full label details for display
+</file>
+
 <file path="create-newsletter-skip-inbox-filter.mjs">
 async function createNewsletterSkipInboxFilter()
+</file>
+
+<file path="create-newsletter-type-sublabels.mjs">
+async function createNewsletterTypeSubLabels()
+⋮----
+// Pre-fetch existing labels to avoid N+1 queries
+⋮----
+// Step 1: Create both sub-labels
+⋮----
+// Step 2: Apply labels to existing emails
+⋮----
+// Company-specific newsletters
+⋮----
+// News aggregate newsletters (digests, roundups, curated)
+⋮----
+// Step 3: Create filters
 </file>
 
 <file path="create-performance-tracking-label.mjs">
@@ -1700,6 +1750,18 @@ async function createRemainingFilters()
 // Build combined query for all filters in this category
 </file>
 
+<file path="create-sentry-newsletter-sublabel.mjs">
+async function createSentryNewsletterSubLabel()
+⋮----
+// Pre-fetch existing labels to avoid N+1 queries
+⋮----
+// Step 1: Create Newsletters/Sentry sub-label
+⋮----
+// Step 2: Find and move Sentry digests back to Newsletters
+⋮----
+// Step 3: Create filter for future Sentry digests
+</file>
+
 <file path="create-signoz-filter.mjs">
 async function createSignozFilter()
 ⋮----
@@ -1708,6 +1770,30 @@ async function createSignozFilter()
 // Create filter for future emails
 ⋮----
 // Apply to existing emails
+</file>
+
+<file path="create-social-newsletters-sublabel.mjs">
+async function createSocialNewslettersSubLabel()
+⋮----
+// Pre-fetch existing labels to avoid N+1 queries
+⋮----
+// Step 1: Create sub-label
+⋮----
+// Step 2: Apply label to existing social newsletter emails (excluding events)
+⋮----
+// Step 3: Create filter for future social newsletters
+</file>
+
+<file path="create-subject-newsletters-sublabel.mjs">
+async function createSubjectNewslettersSubLabel()
+⋮----
+// Pre-fetch existing labels to avoid N+1 queries
+⋮----
+// Step 1: Create sub-label
+⋮----
+// Step 2: Apply label to existing subject-based newsletter emails
+⋮----
+// Step 3: Create filter for future subject-based newsletters
 </file>
 
 <file path="create-unread-filters.mjs">
@@ -1736,6 +1822,10 @@ async function createWorkMeetingSubLabels()
 // Resolve parent label ID at runtime instead of hardcoding
 ⋮----
 // Step 3: Create filters
+</file>
+
+<file path="debug-tools.mjs">
+
 </file>
 
 <file path="delete-sentry-filter.mjs">
@@ -2225,6 +2315,16 @@ async function revertGoogleWorkspaceLabels()
 // Find Google Workspace emails with these labels
 </file>
 
+<file path="search-events.ts">
+import { initializeOAuth2Client } from './src/auth/client.js';
+import { TokenManager } from './src/auth/tokenManager.js';
+import { ListEventsHandler } from './src/handlers/core/ListEventsHandler.js';
+import { GmailSearchHandler } from './src/handlers/gmail/GmailSearchHandler.js';
+async function main()
+⋮----
+// Search for event emails
+</file>
+
 <file path="search-hackathon.mjs">
 async function searchHackathon()
 ⋮----
@@ -2247,6 +2347,22 @@ async function searchHackathon()
 const getHeader = (headers, name)
 ⋮----
 async function printQueryResults(query, label, previewCount)
+</file>
+
+<file path="test-schema-debug.ts">
+import { ToolRegistry, ToolSchemas } from './src/tools/registry.js';
+import { zodToJsonSchema } from 'zod-to-json-schema';
+</file>
+
+<file path="test-schema-debug2.ts">
+import { ToolSchemas } from './src/tools/registry.js';
+import { zodToJsonSchema } from 'zod-to-json-schema';
+</file>
+
+<file path="test-zodtojsonschema.ts">
+import { ToolSchemas } from './src/tools/registry.js';
+import { zodToJsonSchema } from 'zod-to-json-schema';
+import z from 'zod';
 </file>
 
 <file path="tsconfig.json">
@@ -2912,50 +3028,6 @@ todoIf(condition: boolean): void
 onTestFinished(fn: () => void | Promise<void>): void
 </file>
 
-<file path="src/tests/integration/integration-test-helpers.ts">
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { TestDataFactory } from './test-data-factory.js';
-import { getTextContent } from '../unit/helpers/content.js';
-⋮----
-export interface EventCreateResult {
-  eventId: string;
-  result: unknown;
-}
-export interface EventUpdateResult {
-  result: unknown;
-  text: string;
-}
-export async function createAndVerifyEvent(
-  mcpClient: Client,
-  calendarId: string,
-  summary: string,
-  start: Date,
-  end: Date,
-  createdEventIds: string[]
-): Promise<EventCreateResult>
-export async function updateAndVerifyEvent(
-  mcpClient: Client,
-  calendarId: string,
-  eventId: string,
-  start: Date,
-  end: Date,
-  checkConflicts: boolean = false
-): Promise<EventUpdateResult>
-function extractEventId(result: unknown): string
-export async function createNonOverlappingEventPair(
-  mcpClient: Client,
-  calendarId: string,
-  baseTime: Date,
-  createdEventIds: string[]
-): Promise<
-export async function createOverlappingEventPair(
-  mcpClient: Client,
-  calendarId: string,
-  baseTime: Date,
-  createdEventIds: string[]
-): Promise<
-</file>
-
 <file path="src/tests/integration/UpdateEventHandler.recurring.integration.test.ts">
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { OAuth2Client } from 'google-auth-library';
@@ -2995,15 +3067,6 @@ function parseBatchResponse(
 <file path="src/tests/unit/handlers/datetime-utils.test.ts">
 import { describe, it, expect } from 'vitest';
 import { hasTimezoneInDatetime, convertToRFC3339, createTimeObject } from '../../../utils/timezone-utils.js';
-</file>
-
-<file path="src/tests/unit/helpers/content.ts">
-export function getTextContent(result:
-export function tryGetTextContent(result: unknown): string | null
-export function assertTextContentContains(
-  result: { content: Array<{ type: string; text?: string }> },
-  substring: string
-): void
 </file>
 
 <file path="src/tests/unit/helpers/testBuilder.ts">
@@ -3127,121 +3190,6 @@ import { getSecureTokenPath } from './auth/utils.js';
 async function verifyAndRefreshTokens()
 </file>
 
-<file path=".env.test">
-GOOGLE_ACCOUNT_MODE=normal
-GOOGLE_OAUTH_CREDENTIALS=/Users/alyshialedlie/code/is-internal/bot-army-google-calendar-mcp/gcp-oauth.keys.json
-</file>
-
-<file path="create-ccv-newsletter-sublabel.mjs">
-async function createCCVNewsletterSubLabel()
-⋮----
-// Pre-fetch existing labels to avoid N+1 queries
-⋮----
-// Step 1: Create sub-label
-⋮----
-// Step 2: Apply label to existing CCV newsletter emails
-⋮----
-// Step 3: Create filter for future CCV newsletter emails
-</file>
-
-<file path="create-events-label.mjs">
-async function createEventsLabel()
-⋮----
-// Pre-fetch existing labels to avoid N+1 queries
-⋮----
-// Get full label details for display
-</file>
-
-<file path="create-newsletter-label.mjs">
-async function createNewsletterLabel()
-⋮----
-// Pre-fetch existing labels to avoid N+1 queries
-⋮----
-// Get full label details for display
-</file>
-
-<file path="create-newsletter-type-sublabels.mjs">
-async function createNewsletterTypeSubLabels()
-⋮----
-// Pre-fetch existing labels to avoid N+1 queries
-⋮----
-// Step 1: Create both sub-labels
-⋮----
-// Step 2: Apply labels to existing emails
-⋮----
-// Company-specific newsletters
-⋮----
-// News aggregate newsletters (digests, roundups, curated)
-⋮----
-// Step 3: Create filters
-</file>
-
-<file path="create-sentry-newsletter-sublabel.mjs">
-async function createSentryNewsletterSubLabel()
-⋮----
-// Pre-fetch existing labels to avoid N+1 queries
-⋮----
-// Step 1: Create Newsletters/Sentry sub-label
-⋮----
-// Step 2: Find and move Sentry digests back to Newsletters
-⋮----
-// Step 3: Create filter for future Sentry digests
-</file>
-
-<file path="create-social-newsletters-sublabel.mjs">
-async function createSocialNewslettersSubLabel()
-⋮----
-// Pre-fetch existing labels to avoid N+1 queries
-⋮----
-// Step 1: Create sub-label
-⋮----
-// Step 2: Apply label to existing social newsletter emails (excluding events)
-⋮----
-// Step 3: Create filter for future social newsletters
-</file>
-
-<file path="create-subject-newsletters-sublabel.mjs">
-async function createSubjectNewslettersSubLabel()
-⋮----
-// Pre-fetch existing labels to avoid N+1 queries
-⋮----
-// Step 1: Create sub-label
-⋮----
-// Step 2: Apply label to existing subject-based newsletter emails
-⋮----
-// Step 3: Create filter for future subject-based newsletters
-</file>
-
-<file path="debug-tools.mjs">
-
-</file>
-
-<file path="search-events.ts">
-import { initializeOAuth2Client } from './src/auth/client.js';
-import { TokenManager } from './src/auth/tokenManager.js';
-import { ListEventsHandler } from './src/handlers/core/ListEventsHandler.js';
-import { GmailSearchHandler } from './src/handlers/gmail/GmailSearchHandler.js';
-async function main()
-⋮----
-// Search for event emails
-</file>
-
-<file path="test-schema-debug.ts">
-import { ToolRegistry, ToolSchemas } from './src/tools/registry.js';
-import { zodToJsonSchema } from 'zod-to-json-schema';
-</file>
-
-<file path="test-schema-debug2.ts">
-import { ToolSchemas } from './src/tools/registry.js';
-import { zodToJsonSchema } from 'zod-to-json-schema';
-</file>
-
-<file path="test-zodtojsonschema.ts">
-import { ToolSchemas } from './src/tools/registry.js';
-import { zodToJsonSchema } from 'zod-to-json-schema';
-import z from 'zod';
-</file>
-
 <file path="src/auth/server.ts">
 import { OAuth2Client } from 'google-auth-library';
 import { TokenManager } from './tokenManager.js';
@@ -3325,52 +3273,6 @@ function formatGroupedEventsList(events: ExtendedEvent[]): string
 function groupEventsByCalendar(events: ExtendedEvent[]): Record<string, ExtendedEvent[]>
 </file>
 
-<file path="src/handlers/core/eventManipulationUtils.ts">
-import { calendar_v3 } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
-import { CreateEventInput, UpdateEventInput } from '../../tools/registry.js';
-import { createTimeObject } from '../../utils/timezone-utils.js';
-import { ConflictDetectionService } from '../../services/conflict-detection/index.js';
-import { CONFLICT_DETECTION_CONFIG } from '../../services/conflict-detection/config.js';
-export function buildCoreEvent(
-  input: CreateEventInput | UpdateEventInput,
-  timezone: string,
-  existingEvent?: calendar_v3.Schema$Event
-): Pick<calendar_v3.Schema$Event, 'summary' | 'description' | 'start' | 'end' | 'attendees' | 'location'>
-export function buildOptionalEventFields(
-  input: CreateEventInput | UpdateEventInput
-): Pick<calendar_v3.Schema$Event, 'colorId' | 'reminders' | 'recurrence' | 'transparency' | 'visibility' | 'guestsCanInviteOthers' | 'guestsCanModify' | 'guestsCanSeeOtherGuests' | 'anyoneCanAddSelf' | 'conferenceData' | 'extendedProperties' | 'attachments' | 'source'>
-export function buildEventForConflictCheckCreate(
-  input: CreateEventInput,
-  timezone: string
-): calendar_v3.Schema$Event
-export function buildEventForConflictCheckUpdate(
-  input: UpdateEventInput,
-  existingEvent: calendar_v3.Schema$Event,
-  timezone: string
-): calendar_v3.Schema$Event
-export function buildEventRequestBodyCreate(
-  input: CreateEventInput,
-  timezone: string
-): calendar_v3.Schema$Event
-export interface ConflictCheckOptions {
-  checkDuplicates?: boolean;
-  checkConflicts?: boolean;
-  calendarsToCheck?: string[];
-  duplicateSimilarityThreshold?: number;
-}
-export async function performConflictCheck(
-  conflictService: ConflictDetectionService,
-  oauth2Client: OAuth2Client,
-  eventToCheck: calendar_v3.Schema$Event,
-  calendarId: string,
-  options: ConflictCheckOptions = {}
-): Promise<any>
-export function getConferenceAndAttachmentOptions(
-  input: CreateEventInput | UpdateEventInput
-):
-</file>
-
 <file path="src/handlers/core/FreeBusyEventHandler.ts">
 import { BaseToolHandler } from './BaseToolHandler.js';
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
@@ -3403,6 +3305,60 @@ export class GmailCreateLabelHandler extends BaseToolHandler
 ⋮----
 async runTool(args: GmailCreateLabelInput, oauth2Client: OAuth2Client): Promise<CallToolResult>
 async execute(input: GmailCreateLabelInput, oauth2Client: OAuth2Client): Promise<any>
+</file>
+
+<file path="src/tests/integration/integration-test-helpers.ts">
+import { expect } from 'vitest';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { TestDataFactory } from './test-data-factory.js';
+import { getTextContent } from '../unit/helpers/content.js';
+⋮----
+export interface EventCreateResult {
+  eventId: string;
+  result: unknown;
+}
+export interface EventUpdateResult {
+  result: unknown;
+  text: string;
+}
+export async function createAndVerifyEvent(
+  mcpClient: Client,
+  calendarId: string,
+  summary: string,
+  start: Date,
+  end: Date,
+  createdEventIds: string[]
+): Promise<EventCreateResult>
+export async function updateAndVerifyEvent(
+  mcpClient: Client,
+  calendarId: string,
+  eventId: string,
+  start: Date,
+  end: Date,
+  checkConflicts: boolean = false
+): Promise<EventUpdateResult>
+function extractEventId(result: unknown): string
+export async function createNonOverlappingEventPair(
+  mcpClient: Client,
+  calendarId: string,
+  baseTime: Date,
+  createdEventIds: string[]
+): Promise<
+export async function createOverlappingEventPair(
+  mcpClient: Client,
+  calendarId: string,
+  baseTime: Date,
+  createdEventIds: string[]
+): Promise<
+export async function expectModificationScopeError(
+  handlerRunTool: (args: Record<string, any>) => Promise<any>,
+  updateArgs: Record<string, any>,
+  expectedErrorMessage?: string | RegExp
+): Promise<void>
+export async function expectEventUpdateSuccess(
+  result: unknown,
+  expectedContent: string | RegExp
+): Promise<void>
 </file>
 
 <file path="src/tests/unit/handlers/duplicate-event-display.test.ts">
@@ -3440,17 +3396,15 @@ function resolveWith(overrides: Partial<calendar_v3.Schema$Event>)
 function expectSystemFieldsRemoved(result: calendar_v3.Schema$Event): void
 </file>
 
-<file path="src/tests/unit/helpers/handler-setup.ts">
-import { vi } from 'vitest';
-import { OAuth2Client } from 'google-auth-library';
-import { makeCalendarMock } from './factories.js';
-import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
-export interface HandlerSetup {
-  mockOAuth2Client: OAuth2Client;
-  handler: ListEventsHandler;
-  mockCalendarApi: ReturnType<typeof makeCalendarMock>;
-}
-export function setupListEventsHandler(): HandlerSetup
+<file path="src/tests/unit/helpers/content.ts">
+export function getTextContent(result:
+export function tryGetTextContent(result: unknown): string | null
+export function assertTextContentContains(
+  result: { content: Array<{ type: string; text?: string }> },
+  substring: string
+): void
+export function expectValidToolResponse(result: unknown): void
+export function expectJsonResponse(result: unknown): Record<string, any>
 </file>
 
 <file path="src/tests/unit/services/conflict-detection/ConflictAnalyzer.test.ts">
@@ -3589,6 +3543,57 @@ node archive-signoz-dmarc.mjs         # Monitoring/DMARC auto-archive
   - See `docs/LABEL-RESOLUTION-GUIDE.md` for complete pattern documentation
   - Replace hardcoded `Label_N` IDs with `labelCache.get('Label/Name')`
   - Enables scripts to work across different Gmail accounts with different label IDs
+</file>
+
+<file path="src/handlers/core/eventManipulationUtils.ts">
+import { calendar_v3 } from 'googleapis';
+import { OAuth2Client } from 'google-auth-library';
+import { CreateEventInput, UpdateEventInput } from '../../tools/registry.js';
+import { createTimeObject } from '../../utils/timezone-utils.js';
+import { ConflictDetectionService } from '../../services/conflict-detection/index.js';
+import { CONFLICT_DETECTION_CONFIG } from '../../services/conflict-detection/config.js';
+function conditionallyAddFields<T extends Record<string, any>>(
+  source: T,
+  target: Record<string, any>,
+  fieldNames: (keyof T)[]
+): void
+export function buildCoreEvent(
+  input: CreateEventInput | UpdateEventInput,
+  timezone: string,
+  existingEvent?: calendar_v3.Schema$Event
+): Pick<calendar_v3.Schema$Event, 'summary' | 'description' | 'start' | 'end' | 'attendees' | 'location'>
+export function buildOptionalEventFields(
+  input: CreateEventInput | UpdateEventInput
+): Pick<calendar_v3.Schema$Event, 'colorId' | 'reminders' | 'recurrence' | 'transparency' | 'visibility' | 'guestsCanInviteOthers' | 'guestsCanModify' | 'guestsCanSeeOtherGuests' | 'anyoneCanAddSelf' | 'conferenceData' | 'extendedProperties' | 'attachments' | 'source'>
+export function buildEventForConflictCheckCreate(
+  input: CreateEventInput,
+  timezone: string
+): calendar_v3.Schema$Event
+export function buildEventForConflictCheckUpdate(
+  input: UpdateEventInput,
+  existingEvent: calendar_v3.Schema$Event,
+  timezone: string
+): calendar_v3.Schema$Event
+export function buildEventRequestBodyCreate(
+  input: CreateEventInput,
+  timezone: string
+): calendar_v3.Schema$Event
+export interface ConflictCheckOptions {
+  checkDuplicates?: boolean;
+  checkConflicts?: boolean;
+  calendarsToCheck?: string[];
+  duplicateSimilarityThreshold?: number;
+}
+export async function performConflictCheck(
+  conflictService: ConflictDetectionService,
+  oauth2Client: OAuth2Client,
+  eventToCheck: calendar_v3.Schema$Event,
+  calendarId: string,
+  options: ConflictCheckOptions = {}
+): Promise<any>
+export function getConferenceAndAttachmentOptions(
+  input: CreateEventInput | UpdateEventInput
+):
 </file>
 
 <file path="src/handlers/utils.ts">
@@ -3742,6 +3747,20 @@ import { ConflictCheckResult } from '../../../services/conflict-detection/types.
 import { calendar_v3 } from 'googleapis';
 import { makeEvent } from '../helpers/index.js';
 import { DUPLICATE_SUGGESTION } from '../helpers/test-configs.js';
+</file>
+
+<file path="src/tests/unit/helpers/handler-setup.ts">
+import { vi } from 'vitest';
+import { OAuth2Client } from 'google-auth-library';
+import { makeCalendarMock } from './factories.js';
+import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
+export function createGoogleCalendarMocks(): ReturnType<typeof vi.fn>
+export interface HandlerSetup {
+  mockOAuth2Client: OAuth2Client;
+  handler: ListEventsHandler;
+  mockCalendarApi: ReturnType<typeof makeCalendarMock>;
+}
+export function setupListEventsHandler(): HandlerSetup
 </file>
 
 <file path="src/tests/unit/helpers/test-configs.ts">
@@ -4170,11 +4189,38 @@ import {
 } from './integration-test-helpers.js';
 </file>
 
-<file path="src/tests/unit/handlers/CreateEventHandler.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
-import { OAuth2Client } from 'google-auth-library';
-import { makeEvent, getTextContent, createCreateEventArgs, makeCalendarMock, createConflictEventArgs, createEventWithAttendeesAndReminders, createEventWithExtendedProperties, createEventWithAttachments } from '../helpers/index.js';
+<file path="src/handlers/core/RecurringEventHelpers.ts">
+import { calendar_v3 } from 'googleapis';
+import {
+  TIME_DURATIONS,
+  formatBasicDateTime,
+  oneDayBefore,
+  stripUntilAndCount,
+  buildUntilClause,
+  isRRuleString,
+  durationMs,
+  addMilliseconds,
+  formatRFC3339,
+} from '../../utils/date-utils.js';
+import { createTimeObject, applyTimezone } from '../../utils/timezone-utils.js';
+import { buildCoreEvent, buildOptionalEventFields } from './eventManipulationUtils.js';
+import { UpdateEventInput } from '../../tools/registry.js';
+export class RecurringEventHelpers
+⋮----
+constructor(calendar: calendar_v3.Calendar)
+getCalendar(): calendar_v3.Calendar
+async detectEventType(eventId: string, calendarId: string): Promise<'recurring' | 'single'>
+async getEventAndType(eventId: string, calendarId: string): Promise<
+formatInstanceId(eventId: string, originalStartTime: string): string
+calculateUntilDate(futureStartDate: string): string
+calculateEndTime(newStartTime: string, originalEvent: calendar_v3.Schema$Event): string
+updateRecurrenceWithUntil(recurrence: string[], untilDate: string): string[]
+cleanEventForDuplication(event: calendar_v3.Schema$Event): calendar_v3.Schema$Event
+buildUpdateRequestBody(args: UpdateEventInput, defaultTimeZone?: string): calendar_v3.Schema$Event
+⋮----
+export class RecurringEventError extends Error
+⋮----
+constructor(message: string, code: string)
 </file>
 
 <file path="src/tests/unit/helpers/event-test-data.ts">
@@ -4218,142 +4264,9 @@ export function createConflictEventArgs(
   eventId: string = 'existing-event',
   overrides: Record<string, any> = {}
 ): Record<string, any>
-export function createEventWithAttendeesAndReminders(
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
 export function createEventWithExtendedProperties(
   overrides: Partial<calendar_v3.Schema$Event> = {}
 ): calendar_v3.Schema$Event
-export function createEventWithAttachments(
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-</file>
-
-<file path="src/handlers/core/RecurringEventHelpers.ts">
-import { calendar_v3 } from 'googleapis';
-import {
-  TIME_DURATIONS,
-  formatBasicDateTime,
-  oneDayBefore,
-  stripUntilAndCount,
-  buildUntilClause,
-  isRRuleString,
-  durationMs,
-  addMilliseconds,
-  formatRFC3339,
-} from '../../utils/date-utils.js';
-import { createTimeObject, applyTimezone } from '../../utils/timezone-utils.js';
-import { buildCoreEvent, buildOptionalEventFields } from './eventManipulationUtils.js';
-import { UpdateEventInput } from '../../tools/registry.js';
-export class RecurringEventHelpers
-⋮----
-constructor(calendar: calendar_v3.Calendar)
-getCalendar(): calendar_v3.Calendar
-async detectEventType(eventId: string, calendarId: string): Promise<'recurring' | 'single'>
-async getEventAndType(eventId: string, calendarId: string): Promise<
-formatInstanceId(eventId: string, originalStartTime: string): string
-calculateUntilDate(futureStartDate: string): string
-calculateEndTime(newStartTime: string, originalEvent: calendar_v3.Schema$Event): string
-updateRecurrenceWithUntil(recurrence: string[], untilDate: string): string[]
-cleanEventForDuplication(event: calendar_v3.Schema$Event): calendar_v3.Schema$Event
-buildUpdateRequestBody(args: UpdateEventInput, defaultTimeZone?: string): calendar_v3.Schema$Event
-⋮----
-export class RecurringEventError extends Error
-⋮----
-constructor(message: string, code: string)
-</file>
-
-<file path="src/tests/unit/helpers/factories.ts">
-import { calendar_v3 } from 'googleapis';
-import { GaxiosError } from 'gaxios';
-import { vi } from 'vitest';
-import { addHours, addMinutes } from 'simple-rrule';
-import {
-  addDays,
-  getFutureDate,
-  getPastDate,
-  formatTZNaiveDateTime,
-  formatRFC3339,
-  formatBasicDateTime,
-  oneDayBefore,
-} from '../../../utils/date-utils.js';
-import { createBuilder } from './testBuilder.js';
-⋮----
-export function makeEvent(overrides: Partial<calendar_v3.Schema$Event> =
-export function makeEventWithCalendarId(
-  calendarId: string,
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event &
-export function makeGaxiosError(
-  status: number,
-  message: string,
-  data?: object
-): GaxiosError &
-export function makeEvents(
-  count: number,
-  baseOverrides: Partial<calendar_v3.Schema$Event> = {},
-  variantFn?: (index: number) => Partial<calendar_v3.Schema$Event>
-): calendar_v3.Schema$Event[]
-export function makeFutureDateString(daysFromNow: number = 365): string
-export function makePastDateString(yearsAgo: number = 1): string
-export function makeWeeklyRecurringEvent(
-  daysFromNow: number = 7,
-  weeklyPattern: string = 'MO',
-  untilDaysFromNow?: number,
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-export function makeDailyRecurringEvent(
-  daysFromNow: number = 1,
-  countOccurrences?: number,
-  untilDaysFromNow?: number,
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-export function makeMonthlyRecurringEvent(
-  daysFromNow: number = 30,
-  monthlyDay: number = 15,
-  untilDaysFromNow?: number,
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-export function makeRecurringEventWithExceptions(
-  daysFromNow: number = 7,
-  exceptionDates: Date[] = [],
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-export function makeRecurringEventWithAdditionalDates(
-  daysFromNow: number = 7,
-  additionalDates: Date[] = [],
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-export function makeRecurringEventInstance(
-  eventId: string,
-  instanceDate: Date,
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-export function makeRecurringEventInstances(
-  eventId: string,
-  startDate: Date,
-  count: number = 5,
-  intervalDays: number = 7
-): calendar_v3.Schema$Event[]
-export function makeConflictingEvents(
-  overrides1: Partial<calendar_v3.Schema$Event> = {},
-  overrides2: Partial<calendar_v3.Schema$Event> = {}
-): [calendar_v3.Schema$Event, calendar_v3.Schema$Event]
-export function makeTeamMeetingEvent(
-  location: string = 'Conference Room A',
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-export function makeCalendarMock(overrides: {
-  get?: ReturnType<typeof vi.fn>;
-  patch?: ReturnType<typeof vi.fn>;
-  insert?: ReturnType<typeof vi.fn>;
-  list?: ReturnType<typeof vi.fn>;
-  calendarListGet?: ReturnType<typeof vi.fn>;
-} =
-</file>
-
-<file path="src/tests/unit/helpers/index.ts">
-
 </file>
 
 <file path="src/utils/date-utils.ts">
@@ -4473,6 +4386,13 @@ import { groupBy } from '../../../utils/aggregationHelpers.js';
 const sortByStartTime = (a: ExtendedEvent, b: ExtendedEvent) =>
 </file>
 
+<file path="src/tests/unit/handlers/CreateEventHandler.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
+import { OAuth2Client } from 'google-auth-library';
+import { makeEvent, getTextContent, createCreateEventArgs, makeCalendarMock, createConflictEventArgs, createEventWithExtendedProperties, createFullEventArgs, STANDARD_ATTACHMENTS } from '../helpers/index.js';
+</file>
+
 <file path="src/tests/unit/schemas/validators.test.ts">
 import { describe, it, expect } from 'vitest';
 import { ToolSchemas } from '../../../tools/registry.js';
@@ -4486,6 +4406,99 @@ import {
   DEFAULT_EVENT_ID
 } from '../helpers/event-test-data.js';
 import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from '../../../testing/constants.js';
+</file>
+
+<file path="src/tests/unit/helpers/factories.ts">
+import { calendar_v3 } from 'googleapis';
+import { GaxiosError } from 'gaxios';
+import { vi } from 'vitest';
+import { addHours, addMinutes } from 'simple-rrule';
+import {
+  addDays,
+  getFutureDate,
+  getPastDate,
+  formatTZNaiveDateTime,
+  formatRFC3339,
+  formatBasicDateTime,
+  oneDayBefore,
+} from '../../../utils/date-utils.js';
+import { createBuilder } from './testBuilder.js';
+⋮----
+export function makeEvent(overrides: Partial<calendar_v3.Schema$Event> =
+export function makeEventWithCalendarId(
+  calendarId: string,
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event &
+export function makeGaxiosError(
+  status: number,
+  message: string,
+  data?: object
+): GaxiosError &
+export function makeEvents(
+  count: number,
+  baseOverrides: Partial<calendar_v3.Schema$Event> = {},
+  variantFn?: (index: number) => Partial<calendar_v3.Schema$Event>
+): calendar_v3.Schema$Event[]
+export function makeFutureDateString(daysFromNow: number = 365): string
+export function makePastDateString(yearsAgo: number = 1): string
+export function makeWeeklyRecurringEvent(
+  daysFromNow: number = 7,
+  weeklyPattern: string = 'MO',
+  untilDaysFromNow?: number,
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event
+export function makeDailyRecurringEvent(
+  daysFromNow: number = 1,
+  countOccurrences?: number,
+  untilDaysFromNow?: number,
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event
+export function makeMonthlyRecurringEvent(
+  daysFromNow: number = 30,
+  monthlyDay: number = 15,
+  untilDaysFromNow?: number,
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event
+export function makeRecurringEventWithExceptions(
+  daysFromNow: number = 7,
+  exceptionDates: Date[] = [],
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event
+export function makeRecurringEventWithAdditionalDates(
+  daysFromNow: number = 7,
+  additionalDates: Date[] = [],
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event
+export function makeRecurringEventInstance(
+  eventId: string,
+  instanceDate: Date,
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event
+export function makeRecurringEventInstances(
+  eventId: string,
+  startDate: Date,
+  count: number = 5,
+  intervalDays: number = 7
+): calendar_v3.Schema$Event[]
+export function makeConflictingEvents(
+  overrides1: Partial<calendar_v3.Schema$Event> = {},
+  overrides2: Partial<calendar_v3.Schema$Event> = {}
+): [calendar_v3.Schema$Event, calendar_v3.Schema$Event]
+export function makeTeamMeetingEvent(
+  location: string = 'Conference Room A',
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event
+export function makeCalendarMock(overrides: {
+  get?: ReturnType<typeof vi.fn>;
+  patch?: ReturnType<typeof vi.fn>;
+  insert?: ReturnType<typeof vi.fn>;
+  list?: ReturnType<typeof vi.fn>;
+  calendarListGet?: ReturnType<typeof vi.fn>;
+} =
+⋮----
+export function createFullEventArgs(
+  overrides: Record<string, any> = {}
+): Record<string, any>
 </file>
 
 <file path="src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts">
@@ -4504,6 +4517,10 @@ function setupMocks(
     eventData: calendar_v3.Schema$Event,
     insertData?: calendar_v3.Schema$Event
 ): void
+</file>
+
+<file path="src/tests/unit/helpers/index.ts">
+
 </file>
 
 </files>

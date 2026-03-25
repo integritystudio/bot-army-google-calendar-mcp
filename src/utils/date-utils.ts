@@ -8,6 +8,7 @@ import {
   addMilliseconds as _addMilliseconds,
   addMonths as _addMonths,
   addYears as _addYears,
+  compareAsc,
   differenceInDays as _differenceInDays,
   differenceInHours as _differenceInHours,
   differenceInMilliseconds,
@@ -193,6 +194,17 @@ export function isFutureDate(dateString: string): boolean {
 export function isPastDate(dateString: string): boolean {
   const date = new Date(dateString);
   return isBefore(date, new Date());
+}
+
+/**
+ * Compare two dates, returning -1 if first is before second, 0 if equal, 1 if first is after second.
+ * Useful for sorting dates or determining relative order.
+ * @param first First date to compare
+ * @param second Second date to compare
+ * @returns -1 if first < second, 0 if equal, 1 if first > second
+ */
+export function compareDates(first: Date, second: Date): number {
+  return compareAsc(first, second);
 }
 
 /**

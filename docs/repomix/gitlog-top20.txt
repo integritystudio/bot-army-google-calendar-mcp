@@ -1,3 +1,68 @@
+f467d79 2026-03-25 docs: add M5 backlog item for simple-rrule wrapper pattern audit
+  docs/BACKLOG.md
+
+4735bf6 2026-03-25 refactor(date-utils): add month-end utilities
+  src/utils/date-utils.ts
+
+9d837d5 2026-03-25 refactor(date-utils): add compareDates utility function
+  src/utils/date-utils.ts
+
+5da0c1e 2026-03-25 refactor(date-utils): add duration helpers for multiple time units
+  src/utils/date-utils.ts
+
+b90a881 2026-03-25 refactor(date-utils): use simple-rrule isBefore for date comparisons
+  src/utils/date-utils.ts
+
+33b0143 2026-03-25 refactor(time-utils): leverage simple-rrule functions to reduce custom date code
+  src/utils/date-utils.ts
+
+d3511ea 2026-03-25 refactor(tests): import date-utils directly instead of via factory wrappers
+  src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts
+
+3065d2d 2026-03-25 refactor(utils): leverage simple-rrule utilities, remove duplication
+  src/utils/date-utils.ts
+
+9813cd5 2026-03-24 refactor(tests): extract assertion and date-time constants to reduce duplication
+  src/tests/unit/handlers/BatchListEvents.test.ts
+  src/tests/unit/utils/date-utils.test.ts
+
+ea42f67 2026-03-24 refactor(tests): consolidate test data factories and remove duplication
+  src/tests/unit/handlers/CreateEventHandler.test.ts
+  src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts
+
+40bfb4a 2026-03-24 docs(backlog): mark TI consolidation item complete
+  docs/BACKLOG.md
+
+ca55c5d 2026-03-24 refactor(tests): export TIME_MIN/TIME_MAX from test-configs and apply to validators
+  docs/BACKLOG.md
+
+8f0af48 2026-03-24 refactor(tests): eliminate duplicate setup and parameterize test tables
+  src/tests/unit/handlers/BatchListEvents.test.ts
+  src/tests/unit/utils/date-utils.test.ts
+
+77e1bcc 2026-03-24 refactor(tests): migrate handler tests to makeCalendarMock factory
+  src/tests/unit/handlers/CreateEventHandler.test.ts
+
+d1e7c1d 2026-03-24 refactor(tests): consolidate integration test helpers and handler setup
+  docs/BACKLOG.md
+
+5c97b59 2026-03-24 fix: export makeCalendarMock and correct makeEvent API calls in BatchListEvents tests
+  docs/repomix/repo-compressed.xml
+  docs/repomix/repomix-docs.xml
+  docs/repomix/repomix-git-ranked.xml
+  docs/repomix/repomix.xml
+  docs/repomix/token-tree.txt
+  src/tests/unit/handlers/BatchListEvents.test.ts
+
+5613fc5 2026-03-24 docs(backlog): record test infrastructure consolidation opportunities
+  docs/BACKLOG.md
+
+6cda351 2026-03-24 refactor(tests): extract LIST_EVENTS_API_DEFAULTS and DUPLICATE_SUGGESTION constants
+  src/tests/unit/handlers/BatchListEvents.test.ts
+
+9389b88 2026-03-24 refactor(test): simplify batch list events unit tests
+  src/tests/unit/handlers/BatchListEvents.test.ts
+
 22f1932 2026-03-24 docs(backlog): record errorFormatting utilities refactoring completion
   docs/BACKLOG.md
 
@@ -159,9 +224,6 @@ e0fb9d1 2026-03-24 refactor(gmail-labels): apply shared lib helpers to create-* 
 9af67c0 2026-03-24 docs(backlog): document email analyzer module extraction and dedup opportunities
   docs/BACKLOG.md
 
-72775f7 2026-03-24 docs: add comprehensive deliverables summary
-  docs/DELIVERABLES.md
-
 c506407 2026-03-24 docs: add comprehensive implementation guide for Phase 1
   docs/IMPLEMENTATION-GUIDE.md
 
@@ -234,11 +296,13 @@ da37cc7 2026-03-24 refactor(test-quality): eliminate API redundancy and loop ant
 
 b1a6b28 2026-03-23 feat(date-utils): add ISO 8601 datetime format validation and parsing
   src/tests/unit/utils/date-utils.test.ts
+  src/utils/date-utils.ts
 
 d0f808e 2026-03-23 feat(date-utils): add RRULE pattern constants and helper functions
   docs/BACKLOG.md
   src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts
   src/tests/unit/utils/date-utils.test.ts
+  src/utils/date-utils.ts
 
 241167c 2026-03-23 refactor(RecurringEventHelpers): eliminate duplication and magic numbers
   src/tests/unit/handlers/RecurringEventHelpers.test.ts

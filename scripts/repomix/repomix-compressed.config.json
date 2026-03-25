@@ -1,13 +1,12 @@
 {
   "output": {
-    "filePath": "repomix-output.xml",
+    "filePath": "docs/repomix/repo-compressed.xml",
     "style": "xml",
     "removeComments": true,
     "removeEmptyLines": true,
     "showLineNumbers": true,
-    "topFilesLength": 20,
-    "copyToClipboard": false,
-    "instructionFilePath": "CLAUDE.md"
+    "topFilesLength": 10,
+    "copyToClipboard": false
   },
   "ignore": {
     "useGitignore": true,

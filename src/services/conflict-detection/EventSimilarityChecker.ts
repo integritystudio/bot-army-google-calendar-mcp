@@ -1,4 +1,5 @@
 import { calendar_v3 } from "googleapis";
+import { durationDays } from "../../utils/date-utils.js";
 
 export class EventSimilarityChecker {
   private readonly DEFAULT_SIMILARITY_THRESHOLD = 0.7;
@@ -46,13 +47,6 @@ export class EventSimilarityChecker {
   }
 
   /**
-   * Check if an event is an all-day event
-   */
-  private isAllDayEvent(event: calendar_v3.Schema$Event): boolean {
-    return !event.start?.dateTime && !!event.start?.date;
-  }
-
-  /**
    * Check if two titles match (exact or similar)
    * Simplified string matching without Levenshtein distance
    */
@@ -89,21 +83,23 @@ export class EventSimilarityChecker {
   }
 
   /**
+   * Check if an event is an all-day event
+   */
+  private isAllDayEvent(event: calendar_v3.Schema$Event): boolean {
+    return !event.start?.dateTime && !!event.start?.date;
+  }
+
+  /**
    * Check if two events are on the same day
    */
   private eventsOnSameDay(event1: calendar_v3.Schema$Event, event2: calendar_v3.Schema$Event): boolean {
     const time1 = this.getEventTime(event1);
     const time2 = this.getEventTime(event2);
-    
+
     if (!time1 || !time2) return false;
-    
-    // Compare dates only (ignore time)
-    const date1 = new Date(time1.start);
-    const date2 = new Date(time2.start);
-    
-    return date1.getFullYear() === date2.getFullYear() &&
-           date1.getMonth() === date2.getMonth() &&
-           date1.getDate() === date2.getDate();
+
+    // Compare dates only (ignore time) - same day means 0 days difference
+    return durationDays(time1.start, time2.start) === 0;
   }
 
   /**

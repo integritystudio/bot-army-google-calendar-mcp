@@ -1,6 +1,7 @@
 import { calendar_v3 } from "googleapis";
 import { EventTimeRange } from "./types.js";
 import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
+import { durationMs, durationHours, durationMinutes } from "../../utils/date-utils.js";
 
 export class ConflictAnalyzer {
   private similarityChecker: EventSimilarityChecker;
@@ -36,19 +37,19 @@ export class ConflictAnalyzer {
     
     // Calculate overlap details
     const overlapDuration = this.similarityChecker.calculateOverlapDuration(event1, event2);
-    const overlapStart = new Date(Math.max(time1.start.getTime(), time2.start.getTime()));
-    const overlapEnd = new Date(Math.min(time1.end.getTime(), time2.end.getTime()));
-    
+    const overlapStart = time1.start.getTime() > time2.start.getTime() ? time1.start : time2.start;
+    const overlapEnd = time1.end.getTime() < time2.end.getTime() ? time1.end : time2.end;
+
     // Calculate percentage of overlap relative to the first event
-    const event1Duration = time1.end.getTime() - time1.start.getTime();
+    const event1Duration = durationMs(time1.start, time1.end);
     const overlapPercentage = Math.round((overlapDuration / event1Duration) * 100);
     
     return {
       hasOverlap: true,
       duration: this.formatDuration(overlapDuration),
       percentage: overlapPercentage,
-      startTime: overlapStart.toISOString(),
-      endTime: overlapEnd.toISOString()
+      startTime: new Date(overlapStart.getTime()).toISOString(),
+      endTime: new Date(overlapEnd.getTime()).toISOString()
     };
   }
 
@@ -74,25 +75,28 @@ export class ConflictAnalyzer {
    * Format duration in human-readable format
    */
   private formatDuration(milliseconds: number): string {
-    const minutes = Math.floor(milliseconds / (1000 * 60));
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-    
+    const baseDate = new Date(0);
+    const endDate = new Date(milliseconds);
+
+    const totalMinutes = durationMinutes(baseDate, endDate);
+    const days = Math.floor(totalMinutes / (24 * 60));
+    const remainingMinutes = totalMinutes % (24 * 60);
+    const hours = Math.floor(remainingMinutes / 60);
+    const mins = remainingMinutes % 60;
+
     if (days > 0) {
-      const remainingHours = hours % 24;
-      return remainingHours > 0 
-        ? `${days} day${days > 1 ? 's' : ''} ${remainingHours} hour${remainingHours > 1 ? 's' : ''}`
+      return hours > 0
+        ? `${days} day${days > 1 ? 's' : ''} ${hours} hour${hours > 1 ? 's' : ''}`
         : `${days} day${days > 1 ? 's' : ''}`;
     }
-    
+
     if (hours > 0) {
-      const remainingMinutes = minutes % 60;
-      return remainingMinutes > 0
-        ? `${hours} hour${hours > 1 ? 's' : ''} ${remainingMinutes} minute${remainingMinutes > 1 ? 's' : ''}`
+      return mins > 0
+        ? `${hours} hour${hours > 1 ? 's' : ''} ${mins} minute${mins > 1 ? 's' : ''}`
         : `${hours} hour${hours > 1 ? 's' : ''}`;
     }
-    
-    return `${minutes} minute${minutes > 1 ? 's' : ''}`;
+
+    return `${mins} minute${mins > 1 ? 's' : ''}`;
   }
 
   /**

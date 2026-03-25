@@ -13,6 +13,7 @@
     "useDefaultPatterns": true,
     "customPatterns": [
       "docs/**",
+      "examples/**",
       "scripts/repomix/*.sh",
       "*.tsbuildinfo",
       ".env.*.local",

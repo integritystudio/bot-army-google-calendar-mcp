@@ -1,3 +1,11 @@
+ad6ca50 2026-03-25 refactor(repomix): exclude config and docs from compressed output
+  docs/repomix/gitlog-top20.txt
+  docs/repomix/repo-compressed.xml
+  docs/repomix/repomix-docs.xml
+  docs/repomix/repomix-git-ranked.xml
+  docs/repomix/repomix.xml
+  docs/repomix/token-tree.txt
+
 0aa6403 2026-03-25 docs: update CLAUDE.md and README.md with code simplification details
   README.md
 

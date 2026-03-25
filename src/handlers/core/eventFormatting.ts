@@ -4,7 +4,7 @@
 
 import { calendar_v3 } from 'googleapis';
 import { formatEventWithDetails } from '../utils.js';
-import { groupBy } from '../../utils/aggregationHelpers.js';
+import { groupBy } from 'lodash-es';
 
 export interface ExtendedEvent extends calendar_v3.Schema$Event {
   calendarId?: string;

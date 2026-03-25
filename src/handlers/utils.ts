@@ -1,7 +1,7 @@
 import { calendar_v3 } from "googleapis";
 import { ConflictCheckResult } from "../services/conflict-detection/types.js";
 import { RESPONSE_PATTERNS } from "../testing/constants.js";
-import { groupBy } from "../utils/aggregationHelpers.js";
+import { groupBy } from "lodash-es";
 import { oneDayBefore } from "../utils/date-utils.js";
 
 /**

@@ -13,7 +13,7 @@ import { ExtendedEvent } from '../../../handlers/core/batchUtils.js';
 const ListEventsArgumentsSchema = ToolSchemas['list-events'];
 import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
 import { processBatchResponses } from '../../../handlers/core/batchUtils.js';
-import { groupBy } from '../../../utils/aggregationHelpers.js';
+import { groupBy } from 'lodash-es';
 
 // Mock dependencies
 vi.mock('google-auth-library');

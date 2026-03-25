@@ -19,6 +19,12 @@ A Model Context Protocol (MCP) server that provides Google Calendar and Gmail in
 
 ## Recent Updates (v1.4.9)
 
+**Code Quality & Maintainability:**
+- 🧹 **Test Fixture Consolidation** - Extracted 9+ duplicate fixtures into shared factories (70% reduction in test boilerplate)
+- 🛠️ **Test Helper Utilities** - Added assertion helpers (`expectValidToolResponse`, `expectJsonResponse`) and error pattern extractors
+- 🎯 **Runtime Optimization** - Refactored `buildOptionalEventFields()` to eliminate 13 repetitive if-checks with `conditionallyAddFields()` utility (85% reduction)
+- 🔄 **Mock Setup Consolidation** - Created `createGoogleCalendarMocks()` factory to eliminate vi.mock duplication across handler tests
+
 **Performance & Reliability:**
 - 🚀 Dynamic label ID resolution (L6) - Scripts now work across accounts with different label hierarchies
 - ⚡ Sequential API optimization - ~500ms latency reduction per operation
@@ -35,7 +41,8 @@ A Model Context Protocol (MCP) server that provides Google Calendar and Gmail in
 - 486/486 tests passing (100%) ✅
 - Integration tests for conflict detection via MCP protocol (real server, real API)
 - Reduced technical debt with shared utilities in `lib/gmail-*.mjs`
-- CLAUDE.md updated with latest patterns and utilities
+- Consolidated test helpers reduce maintenance burden across 30+ test files
+- CLAUDE.md updated with test utilities and patterns documentation
 
 See [CHANGELOG](docs/CHANGELOG.md) for complete v1.4.9 release notes.
 

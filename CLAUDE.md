@@ -32,6 +32,25 @@ npm install | npm run build | npm run dev | npm test
 - ✅ Integration tests for conflict detection via MCP protocol (real server, real API)
 - ✅ 486/486 tests passing
 
+**Test Helpers & Fixtures:**
+Consolidated test utilities reduce boilerplate across 30+ test files:
+- `src/tests/unit/helpers/factories.ts` - Event fixture factories (makeEvent, makeTeamMeetingEvent, etc.)
+- `src/tests/unit/helpers/content.ts` - Response parsing helpers
+  - `getTextContent(result)` - Extract text from tool response
+  - `expectValidToolResponse(result)` - Validate response structure
+  - `expectJsonResponse(result)` - Parse and validate JSON responses
+- `src/tests/unit/helpers/handler-setup.ts` - Handler mock setup
+  - `setupListEventsHandler()` - Pre-configured handler with mocks
+  - `createGoogleCalendarMocks()` - Googleapis mock factory
+- `src/tests/integration/integration-test-helpers.ts` - Integration test patterns
+  - `createAndVerifyEvent()`, `updateAndVerifyEvent()` - Event lifecycle helpers
+  - `expectModificationScopeError()`, `expectEventUpdateSuccess()` - Error & success validation
+
+**Test Data Constants:**
+- `ATTACHMENT_IDS` - Attachment file IDs (DOCUMENT='123', PRESENTATION='456')
+- `STANDARD_ATTACHMENTS` - Reusable attachment fixtures
+- `createFullEventArgs()` - Full event with attendees/reminders fixture
+
 ## Script Development
 
 **Code Quality:**
@@ -50,6 +69,13 @@ npm install | npm run build | npm run dev | npm test
 - Don't mutate input params; create local copies
 - Prefer direct operations over redundant existence checks (TOCTOU)
 - Array.slice() naturally clamps; Math.min unnecessary
+
+**Key Utilities & Patterns:**
+- `src/handlers/core/eventManipulationUtils.ts` - Event building helpers
+  - `conditionallyAddFields()` - Replaces repeated `if (field in input && input.field !== undefined)` checks
+  - `buildCoreEvent()`, `buildOptionalEventFields()` - Event composition (used by Create/Update handlers)
+- `src/utils/date-utils.ts` - Date/time utilities (formatRFC3339, addMilliseconds, oneDayBefore, etc.)
+- `src/utils/timezone-utils.ts` - Timezone handling (createTimeObject, resolveTimeZone, etc.)
 
 ## Email Organization System
 

@@ -1,7 +1,9 @@
 import { calendar_v3 } from 'googleapis';
 import { GaxiosError } from 'gaxios';
 import { vi } from 'vitest';
+import { addHours, addMinutes } from 'simple-rrule';
 import {
+  addDays,
   getFutureDate,
   getPastDate,
   formatTZNaiveDateTime,
@@ -10,11 +12,6 @@ import {
   oneDayBefore,
 } from '../../../utils/date-utils.js';
 import { createBuilder } from './testBuilder.js';
-
-// Duration constants (milliseconds)
-const ONE_HOUR_MS = 3600000;
-const THIRTY_MINUTES_MS = 1800000;
-const TWO_HOURS_MS = 7200000;
 
 const EVENT_BUILDER = createBuilder<calendar_v3.Schema$Event>({
   id: 'event1',
@@ -142,7 +139,7 @@ export function makeWeeklyRecurringEvent(
     summary: 'Weekly Meeting',
     recurrence: [rrule],
     start: { dateTime: formatRFC3339(startDate) },
-    end: { dateTime: formatRFC3339(new Date(startDate.getTime() + ONE_HOUR_MS)) },
+    end: { dateTime: formatRFC3339(addHours(startDate, 1)) },
     ...overrides,
   });
 }
@@ -178,7 +175,7 @@ export function makeDailyRecurringEvent(
     summary: 'Daily Standup',
     recurrence: [rrule],
     start: { dateTime: formatRFC3339(startDate) },
-    end: { dateTime: formatRFC3339(new Date(startDate.getTime() + THIRTY_MINUTES_MS)) },
+    end: { dateTime: formatRFC3339(addMinutes(startDate, 30)) },
     ...overrides,
   });
 }
@@ -209,7 +206,7 @@ export function makeMonthlyRecurringEvent(
     summary: 'Monthly Review',
     recurrence: [rrule],
     start: { dateTime: formatRFC3339(startDate) },
-    end: { dateTime: formatRFC3339(new Date(startDate.getTime() + TWO_HOURS_MS)) },
+    end: { dateTime: formatRFC3339(addHours(startDate, 2)) },
     ...overrides,
   });
 }
@@ -241,7 +238,7 @@ export function makeRecurringEventWithExceptions(
     summary: 'Meeting with Exceptions',
     recurrence,
     start: { dateTime: formatRFC3339(startDate) },
-    end: { dateTime: formatRFC3339(new Date(startDate.getTime() + ONE_HOUR_MS)) },
+    end: { dateTime: formatRFC3339(addHours(startDate, 1)) },
     ...overrides,
   });
 }
@@ -273,7 +270,7 @@ export function makeRecurringEventWithAdditionalDates(
     summary: 'Meeting with Extra Dates',
     recurrence,
     start: { dateTime: formatRFC3339(startDate) },
-    end: { dateTime: formatRFC3339(new Date(startDate.getTime() + ONE_HOUR_MS)) },
+    end: { dateTime: formatRFC3339(addHours(startDate, 1)) },
     ...overrides,
   });
 }
@@ -291,7 +288,7 @@ export function makeRecurringEventInstance(
   instanceDate: Date,
   overrides: Partial<calendar_v3.Schema$Event> = {}
 ): calendar_v3.Schema$Event {
-  const instanceEndTime = new Date(instanceDate.getTime() + ONE_HOUR_MS);
+  const instanceEndTime = addHours(instanceDate, 1);
 
   return makeEvent({
     id: `${eventId}_${formatBasicDateTime(instanceDate)}`,
@@ -320,8 +317,7 @@ export function makeRecurringEventInstances(
   intervalDays: number = 7
 ): calendar_v3.Schema$Event[] {
   return Array.from({ length: count }, (_, i) => {
-    const instanceDate = new Date(startDate);
-    instanceDate.setDate(instanceDate.getDate() + i * intervalDays);
+    const instanceDate = addDays(startDate, i * intervalDays);
     return makeRecurringEventInstance(eventId, instanceDate, {
       summary: `Occurrence ${i + 1}`,
     });

@@ -2,6 +2,7 @@
  * Generic batch processing utilities for parallel operations with error aggregation
  */
 
+import pLimit from 'p-limit';
 import { formatErrorMessage } from "../handlers/core/errorFormatting.js";
 
 export interface BatchResult<T> {
@@ -100,39 +101,33 @@ export async function processBatchItemsChunked<T, TItem = string>(
   batchSize: number = 5,
   continueOnError: boolean = true
 ): Promise<BatchResult<T>> {
+  const limit = pLimit(batchSize);
   const results: T[] = [];
   const errors: Array<{ id: string; error: string }> = [];
 
-  for (let chunkIndex = 0; chunkIndex < items.length; chunkIndex += batchSize) {
-    const chunk = items.slice(chunkIndex, chunkIndex + batchSize);
+  if (continueOnError) {
+    const outcomes = await Promise.all(
+      items.map((item, index) =>
+        limit(async () => {
+          try {
+            const result = await operation(item);
+            return { success: true, id: String(index), result } as const;
+          } catch (error: unknown) {
+            return { success: false, id: String(index), error } as const;
+          }
+        })
+      )
+    );
 
-    if (continueOnError) {
-      const promises = chunk.map(async (item, index) => {
-        try {
-          const result = await operation(item);
-          return { success: true, id: String(chunkIndex + index), result } as const;
-        } catch (error: unknown) {
-          return { success: false, id: String(chunkIndex + index), error } as const;
-        }
-      });
-
-      const outcomes = await Promise.all(promises);
-      outcomes.forEach((outcome) => {
-        if (outcome.success) {
-          results.push(outcome.result);
-        } else {
-          errors.push({
-            id: outcome.id,
-            error: formatErrorMessage(outcome.error)
-          });
-        }
-      });
-    } else {
-      const chunkResults = await Promise.all(
-        chunk.map((item) => operation(item))
-      );
-      results.push(...chunkResults);
-    }
+    outcomes.forEach((outcome) => {
+      if (outcome.success) {
+        results.push(outcome.result);
+      } else {
+        errors.push({ id: outcome.id, error: formatErrorMessage(outcome.error) });
+      }
+    });
+  } else {
+    results.push(...await Promise.all(items.map((item) => limit(() => operation(item)))));
   }
 
   return { results, errors };

@@ -6,6 +6,7 @@ import {
   stripUntilAndCount,
   buildUntilClause,
   isRRuleString,
+  durationMs,
 } from '../../utils/date-utils.js';
 import { createTimeObject, applyTimezone } from '../../utils/timezone-utils.js';
 import { buildCoreEvent, buildOptionalEventFields } from './eventManipulationUtils.js';
@@ -78,9 +79,9 @@ export class RecurringEventHelpers {
     const newStart = new Date(newStartTime);
     const originalStart = new Date(originalEvent.start!.dateTime!);
     const originalEnd = new Date(originalEvent.end!.dateTime!);
-    const durationMs = originalEnd.getTime() - originalStart.getTime();
+    const eventDurationMs = durationMs(originalStart, originalEnd);
 
-    return new Date(newStart.getTime() + durationMs).toISOString();
+    return new Date(newStart.getTime() + eventDurationMs).toISOString();
   }
 
   /**

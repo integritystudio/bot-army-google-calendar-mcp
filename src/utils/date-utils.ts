@@ -3,14 +3,21 @@
  * Provides semantic, type-safe abstractions for common date calculations.
  */
 
-import { addDays as _addDays, addMilliseconds as _addMilliseconds } from 'simple-rrule';
+import {
+  addDays as _addDays,
+  addMilliseconds as _addMilliseconds,
+  differenceInDays,
+  differenceInMilliseconds,
+  toRRuleDateString,
+} from 'simple-rrule';
 
 // Time duration constants (in milliseconds)
 export const TIME_DURATIONS = {
   HOUR: 1000 * 60 * 60,
   DAY: 1000 * 60 * 60 * 24,
-  WEEK: 1000 * 60 * 60 * 24 * 7,
-  MONTH: 1000 * 60 * 60 * 24 * 30, // Approximate
+  WEEK: 7 * 24 * 60 * 60 * 1000,
+  MONTH: 30 * 24 * 60 * 60 * 1000,
+  QUARTER: 90 * 24 * 60 * 60 * 1000,
 } as const;
 
 /**
@@ -40,7 +47,7 @@ export function addMilliseconds(date: Date, ms: number): Date {
  * @returns Duration in milliseconds (negative if from > to)
  */
 export function durationMs(from: Date, to: Date): number {
-  return to.getTime() - from.getTime();
+  return differenceInMilliseconds(to, from);
 }
 
 /**
@@ -50,7 +57,7 @@ export function durationMs(from: Date, to: Date): number {
  * @returns Basic ISO 8601 format string
  */
 export function formatBasicDateTime(date: Date): string {
-  return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  return toRRuleDateString(date.toISOString());
 }
 
 /**

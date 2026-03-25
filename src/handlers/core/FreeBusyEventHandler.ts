@@ -3,7 +3,7 @@ import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OAuth2Client } from "google-auth-library";
 import { GetFreeBusyInput } from "../../tools/registry.js";
 import { FreeBusyResponse } from '../../schemas/types.js';
-import { TIME_DURATIONS } from "../../testing/constants.js";
+import { TIME_DURATIONS, durationMs } from "../../utils/date-utils.js";
 
 export class FreeBusyEventHandler extends BaseToolHandler {
   async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult> {
@@ -55,11 +55,10 @@ export class FreeBusyEventHandler extends BaseToolHandler {
     const minDate = new Date(timeMin);
     const maxDate = new Date(timeMax);
 
-    const diffInMilliseconds = maxDate.getTime() - minDate.getTime();
-    const threeMonthsInMilliseconds = TIME_DURATIONS.QUARTER;
+    const diffInMilliseconds = durationMs(minDate, maxDate);
 
     // Check if the difference is less than or equal to 3 months
-    return diffInMilliseconds <= threeMonthsInMilliseconds;
+    return diffInMilliseconds <= TIME_DURATIONS.QUARTER;
   };
 
   private generateAvailabilitySummary(response: FreeBusyResponse): string {

@@ -101,7 +101,7 @@ export async function processBatchItemsChunked<T, TItem = string>(
   batchSize: number = 5,
   continueOnError: boolean = true
 ): Promise<BatchResult<T>> {
-  const limit = pLimit(batchSize);
+  const limit = pLimit(Math.max(1, batchSize));
   const results: T[] = [];
   const errors: Array<{ id: string; error: string }> = [];
 

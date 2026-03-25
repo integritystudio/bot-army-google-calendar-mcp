@@ -31,3 +31,35 @@ export function assertTextContentContains(
     throw new Error(`Expected content to contain "${substring}", got: ${text}`);
   }
 }
+
+/**
+ * Validate that result has standard tool response structure.
+ * Checks content array with text type (common assertion pattern).
+ */
+export function expectValidToolResponse(result: unknown): void {
+  if (!result || typeof result !== 'object') {
+    throw new Error('Expected result to be an object');
+  }
+  const r = result as { content?: unknown[] };
+  if (!r.content || !Array.isArray(r.content) || r.content.length === 0) {
+    throw new Error('Expected result.content to be a non-empty array');
+  }
+  const firstContent = (r.content as any)[0];
+  if (firstContent?.type !== 'text') {
+    throw new Error(`Expected first content to be 'text' type, got ${firstContent?.type}`);
+  }
+}
+
+/**
+ * Parse and return JSON response from tool result.
+ * Combines validation with parsing for cleaner test code.
+ */
+export function expectJsonResponse(result: unknown): Record<string, any> {
+  expectValidToolResponse(result);
+  const text = getTextContent(result as any);
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`Expected JSON response but got: ${text}`);
+  }
+}

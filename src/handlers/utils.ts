@@ -1,8 +1,13 @@
 import { calendar_v3 } from "googleapis";
 import { ConflictCheckResult } from "../services/conflict-detection/types.js";
-import { RESPONSE_PATTERNS } from "../testing/constants.js";
 import { groupBy } from "lodash-es";
 import { oneDayBefore } from "../utils/date-utils.js";
+
+export const EVENT_ID_PREFIX = 'Event ID: ';
+export const TIME_START_PREFIX = 'Start: ';
+export const TIME_END_PREFIX = 'End: ';
+export const DUPLICATE_DETECTED_HEADER = '⚠️ POTENTIAL DUPLICATES DETECTED:';
+export const CONFLICT_DETECTED_HEADER = '⚠️ SCHEDULING CONFLICTS DETECTED:';
 
 /**
  * Generates a Google Calendar event view URL
@@ -111,7 +116,7 @@ function formatAttendees(attendees?: calendar_v3.Schema$EventAttendee[]): string
  */
 export function formatEventWithDetails(event: calendar_v3.Schema$Event, calendarId?: string): string {
     const title = event.summary ? `Event: ${event.summary}` : "Untitled Event";
-    const eventId = event.id ? `\n${RESPONSE_PATTERNS.EVENT_ID_PREFIX}${event.id}` : "";
+    const eventId = event.id ? `\n${EVENT_ID_PREFIX}${event.id}` : "";
     const description = event.description ? `\nDescription: ${event.description}` : "";
     const location = event.location ? `\nLocation: ${event.location}` : "";
     const colorId = event.colorId ? `\nColor ID: ${event.colorId}` : "";
@@ -139,7 +144,7 @@ export function formatEventWithDetails(event: calendar_v3.Schema$Event, calendar
         }
     } else {
         // Timed event
-        timeInfo = `\nStart: ${startTime}\nEnd: ${endTime}`;
+        timeInfo = `\n${TIME_START_PREFIX}${startTime}\n${TIME_END_PREFIX}${endTime}`;
     }
     
     const attendeeInfo = formatAttendees(event.attendees);
@@ -160,7 +165,7 @@ export function formatConflictWarnings(conflicts: ConflictCheckResult): string {
     
     // Format duplicate warnings
     if (conflicts.duplicates.length > 0) {
-        warnings += "\n\n⚠️ POTENTIAL DUPLICATES DETECTED:";
+        warnings += `\n\n${DUPLICATE_DETECTED_HEADER}`;
         for (const dup of conflicts.duplicates) {
             warnings += `\n\n━━━ Duplicate Event (${Math.round(dup.event.similarity * 100)}% similar) ━━━`;
             warnings += `\n${dup.suggestion}`;
@@ -181,7 +186,7 @@ export function formatConflictWarnings(conflicts: ConflictCheckResult): string {
     
     // Format conflict warnings
     if (conflicts.conflicts.length > 0) {
-        warnings += "\n\n⚠️ SCHEDULING CONFLICTS DETECTED:";
+        warnings += `\n\n${CONFLICT_DETECTED_HEADER}`;
         const conflictsByCalendar = groupBy(conflicts.conflicts, (conflict) => conflict.calendar);
         
         for (const [calendar, calendarConflicts] of Object.entries(conflictsByCalendar)) {

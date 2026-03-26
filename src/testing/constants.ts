@@ -11,7 +11,6 @@ export const RESPONSE_PATTERNS = {
   LEGACY_UPDATED: 'Event updated: ',
   NEW_CREATED: '✅ Event created successfully',
   NEW_UPDATED: '✅ Event updated successfully',
-  EVENT_ID_PREFIX: 'Event ID: ',
   CREATED_EVENT: 'Created event: ',
   ID_SUFFIX: 'ID: ',
   EVENT_ID_CHAR_CLASS: '[a-zA-Z0-9_@.-]'
@@ -26,6 +25,8 @@ export const TIME_DURATIONS = {
 
 // Timezone for integration test events
 export const TEST_TIMEZONE = 'America/Los_Angeles';
+// Standard-time abbreviation for TEST_TIMEZONE (used in January fixtures)
+export const TEST_TIMEZONE_ABBREVIATION_WINTER = 'PST';
 
 // Secondary timezone used in unit tests for timezone-fallback scenarios
 export const TEST_TIMEZONE_SECONDARY = 'Europe/London';

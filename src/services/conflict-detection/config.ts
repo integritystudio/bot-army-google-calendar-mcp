@@ -28,3 +28,8 @@ export const CONFLICT_DETECTION_CONFIG = {
 } as const;
 
 export type ConflictDetectionConfig = typeof CONFLICT_DETECTION_CONFIG;
+
+export const DUPLICATE_SUGGESTIONS = {
+  BLOCKING: 'This appears to be a duplicate. Consider updating the existing event instead.',
+  WARNING: 'This event is very similar to an existing one. Is this intentional?'
+} as const;

@@ -1,53 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { formatConflictWarnings } from '../../../handlers/utils.js';
 import { ConflictCheckResult } from '../../../services/conflict-detection/types.js';
-import { calendar_v3 } from 'googleapis';
 import { makeEvent } from '../helpers/index.js';
-import { DUPLICATE_SUGGESTION } from '../helpers/test-configs.js';
+import { CONFLICT_DETECTED_HEADER } from '../../../handlers/utils.js';
 
 describe('Enhanced Conflict Response Formatting', () => {
-  it('should format duplicate warnings with full event details', () => {
-    const fullEvent = makeEvent({
-      id: 'duplicate123',
-      summary: 'Team Meeting',
-      description: 'Weekly team sync',
-      location: 'Conference Room A',
-      start: { dateTime: '2024-01-15T10:00:00Z' },
-      end: { dateTime: '2024-01-15T11:00:00Z' },
-      attendees: [
-        { email: 'john@example.com', displayName: 'John Doe', responseStatus: 'accepted' }
-      ],
-      htmlLink: 'https://calendar.google.com/event?eid=duplicate123'
-    });
-
-    const conflicts: ConflictCheckResult = {
-      hasConflicts: true,
-      duplicates: [{
-        event: {
-          id: 'duplicate123',
-          title: 'Team Meeting',
-          url: 'https://calendar.google.com/event?eid=duplicate123',
-          similarity: 0.95
-        },
-        fullEvent: fullEvent,
-        suggestion: 'This appears to be a duplicate. Consider updating the existing event instead.'
-      }],
-      conflicts: []
-    };
-
-    const formatted = formatConflictWarnings(conflicts);
-    
-    expect(formatted).toContain('POTENTIAL DUPLICATES DETECTED');
-    expect(formatted).toContain('95% similar');
-    expect(formatted).toContain('Existing event details:');
-    expect(formatted).toContain('Event: Team Meeting');
-    expect(formatted).toContain('Event ID: duplicate123');
-    expect(formatted).toContain('Description: Weekly team sync');
-    expect(formatted).toContain('Location: Conference Room A');
-    expect(formatted).toContain('John Doe (accepted)');
-    expect(formatted).toContain('View: https://calendar.google.com/event?eid=duplicate123');
-  });
-
   it('should format conflict warnings with full event details', () => {
     const conflictingEvent = makeEvent({
       id: 'conflict456',
@@ -84,7 +41,7 @@ describe('Enhanced Conflict Response Formatting', () => {
 
     const formatted = formatConflictWarnings(conflicts);
     
-    expect(formatted).toContain('SCHEDULING CONFLICTS DETECTED');
+    expect(formatted).toContain(CONFLICT_DETECTED_HEADER);
     expect(formatted).toContain('Calendar: primary');
     expect(formatted).toContain('Conflicting Event');
     expect(formatted).toContain('Overlap: 30 minutes (50% of your event)');
@@ -92,30 +49,6 @@ describe('Enhanced Conflict Response Formatting', () => {
     expect(formatted).toContain('Event: Design Review');
     expect(formatted).toContain('Description: Q4 design review meeting');
     expect(formatted).toContain('Location: Room 201');
-  });
-
-  it('should fallback gracefully when full event details are not available', () => {
-    const conflicts: ConflictCheckResult = {
-      hasConflicts: true,
-      duplicates: [{
-        event: {
-          id: 'dup789',
-          title: 'Standup',
-          url: 'https://calendar.google.com/event?eid=dup789',
-          similarity: 0.85
-        },
-        suggestion: DUPLICATE_SUGGESTION
-      }],
-      conflicts: []
-    };
-
-    const formatted = formatConflictWarnings(conflicts);
-    
-    expect(formatted).toContain('POTENTIAL DUPLICATES DETECTED');
-    expect(formatted).toContain('85% similar');
-    expect(formatted).toContain('"Standup"');
-    expect(formatted).toContain('View existing event: https://calendar.google.com/event?eid=dup789');
-    expect(formatted).not.toContain('Existing event details:'); // Should not show this section
   });
 
   it('should format multiple conflicts with proper separation', () => {

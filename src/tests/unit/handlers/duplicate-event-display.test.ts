@@ -1,9 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { formatConflictWarnings } from '../../../handlers/utils.js';
 import { ConflictCheckResult } from '../../../services/conflict-detection/types.js';
-import { calendar_v3 } from 'googleapis';
 import { makeEvent } from '../helpers/index.js';
-import { DUPLICATE_SUGGESTION } from '../helpers/test-configs.js';
+import { TEST_TIMEZONE_ABBREVIATION_WINTER } from '../../../testing/constants.js';
+import { DUPLICATE_SUGGESTIONS } from '../../../services/conflict-detection/config.js';
+import {
+  EVENT_ID_PREFIX,
+  TIME_START_PREFIX,
+  TIME_END_PREFIX,
+  DUPLICATE_DETECTED_HEADER,
+} from '../../../handlers/utils.js';
 
 describe('Duplicate Event Display', () => {
   it('should show full formatted event details for duplicates with calendarId', () => {
@@ -46,7 +52,7 @@ describe('Duplicate Event Display', () => {
         },
         fullEvent: duplicateEvent,
         calendarId: 'primary',
-        suggestion: DUPLICATE_SUGGESTION
+        suggestion: DUPLICATE_SUGGESTIONS.WARNING
       }],
       conflicts: []
     };
@@ -54,21 +60,21 @@ describe('Duplicate Event Display', () => {
     const formatted = formatConflictWarnings(conflicts);
     
     // Verify the header
-    expect(formatted).toContain('POTENTIAL DUPLICATES DETECTED');
+    expect(formatted).toContain(DUPLICATE_DETECTED_HEADER);
     expect(formatted).toContain('85% similar');
-    expect(formatted).toContain('This event is very similar to an existing one. Is this intentional?');
+    expect(formatted).toContain(DUPLICATE_SUGGESTIONS.WARNING);
     
     // Verify full event details are shown
     expect(formatted).toContain('Existing event details:');
     expect(formatted).toContain('Event: Weekly Team Standup');
-    expect(formatted).toContain('Event ID: dup123');
+    expect(formatted).toContain(`${EVENT_ID_PREFIX}dup123`);
     expect(formatted).toContain('Description: Weekly sync with the engineering team');
     expect(formatted).toContain('Location: Conference Room B');
     
     // Verify time formatting
-    expect(formatted).toContain('Start:');
-    expect(formatted).toContain('End:');
-    expect(formatted).toContain('PST'); // Should show timezone
+    expect(formatted).toContain(TIME_START_PREFIX);
+    expect(formatted).toContain(TIME_END_PREFIX);
+    expect(formatted).toContain(TEST_TIMEZONE_ABBREVIATION_WINTER);
     
     // Verify attendees
     expect(formatted).toContain('Guests: Alice (accepted), Bob (pending)');
@@ -105,7 +111,7 @@ describe('Duplicate Event Display', () => {
           },
           fullEvent: dup1,
           calendarId: 'primary',
-          suggestion: DUPLICATE_SUGGESTION
+          suggestion: DUPLICATE_SUGGESTIONS.WARNING
         },
         {
           event: {
@@ -115,7 +121,7 @@ describe('Duplicate Event Display', () => {
           },
           fullEvent: dup2,
           calendarId: 'work@company.com',
-          suggestion: DUPLICATE_SUGGESTION
+          suggestion: DUPLICATE_SUGGESTIONS.WARNING
         }
       ],
       conflicts: []
@@ -148,7 +154,7 @@ describe('Duplicate Event Display', () => {
           url: 'https://calendar.google.com/event/basic-dup',
           similarity: 0.7
         },
-        suggestion: DUPLICATE_SUGGESTION
+        suggestion: DUPLICATE_SUGGESTIONS.WARNING
       }],
       conflicts: []
     };

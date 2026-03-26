@@ -4,19 +4,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { getTextContent, makeEvent, makeEvents, makeGaxiosError, makeCalendarMock } from '../helpers/index.js';
 import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
 
-vi.mock('googleapis', () => ({
-  google: {
-    calendar: vi.fn(() => ({
-      events: {
-        list: vi.fn()
-      },
-      calendarList: {
-        get: vi.fn()
-      }
-    }))
-  },
-  calendar_v3: {}
-}));
+vi.mock('googleapis');
 
 vi.mock('../../../utils/field-mask-builder.js', () => ({
   buildListFieldMask: vi.fn((fields) => {

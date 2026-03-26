@@ -6,19 +6,7 @@ import { convertToRFC3339 } from '../../../utils/timezone-utils.js';
 import { getTextContent, makeEvent, makeCalendarMock } from '../helpers/index.js';
 import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
 
-// Mock googleapis globally
-vi.mock('googleapis', () => ({
-  google: {
-    calendar: vi.fn(() => ({
-      events: {
-        list: vi.fn()
-      },
-      calendarList: {
-        get: vi.fn()
-      }
-    }))
-  }
-}));
+vi.mock('googleapis');
 
 describe('ListEventsHandler JSON String Handling', () => {
   const mockOAuth2Client = {

@@ -7,7 +7,7 @@ import { getTextContent, assertTextContentContains, makeEvent, makeEventWithCale
 import { LIST_EVENTS_API_DEFAULTS, TIME_MIN, TIME_MAX } from '../helpers/test-configs.js';
 // Import the types and schemas we're testing
 import { ToolSchemas } from '../../../tools/registry.js';
-import { ExtendedEvent } from '../../../handlers/core/batchUtils.js';
+import { calendar_v3 } from 'googleapis';
 
 // Get the schema for validation testing
 const ListEventsArgumentsSchema = ToolSchemas['list-events'];
@@ -120,8 +120,7 @@ describe('Batch List Events Functionality', () => {
       const result = ListEventsArgumentsSchema.safeParse(input);
       expect(result.success).toBe(true);
       expect(typeof result.data?.calendarId).toBe('string');
-      const parsed = JSON.parse(result.data?.calendarId);
-      expect(parsed).toHaveLength(50);
+      expect(result.data?.calendarId).toBe(JSON.stringify(maxCalendars));
     });
   });
 
@@ -292,10 +291,10 @@ describe('Batch List Events Functionality', () => {
   });
 
   describe('Event Sorting and Formatting', () => {
-    const sortByStartTime = (a: ExtendedEvent, b: ExtendedEvent) => {
+    const sortByStartTime = (a: calendar_v3.Schema$Event, b: calendar_v3.Schema$Event) => {
       const aStart = a.start?.dateTime || a.start?.date || '';
       const bStart = b.start?.dateTime || b.start?.date || '';
-      return aStart.localeCompare(bStart);
+      return aStart < bStart ? -1 : aStart > bStart ? 1 : 0;
     };
 
     it('should sort events by start time across multiple calendars', () => {

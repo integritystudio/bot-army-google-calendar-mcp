@@ -9,10 +9,10 @@ import { CONFLICT_DETECTION_CONFIG } from '../../services/conflict-detection/con
  * Copy properties from source to target if they exist in source and are not undefined.
  * Used to conditionally build event fields without boilerplate if-checks.
  */
-function conditionallyAddFields<T extends Record<string, any>>(
-  source: T,
+function conditionallyAddFields(
+  source: Record<string, any>,
   target: Record<string, any>,
-  fieldNames: (keyof T)[]
+  fieldNames: readonly string[]
 ): void {
   for (const field of fieldNames) {
     if (field in source && source[field] !== undefined) {

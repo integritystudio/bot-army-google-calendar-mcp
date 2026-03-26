@@ -72,7 +72,7 @@ export class ListEventsHandler extends BaseToolHandler {
                 timeMax = resolved.timeMax;
             }
 
-            const fieldMask = buildListFieldMask(options.fields);
+            const fieldMask = buildListFieldMask(options.fields) ?? null;
 
             const response = await calendar.events.list({
                 calendarId,
@@ -100,7 +100,7 @@ export class ListEventsHandler extends BaseToolHandler {
         options: ListEventsOptions
     ): Promise<ExtendedEvent[]> {
         const batchHandler = new BatchRequestHandler(client);
-        const fieldMask = buildListFieldMask(options.fields);
+        const fieldMask = buildListFieldMask(options.fields) ?? null;
 
         // Batch timezone fetches to avoid N+1 API calls
         const timezones = await Promise.all(
@@ -111,7 +111,7 @@ export class ListEventsHandler extends BaseToolHandler {
 
         const requests = calendarIds.map((calendarId, i) => ({
             method: "GET" as const,
-            path: this.buildEventsPath(calendarId, timezones[i], options, fieldMask)
+            path: this.buildEventsPath(calendarId, timezones[i]!, options, fieldMask)
         }));
 
         const responses = await batchHandler.executeBatch(requests);

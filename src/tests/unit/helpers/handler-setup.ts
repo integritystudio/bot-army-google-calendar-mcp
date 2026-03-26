@@ -12,7 +12,12 @@ import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
  * Mock the googleapis module with standard calendar and calendarList methods.
  * Returns mocked googleapis for use in vi.mock() calls.
  */
-export function createGoogleCalendarMocks(): ReturnType<typeof vi.fn> {
+interface GoogleCalendarMocks {
+  google: { calendar: ReturnType<typeof vi.fn> };
+  calendar_v3: Record<string, never>;
+}
+
+export function createGoogleCalendarMocks(): GoogleCalendarMocks {
   return {
     google: {
       calendar: vi.fn(() => ({

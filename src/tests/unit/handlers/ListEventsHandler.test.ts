@@ -36,13 +36,10 @@ describe('ListEventsHandler JSON String Handling', () => {
       calendarListGet: vi.fn().mockResolvedValue({ data: { timeZone: 'UTC' } }),
     });
     vi.mocked(google.calendar).mockReturnValue(mockCalendar);
-  });
-
-  // Mock fetch for batch requests
-  global.fetch = vi.fn().mockResolvedValue({
-    ok: true,
-    status: 200,
-    text: () => Promise.resolve(`--batch_boundary
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: () => Promise.resolve(`--batch_boundary
 Content-Type: application/http
 Content-ID: <item1>
 
@@ -52,6 +49,7 @@ Content-Type: application/json
 {"items": [{"id": "test-event", "summary": "Test Event", "start": {"dateTime": "2025-06-02T10:00:00Z"}, "end": {"dateTime": "2025-06-02T11:00:00Z"}}]}
 
 --batch_boundary--`)
+    });
   });
 
   it('should handle single calendar ID as string', async () => {

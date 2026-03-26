@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SearchEventsHandler } from '../../../handlers/core/SearchEventsHandler.js';
 import { OAuth2Client } from 'google-auth-library';
-import { calendar_v3 } from 'googleapis';
-import { getTextContent, makeEvent, makeGaxiosError, makeCalendarMock } from '../helpers/index.js';
+import { getTextContent, makeEvent, makeEvents, makeGaxiosError, makeCalendarMock } from '../helpers/index.js';
 import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
 
 vi.mock('googleapis', () => ({
@@ -261,20 +260,13 @@ describe('SearchEventsHandler', () => {
     });
 
     it('should handle many events', async () => {
-      const mockEvents = Array.from({ length: 50 }, (_, i) => ({
-        id: `event${i}`,
-        summary: `Event ${i}`,
-        start: { dateTime: `2025-01-${String((i % 28) + 1).padStart(2, '0')}T10:00:00Z` },
-        end: { dateTime: `2025-01-${String((i % 28) + 1).padStart(2, '0')}T11:00:00Z` }
-      }));
-
-      mockCalendar.events.list.mockResolvedValue({ data: { items: mockEvents } });
+      mockCalendar.events.list.mockResolvedValue({ data: { items: makeEvents(50) } });
 
       const result = await handler.runTool(BASE_ARGS, mockOAuth2Client);
       const text = getTextContent(result);
 
       expect(text).toContain('Found 50 event(s)');
-      expect(text).toContain('50. Event 49');
+      expect(text).toContain('50. Event 50');
     });
 
     it('should handle events with all-day dates', async () => {

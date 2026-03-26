@@ -202,7 +202,7 @@ node check-gmail.mjs
 Automated scripts for organizing and filtering large volumes of Gmail with focus on correctness and efficiency.
 
 **Management Scripts:** (use shared `createGmailClient()` for OAuth, error handling, and multi-account support)
-- `list-unread-emails.mjs` - Categorize and summarize unread emails by label/sender patterns; clean fallback categorization
+- `list-unread-emails.mjs` - Categorize and summarize unread emails; `--stats` for per-label counts, `--verify` for label spot-checks, `--count` for quick total
 - `summarize-remaining.mjs` - Summary of uncategorized/remaining unread emails (internal work, forums, misc); parallel fetching
 - `describe-internal.mjs` - Detailed breakdown of internal team emails with subjects and dates; hardcoded summary removed
 - `apply-filters-to-unread.mjs` - Apply existing filters to current unread emails

@@ -11,7 +11,7 @@ import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, GMAIL_INBOX, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 import { ensureLabelExists } from './lib/gmail-filter-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
-import { batchModifyMessages, searchAndModify } from './lib/gmail-batch-utils.mjs';
+import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 import { BANNER, printComplete } from './lib/console-utils.mjs';
 
 const billingMode = process.argv.includes('--billing');
@@ -145,29 +145,13 @@ async function runBillingFilters() {
 
     console.log('\nSTEP 2: Applying to existing emails\n');
 
-    const rateLimitResponse = await gmail.users.messages.list({
-      userId: USER_ID,
-      q: `subject:${BILLING_KEYWORDS} subject:"rate limit"`,
-      maxResults: 100,
-    });
-    const rateLimitIds = rateLimitResponse.data.messages || [];
-    if (rateLimitIds.length > 0) {
-      await batchModifyMessages(gmail, rateLimitIds, { addLabelIds: rateLimitLabelIds });
-      console.log(`Applied to ${rateLimitIds.length} rate limit emails (kept in inbox)`);
-    }
+    const rateLimitCount = await searchAndModify(gmail, `subject:${BILLING_KEYWORDS} subject:"rate limit"`, { addLabelIds: rateLimitLabelIds }, 100);
+    if (rateLimitCount > 0) console.log(`Applied to ${rateLimitCount} rate limit emails (kept in inbox)`);
 
-    const regularResponse = await gmail.users.messages.list({
-      userId: USER_ID,
-      q: `subject:${BILLING_KEYWORDS} -"rate limit"`,
-      maxResults: 100,
-    });
-    const regularIds = regularResponse.data.messages || [];
-    if (regularIds.length > 0) {
-      await batchModifyMessages(gmail, regularIds, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] });
-      console.log(`Applied to ${regularIds.length} regular billing emails (archived)`);
-    }
+    const regularCount = await searchAndModify(gmail, `subject:${BILLING_KEYWORDS} -"rate limit"`, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] }, 100);
+    if (regularCount > 0) console.log(`Applied to ${regularCount} regular billing emails (archived)`);
 
-    printComplete(`Rate limit billing: ${rateLimitIds.length} | Regular billing: ${regularIds.length}\n`);
+    printComplete(`Rate limit billing: ${rateLimitCount} | Regular billing: ${regularCount}\n`);
   }
 
   if (billingSubMode === 'update') {
@@ -197,12 +181,9 @@ async function runBillingFilters() {
     }
 
     console.log('STEP 2: Applying to existing urgent billing emails\n');
-    const urgentQuery = `subject:${BILLING_KEYWORDS} subject:${URGENT_KEYWORDS}`;
-    const urgentResponse = await gmail.users.messages.list({ userId: USER_ID, q: urgentQuery, maxResults: 100 });
-    const urgentIds = urgentResponse.data.messages || [];
-    if (urgentIds.length > 0) {
-      await batchModifyMessages(gmail, urgentIds, { addLabelIds: [billingLabelId, keepImportantLabelId] });
-      console.log(`Applied to ${urgentIds.length} urgent billing emails (kept in inbox)\n`);
+    const urgentCount = await searchAndModify(gmail, `subject:${BILLING_KEYWORDS} subject:${URGENT_KEYWORDS}`, { addLabelIds: [billingLabelId, keepImportantLabelId] }, 100);
+    if (urgentCount > 0) {
+      console.log(`Applied to ${urgentCount} urgent billing emails (kept in inbox)\n`);
     } else {
       console.log('No urgent billing emails found\n');
     }
@@ -213,23 +194,13 @@ async function runBillingFilters() {
   if (billingSubMode === 'apply-only') {
     console.log('APPLYING BILLING FILTER TO UNREAD EMAILS\n');
 
-    const urgentQuery = `is:unread subject:${BILLING_KEYWORDS} subject:${URGENT_KEYWORDS}`;
-    const urgentResponse = await gmail.users.messages.list({ userId: USER_ID, q: urgentQuery, maxResults: 100 });
-    const urgentIds = urgentResponse.data.messages || [];
-    console.log(`Found ${urgentIds.length} unread urgent billing emails`);
-    if (urgentIds.length > 0) {
-      await batchModifyMessages(gmail, urgentIds, { addLabelIds: [billingLabelId, keepImportantLabelId] });
-    }
+    const urgentCount = await searchAndModify(gmail, `is:unread subject:${BILLING_KEYWORDS} subject:${URGENT_KEYWORDS}`, { addLabelIds: [billingLabelId, keepImportantLabelId] }, 100);
+    console.log(`Found ${urgentCount} unread urgent billing emails`);
 
-    const regularQuery = `is:unread subject:${BILLING_KEYWORDS} -"late fee" -overdue -"missed payment"`;
-    const regularResponse = await gmail.users.messages.list({ userId: USER_ID, q: regularQuery, maxResults: 100 });
-    const regularIds = regularResponse.data.messages || [];
-    console.log(`Found ${regularIds.length} unread regular billing emails`);
-    if (regularIds.length > 0) {
-      await batchModifyMessages(gmail, regularIds, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] });
-    }
+    const regularCount = await searchAndModify(gmail, `is:unread subject:${BILLING_KEYWORDS} -"late fee" -overdue -"missed payment"`, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] }, 100);
+    console.log(`Found ${regularCount} unread regular billing emails`);
 
-    printComplete(`Urgent billing (kept in inbox): ${urgentIds.length}\nRegular billing (archived): ${regularIds.length}\nTotal processed: ${urgentIds.length + regularIds.length} emails\n`);
+    printComplete(`Urgent billing (kept in inbox): ${urgentCount}\nRegular billing (archived): ${regularCount}\nTotal processed: ${urgentCount + regularCount} emails\n`);
   }
 
   console.log(BANNER + '\n');

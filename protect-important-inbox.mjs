@@ -8,8 +8,8 @@
  *   node protect-important-inbox.mjs --billing --apply-only   # apply billing filters to unread emails only
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID, GMAIL_INBOX, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
-import { ensureLabelExists } from './lib/gmail-filter-utils.mjs';
+import { GMAIL_INBOX, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
+import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 import { BANNER, printComplete } from './lib/console-utils.mjs';
@@ -49,18 +49,8 @@ async function protectImportantItems() {
   console.log('STEP 1: Creating filters to keep important items in inbox\n');
 
   for (const config of IMPORTANT_FILTERS) {
-    try {
-      await gmail.users.settings.filters.create({
-        userId: USER_ID,
-        requestBody: {
-          criteria: { query: config.query },
-          action: { addLabelIds: [importantLabelId] },
-        },
-      });
-      console.log(`  ${config.name}`);
-    } catch (error) {
-      console.log(`  ${config.name}: ${error.message}`);
-    }
+    const filterId = await createGmailFilter(gmail, { query: config.query }, { addLabelIds: [importantLabelId] });
+    console.log(filterId ? `  ${config.name}` : `  ${config.name} (already exists)`);
   }
 
   console.log('\nSTEP 2: Labeling existing important emails\n');
@@ -117,31 +107,11 @@ async function runBillingFilters() {
       : [billingLabelId];
 
     console.log('STEP 1: Creating filters\n');
-    try {
-      await gmail.users.settings.filters.create({
-        userId: USER_ID,
-        requestBody: {
-          criteria: { query: `subject:${BILLING_KEYWORDS} subject:"rate limit"` },
-          action: { addLabelIds: rateLimitLabelIds },
-        },
-      });
-      console.log('Filter 1: Billing + Rate Limit (KEEP IN INBOX)');
-    } catch (error) {
-      console.log(`Filter 1 error: ${error.message}`);
-    }
+    const f1 = await createGmailFilter(gmail, { query: `subject:${BILLING_KEYWORDS} subject:"rate limit"` }, { addLabelIds: rateLimitLabelIds });
+    console.log(f1 ? 'Filter 1: Billing + Rate Limit (KEEP IN INBOX)' : 'Filter 1 already exists');
 
-    try {
-      await gmail.users.settings.filters.create({
-        userId: USER_ID,
-        requestBody: {
-          criteria: { query: `subject:${BILLING_KEYWORDS} -"rate limit"` },
-          action: { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] },
-        },
-      });
-      console.log('Filter 2: Billing Only (SKIP INBOX)');
-    } catch (error) {
-      console.log(`Filter 2 error: ${error.message}`);
-    }
+    const f2 = await createGmailFilter(gmail, { query: `subject:${BILLING_KEYWORDS} -"rate limit"` }, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] });
+    console.log(f2 ? 'Filter 2: Billing Only (SKIP INBOX)' : 'Filter 2 already exists');
 
     console.log('\nSTEP 2: Applying to existing emails\n');
 
@@ -164,14 +134,8 @@ async function runBillingFilters() {
 
     console.log('STEP 1: Creating urgent billing alert filter\n');
     try {
-      await gmail.users.settings.filters.create({
-        userId: USER_ID,
-        requestBody: {
-          criteria: { query: `subject:${BILLING_KEYWORDS} subject:${URGENT_KEYWORDS}` },
-          action: { addLabelIds: [billingLabelId, keepImportantLabelId] },
-        },
-      });
-      console.log('Filter created: Urgent billing alerts (KEEP IN INBOX)\n');
+      const filterId = await createGmailFilter(gmail, { query: `subject:${BILLING_KEYWORDS} subject:${URGENT_KEYWORDS}` }, { addLabelIds: [billingLabelId, keepImportantLabelId] });
+      console.log(filterId ? 'Filter created: Urgent billing alerts (KEEP IN INBOX)\n' : 'Filter already exists\n');
     } catch (error) {
       if (error.message.includes('Too many')) {
         console.log('Gmail label limit reached, using simplified approach\n');

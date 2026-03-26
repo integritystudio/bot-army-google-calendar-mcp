@@ -26,6 +26,24 @@ import { GmailCreateLabelHandler } from "../handlers/gmail/GmailCreateLabelHandl
 import { GmailCreateFilterHandler } from "../handlers/gmail/GmailCreateFilterHandler.js";
 import { GmailApplyFiltersHandler } from "../handlers/gmail/GmailApplyFiltersHandler.js";
 
+const KEY_VALUE_REGEX = /^[^=]+=[^=]+$/;
+const KEY_VALUE_FORMAT_MSG = "Must be in key=value format";
+
+const extendedPropertyFilters = {
+  privateExtendedProperty: z
+    .array(z.string().regex(KEY_VALUE_REGEX, KEY_VALUE_FORMAT_MSG))
+    .optional()
+    .describe(
+      "Filter by private extended properties (key=value). Matches events that have all specified properties."
+    ),
+  sharedExtendedProperty: z
+    .array(z.string().regex(KEY_VALUE_REGEX, KEY_VALUE_FORMAT_MSG))
+    .optional()
+    .describe(
+      "Filter by shared extended properties (key=value). Matches events that have all specified properties."
+    )
+};
+
 // Define all tool schemas with TypeScript inference
 export const ToolSchemas = {
   'list-calendars': z.object({}),
@@ -48,20 +66,9 @@ export const ToolSchemas = {
     fields: z.array(z.enum(ALLOWED_EVENT_FIELDS)).optional().describe(
       "Optional array of additional event fields to retrieve. Available fields are strictly validated. Default fields (id, summary, start, end, status, htmlLink, location, attendees) are always included."
     ),
-    privateExtendedProperty: z
-      .array(z.string().regex(/^[^=]+=[^=]+$/, "Must be in key=value format"))
-      .optional()
-      .describe(
-        "Filter by private extended properties (key=value). Matches events that have all specified properties."
-      ),
-    sharedExtendedProperty: z
-      .array(z.string().regex(/^[^=]+=[^=]+$/, "Must be in key=value format"))
-      .optional()
-      .describe(
-        "Filter by shared extended properties (key=value). Matches events that have all specified properties."
-      )
+    ...extendedPropertyFilters
   }),
-  
+
   'search-events': z.object({
     calendarId: z.string().describe("ID of the calendar (use 'primary' for the main calendar)"),
     query: z.string().describe(
@@ -79,20 +86,9 @@ export const ToolSchemas = {
     fields: z.array(z.enum(ALLOWED_EVENT_FIELDS)).optional().describe(
       "Optional array of additional event fields to retrieve. Available fields are strictly validated. Default fields (id, summary, start, end, status, htmlLink, location, attendees) are always included."
     ),
-    privateExtendedProperty: z
-      .array(z.string().regex(/^[^=]+=[^=]+$/, "Must be in key=value format"))
-      .optional()
-      .describe(
-        "Filter by private extended properties (key=value). Matches events that have all specified properties."
-      ),
-    sharedExtendedProperty: z
-      .array(z.string().regex(/^[^=]+=[^=]+$/, "Must be in key=value format"))
-      .optional()
-      .describe(
-        "Filter by shared extended properties (key=value). Matches events that have all specified properties."
-      )
+    ...extendedPropertyFilters
   }),
-  
+
   'get-event': z.object({
     calendarId: z.string().describe("ID of the calendar (use 'primary' for the main calendar)"),
     eventId: z.string().describe("ID of the event to retrieve"),

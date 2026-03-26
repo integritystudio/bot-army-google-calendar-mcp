@@ -101,10 +101,7 @@ async function runSingleLabel(gmail, cfg) {
   console.log('\n1. APPLYING LABEL TO EXISTING EMAILS\n');
 
   let totalLabeled = 0;
-  const processedQueries = new Set();
   for (const query of cfg.searchPatterns) {
-    if (processedQueries.has(query)) continue;
-    processedQueries.add(query);
     try {
       const count = await searchAndModify(gmail, query, { addLabelIds: [labelId] }, 100);
       if (count > 0) console.log(`  Applied to ${count} emails matching: "${query}"`);

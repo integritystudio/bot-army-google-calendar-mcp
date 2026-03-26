@@ -148,26 +148,13 @@ async function run() {
     }
 
     if (!applyOnly) {
-      const filterId = await createGmailFilter(
-        gmail,
-        { query: config.filterQuery },
-        { addLabelIds: [labelId], removeLabelIds: [GMAIL_INBOX] },
-      );
-      if (filterId) {
-        console.log(`  Filter created: ${config.label}`);
-        created++;
-      } else {
-        console.log(`  Filter already exists: ${config.label}`);
-      }
+      const filterId = await createGmailFilter(gmail, { query: config.filterQuery }, { addLabelIds: [labelId], removeLabelIds: [GMAIL_INBOX] });
+      console.log(filterId ? `  Filter created: ${config.label}` : `  Filter already exists: ${config.label}`);
+      if (filterId) created++;
     }
 
     const applyQuery = config.applyQuery ?? `is:unread ${config.filterQuery}`;
-    const count = await searchAndModify(
-      gmail,
-      applyQuery,
-      { addLabelIds: [labelId], removeLabelIds: [GMAIL_INBOX] },
-      config.maxResults,
-    );
+    const count = await searchAndModify(gmail, applyQuery, { addLabelIds: [labelId], removeLabelIds: [GMAIL_INBOX] }, config.maxResults);
     if (count > 0) {
       console.log(`  ${config.label}: labeled and archived ${count} existing emails`);
       emailsProcessed += count;

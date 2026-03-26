@@ -1,8 +1,9 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID, GMAIL_INBOX, LABEL_EVENTS, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
-import { classifyEmail, getGmailAction } from './lib/date-based-filter.mjs';
+import { GMAIL_INBOX, LABEL_EVENTS, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
+import { classifyEmail } from './lib/date-based-filter.mjs';
 import { getHeader } from './lib/email-utils.mjs';
 import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { BANNER } from './lib/console-utils.mjs';
 import { decodeMessageBody } from './lib/gmail-message-utils.mjs';
 
@@ -15,17 +16,14 @@ async function filterEventsByDate() {
   console.log('FILTERING EVENTS BY DATE (WITH DATE-BASED ARCHIVE)\n');
   console.log(BANNER + '\n');
 
-  const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
-  const eventsLabel = labelsResponse.data.labels.find(l => l.name === LABEL_EVENTS);
-  const keepImportantLabel = labelsResponse.data.labels.find(l => l.name === LABEL_KEEP_IMPORTANT);
+  const labelCache = await buildLabelCache(gmail);
+  const eventsLabelId = labelCache.get(LABEL_EVENTS);
+  const keepImportantLabelId = labelCache.get(LABEL_KEEP_IMPORTANT);
 
-  if (!eventsLabel) {
+  if (!eventsLabelId) {
     console.log('Events label not found\n');
     process.exit(1);
   }
-
-  const eventsLabelId = eventsLabel.id;
-  const keepImportantLabelId = keepImportantLabel?.id;
 
   const searchQuery = `is:unread (subject:${EVENT_KEYWORDS} OR from:${EVENT_SENDERS}) ${keepImportantLabelId ? `-label:"${LABEL_KEEP_IMPORTANT}"` : ''}`;
   const searchResponse = await gmail.users.messages.list({ userId: USER_ID, q: searchQuery, maxResults: 100 });

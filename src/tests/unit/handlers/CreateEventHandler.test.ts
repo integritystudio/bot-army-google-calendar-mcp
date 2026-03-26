@@ -27,13 +27,6 @@ vi.mock('../../../utils/event-id-validator.js', () => ({
   })
 }));
 
-// Mock datetime utilities
-vi.mock('../../../utils/datetime.js', () => ({
-  createTimeObject: vi.fn((datetime: string, timezone: string) => ({ 
-    dateTime: datetime,
-    timeZone: timezone 
-  }))
-}));
 
 describe('CreateEventHandler', () => {
   let handler: CreateEventHandler;

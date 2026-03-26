@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
 import { OAuth2Client } from 'google-auth-library';
-import { makeEvent, getTextContent, createCreateEventArgs, makeCalendarMock, createConflictEventArgs, createEventWithExtendedProperties, createFullEventArgs, STANDARD_ATTACHMENTS } from '../helpers/index.js';
+import { makeEvent, getTextContent, createCreateEventArgs, makeCalendarMock, createConflictEventArgs, createFullEventArgs, STANDARD_ATTACHMENTS } from '../helpers/index.js';
 
 // Mock the googleapis module
 vi.mock('googleapis', () => ({

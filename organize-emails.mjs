@@ -16,6 +16,7 @@ import {
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 import { createGmailFilter } from './lib/gmail-filter-utils.mjs';
+import { BANNER } from './lib/console-utils.mjs';
 
 const typeArg = process.argv[process.argv.indexOf('--type') + 1];
 if (!typeArg || !['events', 'newsletters', 'event-sublabels'].includes(typeArg)) {
@@ -121,7 +122,7 @@ async function runSingleLabel(gmail, cfg) {
     console.error(`${cfg.label} label not found`);
     process.exit(1);
   }
-  console.log('═'.repeat(80));
+  console.log(BANNER);
   console.log('\n1. APPLYING LABEL TO EXISTING EMAILS\n');
 
   let totalLabeled = 0;
@@ -139,7 +140,7 @@ async function runSingleLabel(gmail, cfg) {
   }
 
   console.log(`\n  Total labeled: ${totalLabeled} emails\n`);
-  console.log('═'.repeat(80));
+  console.log(BANNER);
   console.log('\n2. CREATING AUTO-LABEL FILTERS\n');
 
   let filtersCreated = 0;
@@ -153,7 +154,7 @@ async function runSingleLabel(gmail, cfg) {
     }
   }
 
-  console.log('═'.repeat(80));
+  console.log(BANNER);
   console.log(`\n${cfg.title} COMPLETE\n`);
   console.log(`  Labeled existing emails: ${totalLabeled}`);
   console.log(`  Filters created: ${filtersCreated}`);
@@ -161,7 +162,7 @@ async function runSingleLabel(gmail, cfg) {
 
 async function runEventSublabels(gmail) {
   console.log('ORGANIZING EVENTS BY SUB-LABEL\n');
-  console.log('═'.repeat(80));
+  console.log(BANNER);
   console.log('\n1. APPLYING SUB-LABELS TO EXISTING EMAILS\n');
 
   const labelCache = await buildLabelCache(gmail);
@@ -181,7 +182,7 @@ async function runEventSublabels(gmail) {
   }
 
   console.log(`\n  Total labeled: ${totalLabeled} emails\n`);
-  console.log('═'.repeat(80));
+  console.log(BANNER);
   console.log('\n2. CREATING AUTO-LABEL FILTERS\n');
 
   let filtersCreated = 0;
@@ -195,7 +196,7 @@ async function runEventSublabels(gmail) {
     }
   }
 
-  console.log('═'.repeat(80));
+  console.log(BANNER);
   console.log('\nEVENT SUB-LABELS ORGANIZATION COMPLETE\n');
   console.log(`  Emails labeled: ${totalLabeled}`);
   console.log(`  Filters created: ${filtersCreated}`);

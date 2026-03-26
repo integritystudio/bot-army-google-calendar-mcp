@@ -13,7 +13,7 @@ import { ListEventsHandler } from "../../handlers/core/ListEventsHandler.js";
 // Import test helpers
 import { getTextContent, assertTextContentContains } from "../unit/helpers/index.js";
 import { LIST_EVENTS_API_DEFAULTS } from "../unit/helpers/test-configs.js";
-import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from "../../testing/constants.js";
+import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE, TEST_TIMEZONE_SECONDARY } from "../../testing/constants.js";
 
 // Mock OAuth2Client
 vi.mock('google-auth-library', () => ({
@@ -79,6 +79,15 @@ describe('Google Calendar MCP Server', () => {
   });
 
   describe('Tool Handlers', () => {
+    function mockCalendarEuropeTimezone(mockCalendarApi: ReturnType<typeof import('googleapis')['google']['calendar']>, summary: string) {
+      (mockCalendarApi.calendarList.get as any).mockResolvedValue({
+        data: { id: 'primary', timeZone: TEST_TIMEZONE_SECONDARY }
+      });
+      (mockCalendarApi.events.insert as any).mockResolvedValue({
+        data: { id: 'testEvent', summary }
+      });
+    }
+
     it('should handle list-calendars tool correctly', async () => {
       const handler = new ListCalendarsHandler();
       const { google } = await import('googleapis');
@@ -212,17 +221,7 @@ Personal (cal2)
         end: '2024-08-15T11:00:00', // Timezone-naive datetime
       };
 
-      // Mock calendar details with specific timezone
-      (mockCalendarApi.calendarList.get as any).mockResolvedValue({
-        data: {
-          id: 'primary',
-          timeZone: 'Europe/London'
-        }
-      });
-
-      (mockCalendarApi.events.insert as any).mockResolvedValue({
-        data: { id: 'testEvent', summary: mockEventArgs.summary }
-      });
+      mockCalendarEuropeTimezone(mockCalendarApi, mockEventArgs.summary);
 
       await handler.runTool(mockEventArgs, mockOAuth2Client);
 
@@ -230,8 +229,8 @@ Personal (cal2)
       expect(mockCalendarApi.events.insert).toHaveBeenCalledWith({
         calendarId: mockEventArgs.calendarId,
         requestBody: expect.objectContaining({
-          start: { dateTime: mockEventArgs.start, timeZone: 'Europe/London' },
-          end: { dateTime: mockEventArgs.end, timeZone: 'Europe/London' },
+          start: { dateTime: mockEventArgs.start, timeZone: TEST_TIMEZONE_SECONDARY },
+          end: { dateTime: mockEventArgs.end, timeZone: TEST_TIMEZONE_SECONDARY },
         }),
       });
     });
@@ -248,17 +247,7 @@ Personal (cal2)
         end: '2024-08-15T11:00:00-07:00', // Timezone-aware datetime
       };
 
-      // Mock calendar details (should not be used since timezone is in datetime)
-      (mockCalendarApi.calendarList.get as any).mockResolvedValue({
-        data: {
-          id: 'primary',
-          timeZone: 'Europe/London'
-        }
-      });
-
-      (mockCalendarApi.events.insert as any).mockResolvedValue({
-        data: { id: 'testEvent', summary: mockEventArgs.summary }
-      });
+      mockCalendarEuropeTimezone(mockCalendarApi, mockEventArgs.summary);
 
       await handler.runTool(mockEventArgs, mockOAuth2Client);
 

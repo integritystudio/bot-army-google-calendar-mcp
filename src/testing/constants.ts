@@ -27,6 +27,9 @@ export const TIME_DURATIONS = {
 // Timezone for integration test events
 export const TEST_TIMEZONE = 'America/Los_Angeles';
 
+// Secondary timezone used in unit tests for timezone-fallback scenarios
+export const TEST_TIMEZONE_SECONDARY = 'Europe/London';
+
 // Test event constants
 export const TEST_EVENT_DEFAULTS = {
   SUMMARY: 'Test Integration Event',

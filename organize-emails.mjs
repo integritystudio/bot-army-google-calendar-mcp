@@ -25,36 +25,11 @@ if (!typeArg || !['events', 'newsletters', 'event-sublabels'].includes(typeArg))
 }
 
 const EVENT_SUBLABEL_CATEGORIES = [
-  {
-    label: LABEL_EVENTS_MEETUP,
-    searchQuery: 'from:info@email.meetup.com',
-    filterCriteria: { from: 'info@email.meetup.com' },
-    filterName: 'Meetup Events',
-  },
-  {
-    label: LABEL_EVENTS_CALENDLY,
-    searchQuery: 'from:teamcalendly@send.calendly.com OR from:support@calendly.zendesk.com',
-    filterCriteria: { from: 'teamcalendly@send.calendly.com' },
-    filterName: 'Calendly Events',
-  },
-  {
-    label: LABEL_EVENTS_COMMUNITY,
-    searchQuery: 'subject:"📅 Just scheduled"',
-    filterCriteria: { subject: '📅 Just scheduled' },
-    filterName: 'Community Event Announcements',
-  },
-  {
-    label: LABEL_EVENTS_WORKSHOPS,
-    searchQuery: 'subject:workshop OR subject:conference OR subject:summit OR subject:webinar',
-    filterCriteria: { subject: 'workshop OR conference OR summit OR webinar' },
-    filterName: 'Workshop & Conference Events',
-  },
-  {
-    label: LABEL_EVENTS_INVITATIONS,
-    searchQuery: 'subject:invitation OR subject:invite OR subject:rsvp',
-    filterCriteria: { subject: 'invitation OR invite OR rsvp' },
-    filterName: 'Event Invitations',
-  },
+  { label: LABEL_EVENTS_MEETUP, searchQuery: 'from:info@email.meetup.com', filterCriteria: { from: 'info@email.meetup.com' }, filterName: 'Meetup Events' },
+  { label: LABEL_EVENTS_CALENDLY, searchQuery: 'from:teamcalendly@send.calendly.com OR from:support@calendly.zendesk.com', filterCriteria: { from: 'teamcalendly@send.calendly.com' }, filterName: 'Calendly Events' },
+  { label: LABEL_EVENTS_COMMUNITY, searchQuery: 'subject:"📅 Just scheduled"', filterCriteria: { subject: '📅 Just scheduled' }, filterName: 'Community Event Announcements' },
+  { label: LABEL_EVENTS_WORKSHOPS, searchQuery: 'subject:workshop OR subject:conference OR subject:summit OR subject:webinar', filterCriteria: { subject: 'workshop OR conference OR summit OR webinar' }, filterName: 'Workshop & Conference Events' },
+  { label: LABEL_EVENTS_INVITATIONS, searchQuery: 'subject:invitation OR subject:invite OR subject:rsvp', filterCriteria: { subject: 'invitation OR invite OR rsvp' }, filterName: 'Event Invitations' },
 ];
 
 const CONFIGS = {

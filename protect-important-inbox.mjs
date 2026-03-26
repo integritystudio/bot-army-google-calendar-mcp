@@ -11,7 +11,7 @@ import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, GMAIL_INBOX, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 import { ensureLabelExists } from './lib/gmail-filter-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
-import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
+import { batchModifyMessages, searchAndModify } from './lib/gmail-batch-utils.mjs';
 import { BANNER, printComplete } from './lib/console-utils.mjs';
 
 const billingMode = process.argv.includes('--billing');
@@ -66,13 +66,7 @@ async function protectImportantItems() {
   console.log('\nSTEP 2: Labeling existing important emails\n');
 
   const queryCounts = await Promise.all(
-    IMPORTANT_FILTERS.map(async ({ query }) => {
-      const searchResponse = await gmail.users.messages.list({ userId: USER_ID, q: query, maxResults: 100 });
-      const messageIds = searchResponse.data.messages || [];
-      if (messageIds.length === 0) return 0;
-      await batchModifyMessages(gmail, messageIds, { addLabelIds: [importantLabelId] });
-      return messageIds.length;
-    })
+    IMPORTANT_FILTERS.map(({ query }) => searchAndModify(gmail, query, { addLabelIds: [importantLabelId] }, 100))
   );
 
   const totalLabeled = queryCounts.reduce((sum, n) => sum + n, 0);

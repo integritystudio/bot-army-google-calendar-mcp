@@ -16,6 +16,7 @@ import {
 import { extractEventDate, isPastEvent } from './lib/date-based-filter.mjs';
 import { getHeader } from './lib/email-utils.mjs';
 import { batchModifyMessages, searchAndModify } from './lib/gmail-batch-utils.mjs';
+import { decodeMessageBody } from './lib/gmail-message-utils.mjs';
 
 const pastEventsMode = process.argv.includes('--past-events');
 const archivedOnly = process.argv.includes('--archived-only');
@@ -55,17 +56,7 @@ async function markPastEventsRead(gmail) {
     .filter(fullMsg => {
       const headers = fullMsg.data.payload?.headers || [];
       const subject = getHeader(headers, 'Subject');
-
-      let body = '';
-      if (fullMsg.data.payload?.body?.data) {
-        body = Buffer.from(fullMsg.data.payload.body.data, 'base64').toString('utf-8');
-      } else if (fullMsg.data.payload?.parts) {
-        const textPart = fullMsg.data.payload.parts.find(p => p.mimeType === 'text/plain');
-        if (textPart?.body?.data) {
-          body = Buffer.from(textPart.body.data, 'base64').toString('utf-8');
-        }
-      }
-
+      const body = decodeMessageBody(fullMsg.data.payload);
       const eventDate = extractEventDate(subject + '\n' + body);
       return eventDate && isPastEvent(eventDate);
     })

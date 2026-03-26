@@ -1,3 +1,10 @@
+/**
+ * List unread emails grouped by label category.
+ *
+ * Usage:
+ *   node list-unread-emails.mjs          # full category breakdown with previews
+ *   node list-unread-emails.mjs --count  # just print total unread count
+ */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { extractDisplayName, getHeader } from './lib/email-utils.mjs';
 import {
@@ -12,6 +19,8 @@ import {
   LABEL_BILLING,
 } from './lib/constants.mjs';
 
+const countOnly = process.argv.includes('--count');
+
 const CATEGORY_PRIORITY = [
   LABEL_KEEP_IMPORTANT, LABEL_EVENTS, LABEL_MONITORING,
   LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING,
@@ -23,11 +32,18 @@ const SUBJECT_MAX_LENGTH = 60;
 async function listUnreadEmails() {
   const gmail = createGmailClient();
 
+  const searchResponse = await gmail.users.messages.list({ userId: USER_ID, q: 'is:unread', maxResults: countOnly ? 1 : 500 });
+  const unreadCount = searchResponse.data.resultSizeEstimate || 0;
+
+  if (countOnly) {
+    console.log(`\nUnread messages: ${unreadCount}`);
+    return;
+  }
+
+  const messageIds = searchResponse.data.messages || [];
+
   console.log('LISTING UNREAD EMAILS\n');
   console.log('═'.repeat(80) + '\n');
-
-  const searchResponse = await gmail.users.messages.list({ userId: USER_ID, q: 'is:unread', maxResults: 500 });
-  const messageIds = searchResponse.data.messages || [];
   console.log(`Total unread: ${messageIds.length}\n`);
 
   if (messageIds.length === 0) {

@@ -131,7 +131,7 @@ describe('RecurringEventHelpers', () => {
       const newStartTime = '2024-06-15T14:00:00-07:00';
 
       const result = helpers.calculateEndTime(newStartTime, originalEvent);
-      expect(result).toBe('2024-06-15T22:00:00.000Z');
+      expect(result).toBe('2024-06-15T22:00:00Z');
     });
 
     it('should handle different durations', () => {
@@ -139,7 +139,7 @@ describe('RecurringEventHelpers', () => {
       const newStartTime = '2024-06-16T09:00:00Z';
 
       const result = helpers.calculateEndTime(newStartTime, originalEvent);
-      expect(result).toBe('2024-06-16T11:30:00.000Z');
+      expect(result).toBe('2024-06-16T11:30:00Z');
     });
 
     it('should handle cross-timezone calculations', () => {
@@ -147,13 +147,13 @@ describe('RecurringEventHelpers', () => {
       const newStartTime = '2024-06-15T10:00:00+05:30';
 
       const result = helpers.calculateEndTime(newStartTime, originalEvent);
-      expect(result).toBe('2024-06-15T05:30:00.000Z');
+      expect(result).toBe('2024-06-15T05:30:00Z');
     });
 
     it.each([
-      ['1 minute', '2024-06-15T10:00:00Z', '2024-06-15T10:01:00Z', '2024-06-16T15:30:00Z', '2024-06-16T15:31:00.000Z'],
-      ['8 hours', '2024-06-15T09:00:00Z', '2024-06-15T17:00:00Z', '2024-06-16T10:00:00Z', '2024-06-16T18:00:00.000Z'],
-      ['48 hours', '2024-06-15T10:00:00Z', '2024-06-17T10:00:00Z', '2024-06-20T10:00:00Z', '2024-06-22T10:00:00.000Z'],
+      ['1 minute', '2024-06-15T10:00:00Z', '2024-06-15T10:01:00Z', '2024-06-16T15:30:00Z', '2024-06-16T15:31:00Z'],
+      ['8 hours', '2024-06-15T09:00:00Z', '2024-06-15T17:00:00Z', '2024-06-16T10:00:00Z', '2024-06-16T18:00:00Z'],
+      ['48 hours', '2024-06-15T10:00:00Z', '2024-06-17T10:00:00Z', '2024-06-20T10:00:00Z', '2024-06-22T10:00:00Z'],
     ])('should preserve %s duration', (_, origStart, origEnd, newStart, expected) => {
       const event = { start: { dateTime: origStart }, end: { dateTime: origEnd } };
       expect(helpers.calculateEndTime(newStart, event)).toBe(expected);

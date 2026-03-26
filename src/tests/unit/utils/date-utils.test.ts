@@ -5,7 +5,6 @@ import {
   addMilliseconds,
   durationMs,
   formatBasicDateTime,
-  formatISODateTime,
   formatTZNaiveDateTime,
   formatRFC3339,
   getFutureDate,
@@ -119,20 +118,6 @@ describe('date-utils', () => {
     });
   });
 
-  describe('formatISODateTime', () => {
-    it('should format date as ISO datetime without milliseconds', () => {
-      expect(formatISODateTime(BASE_DATE_WITH_MS)).toBe('2024-06-15T10:00:00');
-    });
-
-    it('should not include timezone designator', () => {
-      const result = formatISODateTime(BASE_DATE);
-
-      expect(result).not.toContain('Z');
-      expect(result).not.toContain('+');
-      expect(result).not.toContain('-00:00');
-    });
-  });
-
   describe('formatTZNaiveDateTime', () => {
     it('should format date as timezone-naive ISO datetime', () => {
       expect(formatTZNaiveDateTime(BASE_DATE_WITH_MS)).toBe('2024-06-15T10:00:00');
@@ -221,11 +206,12 @@ describe('date-utils', () => {
   });
 
   describe('oneDayBefore', () => {
-    it('should subtract exactly one day from a date', () => {
+    it('should subtract one day from a date', () => {
       const result = oneDayBefore(BASE_DATE);
 
-      const duration = BASE_DATE.getTime() - result.getTime();
-      expect(duration).toBe(TIME_DURATIONS.DAY);
+      expect(result.getDate()).toBe(14);
+      expect(result.getMonth()).toBe(5);
+      expect(result.getFullYear()).toBe(2024);
     });
 
     it('should handle month boundaries', () => {

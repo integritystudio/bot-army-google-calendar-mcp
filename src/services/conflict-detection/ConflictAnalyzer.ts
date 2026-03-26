@@ -1,7 +1,7 @@
 import { calendar_v3 } from "googleapis";
 import { EventTimeRange } from "./types.js";
 import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
-import { durationMs, durationHours, durationMinutes } from "../../utils/date-utils.js";
+import { durationMs, durationMinutes } from "../../utils/date-utils.js";
 
 export class ConflictAnalyzer {
   private similarityChecker: EventSimilarityChecker;

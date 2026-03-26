@@ -1,5 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { GMAIL_INBOX, LABEL_EVENTS, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
+import { USER_ID, GMAIL_INBOX, LABEL_EVENTS, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 import { classifyEmail } from './lib/date-based-filter.mjs';
 import { getHeader } from './lib/email-utils.mjs';
 import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';

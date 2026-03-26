@@ -144,35 +144,22 @@ async function runRemainingFilters(gmail) {
   console.log(BANNER + '\n');
 
   let totalCreated = 0;
+  let emailsProcessed = 0;
 
   for (const categoryConfig of REMAINING_CATEGORIES) {
     console.log(`\n${categoryConfig.labelName.toUpperCase()}\n`);
-    const labelId = await ensureLabelExists(gmail, categoryConfig.labelName);
-    for (const filter of categoryConfig.filters) {
-      const filterId = await createGmailFilter(
-        gmail,
-        { query: filter.query },
-        { addLabelIds: [labelId], removeLabelIds: [GMAIL_INBOX] },
-      );
-      if (filterId) {
-        console.log(`  ${filter.name}`);
-        totalCreated++;
-      } else {
-        console.log(`  ${filter.name} (already exists)`);
-      }
-    }
-  }
-
-  console.log('\n' + BANNER);
-  console.log('\nAPPLYING TO EXISTING EMAILS\n');
-
-  let emailsProcessed = 0;
-  for (const categoryConfig of REMAINING_CATEGORIES) {
     const labelId = await ensureLabelExists(gmail, categoryConfig.labelName).catch(err => {
       console.warn(`  Warning: skipping ${categoryConfig.labelName} — ${err.message}`);
       return null;
     });
     if (!labelId) continue;
+
+    for (const filter of categoryConfig.filters) {
+      const filterId = await createGmailFilter(gmail, { query: filter.query }, { addLabelIds: [labelId], removeLabelIds: [GMAIL_INBOX] });
+      console.log(filterId ? `  ${filter.name}` : `  ${filter.name} (already exists)`);
+      if (filterId) totalCreated++;
+    }
+
     const queries = categoryConfig.filters.map(f => `(${f.query})`).join(' OR ');
     const count = await searchAndModify(gmail, queries, { addLabelIds: [labelId], removeLabelIds: [GMAIL_INBOX] }, 100);
     if (count > 0) {
@@ -181,7 +168,7 @@ async function runRemainingFilters(gmail) {
     }
   }
 
-  console.log(BANNER);
+  console.log('\n' + BANNER);
   console.log(`Filters created: ${totalCreated} | Emails processed: ${emailsProcessed}\n`);
   console.log(BANNER + '\n');
 }

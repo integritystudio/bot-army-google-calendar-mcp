@@ -1,3 +1,8 @@
+aeffe16 2026-03-26 chore(docs): regenerate repomix snapshots after simplify refactors
+  docs/repomix/repo-compressed.xml
+  docs/repomix/repomix-git-ranked.xml
+  docs/repomix/repomix.xml
+
 70510b3 2026-03-26 (chore) repomix regen
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-git-ranked.xml

@@ -296,19 +296,6 @@ vitest.config.ts
 <files>
 This section contains the contents of the repository's files.
 
-<file path=".claude/ralph-loop.local.md">
----
-active: true
-iteration: 1
-session_id: 
-max_iterations: 10
-completion_promise: "RALPH_COMPLETE"
-started_at: "2026-03-26T10:21:30Z"
----
-
-run /simplify on docs/repomix/repo-compressed.xml contents, accept all changes, run /otel-session-summary, address issues, run npm run repomix, repeat until clean
-</file>
-
 <file path="lib/gmail-client.mjs">
 /**
  * Creates an authenticated Gmail client.
@@ -819,6 +806,17 @@ constructor(apiKey: string, mcpClient: Client)
 async sendMessage(prompt: string): Promise<LLMResponse>
 </file>
 
+<file path="src/tests/integration/UpdateEventHandler.recurring.integration.test.ts">
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { OAuth2Client } from 'google-auth-library';
+import { google, calendar_v3 } from 'googleapis';
+import { initializeOAuth2Client } from '../../auth/client.js';
+import { TokenManager } from '../../auth/tokenManager.js';
+import { UpdateEventHandler } from '../../handlers/core/UpdateEventHandler.js';
+⋮----
+async function createTestEvent(overrides: any =
+</file>
+
 <file path="src/tests/unit/handlers/create-event-blocking.test.ts">
 import { describe, it, expect, vi } from 'vitest';
 import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
@@ -983,6 +981,41 @@ function showVersion(): void
 async function initializeApp(config: any): Promise<GoogleCalendarMcpServer>
 ⋮----
 function parseCliArgs():
+</file>
+
+<file path="src/server.ts">
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
+import { OAuth2Client } from "google-auth-library";
+import { initializeOAuth2Client } from './auth/client.js';
+import { AuthServer } from './auth/server.js';
+import { TokenManager } from './auth/tokenManager.js';
+import { ToolRegistry } from './tools/registry.js';
+import { StdioTransportHandler } from './transports/stdio.js';
+import { HttpTransportHandler, HttpTransportConfig } from './transports/http.js';
+import { ServerConfig } from './config/TransportConfig.js';
+export class GoogleCalendarMcpServer
+⋮----
+constructor(config: ServerConfig)
+async initialize(): Promise<void>
+private async handleStartupAuthentication(): Promise<void>
+private registerTools(): void
+private async ensureAuthenticated(): Promise<void>
+private async executeWithHandler(handler: any, args: any): Promise<
+async start(): Promise<void>
+private setupGracefulShutdown(): void
+⋮----
+const cleanup = async () =>
+⋮----
+getServer(): McpServer
+</file>
+
+<file path="src/verify-tokens.ts">
+import { initializeOAuth2Client } from './auth/client.js';
+import { TokenManager } from './auth/tokenManager.js';
+import fs from 'fs/promises';
+import { getSecureTokenPath } from './auth/utils.js';
+async function verifyAndRefreshTokens()
 </file>
 
 <file path=".env.test">
@@ -1158,6 +1191,19 @@ import { defineConfig } from 'vitest/config'
 import { loadEnv } from 'vite'
 ⋮----
 // Increase timeout for AI API calls
+</file>
+
+<file path=".claude/ralph-loop.local.md">
+---
+active: true
+iteration: 3
+session_id: 
+max_iterations: 10
+completion_promise: "RALPH_COMPLETE"
+started_at: "2026-03-26T10:21:30Z"
+---
+
+run /simplify on docs/repomix/repo-compressed.xml contents, accept all changes, run /otel-session-summary, address issues, run npm run repomix, repeat until clean
 </file>
 
 <file path="lib/date-based-filter.mjs">
@@ -1534,6 +1580,28 @@ When complete, output exactly:
 }
 </file>
 
+<file path="src/auth/server.ts">
+import { OAuth2Client } from 'google-auth-library';
+import { TokenManager } from './tokenManager.js';
+import http from 'http';
+import { URL } from 'url';
+import open from 'open';
+import { loadCredentials } from './client.js';
+import { getAccountMode, isNodeError } from './utils.js';
+⋮----
+function buildAuthHtml(title: string, body: string): string
+⋮----
+export class AuthServer
+⋮----
+constructor(oauth2Client: OAuth2Client)
+private createServer(): http.Server
+async start(openBrowser = true): Promise<boolean>
+private async startWithTimeout(openBrowser = true): Promise<boolean>
+private async startServerOnAvailablePort(): Promise<number | null>
+public getRunningPort(): number | null
+async stop(): Promise<void>
+</file>
+
 <file path="src/handlers/core/BatchRequestHandler.ts">
 import { OAuth2Client } from "google-auth-library";
 import { formatErrorMessage } from "./errorFormatting.js";
@@ -1848,17 +1916,6 @@ createEvent(overrides?: Partial<Record<string, any>>): Record<string, any>
 getEvent(overrides?: Partial<Record<string, any>>): Record<string, any>
 </file>
 
-<file path="src/tests/integration/UpdateEventHandler.recurring.integration.test.ts">
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { OAuth2Client } from 'google-auth-library';
-import { google, calendar_v3 } from 'googleapis';
-import { initializeOAuth2Client } from '../../auth/client.js';
-import { TokenManager } from '../../auth/tokenManager.js';
-import { UpdateEventHandler } from '../../handlers/core/UpdateEventHandler.js';
-⋮----
-async function createTestEvent(overrides: any =
-</file>
-
 <file path="src/tests/unit/handlers/BatchRequestHandler.test.ts">
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { OAuth2Client } from 'google-auth-library';
@@ -1959,41 +2016,6 @@ export class HttpTransportHandler
 ⋮----
 constructor(server: McpServer, config: HttpTransportConfig =
 async connect(): Promise<void>
-</file>
-
-<file path="src/server.ts">
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { OAuth2Client } from "google-auth-library";
-import { initializeOAuth2Client } from './auth/client.js';
-import { AuthServer } from './auth/server.js';
-import { TokenManager } from './auth/tokenManager.js';
-import { ToolRegistry } from './tools/registry.js';
-import { StdioTransportHandler } from './transports/stdio.js';
-import { HttpTransportHandler, HttpTransportConfig } from './transports/http.js';
-import { ServerConfig } from './config/TransportConfig.js';
-export class GoogleCalendarMcpServer
-⋮----
-constructor(config: ServerConfig)
-async initialize(): Promise<void>
-private async handleStartupAuthentication(): Promise<void>
-private registerTools(): void
-private async ensureAuthenticated(): Promise<void>
-private async executeWithHandler(handler: any, args: any): Promise<
-async start(): Promise<void>
-private setupGracefulShutdown(): void
-⋮----
-const cleanup = async () =>
-⋮----
-getServer(): McpServer
-</file>
-
-<file path="src/verify-tokens.ts">
-import { initializeOAuth2Client } from './auth/client.js';
-import { TokenManager } from './auth/tokenManager.js';
-import fs from 'fs/promises';
-import { getSecureTokenPath } from './auth/utils.js';
-async function verifyAndRefreshTokens()
 </file>
 
 <file path="analyze_emails.mjs">
@@ -2368,28 +2390,6 @@ async function verifyAndRefreshTokens()
 /** Gmail label names for email categories */
 </file>
 
-<file path="src/auth/server.ts">
-import { OAuth2Client } from 'google-auth-library';
-import { TokenManager } from './tokenManager.js';
-import http from 'http';
-import { URL } from 'url';
-import open from 'open';
-import { loadCredentials } from './client.js';
-import { getAccountMode, isNodeError } from './utils.js';
-⋮----
-function buildAuthHtml(title: string, body: string): string
-⋮----
-export class AuthServer
-⋮----
-constructor(oauth2Client: OAuth2Client)
-private createServer(): http.Server
-async start(openBrowser = true): Promise<boolean>
-private async startWithTimeout(openBrowser = true): Promise<boolean>
-private async startServerOnAvailablePort(): Promise<number | null>
-public getRunningPort(): number | null
-async stop(): Promise<void>
-</file>
-
 <file path="src/handlers/core/BaseToolHandler.ts">
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
@@ -2417,10 +2417,10 @@ import { CreateEventInput, UpdateEventInput } from '../../tools/registry.js';
 import { createTimeObject } from '../../utils/timezone-utils.js';
 import { ConflictDetectionService } from '../../services/conflict-detection/index.js';
 import { CONFLICT_DETECTION_CONFIG } from '../../services/conflict-detection/config.js';
-function conditionallyAddFields<T extends Record<string, any>>(
-  source: T,
+function conditionallyAddFields(
+  source: Record<string, any>,
   target: Record<string, any>,
-  fieldNames: (keyof T)[]
+  fieldNames: readonly string[]
 ): void
 export function buildCoreEvent(
   input: CreateEventInput | UpdateEventInput,
@@ -2740,6 +2740,119 @@ export function processBatchResponses<T extends ExtendedEvent = ExtendedEvent>(
 ): BatchResponseResult<T>
 </file>
 
+<file path="src/handlers/core/UpdateEventHandler.ts">
+import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { OAuth2Client } from "google-auth-library";
+import { UpdateEventInput } from "../../tools/registry.js";
+import { BaseToolHandler } from "./BaseToolHandler.js";
+import { calendar_v3 } from 'googleapis';
+import { RecurringEventHelpers, RecurringEventError, RECURRING_EVENT_ERRORS } from './RecurringEventHelpers.js';
+import { createEventResponseWithConflicts } from "../utils.js";
+import { ConflictDetectionService } from "../../services/conflict-detection/index.js";
+import { createTimeObject } from "../../utils/timezone-utils.js";
+import {
+  buildEventForConflictCheckUpdate,
+  performConflictCheck,
+} from "./eventManipulationUtils.js";
+export class UpdateEventHandler extends BaseToolHandler
+⋮----
+constructor()
+async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult>
+private async updateEventWithScope(
+        client: OAuth2Client,
+        args: UpdateEventInput
+): Promise<calendar_v3.Schema$Event>
+private async updateSingleInstance(
+        helpers: RecurringEventHelpers,
+        args: UpdateEventInput,
+        defaultTimeZone: string
+): Promise<calendar_v3.Schema$Event>
+private async updateAllInstances(
+        helpers: RecurringEventHelpers,
+        args: UpdateEventInput,
+        defaultTimeZone: string
+): Promise<calendar_v3.Schema$Event>
+private async updateFutureInstances(
+        helpers: RecurringEventHelpers,
+        args: UpdateEventInput,
+        defaultTimeZone: string,
+        originalEvent?: calendar_v3.Schema$Event
+): Promise<calendar_v3.Schema$Event>
+</file>
+
+<file path="src/services/conflict-detection/ConflictDetectionService.ts">
+import { OAuth2Client } from "google-auth-library";
+import { google, calendar_v3 } from "googleapis";
+import {
+  ConflictCheckResult,
+  ConflictInfo,
+  DuplicateInfo,
+  ConflictDetectionOptions
+} from "./types.js";
+import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
+import { ConflictAnalyzer } from "./ConflictAnalyzer.js";
+import { CONFLICT_DETECTION_CONFIG } from "./config.js";
+import { getEventUrl } from "../../handlers/utils.js";
+import {
+  resolveTimeRange,
+  hasTimezoneInDatetime,
+  resolveTimeZone,
+  isValidIANATimeZone
+} from "../../utils/timezone-utils.js";
+function getEventDateTime(event: calendar_v3.Schema$Event):
+function formatEventTimesForInfo(event: calendar_v3.Schema$Event):
+export class ConflictDetectionService
+⋮----
+constructor()
+async checkConflicts(
+    oauth2Client: OAuth2Client,
+    event: calendar_v3.Schema$Event,
+    calendarId: string,
+    options: ConflictDetectionOptions = {}
+): Promise<ConflictCheckResult>
+private async getEventsInTimeRange(
+    oauth2Client: OAuth2Client,
+    calendarId: string,
+    timeMin: string,
+    timeMax: string,
+    timeZone?: string
+): Promise<calendar_v3.Schema$Event[]>
+private findDuplicates(
+    newEvent: calendar_v3.Schema$Event,
+    existingEvents: calendar_v3.Schema$Event[],
+    calendarId: string,
+    threshold: number
+): DuplicateInfo[]
+private findConflicts(
+    newEvent: calendar_v3.Schema$Event,
+    existingEvents: calendar_v3.Schema$Event[],
+    calendarId: string,
+    includeDeclinedEvents: boolean
+): ConflictInfo[]
+private isEventDeclined(_event: calendar_v3.Schema$Event): boolean
+async checkConflictsWithFreeBusy(
+    oauth2Client: OAuth2Client,
+    eventToCheck: calendar_v3.Schema$Event,
+    calendarsToCheck: string[]
+): Promise<ConflictInfo[]>
+</file>
+
+<file path="src/tests/integration/conflict-detection-integration.test.ts">
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { initializeOAuth2Client } from '../../auth/client.js';
+import { TokenManager } from '../../auth/tokenManager.js';
+import { TestDataFactory } from './test-data-factory.js';
+import { getTextContent } from '../unit/helpers/content.js';
+import {
+  createAndVerifyEvent,
+  updateAndVerifyEvent,
+  createNonOverlappingEventPair,
+  createOverlappingEventPair
+} from './integration-test-helpers.js';
+</file>
+
 <file path="src/tests/integration/test-data-factory.ts">
 import { tryGetTextContent } from '../unit/helpers/index.js';
 import { formatTZNaiveDateTime, formatRFC3339 } from '../../utils/date-utils.js';
@@ -2855,7 +2968,11 @@ import { vi } from 'vitest';
 import { OAuth2Client } from 'google-auth-library';
 import { makeCalendarMock } from './factories.js';
 import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
-export function createGoogleCalendarMocks(): ReturnType<typeof vi.fn>
+interface GoogleCalendarMocks {
+  google: { calendar: ReturnType<typeof vi.fn> };
+  calendar_v3: Record<string, never>;
+}
+export function createGoogleCalendarMocks(): GoogleCalendarMocks
 export interface HandlerSetup {
   mockOAuth2Client: OAuth2Client;
   handler: ListEventsHandler;
@@ -3028,46 +3145,6 @@ private async searchEvents(
 ): Promise<calendar_v3.Schema$Event[]>
 </file>
 
-<file path="src/handlers/core/UpdateEventHandler.ts">
-import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { OAuth2Client } from "google-auth-library";
-import { UpdateEventInput } from "../../tools/registry.js";
-import { BaseToolHandler } from "./BaseToolHandler.js";
-import { calendar_v3 } from 'googleapis';
-import { RecurringEventHelpers, RecurringEventError, RECURRING_EVENT_ERRORS } from './RecurringEventHelpers.js';
-import { createEventResponseWithConflicts } from "../utils.js";
-import { ConflictDetectionService } from "../../services/conflict-detection/index.js";
-import { createTimeObject } from "../../utils/timezone-utils.js";
-import {
-  buildEventForConflictCheckUpdate,
-  performConflictCheck,
-} from "./eventManipulationUtils.js";
-export class UpdateEventHandler extends BaseToolHandler
-⋮----
-constructor()
-async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult>
-private async updateEventWithScope(
-        client: OAuth2Client,
-        args: UpdateEventInput
-): Promise<calendar_v3.Schema$Event>
-private async updateSingleInstance(
-        helpers: RecurringEventHelpers,
-        args: UpdateEventInput,
-        defaultTimeZone: string
-): Promise<calendar_v3.Schema$Event>
-private async updateAllInstances(
-        helpers: RecurringEventHelpers,
-        args: UpdateEventInput,
-        defaultTimeZone: string
-): Promise<calendar_v3.Schema$Event>
-private async updateFutureInstances(
-        helpers: RecurringEventHelpers,
-        args: UpdateEventInput,
-        defaultTimeZone: string,
-        originalEvent?: calendar_v3.Schema$Event
-): Promise<calendar_v3.Schema$Event>
-</file>
-
 <file path="src/handlers/utils.ts">
 import { calendar_v3 } from "googleapis";
 import { ConflictCheckResult } from "../services/conflict-detection/types.js";
@@ -3116,79 +3193,6 @@ export function createEventResponseWithConflicts(
     conflicts?: ConflictCheckResult,
     actionVerb: string = "created"
 ): string
-</file>
-
-<file path="src/services/conflict-detection/ConflictDetectionService.ts">
-import { OAuth2Client } from "google-auth-library";
-import { google, calendar_v3 } from "googleapis";
-import {
-  ConflictCheckResult,
-  ConflictInfo,
-  DuplicateInfo,
-  ConflictDetectionOptions
-} from "./types.js";
-import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
-import { ConflictAnalyzer } from "./ConflictAnalyzer.js";
-import { CONFLICT_DETECTION_CONFIG } from "./config.js";
-import { getEventUrl } from "../../handlers/utils.js";
-import {
-  resolveTimeRange,
-  hasTimezoneInDatetime,
-  resolveTimeZone,
-  isValidIANATimeZone
-} from "../../utils/timezone-utils.js";
-function getEventDateTime(event: calendar_v3.Schema$Event):
-function formatEventTimesForInfo(event: calendar_v3.Schema$Event):
-export class ConflictDetectionService
-⋮----
-constructor()
-async checkConflicts(
-    oauth2Client: OAuth2Client,
-    event: calendar_v3.Schema$Event,
-    calendarId: string,
-    options: ConflictDetectionOptions = {}
-): Promise<ConflictCheckResult>
-private async getEventsInTimeRange(
-    oauth2Client: OAuth2Client,
-    calendarId: string,
-    timeMin: string,
-    timeMax: string,
-    timeZone?: string
-): Promise<calendar_v3.Schema$Event[]>
-private findDuplicates(
-    newEvent: calendar_v3.Schema$Event,
-    existingEvents: calendar_v3.Schema$Event[],
-    calendarId: string,
-    threshold: number
-): DuplicateInfo[]
-private findConflicts(
-    newEvent: calendar_v3.Schema$Event,
-    existingEvents: calendar_v3.Schema$Event[],
-    calendarId: string,
-    includeDeclinedEvents: boolean
-): ConflictInfo[]
-private isEventDeclined(_event: calendar_v3.Schema$Event): boolean
-async checkConflictsWithFreeBusy(
-    oauth2Client: OAuth2Client,
-    eventToCheck: calendar_v3.Schema$Event,
-    calendarsToCheck: string[]
-): Promise<ConflictInfo[]>
-</file>
-
-<file path="src/tests/integration/conflict-detection-integration.test.ts">
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { initializeOAuth2Client } from '../../auth/client.js';
-import { TokenManager } from '../../auth/tokenManager.js';
-import { TestDataFactory } from './test-data-factory.js';
-import { getTextContent } from '../unit/helpers/content.js';
-import {
-  createAndVerifyEvent,
-  updateAndVerifyEvent,
-  createNonOverlappingEventPair,
-  createOverlappingEventPair
-} from './integration-test-helpers.js';
 </file>
 
 <file path="src/tests/unit/utils/date-utils.test.ts">
@@ -3267,6 +3271,40 @@ private buildEventsPath(
         options: ListEventsOptions,
         fieldMask: string | null
 ): string
+</file>
+
+<file path="src/handlers/core/RecurringEventHelpers.ts">
+import { calendar_v3 } from 'googleapis';
+import {
+  TIME_DURATIONS,
+  formatBasicDateTime,
+  oneDayBefore,
+  stripUntilAndCount,
+  buildUntilClause,
+  isRRuleString,
+  durationMs,
+  addMilliseconds,
+  formatRFC3339,
+} from '../../utils/date-utils.js';
+import { createTimeObject, applyTimezone } from '../../utils/timezone-utils.js';
+import { buildCoreEvent, buildOptionalEventFields } from './eventManipulationUtils.js';
+import { UpdateEventInput } from '../../tools/registry.js';
+export class RecurringEventHelpers
+⋮----
+constructor(calendar: calendar_v3.Calendar)
+getCalendar(): calendar_v3.Calendar
+async detectEventType(eventId: string, calendarId: string): Promise<'recurring' | 'single'>
+async getEventAndType(eventId: string, calendarId: string): Promise<
+formatInstanceId(eventId: string, originalStartTime: string): string
+calculateUntilDate(futureStartDate: string): string
+calculateEndTime(newStartTime: string, originalEvent: calendar_v3.Schema$Event): string
+updateRecurrenceWithUntil(recurrence: string[], untilDate: string): string[]
+cleanEventForDuplication(event: calendar_v3.Schema$Event): calendar_v3.Schema$Event
+buildUpdateRequestBody(args: UpdateEventInput, defaultTimeZone?: string): calendar_v3.Schema$Event
+⋮----
+export class RecurringEventError extends Error
+⋮----
+constructor(message: string, code: string)
 </file>
 
 <file path="src/utils/batchProcessor.ts">
@@ -3373,40 +3411,6 @@ export async function processBatchItemsChunked<T, TItem = string>(
     "vitest": "^3.1.1"
   }
 }
-</file>
-
-<file path="src/handlers/core/RecurringEventHelpers.ts">
-import { calendar_v3 } from 'googleapis';
-import {
-  TIME_DURATIONS,
-  formatBasicDateTime,
-  oneDayBefore,
-  stripUntilAndCount,
-  buildUntilClause,
-  isRRuleString,
-  durationMs,
-  addMilliseconds,
-  formatRFC3339,
-} from '../../utils/date-utils.js';
-import { createTimeObject, applyTimezone } from '../../utils/timezone-utils.js';
-import { buildCoreEvent, buildOptionalEventFields } from './eventManipulationUtils.js';
-import { UpdateEventInput } from '../../tools/registry.js';
-export class RecurringEventHelpers
-⋮----
-constructor(calendar: calendar_v3.Calendar)
-getCalendar(): calendar_v3.Calendar
-async detectEventType(eventId: string, calendarId: string): Promise<'recurring' | 'single'>
-async getEventAndType(eventId: string, calendarId: string): Promise<
-formatInstanceId(eventId: string, originalStartTime: string): string
-calculateUntilDate(futureStartDate: string): string
-calculateEndTime(newStartTime: string, originalEvent: calendar_v3.Schema$Event): string
-updateRecurrenceWithUntil(recurrence: string[], untilDate: string): string[]
-cleanEventForDuplication(event: calendar_v3.Schema$Event): calendar_v3.Schema$Event
-buildUpdateRequestBody(args: UpdateEventInput, defaultTimeZone?: string): calendar_v3.Schema$Event
-⋮----
-export class RecurringEventError extends Error
-⋮----
-constructor(message: string, code: string)
 </file>
 
 <file path="src/tests/unit/helpers/event-test-data.ts">

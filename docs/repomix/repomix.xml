@@ -369,19 +369,6 @@ vitest.config.ts
 <files>
 This section contains the contents of the repository's files.
 
-<file path=".claude/ralph-loop.local.md">
----
-active: true
-iteration: 1
-session_id: 
-max_iterations: 10
-completion_promise: "RALPH_COMPLETE"
-started_at: "2026-03-26T10:21:30Z"
----
-
-run /simplify on docs/repomix/repo-compressed.xml contents, accept all changes, run /otel-session-summary, address issues, run npm run repomix, repeat until clean
-</file>
-
 <file path=".claude/settings.local.json">
 {
   "permissions": {
@@ -759,6 +746,186 @@ DEBUG=mcp:* npm start
 3. **Timezone mismatches**: Ensure consistent timezone usage
 
 See [Troubleshooting Guide](troubleshooting.md) for detailed solutions.
+</file>
+
+<file path="docs/AUTH-REFACTORING-OPPORTUNITIES.md">
+# Auth Refactoring Opportunities
+
+**Analysis Date:** 2026-03-24
+**Goal:** Apply new TokenManager auth methods (`isAuthenticated()`, `getCredentials()`, `refreshCredentials()`, `logout()`) to improve DRY and reduce code duplication.
+
+---
+
+## Executive Summary
+
+3 refactoring opportunities identified:
+- **Direct credential access** (1 location) → Use `getCredentials()` method
+- **Token validation patterns** (3 locations) → Use `isAuthenticated()` method
+- **Verbose token checking** (2 locations) → Simplify with new methods
+
+**Estimated Effort:** 15-30 minutes | **Impact:** Cleaner API surface, better encapsulation
+
+---
+
+## Detailed Opportunities
+
+### 1. Direct Credential Access (HIGH PRIORITY)
+
+**Location:** `src/verify-tokens.ts:53`
+
+**Current Pattern:**
+```typescript
+// Direct access to oauth2Client credentials
+const credentials = oauth2Client.credentials;
+if (credentials.expiry_date) {
+  const expiresIn = Math.floor((credentials.expiry_date - Date.now()) / 1000);
+  // ... calculate hours/minutes
+}
+```
+
+**Issue:**
+- Direct access to internal `oauth2Client.credentials` violates encapsulation
+- Couples verify-tokens.ts to oauth2Client implementation
+- No validation that credentials exist
+
+**Refactored Pattern:**
+```typescript
+// Use TokenManager's new public method
+const credentials = tokenManager.getCredentials();
+if (credentials?.expiry_date) {
+  const expiresIn = Math.floor((credentials.expiry_date - Date.now()) / 1000);
+  // ... calculate hours/minutes
+}
+```
+
+**Benefits:**
+- ✅ Encapsulation: oauth2Client.credentials is internal detail
+- ✅ Consistency: Use TokenManager for all credential access
+- ✅ Safety: null-safe with optional chaining
+
+---
+
+### 2. Token Validation Pattern (MEDIUM PRIORITY)
+
+**Locations (3 instances):**
+1. `src/server.ts:61` - `await this.tokenManager.validateTokens(accountMode)`
+2. `src/server.ts:75` - `await this.tokenManager.validateTokens(accountMode)`
+3. `src/auth/server.ts:144` - `await this.tokenManager.validateTokens()`
+
+**Current Pattern:**
+```typescript
+const hasValidTokens = await this.tokenManager.validateTokens();
+if (!hasValidTokens) {
+  // handle no auth
+}
+```
+
+**Refactored Pattern:**
+```typescript
+if (!(await this.tokenManager.isAuthenticated())) {
+  // handle no auth
+}
+```
+
+**Benefits:**
+- ✅ Intent clarity: `isAuthenticated()` reads better than `validateTokens()`
+- ✅ DRY: Semantically correct method name
+- ✅ Consistency: All auth checks use `isAuthenticated()`
+- ✅ Future-proof: If validation logic changes, only one method to update
+
+**Code Impact:**
+- `src/server.ts:61` - Rename check and message
+- `src/server.ts:75` - Rename check
+- `src/auth/server.ts:144` - Rename check
+
+---
+
+### 3. Integration Test Auth Guards (MEDIUM PRIORITY)
+
+**Locations (2 instances):**
+1. `src/tests/integration/UpdateEventHandler.recurring.integration.test.ts:32`
+2. `src/tests/integration/conflict-detection-integration.test.ts:31`
+
+**Current Pattern:**
+```typescript
+const hasValidTokens = await tokenManager.validateTokens();
+if (!hasValidTokens) {
+  test.skip('No valid tokens from Doppler');
+}
+```
+
+**Refactored Pattern:**
+```typescript
+const isAuth = await tokenManager.isAuthenticated();
+if (!isAuth) {
+  test.skip('No valid tokens from Doppler');
+}
+```
+
+**Benefits:**
+- ✅ Semantic clarity: `isAuthenticated()` is the right method
+- ✅ Consistency: Test guards use same auth API as production code
+- ✅ Maintainability: Single semantic meaning across codebase
+
+---
+
+## Unused New Methods
+
+The following new TokenManager methods have **no current usage**:
+- `refreshCredentials()` — Currently `validateTokens()` handles refresh implicitly
+- `logout()` — No logout functionality exists in current codebase
+
+### Recommendations
+
+**For `refreshCredentials()`:**
+- Current usage: `validateTokens()` calls `refresh()` internally
+- Could replace `refreshCredentials()` with public method if explicit refresh needed
+- **Status:** Keep for future use (e.g., manual token refresh in CLI tools)
+
+**For `logout()`:**
+- No current use case in MCP server
+- Useful for: Multi-account CLI scripts, token cleanup
+- **Status:** Keep for future implementation of logout functionality
+
+---
+
+## Refactoring Checklist
+
+- [ ] **Refactor:** `src/verify-tokens.ts:53` - Replace `oauth2Client.credentials` with `tokenManager.getCredentials()`
+- [ ] **Refactor:** `src/server.ts:61` - Replace `validateTokens()` with `isAuthenticated()`
+- [ ] **Refactor:** `src/server.ts:75` - Replace `validateTokens()` with `isAuthenticated()`
+- [ ] **Refactor:** `src/auth/server.ts:144` - Replace `validateTokens()` with `isAuthenticated()`
+- [ ] **Refactor:** `src/tests/integration/UpdateEventHandler.recurring.integration.test.ts:32` - Use `isAuthenticated()`
+- [ ] **Refactor:** `src/tests/integration/conflict-detection-integration.test.ts:31` - Use `isAuthenticated()`
+- [ ] **Test:** All auth checks still work (`npm test`)
+- [ ] **Verify:** No behavioral changes, only method naming
+
+---
+
+## Testing Strategy
+
+**Before & After Parity:**
+1. Run full test suite: `npm test`
+2. Run integration tests: `npm test -- src/tests/integration/`
+3. Manual verification: `npm run verify-tokens`
+
+**Commit Scope:**
+- Single focused commit: "refactor(auth): replace validateTokens with isAuthenticated"
+- Alternative: Per-file commits if changes need isolation
+
+---
+
+## Summary of Changes
+
+| File | Change | Method | Impact |
+|------|--------|--------|--------|
+| `src/verify-tokens.ts` | L53 | `getCredentials()` | Direct credential access |
+| `src/server.ts` | L61 | `isAuthenticated()` | Token validation |
+| `src/server.ts` | L75 | `isAuthenticated()` | Token validation |
+| `src/auth/server.ts` | L144 | `isAuthenticated()` | Token validation |
+| `src/tests/integration/*.ts` | L31-32 | `isAuthenticated()` | Test guards |
+
+**Total Changes:** 6 locations | **Estimated Time:** 15-30 minutes | **Risk:** Low (semantic renames)
 </file>
 
 <file path="docs/authentication.md">
@@ -12845,6 +13012,396 @@ This directory contains 5 code file(s) with extracted schemas.
 *Generated by Schema Generator*
 </file>
 
+<file path="src/tests/integration/UpdateEventHandler.recurring.integration.test.ts">
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { OAuth2Client } from 'google-auth-library';
+import { google, calendar_v3 } from 'googleapis';
+import { initializeOAuth2Client } from '../../auth/client.js';
+import { TokenManager } from '../../auth/tokenManager.js';
+import { UpdateEventHandler } from '../../handlers/core/UpdateEventHandler.js';
+
+/**
+ * Real Google Calendar Integration Tests for UpdateEventHandler Recurring Events
+ *
+ * PURPOSE: Test the real UpdateEventHandler against actual Google Calendar API
+ * - Uses real credentials from Doppler
+ * - Tests actual modification scopes: 'all', 'thisEventOnly', 'thisAndFollowing'
+ * - Validates error handling and response formatting
+ * - No mocking - real API calls
+ *
+ * RUN: npm run test:integration:doppler
+ * OR: doppler run -- npm run test:integration
+ */
+
+describe('UpdateEventHandler - Recurring Events (Real API Integration)', () => {
+  let handler: UpdateEventHandler;
+  let oauth2Client: OAuth2Client;
+  let calendar: any;
+  const createdEventIds: string[] = [];
+  const TEST_CALENDAR_ID = process.env.TEST_CALENDAR_ID || 'primary';
+
+  beforeAll(async () => {
+    // Load real credentials from Doppler
+    oauth2Client = await initializeOAuth2Client();
+    const tokenManager = new TokenManager(oauth2Client);
+    const isAuth = await tokenManager.isAuthenticated();
+
+    if (!isAuth) {
+      throw new Error(
+        'No valid tokens found. Run: npm run auth\n' +
+        'For integration tests with Doppler: doppler run -- npm run test:integration'
+      );
+    }
+
+    handler = new UpdateEventHandler();
+    calendar = google.calendar({
+      version: 'v3',
+      auth: oauth2Client
+    });
+  });
+
+  afterAll(async () => {
+    // Cleanup: Delete all created test events
+    for (const eventId of createdEventIds) {
+      try {
+        await calendar.events.delete({
+          calendarId: TEST_CALENDAR_ID,
+          eventId: eventId
+        });
+      } catch (error) {
+        console.warn(`Failed to cleanup event ${eventId}:`, error);
+      }
+    }
+  });
+
+  async function createTestEvent(overrides: any = {}): Promise<string> {
+    const now = new Date();
+    const tomorrow = new Date(now.getTime() + 86400000);
+    const dayAfter = new Date(now.getTime() + 172800000);
+
+    const event = {
+      summary: 'Integration Test Event',
+      description: 'Created by UpdateEventHandler.recurring.integration.test.ts',
+      start: {
+        dateTime: tomorrow.toISOString(),
+        timeZone: 'UTC'
+      },
+      end: {
+        dateTime: dayAfter.toISOString(),
+        timeZone: 'UTC'
+      },
+      ...overrides
+    };
+
+    const response = await calendar.events.insert({
+      calendarId: TEST_CALENDAR_ID,
+      requestBody: event
+    });
+
+    const eventId = response.data.id!;
+    createdEventIds.push(eventId);
+    return eventId;
+  }
+
+  describe('Update all instances (scope: "all")', () => {
+    it('should update summary for all instances of recurring event', async () => {
+      // Create recurring event
+      const eventId = await createTestEvent({
+        summary: 'Weekly Standup',
+        recurrence: ['RRULE:FREQ=WEEKLY;COUNT=5']
+      });
+
+      // Update with scope "all"
+      const result = await handler.runTool(
+        {
+          calendarId: TEST_CALENDAR_ID,
+          eventId: eventId,
+          modificationScope: 'all',
+          summary: 'Updated Weekly Standup',
+          timeZone: 'UTC'
+        },
+        oauth2Client
+      );
+
+      // Verify response
+      expect(result.content[0].type).toBe('text');
+      expect(result.content[0].text).toContain('Updated Weekly Standup');
+      expect(result.content[0].text).toContain('updated');
+    });
+
+    it('should update all instances without specifying scope (defaults to "all")', async () => {
+      const eventId = await createTestEvent({
+        summary: 'Daily Sync',
+        recurrence: ['RRULE:FREQ=DAILY;COUNT=3']
+      });
+
+      const result = await handler.runTool(
+        {
+          calendarId: TEST_CALENDAR_ID,
+          eventId: eventId,
+          // modificationScope not specified - should default to 'all'
+          summary: 'Updated Daily Sync',
+          timeZone: 'UTC'
+        },
+        oauth2Client
+      );
+
+      expect(result.content[0].text).toContain('Updated Daily Sync');
+    });
+  });
+
+  describe('Update single instance (scope: "thisEventOnly")', () => {
+    it('should update only the specified instance', async () => {
+      const now = new Date();
+      const eventStart = new Date(now.getTime() + 86400000);
+
+      const eventId = await createTestEvent({
+        summary: 'Repeating Meeting',
+        recurrence: ['RRULE:FREQ=DAILY;COUNT=5'],
+        start: { dateTime: eventStart.toISOString(), timeZone: 'UTC' }
+      });
+
+      const result = await handler.runTool(
+        {
+          calendarId: TEST_CALENDAR_ID,
+          eventId: eventId,
+          modificationScope: 'thisEventOnly',
+          originalStartTime: eventStart.toISOString(),
+          summary: 'Single Instance Updated',
+          timeZone: 'UTC'
+        },
+        oauth2Client
+      );
+
+      expect(result.content[0].text).toContain('Single Instance Updated');
+    });
+
+    it('should throw error when thisEventOnly is used without originalStartTime', async () => {
+      const eventId = await createTestEvent({
+        summary: 'Test Event',
+        recurrence: ['RRULE:FREQ=DAILY;COUNT=3']
+      });
+
+      await expect(
+        handler.runTool(
+          {
+            calendarId: TEST_CALENDAR_ID,
+            eventId: eventId,
+            modificationScope: 'thisEventOnly',
+            // originalStartTime missing - should error
+            summary: 'Updated',
+            timeZone: 'UTC'
+          },
+          oauth2Client
+        )
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('Update future instances (scope: "thisAndFollowing")', () => {
+    it('should update this and following instances', async () => {
+      const now = new Date();
+      const eventStart = new Date(now.getTime() + 86400000);
+      const futureDate = new Date(now.getTime() + 5 * 86400000);
+
+      const eventId = await createTestEvent({
+        summary: 'Bi-weekly Review',
+        recurrence: ['RRULE:FREQ=WEEKLY;COUNT=10'],
+        start: { dateTime: eventStart.toISOString(), timeZone: 'UTC' }
+      });
+
+      const result = await handler.runTool(
+        {
+          calendarId: TEST_CALENDAR_ID,
+          eventId: eventId,
+          modificationScope: 'thisAndFollowing',
+          futureStartDate: futureDate.toISOString(),
+          summary: 'Updated from future date',
+          timeZone: 'UTC'
+        },
+        oauth2Client
+      );
+
+      expect(result.content[0].text).toContain('Updated from future date');
+    });
+
+    it('should throw error when thisAndFollowing is used without futureStartDate', async () => {
+      const eventId = await createTestEvent({
+        summary: 'Test Event',
+        recurrence: ['RRULE:FREQ=DAILY;COUNT=5']
+      });
+
+      await expect(
+        handler.runTool(
+          {
+            calendarId: TEST_CALENDAR_ID,
+            eventId: eventId,
+            modificationScope: 'thisAndFollowing',
+            // futureStartDate missing - should error
+            summary: 'Updated',
+            timeZone: 'UTC'
+          },
+          oauth2Client
+        )
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('Scope validation', () => {
+    it('should throw error when using thisEventOnly on single (non-recurring) event', async () => {
+      const eventId = await createTestEvent({
+        summary: 'Single Event',
+        // No recurrence
+      });
+
+      await expect(
+        handler.runTool(
+          {
+            calendarId: TEST_CALENDAR_ID,
+            eventId: eventId,
+            modificationScope: 'thisEventOnly',
+            originalStartTime: new Date().toISOString(),
+            summary: 'Updated',
+            timeZone: 'UTC'
+          },
+          oauth2Client
+        )
+      ).rejects.toThrow('Scope other than "all" only applies to recurring events');
+    });
+
+    it('should throw error when using thisAndFollowing on single event', async () => {
+      const eventId = await createTestEvent({
+        summary: 'Single Event',
+        // No recurrence
+      });
+
+      await expect(
+        handler.runTool(
+          {
+            calendarId: TEST_CALENDAR_ID,
+            eventId: eventId,
+            modificationScope: 'thisAndFollowing',
+            futureStartDate: new Date(Date.now() + 86400000).toISOString(),
+            summary: 'Updated',
+            timeZone: 'UTC'
+          },
+          oauth2Client
+        )
+      ).rejects.toThrow('Scope other than "all" only applies to recurring events');
+    });
+  });
+
+  describe('Conflict detection', () => {
+    it('should report conflicts when updating to overlapping time', async () => {
+      // Create first event
+      const eventId1 = await createTestEvent({
+        summary: 'Event 1',
+        start: {
+          dateTime: new Date(Date.now() + 86400000).toISOString(),
+          timeZone: 'UTC'
+        },
+        end: {
+          dateTime: new Date(Date.now() + 90000000).toISOString(),
+          timeZone: 'UTC'
+        }
+      });
+
+      // Create second event
+      const eventId2 = await createTestEvent({
+        summary: 'Event 2',
+        start: {
+          dateTime: new Date(Date.now() + 100000000).toISOString(),
+          timeZone: 'UTC'
+        },
+        end: {
+          dateTime: new Date(Date.now() + 103600000).toISOString(),
+          timeZone: 'UTC'
+        }
+      });
+
+      // Try to move event 2 to overlap with event 1
+      const result = await handler.runTool(
+        {
+          calendarId: TEST_CALENDAR_ID,
+          eventId: eventId2,
+          start: new Date(Date.now() + 86400000 + 1800000).toISOString(),
+          end: new Date(Date.now() + 90000000 + 1800000).toISOString(),
+          timeZone: 'UTC',
+          checkConflicts: true
+        },
+        oauth2Client
+      );
+
+      expect(result.content[0].type).toBe('text');
+      // Should either succeed or report conflicts (depending on conflict detection)
+      expect(result.content).toBeDefined();
+    });
+  });
+
+  describe('Recurrence rule variations', () => {
+    it('should handle daily recurrence', async () => {
+      const eventId = await createTestEvent({
+        summary: 'Daily Event',
+        recurrence: ['RRULE:FREQ=DAILY;COUNT=7']
+      });
+
+      const result = await handler.runTool(
+        {
+          calendarId: TEST_CALENDAR_ID,
+          eventId: eventId,
+          modificationScope: 'all',
+          summary: 'Updated Daily',
+          timeZone: 'UTC'
+        },
+        oauth2Client
+      );
+
+      expect(result.content[0].text).toContain('Updated Daily');
+    });
+
+    it('should handle weekly recurrence with BYDAY', async () => {
+      const eventId = await createTestEvent({
+        summary: 'Weekly Event',
+        recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=12']
+      });
+
+      const result = await handler.runTool(
+        {
+          calendarId: TEST_CALENDAR_ID,
+          eventId: eventId,
+          modificationScope: 'all',
+          summary: 'Updated Weekly',
+          timeZone: 'UTC'
+        },
+        oauth2Client
+      );
+
+      expect(result.content[0].text).toContain('Updated Weekly');
+    });
+
+    it('should handle monthly recurrence', async () => {
+      const eventId = await createTestEvent({
+        summary: 'Monthly Event',
+        recurrence: ['RRULE:FREQ=MONTHLY;COUNT=12']
+      });
+
+      const result = await handler.runTool(
+        {
+          calendarId: TEST_CALENDAR_ID,
+          eventId: eventId,
+          modificationScope: 'all',
+          summary: 'Updated Monthly',
+          timeZone: 'UTC'
+        },
+        oauth2Client
+      );
+
+      expect(result.content[0].text).toContain('Updated Monthly');
+    });
+  });
+});
+</file>
+
 <file path="src/tests/unit/handlers/create-event-blocking.test.ts">
 import { describe, it, expect, vi } from 'vitest';
 import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
@@ -15194,6 +15751,264 @@ This directory contains 3 code file(s) with extracted schemas.
 *Generated by Schema Generator*
 </file>
 
+<file path="src/server.ts">
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
+import { OAuth2Client } from "google-auth-library";
+
+// Import authentication components
+import { initializeOAuth2Client } from './auth/client.js';
+import { AuthServer } from './auth/server.js';
+import { TokenManager } from './auth/tokenManager.js';
+
+// Import tool registry
+import { ToolRegistry } from './tools/registry.js';
+
+// Import transport handlers
+import { StdioTransportHandler } from './transports/stdio.js';
+import { HttpTransportHandler, HttpTransportConfig } from './transports/http.js';
+
+// Import config
+import { ServerConfig } from './config/TransportConfig.js';
+
+export class GoogleCalendarMcpServer {
+  private server: McpServer;
+  private oauth2Client!: OAuth2Client;
+  private tokenManager!: TokenManager;
+  private authServer!: AuthServer;
+  private config: ServerConfig;
+
+  constructor(config: ServerConfig) {
+    this.config = config;
+    this.server = new McpServer({
+      name: "google-calendar",
+      version: "1.3.0"
+    });
+  }
+
+  async initialize(): Promise<void> {
+    // 1. Initialize Authentication (but don't block on it)
+    this.oauth2Client = await initializeOAuth2Client();
+    this.tokenManager = new TokenManager(this.oauth2Client);
+    this.authServer = new AuthServer(this.oauth2Client);
+
+    // 2. Handle startup authentication based on transport type
+    await this.handleStartupAuthentication();
+
+    // 3. Set up Modern Tool Definitions
+    this.registerTools();
+
+    // 4. Set up Graceful Shutdown
+    this.setupGracefulShutdown();
+  }
+
+  private async handleStartupAuthentication(): Promise<void> {
+    // Skip authentication in test environment
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+    
+    const accountMode = this.tokenManager.getAccountMode();
+    
+    if (this.config.transport.type === 'stdio') {
+      // For stdio mode, ensure authentication before starting server
+      if (!(await this.tokenManager.isAuthenticated())) {
+        // Ensure we're using the correct account mode (don't override it)
+        const authSuccess = await this.authServer.start(true); // openBrowser = true
+        if (!authSuccess) {
+          process.stderr.write(`Authentication failed for ${accountMode} account. Please check your OAuth credentials and try again.\n`);
+          process.exit(1);
+        }
+        process.stderr.write(`Successfully authenticated user.\n`);
+      } else {
+        process.stderr.write(`Valid ${accountMode} user tokens found, skipping authentication prompt.\n`);
+      }
+    } else {
+      // For HTTP mode, check for tokens but don't block startup
+      if (!(await this.tokenManager.isAuthenticated())) {
+        process.stderr.write(`⚠️  No valid ${accountMode} user authentication tokens found.\n`);
+        process.stderr.write('Visit the server URL in your browser to authenticate, or run "npm run auth" separately.\n');
+      } else {
+        process.stderr.write(`Valid ${accountMode} user tokens found.\n`);
+      }
+    }
+  }
+
+  private registerTools(): void {
+    ToolRegistry.registerAll(this.server, this.executeWithHandler.bind(this));
+  }
+
+  private async ensureAuthenticated(): Promise<void> {
+    // Check if we already have valid tokens
+    if (await this.tokenManager.validateTokens()) {
+      return;
+    }
+
+    // For stdio mode, authentication should have been handled at startup
+    if (this.config.transport.type === 'stdio') {
+      throw new McpError(
+        ErrorCode.InvalidRequest,
+        "Authentication tokens are no longer valid. Please restart the server to re-authenticate."
+      );
+    }
+
+    // For HTTP mode, try to start auth server if not already running
+    try {
+      const authSuccess = await this.authServer.start(false); // openBrowser = false for HTTP mode
+      
+      if (!authSuccess) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          "Authentication required. Please run 'npm run auth' to authenticate, or visit the auth URL shown in the logs for HTTP mode."
+        );
+      }
+    } catch (error) {
+      if (error instanceof McpError) {
+        throw error;
+      }
+      if (error instanceof Error) {
+        throw new McpError(ErrorCode.InvalidRequest, error.message);
+      }
+      throw new McpError(ErrorCode.InvalidRequest, "Authentication required. Please run 'npm run auth' to authenticate.");
+    }
+  }
+
+  private async executeWithHandler(handler: any, args: any): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+    await this.ensureAuthenticated();
+    const result = await handler.runTool(args, this.oauth2Client);
+    return result;
+  }
+
+  async start(): Promise<void> {
+    switch (this.config.transport.type) {
+      case 'stdio':
+        const stdioHandler = new StdioTransportHandler(this.server);
+        await stdioHandler.connect();
+        break;
+        
+      case 'http':
+        const httpConfig: HttpTransportConfig = {
+          port: this.config.transport.port,
+          host: this.config.transport.host
+        };
+        const httpHandler = new HttpTransportHandler(this.server, httpConfig);
+        await httpHandler.connect();
+        break;
+        
+      default:
+        throw new Error(`Unsupported transport type: ${this.config.transport.type}`);
+    }
+  }
+
+  private setupGracefulShutdown(): void {
+    const cleanup = async () => {
+      try {
+        if (this.authServer) {
+          await this.authServer.stop();
+        }
+        
+        // McpServer handles transport cleanup automatically
+        this.server.close();
+        
+        process.exit(0);
+      } catch (error: unknown) {
+        process.stderr.write(`Error during cleanup: ${error instanceof Error ? error.message : error}\n`);
+        process.exit(1);
+      }
+    };
+
+    process.on("SIGINT", cleanup);
+    process.on("SIGTERM", cleanup);
+  }
+
+  // Expose server for testing
+  getServer(): McpServer {
+    return this.server;
+  }
+}
+</file>
+
+<file path="src/verify-tokens.ts">
+import { initializeOAuth2Client } from './auth/client.js';
+import { TokenManager } from './auth/tokenManager.js';
+import fs from 'fs/promises';
+import { getSecureTokenPath } from './auth/utils.js';
+
+async function verifyAndRefreshTokens() {
+  try {
+    console.log('🔍 Verifying OAuth tokens...\n');
+
+    // Initialize OAuth client
+    const oauth2Client = await initializeOAuth2Client();
+    const tokenManager = new TokenManager(oauth2Client);
+    const tokenPath = tokenManager.getTokenPath();
+
+    // Check if token file exists
+    console.log(`📁 Token file: ${tokenPath}`);
+    try {
+      await fs.access(tokenPath);
+      console.log('✓ Token file exists\n');
+    } catch {
+      console.log('✗ Token file not found. Run: npm run auth\n');
+      process.exit(1);
+    }
+
+    // Display token info
+    const tokenContent = await fs.readFile(tokenPath, 'utf-8');
+    const tokens = JSON.parse(tokenContent);
+
+    console.log('📋 Available accounts:');
+    Object.keys(tokens).forEach(account => {
+      const accountTokens = tokens[account];
+      const hasRefresh = !!accountTokens.refresh_token;
+      const hasAccess = !!accountTokens.access_token;
+      const expiryDate = accountTokens.expiry_date
+        ? new Date(accountTokens.expiry_date).toLocaleString()
+        : 'unknown';
+
+      console.log(`  • ${account}`);
+      console.log(`    - Access token: ${hasAccess ? '✓ present' : '✗ missing'}`);
+      console.log(`    - Refresh token: ${hasRefresh ? '✓ present' : '✗ missing'}`);
+      console.log(`    - Expires: ${expiryDate}`);
+    });
+
+    console.log('\n⏱️  Checking token validity...');
+
+    // Validate and refresh if needed
+    const isValid = await tokenManager.validateTokens();
+
+    if (isValid) {
+      console.log('✓ Tokens are valid\n');
+
+      // Check expiry time
+      const credentials = tokenManager.getCredentials();
+      if (credentials?.expiry_date) {
+        const expiresIn = Math.floor((credentials.expiry_date - Date.now()) / 1000);
+        const hours = Math.floor(expiresIn / 3600);
+        const minutes = Math.floor((expiresIn % 3600) / 60);
+        console.log(`⏰ Current access token expires in: ${hours}h ${minutes}m`);
+      }
+      console.log('✓ Ready to use Google Calendar API');
+    } else {
+      console.log('✗ Tokens invalid or expired');
+      console.log('💡 Run: npm run auth');
+      process.exit(1);
+    }
+
+  } catch (error: unknown) {
+    console.error('❌ Error verifying tokens:');
+    if (error instanceof Error) {
+      console.error(`   ${error.message}`);
+    } else {
+      console.error(`   ${error}`);
+    }
+    process.exit(1);
+  }
+}
+
+verifyAndRefreshTokens();
+</file>
+
 <file path=".env.test">
 GOOGLE_ACCOUNT_MODE=normal
 GOOGLE_OAUTH_CREDENTIALS=/Users/alyshialedlie/code/is-internal/bot-army-google-calendar-mcp/gcp-oauth.keys.json
@@ -15623,6 +16438,19 @@ export default defineConfig({
     },
   },
 })
+</file>
+
+<file path=".claude/ralph-loop.local.md">
+---
+active: true
+iteration: 3
+session_id: 
+max_iterations: 10
+completion_promise: "RALPH_COMPLETE"
+started_at: "2026-03-26T10:21:30Z"
+---
+
+run /simplify on docs/repomix/repo-compressed.xml contents, accept all changes, run /otel-session-summary, address issues, run npm run repomix, repeat until clean
 </file>
 
 <file path="docs/changelog/1.4.9/CHANGELOG.md">
@@ -24169,186 +24997,6 @@ Token file structure (both accounts in one file):
 - Dynamic future dates prevent test expiration
 </file>
 
-<file path="docs/AUTH-REFACTORING-OPPORTUNITIES.md">
-# Auth Refactoring Opportunities
-
-**Analysis Date:** 2026-03-24
-**Goal:** Apply new TokenManager auth methods (`isAuthenticated()`, `getCredentials()`, `refreshCredentials()`, `logout()`) to improve DRY and reduce code duplication.
-
----
-
-## Executive Summary
-
-3 refactoring opportunities identified:
-- **Direct credential access** (1 location) → Use `getCredentials()` method
-- **Token validation patterns** (3 locations) → Use `isAuthenticated()` method
-- **Verbose token checking** (2 locations) → Simplify with new methods
-
-**Estimated Effort:** 15-30 minutes | **Impact:** Cleaner API surface, better encapsulation
-
----
-
-## Detailed Opportunities
-
-### 1. Direct Credential Access (HIGH PRIORITY)
-
-**Location:** `src/verify-tokens.ts:53`
-
-**Current Pattern:**
-```typescript
-// Direct access to oauth2Client credentials
-const credentials = oauth2Client.credentials;
-if (credentials.expiry_date) {
-  const expiresIn = Math.floor((credentials.expiry_date - Date.now()) / 1000);
-  // ... calculate hours/minutes
-}
-```
-
-**Issue:**
-- Direct access to internal `oauth2Client.credentials` violates encapsulation
-- Couples verify-tokens.ts to oauth2Client implementation
-- No validation that credentials exist
-
-**Refactored Pattern:**
-```typescript
-// Use TokenManager's new public method
-const credentials = tokenManager.getCredentials();
-if (credentials?.expiry_date) {
-  const expiresIn = Math.floor((credentials.expiry_date - Date.now()) / 1000);
-  // ... calculate hours/minutes
-}
-```
-
-**Benefits:**
-- ✅ Encapsulation: oauth2Client.credentials is internal detail
-- ✅ Consistency: Use TokenManager for all credential access
-- ✅ Safety: null-safe with optional chaining
-
----
-
-### 2. Token Validation Pattern (MEDIUM PRIORITY)
-
-**Locations (3 instances):**
-1. `src/server.ts:61` - `await this.tokenManager.validateTokens(accountMode)`
-2. `src/server.ts:75` - `await this.tokenManager.validateTokens(accountMode)`
-3. `src/auth/server.ts:144` - `await this.tokenManager.validateTokens()`
-
-**Current Pattern:**
-```typescript
-const hasValidTokens = await this.tokenManager.validateTokens();
-if (!hasValidTokens) {
-  // handle no auth
-}
-```
-
-**Refactored Pattern:**
-```typescript
-if (!(await this.tokenManager.isAuthenticated())) {
-  // handle no auth
-}
-```
-
-**Benefits:**
-- ✅ Intent clarity: `isAuthenticated()` reads better than `validateTokens()`
-- ✅ DRY: Semantically correct method name
-- ✅ Consistency: All auth checks use `isAuthenticated()`
-- ✅ Future-proof: If validation logic changes, only one method to update
-
-**Code Impact:**
-- `src/server.ts:61` - Rename check and message
-- `src/server.ts:75` - Rename check
-- `src/auth/server.ts:144` - Rename check
-
----
-
-### 3. Integration Test Auth Guards (MEDIUM PRIORITY)
-
-**Locations (2 instances):**
-1. `src/tests/integration/UpdateEventHandler.recurring.integration.test.ts:32`
-2. `src/tests/integration/conflict-detection-integration.test.ts:31`
-
-**Current Pattern:**
-```typescript
-const hasValidTokens = await tokenManager.validateTokens();
-if (!hasValidTokens) {
-  test.skip('No valid tokens from Doppler');
-}
-```
-
-**Refactored Pattern:**
-```typescript
-const isAuth = await tokenManager.isAuthenticated();
-if (!isAuth) {
-  test.skip('No valid tokens from Doppler');
-}
-```
-
-**Benefits:**
-- ✅ Semantic clarity: `isAuthenticated()` is the right method
-- ✅ Consistency: Test guards use same auth API as production code
-- ✅ Maintainability: Single semantic meaning across codebase
-
----
-
-## Unused New Methods
-
-The following new TokenManager methods have **no current usage**:
-- `refreshCredentials()` — Currently `validateTokens()` handles refresh implicitly
-- `logout()` — No logout functionality exists in current codebase
-
-### Recommendations
-
-**For `refreshCredentials()`:**
-- Current usage: `validateTokens()` calls `refresh()` internally
-- Could replace `refreshCredentials()` with public method if explicit refresh needed
-- **Status:** Keep for future use (e.g., manual token refresh in CLI tools)
-
-**For `logout()`:**
-- No current use case in MCP server
-- Useful for: Multi-account CLI scripts, token cleanup
-- **Status:** Keep for future implementation of logout functionality
-
----
-
-## Refactoring Checklist
-
-- [ ] **Refactor:** `src/verify-tokens.ts:53` - Replace `oauth2Client.credentials` with `tokenManager.getCredentials()`
-- [ ] **Refactor:** `src/server.ts:61` - Replace `validateTokens()` with `isAuthenticated()`
-- [ ] **Refactor:** `src/server.ts:75` - Replace `validateTokens()` with `isAuthenticated()`
-- [ ] **Refactor:** `src/auth/server.ts:144` - Replace `validateTokens()` with `isAuthenticated()`
-- [ ] **Refactor:** `src/tests/integration/UpdateEventHandler.recurring.integration.test.ts:32` - Use `isAuthenticated()`
-- [ ] **Refactor:** `src/tests/integration/conflict-detection-integration.test.ts:31` - Use `isAuthenticated()`
-- [ ] **Test:** All auth checks still work (`npm test`)
-- [ ] **Verify:** No behavioral changes, only method naming
-
----
-
-## Testing Strategy
-
-**Before & After Parity:**
-1. Run full test suite: `npm test`
-2. Run integration tests: `npm test -- src/tests/integration/`
-3. Manual verification: `npm run verify-tokens`
-
-**Commit Scope:**
-- Single focused commit: "refactor(auth): replace validateTokens with isAuthenticated"
-- Alternative: Per-file commits if changes need isolation
-
----
-
-## Summary of Changes
-
-| File | Change | Method | Impact |
-|------|--------|--------|--------|
-| `src/verify-tokens.ts` | L53 | `getCredentials()` | Direct credential access |
-| `src/server.ts` | L61 | `isAuthenticated()` | Token validation |
-| `src/server.ts` | L75 | `isAuthenticated()` | Token validation |
-| `src/auth/server.ts` | L144 | `isAuthenticated()` | Token validation |
-| `src/tests/integration/*.ts` | L31-32 | `isAuthenticated()` | Test guards |
-
-**Total Changes:** 6 locations | **Estimated Time:** 15-30 minutes | **Risk:** Low (semantic renames)
-</file>
-
 <file path="docs/CHANGELOG.md">
 # Changelog
 
@@ -26480,6 +27128,265 @@ When complete, output exactly:
 }
 </file>
 
+<file path="src/auth/server.ts">
+import { OAuth2Client } from 'google-auth-library';
+import { TokenManager } from './tokenManager.js';
+import http from 'http';
+import { URL } from 'url';
+import open from 'open';
+import { loadCredentials } from './client.js';
+import { getAccountMode, isNodeError } from './utils.js';
+
+const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
+const PORT_RANGE = { start: 3500, end: 3505 };
+
+function buildAuthHtml(title: string, body: string): string {
+  return `<!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>${title}</title>
+            </head>
+            <body>
+                ${body}
+            </body>
+            </html>`;
+}
+const AUTH_SERVER_TIMEOUT_MS = 10000;
+
+export class AuthServer {
+  private baseOAuth2Client: OAuth2Client; // Used by TokenManager for validation/refresh
+  private flowOAuth2Client: OAuth2Client | null = null; // Used specifically for the auth code flow
+  private server: http.Server | null = null;
+  private tokenManager: TokenManager;
+  private portRange: { start: number; end: number };
+  private activeConnections: Set<import('net').Socket> = new Set(); // Track active socket connections
+  public authCompletedSuccessfully = false; // Flag for standalone script
+
+  constructor(oauth2Client: OAuth2Client) {
+    this.baseOAuth2Client = oauth2Client;
+    this.tokenManager = new TokenManager(oauth2Client);
+    this.portRange = PORT_RANGE;
+  }
+
+  private createServer(): http.Server {
+    const server = http.createServer(async (req, res) => {
+      const url = new URL(req.url || '/', `http://${req.headers.host}`);
+      
+      if (url.pathname === '/') {
+        const clientForUrl = this.flowOAuth2Client || this.baseOAuth2Client;
+        const authUrl = clientForUrl.generateAuthUrl({
+          access_type: 'offline',
+          scope: [CALENDAR_SCOPE],
+          prompt: 'consent'
+        });
+
+        const accountMode = getAccountMode();
+
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(`
+          <h1>Google Calendar Authentication</h1>
+          <p><strong>Account Mode:</strong> <code>${accountMode}</code></p>
+          <p>You are authenticating for the <strong>${accountMode}</strong> account.</p>
+          <a href="${authUrl}">Authenticate with Google</a>
+        `);
+        
+      } else if (url.pathname === '/oauth2callback') {
+        // OAuth callback route
+        const code = url.searchParams.get('code');
+        if (!code) {
+          res.writeHead(400, { 'Content-Type': 'text/plain' });
+          res.end('Authorization code missing');
+          return;
+        }
+        
+        if (!this.flowOAuth2Client) {
+          res.writeHead(500, { 'Content-Type': 'text/plain' });
+          res.end('Authentication flow not properly initiated.');
+          return;
+        }
+        
+        try {
+          const { tokens } = await this.flowOAuth2Client.getToken(code);
+          await this.tokenManager.saveTokens(tokens);
+          this.authCompletedSuccessfully = true;
+
+          const tokenPath = this.tokenManager.getTokenPath();
+          const accountMode = this.tokenManager.getAccountMode();
+
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end(buildAuthHtml('Authentication Successful', `
+                <h1>Authentication Successful!</h1>
+                <p><strong>Account Mode:</strong> ${accountMode}</p>
+                <p>Your authentication tokens have been saved for the <strong>${accountMode}</strong> account.</p>
+                <p>Tokens saved to: ${tokenPath}</p>
+                <p>You can now close this browser window.</p>
+          `));
+        } catch (error: unknown) {
+          this.authCompletedSuccessfully = false;
+          const message = error instanceof Error ? error.message : 'Unknown error';
+          process.stderr.write(`✗ Token save failed: ${message}\n`);
+
+          const escapedMessage = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+
+          res.writeHead(500, { 'Content-Type': 'text/html' });
+          res.end(buildAuthHtml('Authentication Failed', `
+                <h1>Authentication Failed</h1>
+                <p>An error occurred during authentication:</p>
+                <p>${escapedMessage}</p>
+                <p>Please try again or check the server logs.</p>
+          `));
+        }
+      } else {
+        // 404 for other routes
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Not Found');
+      }
+    });
+
+    // Track connections at server level
+    server.on('connection', (socket) => {
+      this.activeConnections.add(socket);
+      socket.on('close', () => {
+        this.activeConnections.delete(socket);
+      });
+    });
+    
+    return server;
+  }
+
+  async start(openBrowser = true): Promise<boolean> {
+    return Promise.race([
+      this.startWithTimeout(openBrowser),
+      new Promise<boolean>((_, reject) => {
+        setTimeout(() => reject(new Error('Auth server start timed out')), AUTH_SERVER_TIMEOUT_MS);
+      })
+    ]).catch(() => false);
+  }
+
+  private async startWithTimeout(openBrowser = true): Promise<boolean> {
+    if (await this.tokenManager.isAuthenticated()) {
+      this.authCompletedSuccessfully = true;
+      return true;
+    }
+    
+    // Try to start the server and get the port
+    const port = await this.startServerOnAvailablePort();
+    if (port === null) {
+      this.authCompletedSuccessfully = false;
+      return false;
+    }
+
+    // Successfully started server on `port`. Now create the flow-specific OAuth client.
+    try {
+      const { client_id, client_secret } = await loadCredentials();
+      this.flowOAuth2Client = new OAuth2Client(
+        client_id,
+        client_secret,
+        `http://localhost:${port}/oauth2callback`
+      );
+    } catch (error) {
+        // Could not load credentials, cannot proceed with auth flow
+        this.authCompletedSuccessfully = false;
+        await this.stop(); // Stop the server we just started
+        return false;
+    }
+
+    const authorizeUrl = this.flowOAuth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: [CALENDAR_SCOPE],
+      prompt: 'consent'
+    });
+    
+    // Always show the URL in console for easy access
+    process.stderr.write(`\n🔗 Authentication URL: ${authorizeUrl}\n\n`);
+    process.stderr.write(`Or visit: http://localhost:${port}\n\n`);
+    
+    if (openBrowser) {
+      try {
+        await open(authorizeUrl);
+        process.stderr.write(`Browser opened automatically. If it didn't open, use the URL above.\n`);
+      } catch (error) {
+        process.stderr.write(`Could not open browser automatically. Please use the URL above.\n`);
+      }
+    } else {
+      process.stderr.write(`Please visit the URL above to complete authentication.\n`);
+    }
+
+    return true; // Auth flow initiated
+  }
+
+  private async startServerOnAvailablePort(): Promise<number | null> {
+    for (let port = this.portRange.start; port <= this.portRange.end; port++) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const testServer = this.createServer();
+          testServer.listen(port, () => {
+            this.server = testServer;
+            resolve();
+          });
+          testServer.on('error', (err: NodeJS.ErrnoException) => {
+            if (err.code === 'EADDRINUSE') {
+              testServer.close(() => reject(err));
+            } else {
+              reject(err);
+            }
+          });
+        });
+        return port;
+      } catch (error: unknown) {
+        if (!isNodeError(error, 'EADDRINUSE')) {
+          return null;
+        }
+      }
+    }
+    return null;
+  }
+
+  public getRunningPort(): number | null {
+    if (this.server) {
+      const address = this.server.address();
+      if (typeof address === 'object' && address !== null) {
+        return address.port;
+      }
+    }
+    return null;
+  }
+
+  async stop(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.server) {
+        // Force close all active connections
+        for (const connection of this.activeConnections) {
+          connection.destroy();
+        }
+        this.activeConnections.clear();
+        
+        // Add a timeout to force close if server doesn't close gracefully
+        const timeout = setTimeout(() => {
+          process.stderr.write('Server close timeout, forcing exit...\n');
+          this.server = null;
+          resolve();
+        }, 2000); // 2 second timeout
+        
+        this.server.close((err) => {
+          clearTimeout(timeout);
+          if (err) {
+            reject(err);
+          } else {
+            this.server = null;
+            resolve();
+          }
+        });
+      } else {
+        resolve();
+      }
+    });
+  }
+}
+</file>
+
 <file path="src/handlers/core/BatchRequestHandler.ts">
 import { OAuth2Client } from "google-auth-library";
 import { formatErrorMessage } from "./errorFormatting.js";
@@ -28119,396 +29026,6 @@ export const TestInputFactory = {
     };
   }
 };
-</file>
-
-<file path="src/tests/integration/UpdateEventHandler.recurring.integration.test.ts">
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { OAuth2Client } from 'google-auth-library';
-import { google, calendar_v3 } from 'googleapis';
-import { initializeOAuth2Client } from '../../auth/client.js';
-import { TokenManager } from '../../auth/tokenManager.js';
-import { UpdateEventHandler } from '../../handlers/core/UpdateEventHandler.js';
-
-/**
- * Real Google Calendar Integration Tests for UpdateEventHandler Recurring Events
- *
- * PURPOSE: Test the real UpdateEventHandler against actual Google Calendar API
- * - Uses real credentials from Doppler
- * - Tests actual modification scopes: 'all', 'thisEventOnly', 'thisAndFollowing'
- * - Validates error handling and response formatting
- * - No mocking - real API calls
- *
- * RUN: npm run test:integration:doppler
- * OR: doppler run -- npm run test:integration
- */
-
-describe('UpdateEventHandler - Recurring Events (Real API Integration)', () => {
-  let handler: UpdateEventHandler;
-  let oauth2Client: OAuth2Client;
-  let calendar: any;
-  const createdEventIds: string[] = [];
-  const TEST_CALENDAR_ID = process.env.TEST_CALENDAR_ID || 'primary';
-
-  beforeAll(async () => {
-    // Load real credentials from Doppler
-    oauth2Client = await initializeOAuth2Client();
-    const tokenManager = new TokenManager(oauth2Client);
-    const isAuth = await tokenManager.isAuthenticated();
-
-    if (!isAuth) {
-      throw new Error(
-        'No valid tokens found. Run: npm run auth\n' +
-        'For integration tests with Doppler: doppler run -- npm run test:integration'
-      );
-    }
-
-    handler = new UpdateEventHandler();
-    calendar = google.calendar({
-      version: 'v3',
-      auth: oauth2Client
-    });
-  });
-
-  afterAll(async () => {
-    // Cleanup: Delete all created test events
-    for (const eventId of createdEventIds) {
-      try {
-        await calendar.events.delete({
-          calendarId: TEST_CALENDAR_ID,
-          eventId: eventId
-        });
-      } catch (error) {
-        console.warn(`Failed to cleanup event ${eventId}:`, error);
-      }
-    }
-  });
-
-  async function createTestEvent(overrides: any = {}): Promise<string> {
-    const now = new Date();
-    const tomorrow = new Date(now.getTime() + 86400000);
-    const dayAfter = new Date(now.getTime() + 172800000);
-
-    const event = {
-      summary: 'Integration Test Event',
-      description: 'Created by UpdateEventHandler.recurring.integration.test.ts',
-      start: {
-        dateTime: tomorrow.toISOString(),
-        timeZone: 'UTC'
-      },
-      end: {
-        dateTime: dayAfter.toISOString(),
-        timeZone: 'UTC'
-      },
-      ...overrides
-    };
-
-    const response = await calendar.events.insert({
-      calendarId: TEST_CALENDAR_ID,
-      requestBody: event
-    });
-
-    const eventId = response.data.id!;
-    createdEventIds.push(eventId);
-    return eventId;
-  }
-
-  describe('Update all instances (scope: "all")', () => {
-    it('should update summary for all instances of recurring event', async () => {
-      // Create recurring event
-      const eventId = await createTestEvent({
-        summary: 'Weekly Standup',
-        recurrence: ['RRULE:FREQ=WEEKLY;COUNT=5']
-      });
-
-      // Update with scope "all"
-      const result = await handler.runTool(
-        {
-          calendarId: TEST_CALENDAR_ID,
-          eventId: eventId,
-          modificationScope: 'all',
-          summary: 'Updated Weekly Standup',
-          timeZone: 'UTC'
-        },
-        oauth2Client
-      );
-
-      // Verify response
-      expect(result.content[0].type).toBe('text');
-      expect(result.content[0].text).toContain('Updated Weekly Standup');
-      expect(result.content[0].text).toContain('updated');
-    });
-
-    it('should update all instances without specifying scope (defaults to "all")', async () => {
-      const eventId = await createTestEvent({
-        summary: 'Daily Sync',
-        recurrence: ['RRULE:FREQ=DAILY;COUNT=3']
-      });
-
-      const result = await handler.runTool(
-        {
-          calendarId: TEST_CALENDAR_ID,
-          eventId: eventId,
-          // modificationScope not specified - should default to 'all'
-          summary: 'Updated Daily Sync',
-          timeZone: 'UTC'
-        },
-        oauth2Client
-      );
-
-      expect(result.content[0].text).toContain('Updated Daily Sync');
-    });
-  });
-
-  describe('Update single instance (scope: "thisEventOnly")', () => {
-    it('should update only the specified instance', async () => {
-      const now = new Date();
-      const eventStart = new Date(now.getTime() + 86400000);
-
-      const eventId = await createTestEvent({
-        summary: 'Repeating Meeting',
-        recurrence: ['RRULE:FREQ=DAILY;COUNT=5'],
-        start: { dateTime: eventStart.toISOString(), timeZone: 'UTC' }
-      });
-
-      const result = await handler.runTool(
-        {
-          calendarId: TEST_CALENDAR_ID,
-          eventId: eventId,
-          modificationScope: 'thisEventOnly',
-          originalStartTime: eventStart.toISOString(),
-          summary: 'Single Instance Updated',
-          timeZone: 'UTC'
-        },
-        oauth2Client
-      );
-
-      expect(result.content[0].text).toContain('Single Instance Updated');
-    });
-
-    it('should throw error when thisEventOnly is used without originalStartTime', async () => {
-      const eventId = await createTestEvent({
-        summary: 'Test Event',
-        recurrence: ['RRULE:FREQ=DAILY;COUNT=3']
-      });
-
-      await expect(
-        handler.runTool(
-          {
-            calendarId: TEST_CALENDAR_ID,
-            eventId: eventId,
-            modificationScope: 'thisEventOnly',
-            // originalStartTime missing - should error
-            summary: 'Updated',
-            timeZone: 'UTC'
-          },
-          oauth2Client
-        )
-      ).rejects.toThrow();
-    });
-  });
-
-  describe('Update future instances (scope: "thisAndFollowing")', () => {
-    it('should update this and following instances', async () => {
-      const now = new Date();
-      const eventStart = new Date(now.getTime() + 86400000);
-      const futureDate = new Date(now.getTime() + 5 * 86400000);
-
-      const eventId = await createTestEvent({
-        summary: 'Bi-weekly Review',
-        recurrence: ['RRULE:FREQ=WEEKLY;COUNT=10'],
-        start: { dateTime: eventStart.toISOString(), timeZone: 'UTC' }
-      });
-
-      const result = await handler.runTool(
-        {
-          calendarId: TEST_CALENDAR_ID,
-          eventId: eventId,
-          modificationScope: 'thisAndFollowing',
-          futureStartDate: futureDate.toISOString(),
-          summary: 'Updated from future date',
-          timeZone: 'UTC'
-        },
-        oauth2Client
-      );
-
-      expect(result.content[0].text).toContain('Updated from future date');
-    });
-
-    it('should throw error when thisAndFollowing is used without futureStartDate', async () => {
-      const eventId = await createTestEvent({
-        summary: 'Test Event',
-        recurrence: ['RRULE:FREQ=DAILY;COUNT=5']
-      });
-
-      await expect(
-        handler.runTool(
-          {
-            calendarId: TEST_CALENDAR_ID,
-            eventId: eventId,
-            modificationScope: 'thisAndFollowing',
-            // futureStartDate missing - should error
-            summary: 'Updated',
-            timeZone: 'UTC'
-          },
-          oauth2Client
-        )
-      ).rejects.toThrow();
-    });
-  });
-
-  describe('Scope validation', () => {
-    it('should throw error when using thisEventOnly on single (non-recurring) event', async () => {
-      const eventId = await createTestEvent({
-        summary: 'Single Event',
-        // No recurrence
-      });
-
-      await expect(
-        handler.runTool(
-          {
-            calendarId: TEST_CALENDAR_ID,
-            eventId: eventId,
-            modificationScope: 'thisEventOnly',
-            originalStartTime: new Date().toISOString(),
-            summary: 'Updated',
-            timeZone: 'UTC'
-          },
-          oauth2Client
-        )
-      ).rejects.toThrow('Scope other than "all" only applies to recurring events');
-    });
-
-    it('should throw error when using thisAndFollowing on single event', async () => {
-      const eventId = await createTestEvent({
-        summary: 'Single Event',
-        // No recurrence
-      });
-
-      await expect(
-        handler.runTool(
-          {
-            calendarId: TEST_CALENDAR_ID,
-            eventId: eventId,
-            modificationScope: 'thisAndFollowing',
-            futureStartDate: new Date(Date.now() + 86400000).toISOString(),
-            summary: 'Updated',
-            timeZone: 'UTC'
-          },
-          oauth2Client
-        )
-      ).rejects.toThrow('Scope other than "all" only applies to recurring events');
-    });
-  });
-
-  describe('Conflict detection', () => {
-    it('should report conflicts when updating to overlapping time', async () => {
-      // Create first event
-      const eventId1 = await createTestEvent({
-        summary: 'Event 1',
-        start: {
-          dateTime: new Date(Date.now() + 86400000).toISOString(),
-          timeZone: 'UTC'
-        },
-        end: {
-          dateTime: new Date(Date.now() + 90000000).toISOString(),
-          timeZone: 'UTC'
-        }
-      });
-
-      // Create second event
-      const eventId2 = await createTestEvent({
-        summary: 'Event 2',
-        start: {
-          dateTime: new Date(Date.now() + 100000000).toISOString(),
-          timeZone: 'UTC'
-        },
-        end: {
-          dateTime: new Date(Date.now() + 103600000).toISOString(),
-          timeZone: 'UTC'
-        }
-      });
-
-      // Try to move event 2 to overlap with event 1
-      const result = await handler.runTool(
-        {
-          calendarId: TEST_CALENDAR_ID,
-          eventId: eventId2,
-          start: new Date(Date.now() + 86400000 + 1800000).toISOString(),
-          end: new Date(Date.now() + 90000000 + 1800000).toISOString(),
-          timeZone: 'UTC',
-          checkConflicts: true
-        },
-        oauth2Client
-      );
-
-      expect(result.content[0].type).toBe('text');
-      // Should either succeed or report conflicts (depending on conflict detection)
-      expect(result.content).toBeDefined();
-    });
-  });
-
-  describe('Recurrence rule variations', () => {
-    it('should handle daily recurrence', async () => {
-      const eventId = await createTestEvent({
-        summary: 'Daily Event',
-        recurrence: ['RRULE:FREQ=DAILY;COUNT=7']
-      });
-
-      const result = await handler.runTool(
-        {
-          calendarId: TEST_CALENDAR_ID,
-          eventId: eventId,
-          modificationScope: 'all',
-          summary: 'Updated Daily',
-          timeZone: 'UTC'
-        },
-        oauth2Client
-      );
-
-      expect(result.content[0].text).toContain('Updated Daily');
-    });
-
-    it('should handle weekly recurrence with BYDAY', async () => {
-      const eventId = await createTestEvent({
-        summary: 'Weekly Event',
-        recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=12']
-      });
-
-      const result = await handler.runTool(
-        {
-          calendarId: TEST_CALENDAR_ID,
-          eventId: eventId,
-          modificationScope: 'all',
-          summary: 'Updated Weekly',
-          timeZone: 'UTC'
-        },
-        oauth2Client
-      );
-
-      expect(result.content[0].text).toContain('Updated Weekly');
-    });
-
-    it('should handle monthly recurrence', async () => {
-      const eventId = await createTestEvent({
-        summary: 'Monthly Event',
-        recurrence: ['RRULE:FREQ=MONTHLY;COUNT=12']
-      });
-
-      const result = await handler.runTool(
-        {
-          calendarId: TEST_CALENDAR_ID,
-          eventId: eventId,
-          modificationScope: 'all',
-          summary: 'Updated Monthly',
-          timeZone: 'UTC'
-        },
-        oauth2Client
-      );
-
-      expect(result.content[0].text).toContain('Updated Monthly');
-    });
-  });
-});
 </file>
 
 <file path="src/tests/unit/handlers/BatchRequestHandler.test.ts">
@@ -30259,264 +30776,6 @@ export class HttpTransportHandler {
     });
   }
 }
-</file>
-
-<file path="src/server.ts">
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { OAuth2Client } from "google-auth-library";
-
-// Import authentication components
-import { initializeOAuth2Client } from './auth/client.js';
-import { AuthServer } from './auth/server.js';
-import { TokenManager } from './auth/tokenManager.js';
-
-// Import tool registry
-import { ToolRegistry } from './tools/registry.js';
-
-// Import transport handlers
-import { StdioTransportHandler } from './transports/stdio.js';
-import { HttpTransportHandler, HttpTransportConfig } from './transports/http.js';
-
-// Import config
-import { ServerConfig } from './config/TransportConfig.js';
-
-export class GoogleCalendarMcpServer {
-  private server: McpServer;
-  private oauth2Client!: OAuth2Client;
-  private tokenManager!: TokenManager;
-  private authServer!: AuthServer;
-  private config: ServerConfig;
-
-  constructor(config: ServerConfig) {
-    this.config = config;
-    this.server = new McpServer({
-      name: "google-calendar",
-      version: "1.3.0"
-    });
-  }
-
-  async initialize(): Promise<void> {
-    // 1. Initialize Authentication (but don't block on it)
-    this.oauth2Client = await initializeOAuth2Client();
-    this.tokenManager = new TokenManager(this.oauth2Client);
-    this.authServer = new AuthServer(this.oauth2Client);
-
-    // 2. Handle startup authentication based on transport type
-    await this.handleStartupAuthentication();
-
-    // 3. Set up Modern Tool Definitions
-    this.registerTools();
-
-    // 4. Set up Graceful Shutdown
-    this.setupGracefulShutdown();
-  }
-
-  private async handleStartupAuthentication(): Promise<void> {
-    // Skip authentication in test environment
-    if (process.env.NODE_ENV === 'test') {
-      return;
-    }
-    
-    const accountMode = this.tokenManager.getAccountMode();
-    
-    if (this.config.transport.type === 'stdio') {
-      // For stdio mode, ensure authentication before starting server
-      if (!(await this.tokenManager.isAuthenticated())) {
-        // Ensure we're using the correct account mode (don't override it)
-        const authSuccess = await this.authServer.start(true); // openBrowser = true
-        if (!authSuccess) {
-          process.stderr.write(`Authentication failed for ${accountMode} account. Please check your OAuth credentials and try again.\n`);
-          process.exit(1);
-        }
-        process.stderr.write(`Successfully authenticated user.\n`);
-      } else {
-        process.stderr.write(`Valid ${accountMode} user tokens found, skipping authentication prompt.\n`);
-      }
-    } else {
-      // For HTTP mode, check for tokens but don't block startup
-      if (!(await this.tokenManager.isAuthenticated())) {
-        process.stderr.write(`⚠️  No valid ${accountMode} user authentication tokens found.\n`);
-        process.stderr.write('Visit the server URL in your browser to authenticate, or run "npm run auth" separately.\n');
-      } else {
-        process.stderr.write(`Valid ${accountMode} user tokens found.\n`);
-      }
-    }
-  }
-
-  private registerTools(): void {
-    ToolRegistry.registerAll(this.server, this.executeWithHandler.bind(this));
-  }
-
-  private async ensureAuthenticated(): Promise<void> {
-    // Check if we already have valid tokens
-    if (await this.tokenManager.validateTokens()) {
-      return;
-    }
-
-    // For stdio mode, authentication should have been handled at startup
-    if (this.config.transport.type === 'stdio') {
-      throw new McpError(
-        ErrorCode.InvalidRequest,
-        "Authentication tokens are no longer valid. Please restart the server to re-authenticate."
-      );
-    }
-
-    // For HTTP mode, try to start auth server if not already running
-    try {
-      const authSuccess = await this.authServer.start(false); // openBrowser = false for HTTP mode
-      
-      if (!authSuccess) {
-        throw new McpError(
-          ErrorCode.InvalidRequest,
-          "Authentication required. Please run 'npm run auth' to authenticate, or visit the auth URL shown in the logs for HTTP mode."
-        );
-      }
-    } catch (error) {
-      if (error instanceof McpError) {
-        throw error;
-      }
-      if (error instanceof Error) {
-        throw new McpError(ErrorCode.InvalidRequest, error.message);
-      }
-      throw new McpError(ErrorCode.InvalidRequest, "Authentication required. Please run 'npm run auth' to authenticate.");
-    }
-  }
-
-  private async executeWithHandler(handler: any, args: any): Promise<{ content: Array<{ type: "text"; text: string }> }> {
-    await this.ensureAuthenticated();
-    const result = await handler.runTool(args, this.oauth2Client);
-    return result;
-  }
-
-  async start(): Promise<void> {
-    switch (this.config.transport.type) {
-      case 'stdio':
-        const stdioHandler = new StdioTransportHandler(this.server);
-        await stdioHandler.connect();
-        break;
-        
-      case 'http':
-        const httpConfig: HttpTransportConfig = {
-          port: this.config.transport.port,
-          host: this.config.transport.host
-        };
-        const httpHandler = new HttpTransportHandler(this.server, httpConfig);
-        await httpHandler.connect();
-        break;
-        
-      default:
-        throw new Error(`Unsupported transport type: ${this.config.transport.type}`);
-    }
-  }
-
-  private setupGracefulShutdown(): void {
-    const cleanup = async () => {
-      try {
-        if (this.authServer) {
-          await this.authServer.stop();
-        }
-        
-        // McpServer handles transport cleanup automatically
-        this.server.close();
-        
-        process.exit(0);
-      } catch (error: unknown) {
-        process.stderr.write(`Error during cleanup: ${error instanceof Error ? error.message : error}\n`);
-        process.exit(1);
-      }
-    };
-
-    process.on("SIGINT", cleanup);
-    process.on("SIGTERM", cleanup);
-  }
-
-  // Expose server for testing
-  getServer(): McpServer {
-    return this.server;
-  }
-}
-</file>
-
-<file path="src/verify-tokens.ts">
-import { initializeOAuth2Client } from './auth/client.js';
-import { TokenManager } from './auth/tokenManager.js';
-import fs from 'fs/promises';
-import { getSecureTokenPath } from './auth/utils.js';
-
-async function verifyAndRefreshTokens() {
-  try {
-    console.log('🔍 Verifying OAuth tokens...\n');
-
-    // Initialize OAuth client
-    const oauth2Client = await initializeOAuth2Client();
-    const tokenManager = new TokenManager(oauth2Client);
-    const tokenPath = tokenManager.getTokenPath();
-
-    // Check if token file exists
-    console.log(`📁 Token file: ${tokenPath}`);
-    try {
-      await fs.access(tokenPath);
-      console.log('✓ Token file exists\n');
-    } catch {
-      console.log('✗ Token file not found. Run: npm run auth\n');
-      process.exit(1);
-    }
-
-    // Display token info
-    const tokenContent = await fs.readFile(tokenPath, 'utf-8');
-    const tokens = JSON.parse(tokenContent);
-
-    console.log('📋 Available accounts:');
-    Object.keys(tokens).forEach(account => {
-      const accountTokens = tokens[account];
-      const hasRefresh = !!accountTokens.refresh_token;
-      const hasAccess = !!accountTokens.access_token;
-      const expiryDate = accountTokens.expiry_date
-        ? new Date(accountTokens.expiry_date).toLocaleString()
-        : 'unknown';
-
-      console.log(`  • ${account}`);
-      console.log(`    - Access token: ${hasAccess ? '✓ present' : '✗ missing'}`);
-      console.log(`    - Refresh token: ${hasRefresh ? '✓ present' : '✗ missing'}`);
-      console.log(`    - Expires: ${expiryDate}`);
-    });
-
-    console.log('\n⏱️  Checking token validity...');
-
-    // Validate and refresh if needed
-    const isValid = await tokenManager.validateTokens();
-
-    if (isValid) {
-      console.log('✓ Tokens are valid\n');
-
-      // Check expiry time
-      const credentials = tokenManager.getCredentials();
-      if (credentials?.expiry_date) {
-        const expiresIn = Math.floor((credentials.expiry_date - Date.now()) / 1000);
-        const hours = Math.floor(expiresIn / 3600);
-        const minutes = Math.floor((expiresIn % 3600) / 60);
-        console.log(`⏰ Current access token expires in: ${hours}h ${minutes}m`);
-      }
-      console.log('✓ Ready to use Google Calendar API');
-    } else {
-      console.log('✗ Tokens invalid or expired');
-      console.log('💡 Run: npm run auth');
-      process.exit(1);
-    }
-
-  } catch (error: unknown) {
-    console.error('❌ Error verifying tokens:');
-    if (error instanceof Error) {
-      console.error(`   ${error.message}`);
-    } else {
-      console.error(`   ${error}`);
-    }
-    process.exit(1);
-  }
-}
-
-verifyAndRefreshTokens();
 </file>
 
 <file path="analyze_emails.mjs">
@@ -38308,265 +38567,6 @@ export const GMAIL_TRASH = 'TRASH';
 export const GMAIL_IMPORTANT = 'IMPORTANT';
 </file>
 
-<file path="src/auth/server.ts">
-import { OAuth2Client } from 'google-auth-library';
-import { TokenManager } from './tokenManager.js';
-import http from 'http';
-import { URL } from 'url';
-import open from 'open';
-import { loadCredentials } from './client.js';
-import { getAccountMode, isNodeError } from './utils.js';
-
-const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
-const PORT_RANGE = { start: 3500, end: 3505 };
-
-function buildAuthHtml(title: string, body: string): string {
-  return `<!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>${title}</title>
-            </head>
-            <body>
-                ${body}
-            </body>
-            </html>`;
-}
-const AUTH_SERVER_TIMEOUT_MS = 10000;
-
-export class AuthServer {
-  private baseOAuth2Client: OAuth2Client; // Used by TokenManager for validation/refresh
-  private flowOAuth2Client: OAuth2Client | null = null; // Used specifically for the auth code flow
-  private server: http.Server | null = null;
-  private tokenManager: TokenManager;
-  private portRange: { start: number; end: number };
-  private activeConnections: Set<import('net').Socket> = new Set(); // Track active socket connections
-  public authCompletedSuccessfully = false; // Flag for standalone script
-
-  constructor(oauth2Client: OAuth2Client) {
-    this.baseOAuth2Client = oauth2Client;
-    this.tokenManager = new TokenManager(oauth2Client);
-    this.portRange = PORT_RANGE;
-  }
-
-  private createServer(): http.Server {
-    const server = http.createServer(async (req, res) => {
-      const url = new URL(req.url || '/', `http://${req.headers.host}`);
-      
-      if (url.pathname === '/') {
-        const clientForUrl = this.flowOAuth2Client || this.baseOAuth2Client;
-        const authUrl = clientForUrl.generateAuthUrl({
-          access_type: 'offline',
-          scope: [CALENDAR_SCOPE],
-          prompt: 'consent'
-        });
-
-        const accountMode = getAccountMode();
-
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(`
-          <h1>Google Calendar Authentication</h1>
-          <p><strong>Account Mode:</strong> <code>${accountMode}</code></p>
-          <p>You are authenticating for the <strong>${accountMode}</strong> account.</p>
-          <a href="${authUrl}">Authenticate with Google</a>
-        `);
-        
-      } else if (url.pathname === '/oauth2callback') {
-        // OAuth callback route
-        const code = url.searchParams.get('code');
-        if (!code) {
-          res.writeHead(400, { 'Content-Type': 'text/plain' });
-          res.end('Authorization code missing');
-          return;
-        }
-        
-        if (!this.flowOAuth2Client) {
-          res.writeHead(500, { 'Content-Type': 'text/plain' });
-          res.end('Authentication flow not properly initiated.');
-          return;
-        }
-        
-        try {
-          const { tokens } = await this.flowOAuth2Client.getToken(code);
-          await this.tokenManager.saveTokens(tokens);
-          this.authCompletedSuccessfully = true;
-
-          const tokenPath = this.tokenManager.getTokenPath();
-          const accountMode = this.tokenManager.getAccountMode();
-
-          res.writeHead(200, { 'Content-Type': 'text/html' });
-          res.end(buildAuthHtml('Authentication Successful', `
-                <h1>Authentication Successful!</h1>
-                <p><strong>Account Mode:</strong> ${accountMode}</p>
-                <p>Your authentication tokens have been saved for the <strong>${accountMode}</strong> account.</p>
-                <p>Tokens saved to: ${tokenPath}</p>
-                <p>You can now close this browser window.</p>
-          `));
-        } catch (error: unknown) {
-          this.authCompletedSuccessfully = false;
-          const message = error instanceof Error ? error.message : 'Unknown error';
-          process.stderr.write(`✗ Token save failed: ${message}\n`);
-
-          const escapedMessage = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
-
-          res.writeHead(500, { 'Content-Type': 'text/html' });
-          res.end(buildAuthHtml('Authentication Failed', `
-                <h1>Authentication Failed</h1>
-                <p>An error occurred during authentication:</p>
-                <p>${escapedMessage}</p>
-                <p>Please try again or check the server logs.</p>
-          `));
-        }
-      } else {
-        // 404 for other routes
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('Not Found');
-      }
-    });
-
-    // Track connections at server level
-    server.on('connection', (socket) => {
-      this.activeConnections.add(socket);
-      socket.on('close', () => {
-        this.activeConnections.delete(socket);
-      });
-    });
-    
-    return server;
-  }
-
-  async start(openBrowser = true): Promise<boolean> {
-    return Promise.race([
-      this.startWithTimeout(openBrowser),
-      new Promise<boolean>((_, reject) => {
-        setTimeout(() => reject(new Error('Auth server start timed out')), AUTH_SERVER_TIMEOUT_MS);
-      })
-    ]).catch(() => false);
-  }
-
-  private async startWithTimeout(openBrowser = true): Promise<boolean> {
-    if (await this.tokenManager.isAuthenticated()) {
-      this.authCompletedSuccessfully = true;
-      return true;
-    }
-    
-    // Try to start the server and get the port
-    const port = await this.startServerOnAvailablePort();
-    if (port === null) {
-      this.authCompletedSuccessfully = false;
-      return false;
-    }
-
-    // Successfully started server on `port`. Now create the flow-specific OAuth client.
-    try {
-      const { client_id, client_secret } = await loadCredentials();
-      this.flowOAuth2Client = new OAuth2Client(
-        client_id,
-        client_secret,
-        `http://localhost:${port}/oauth2callback`
-      );
-    } catch (error) {
-        // Could not load credentials, cannot proceed with auth flow
-        this.authCompletedSuccessfully = false;
-        await this.stop(); // Stop the server we just started
-        return false;
-    }
-
-    const authorizeUrl = this.flowOAuth2Client.generateAuthUrl({
-      access_type: 'offline',
-      scope: [CALENDAR_SCOPE],
-      prompt: 'consent'
-    });
-    
-    // Always show the URL in console for easy access
-    process.stderr.write(`\n🔗 Authentication URL: ${authorizeUrl}\n\n`);
-    process.stderr.write(`Or visit: http://localhost:${port}\n\n`);
-    
-    if (openBrowser) {
-      try {
-        await open(authorizeUrl);
-        process.stderr.write(`Browser opened automatically. If it didn't open, use the URL above.\n`);
-      } catch (error) {
-        process.stderr.write(`Could not open browser automatically. Please use the URL above.\n`);
-      }
-    } else {
-      process.stderr.write(`Please visit the URL above to complete authentication.\n`);
-    }
-
-    return true; // Auth flow initiated
-  }
-
-  private async startServerOnAvailablePort(): Promise<number | null> {
-    for (let port = this.portRange.start; port <= this.portRange.end; port++) {
-      try {
-        await new Promise<void>((resolve, reject) => {
-          const testServer = this.createServer();
-          testServer.listen(port, () => {
-            this.server = testServer;
-            resolve();
-          });
-          testServer.on('error', (err: NodeJS.ErrnoException) => {
-            if (err.code === 'EADDRINUSE') {
-              testServer.close(() => reject(err));
-            } else {
-              reject(err);
-            }
-          });
-        });
-        return port;
-      } catch (error: unknown) {
-        if (!isNodeError(error, 'EADDRINUSE')) {
-          return null;
-        }
-      }
-    }
-    return null;
-  }
-
-  public getRunningPort(): number | null {
-    if (this.server) {
-      const address = this.server.address();
-      if (typeof address === 'object' && address !== null) {
-        return address.port;
-      }
-    }
-    return null;
-  }
-
-  async stop(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (this.server) {
-        // Force close all active connections
-        for (const connection of this.activeConnections) {
-          connection.destroy();
-        }
-        this.activeConnections.clear();
-        
-        // Add a timeout to force close if server doesn't close gracefully
-        const timeout = setTimeout(() => {
-          process.stderr.write('Server close timeout, forcing exit...\n');
-          this.server = null;
-          resolve();
-        }, 2000); // 2 second timeout
-        
-        this.server.close((err) => {
-          clearTimeout(timeout);
-          if (err) {
-            reject(err);
-          } else {
-            this.server = null;
-            resolve();
-          }
-        });
-      } else {
-        resolve();
-      }
-    });
-  }
-}
-</file>
-
 <file path="src/handlers/core/BaseToolHandler.ts">
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
@@ -38716,10 +38716,10 @@ import { CONFLICT_DETECTION_CONFIG } from '../../services/conflict-detection/con
  * Copy properties from source to target if they exist in source and are not undefined.
  * Used to conditionally build event fields without boilerplate if-checks.
  */
-function conditionallyAddFields<T extends Record<string, any>>(
-  source: T,
+function conditionallyAddFields(
+  source: Record<string, any>,
   target: Record<string, any>,
-  fieldNames: (keyof T)[]
+  fieldNames: readonly string[]
 ): void {
   for (const field of fieldNames) {
     if (field in source && source[field] !== undefined) {
@@ -41582,6 +41582,830 @@ export function processBatchResponses<T extends ExtendedEvent = ExtendedEvent>(
 }
 </file>
 
+<file path="src/handlers/core/UpdateEventHandler.ts">
+import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { OAuth2Client } from "google-auth-library";
+import { UpdateEventInput } from "../../tools/registry.js";
+import { BaseToolHandler } from "./BaseToolHandler.js";
+import { calendar_v3 } from 'googleapis';
+import { RecurringEventHelpers, RecurringEventError, RECURRING_EVENT_ERRORS } from './RecurringEventHelpers.js';
+import { createEventResponseWithConflicts } from "../utils.js";
+import { ConflictDetectionService } from "../../services/conflict-detection/index.js";
+import { createTimeObject } from "../../utils/timezone-utils.js";
+import {
+  buildEventForConflictCheckUpdate,
+  performConflictCheck,
+} from "./eventManipulationUtils.js";
+
+export class UpdateEventHandler extends BaseToolHandler {
+    private conflictDetectionService: ConflictDetectionService;
+    
+    constructor() {
+        super();
+        this.conflictDetectionService = new ConflictDetectionService();
+    }
+    
+    async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult> {
+        const validArgs = args as UpdateEventInput;
+
+        let conflicts = null;
+        if (validArgs.checkConflicts !== false && (validArgs.start || validArgs.end)) {
+            const calendar = this.getCalendar(oauth2Client);
+            const existingEvent = await calendar.events.get({
+                calendarId: validArgs.calendarId,
+                eventId: validArgs.eventId
+            });
+
+            if (!existingEvent.data) {
+                throw new Error('Event not found');
+            }
+
+            const timezone = validArgs.timeZone || await this.getCalendarTimezone(oauth2Client, validArgs.calendarId);
+            const eventToCheck = buildEventForConflictCheckUpdate(validArgs, existingEvent.data, timezone);
+
+            conflicts = await performConflictCheck(
+                this.conflictDetectionService,
+                oauth2Client,
+                eventToCheck,
+                validArgs.calendarId,
+                {
+                    checkDuplicates: false,
+                    checkConflicts: true,
+                    calendarsToCheck: validArgs.calendarsToCheck || [validArgs.calendarId],
+                }
+            );
+        }
+
+        const event = await this.updateEventWithScope(oauth2Client, validArgs);
+        const text = createEventResponseWithConflicts(event, validArgs.calendarId, conflicts ?? undefined, "updated");
+
+        return this.textResult(text);
+    }
+
+    private async updateEventWithScope(
+        client: OAuth2Client,
+        args: UpdateEventInput
+    ): Promise<calendar_v3.Schema$Event> {
+        try {
+            const calendar = this.getCalendar(client);
+            const helpers = new RecurringEventHelpers(calendar);
+
+            // Get calendar's default timezone if not provided
+            const defaultTimeZone = await this.getCalendarTimezone(client, args.calendarId);
+
+            // Fetch event and detect type in single API call
+            const { event, type: eventType } = await helpers.getEventAndType(args.eventId, args.calendarId);
+
+            if (args.modificationScope && args.modificationScope !== 'all' && eventType !== 'recurring') {
+                throw new RecurringEventError(
+                    'Scope other than "all" only applies to recurring events',
+                    RECURRING_EVENT_ERRORS.NON_RECURRING_SCOPE
+                );
+            }
+
+            switch (args.modificationScope) {
+                case 'thisEventOnly':
+                    return this.updateSingleInstance(helpers, args, defaultTimeZone);
+                case 'all':
+                case undefined:
+                    return this.updateAllInstances(helpers, args, defaultTimeZone);
+                case 'thisAndFollowing':
+                    return this.updateFutureInstances(helpers, args, defaultTimeZone, event);
+                default:
+                    throw new RecurringEventError(
+                        `Invalid modification scope: ${args.modificationScope}`,
+                        RECURRING_EVENT_ERRORS.INVALID_SCOPE
+                    );
+            }
+        } catch (error) {
+            if (error instanceof RecurringEventError) {
+                throw error;
+            }
+            throw this.handleGoogleApiError(error);
+        }
+    }
+
+    private async updateSingleInstance(
+        helpers: RecurringEventHelpers,
+        args: UpdateEventInput,
+        defaultTimeZone: string
+    ): Promise<calendar_v3.Schema$Event> {
+        if (!args.originalStartTime) {
+            throw new RecurringEventError(
+                'originalStartTime is required for single instance updates',
+                RECURRING_EVENT_ERRORS.MISSING_ORIGINAL_TIME
+            );
+        }
+
+        const calendar = helpers.getCalendar();
+        const instanceId = helpers.formatInstanceId(args.eventId, args.originalStartTime);
+        
+        const response = await calendar.events.patch({
+            calendarId: args.calendarId,
+            eventId: instanceId,
+            requestBody: helpers.buildUpdateRequestBody(args, defaultTimeZone)
+        });
+
+        if (!response.data) throw new Error('Failed to update event instance');
+        return response.data;
+    }
+
+    private async updateAllInstances(
+        helpers: RecurringEventHelpers,
+        args: UpdateEventInput,
+        defaultTimeZone: string
+    ): Promise<calendar_v3.Schema$Event> {
+        const calendar = helpers.getCalendar();
+        
+        const response = await calendar.events.patch({
+            calendarId: args.calendarId,
+            eventId: args.eventId,
+            requestBody: helpers.buildUpdateRequestBody(args, defaultTimeZone)
+        });
+
+        if (!response.data) throw new Error('Failed to update event');
+        return response.data;
+    }
+
+    private async updateFutureInstances(
+        helpers: RecurringEventHelpers,
+        args: UpdateEventInput,
+        defaultTimeZone: string,
+        originalEvent?: calendar_v3.Schema$Event
+    ): Promise<calendar_v3.Schema$Event> {
+        if (!args.futureStartDate) {
+            throw new RecurringEventError(
+                'futureStartDate is required for future instance updates',
+                RECURRING_EVENT_ERRORS.MISSING_FUTURE_DATE
+            );
+        }
+
+        const calendar = helpers.getCalendar();
+        const effectiveTimeZone = args.timeZone || defaultTimeZone;
+
+        // Use passed event or fetch if not provided (for backward compatibility)
+        let eventData = originalEvent;
+        if (!eventData) {
+            const originalResponse = await calendar.events.get({
+                calendarId: args.calendarId,
+                eventId: args.eventId
+            });
+            eventData = originalResponse.data;
+        }
+
+        if (!eventData.recurrence) {
+            throw new Error('Event does not have recurrence rules');
+        }
+
+        // 1. Calculate UNTIL date and update original event
+        const untilDate = helpers.calculateUntilDate(args.futureStartDate);
+        const updatedRecurrence = helpers.updateRecurrenceWithUntil(eventData.recurrence, untilDate);
+
+        await calendar.events.patch({
+            calendarId: args.calendarId,
+            eventId: args.eventId,
+            requestBody: { recurrence: updatedRecurrence }
+        });
+
+        // 2. Create new recurring event starting from future date
+        const newStartTime = args.start || args.futureStartDate;
+        const newEndTime = args.end || helpers.calculateEndTime(newStartTime, eventData);
+
+        const newEvent = {
+            ...helpers.cleanEventForDuplication(eventData),
+            ...helpers.buildUpdateRequestBody(args, defaultTimeZone),
+            start: createTimeObject(newStartTime, effectiveTimeZone),
+            end: createTimeObject(newEndTime, effectiveTimeZone)
+        };
+
+        const response = await calendar.events.insert({
+            calendarId: args.calendarId,
+            requestBody: newEvent
+        });
+
+        if (!response.data) throw new Error('Failed to create new recurring event');
+        return response.data;
+    }
+
+}
+</file>
+
+<file path="src/services/conflict-detection/ConflictDetectionService.ts">
+import { OAuth2Client } from "google-auth-library";
+import { google, calendar_v3 } from "googleapis";
+import {
+  ConflictCheckResult,
+  ConflictInfo,
+  DuplicateInfo,
+  ConflictDetectionOptions
+} from "./types.js";
+import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
+import { ConflictAnalyzer } from "./ConflictAnalyzer.js";
+import { CONFLICT_DETECTION_CONFIG } from "./config.js";
+import { getEventUrl } from "../../handlers/utils.js";
+import {
+  resolveTimeRange,
+  hasTimezoneInDatetime,
+  resolveTimeZone,
+  isValidIANATimeZone
+} from "../../utils/timezone-utils.js";
+
+/**
+ * Extract datetime and date from event start/end objects.
+ * Returns the dateTime if available, falls back to date for all-day events.
+ * Handles null values from Google Calendar API.
+ */
+function getEventDateTime(event: calendar_v3.Schema$Event): { start?: string; end?: string } {
+  return {
+    start: event.start?.dateTime || event.start?.date || undefined,
+    end: event.end?.dateTime || event.end?.date || undefined,
+  };
+}
+
+/**
+ * Format event times for conflict/overlap info.
+ * Safely extracts both dateTime and date fields from event objects.
+ * Handles null values from Google Calendar API.
+ */
+function formatEventTimesForInfo(event: calendar_v3.Schema$Event): { start?: string; end?: string } {
+  return {
+    start: event.start?.dateTime || event.start?.date || undefined,
+    end: event.end?.dateTime || event.end?.date || undefined,
+  };
+}
+
+/**
+ * Service for detecting event conflicts and duplicates.
+ *
+ * IMPORTANT: This service relies on Google Calendar's list API to find existing events.
+ * Due to eventual consistency in Google Calendar, recently created events may not
+ * immediately appear in list queries. This is a known limitation of the Google Calendar API
+ * and affects duplicate detection for events created in quick succession.
+ *
+ * In real-world usage, this is rarely an issue as there's natural time between event creation.
+ */
+export class ConflictDetectionService {
+  private similarityChecker: EventSimilarityChecker;
+  private conflictAnalyzer: ConflictAnalyzer;
+
+  constructor() {
+    this.similarityChecker = new EventSimilarityChecker();
+    this.conflictAnalyzer = new ConflictAnalyzer();
+  }
+
+  /**
+   * Check for conflicts and duplicates when creating or updating an event
+   */
+  async checkConflicts(
+    oauth2Client: OAuth2Client,
+    event: calendar_v3.Schema$Event,
+    calendarId: string,
+    options: ConflictDetectionOptions = {}
+  ): Promise<ConflictCheckResult> {
+    const {
+      checkDuplicates = true,
+      checkConflicts = true,
+      calendarsToCheck = [calendarId],
+      duplicateSimilarityThreshold = CONFLICT_DETECTION_CONFIG.DEFAULT_DUPLICATE_THRESHOLD,
+      includeDeclinedEvents = false
+    } = options;
+
+    const result: ConflictCheckResult = {
+      hasConflicts: false,
+      conflicts: [],
+      duplicates: []
+    };
+
+    if (!event.start || !event.end) {
+      return result;
+    }
+
+    // Get the time range for checking
+    const { start: timeMin, end: timeMax } = getEventDateTime(event);
+
+    if (!timeMin || !timeMax) {
+      return result;
+    }
+
+    // Extract and validate timezone with proper fallback chain
+    const rawTimezone = event.start?.timeZone || event.end?.timeZone;
+    const timezone = rawTimezone && isValidIANATimeZone(rawTimezone)
+      ? rawTimezone
+      : undefined;
+
+    // The Google Calendar API requires RFC3339 format for timeMin/timeMax
+    // If we have timezone-naive datetimes with a timezone field, convert them to proper RFC3339
+    const needsConversion = timezone && timeMin && !hasTimezoneInDatetime(timeMin);
+
+    let searchTimeMin: string | undefined = timeMin;
+    let searchTimeMax: string | undefined = timeMax;
+
+    if (needsConversion) {
+      const timeRange = resolveTimeRange(timeMin!, timeMax!, timezone!);
+      searchTimeMin = timeRange.timeMin;
+      searchTimeMax = timeRange.timeMax;
+    }
+
+    // Check each calendar
+    for (const checkCalendarId of calendarsToCheck) {
+      try {
+        // Only search if we have valid time bounds
+        if (!searchTimeMin || !searchTimeMax) {
+          continue;
+        }
+
+        // Get events in the search time range, passing timezone for proper interpretation
+        const events = await this.getEventsInTimeRange(
+          oauth2Client,
+          checkCalendarId,
+          searchTimeMin,
+          searchTimeMax,
+          timezone || undefined
+        );
+
+        // Check for duplicates
+        if (checkDuplicates) {
+          const duplicates = this.findDuplicates(
+            event,
+            events,
+            checkCalendarId,
+            duplicateSimilarityThreshold
+          );
+          result.duplicates.push(...duplicates);
+        }
+
+        // Check for conflicts
+        if (checkConflicts) {
+          const conflicts = this.findConflicts(
+            event,
+            events,
+            checkCalendarId,
+            includeDeclinedEvents
+          );
+          result.conflicts.push(...conflicts);
+        }
+      } catch (error) {
+        // If we can't access a calendar, skip it silently
+        // Errors are expected for calendars without access permissions
+      }
+    }
+
+    result.hasConflicts = result.conflicts.length > 0 || result.duplicates.length > 0;
+    return result;
+  }
+
+  /**
+   * Get events in a specific time range from a calendar
+   */
+  private async getEventsInTimeRange(
+    oauth2Client: OAuth2Client,
+    calendarId: string,
+    timeMin: string,
+    timeMax: string,
+    timeZone?: string
+  ): Promise<calendar_v3.Schema$Event[]> {
+    // Fetch from API
+    const calendar = google.calendar({ version: "v3", auth: oauth2Client });
+    
+    // Build list parameters
+    const listParams: any = {
+      calendarId,
+      timeMin,
+      timeMax,
+      singleEvents: true,
+      orderBy: 'startTime',
+      maxResults: 250
+    };
+    
+    // The Google Calendar API accepts both:
+    // 1. Timezone-aware datetimes (with Z or offset)
+    // 2. Timezone-naive datetimes with a timeZone parameter
+    // We pass the timeZone parameter when available for consistency
+    if (timeZone) {
+      listParams.timeZone = timeZone;
+    }
+    
+    
+    // Use exact time range without extension to avoid false positives
+    const response = await calendar.events.list(listParams);
+
+    const events = response?.data?.items || [];
+    
+    return events;
+  }
+
+  /**
+   * Find duplicate events based on similarity
+   */
+  private findDuplicates(
+    newEvent: calendar_v3.Schema$Event,
+    existingEvents: calendar_v3.Schema$Event[],
+    calendarId: string,
+    threshold: number
+  ): DuplicateInfo[] {
+    const duplicates: DuplicateInfo[] = [];
+
+
+    for (const existingEvent of existingEvents) {
+      // Skip if it's the same event (for updates)
+      if (existingEvent.id === newEvent.id) continue;
+      
+      // Skip cancelled events
+      if (existingEvent.status === 'cancelled') continue;
+
+      const similarity = this.similarityChecker.checkSimilarity(newEvent, existingEvent);
+      
+      
+      if (similarity >= threshold) {
+        duplicates.push({
+          event: {
+            id: existingEvent.id!,
+            title: existingEvent.summary || 'Untitled Event',
+            url: getEventUrl(existingEvent, calendarId) || undefined,
+            similarity: Math.round(similarity * 100) / 100
+          },
+          fullEvent: existingEvent,
+          calendarId: calendarId,
+          suggestion: similarity >= CONFLICT_DETECTION_CONFIG.DUPLICATE_THRESHOLDS.BLOCKING
+            ? 'This appears to be a duplicate. Consider updating the existing event instead.'
+            : 'This event is very similar to an existing one. Is this intentional?'
+        });
+      }
+    }
+
+
+    return duplicates;
+  }
+
+  /**
+   * Find conflicting events based on time overlap
+   */
+  private findConflicts(
+    newEvent: calendar_v3.Schema$Event,
+    existingEvents: calendar_v3.Schema$Event[],
+    calendarId: string,
+    includeDeclinedEvents: boolean
+  ): ConflictInfo[] {
+    const conflicts: ConflictInfo[] = [];
+    const overlappingEvents = this.conflictAnalyzer.findOverlappingEvents(existingEvents, newEvent);
+
+    for (const conflictingEvent of overlappingEvents) {
+      // Skip declined events if configured
+      if (!includeDeclinedEvents && this.isEventDeclined(conflictingEvent)) {
+        continue;
+      }
+
+      const overlap = this.conflictAnalyzer.analyzeOverlap(newEvent, conflictingEvent);
+
+      if (overlap.hasOverlap) {
+        const { start, end } = formatEventTimesForInfo(conflictingEvent);
+        conflicts.push({
+          type: 'overlap',
+          calendar: calendarId,
+          event: {
+            id: conflictingEvent.id!,
+            title: conflictingEvent.summary || 'Untitled Event',
+            url: getEventUrl(conflictingEvent, calendarId) || undefined,
+            start,
+            end
+          },
+          fullEvent: conflictingEvent,
+          overlap: {
+            duration: overlap.duration!,
+            percentage: overlap.percentage!,
+            startTime: overlap.startTime!,
+            endTime: overlap.endTime!
+          }
+        });
+      }
+    }
+
+    return conflicts;
+  }
+
+  /**
+   * Check if the current user has declined an event
+   */
+  private isEventDeclined(_event: calendar_v3.Schema$Event): boolean {
+    // For now, we'll skip this check since we don't have easy access to the user's email
+    // This could be enhanced later by passing the user email through the service
+    return false;
+  }
+
+  /**
+   * Check for conflicts using free/busy data (alternative method)
+   */
+  async checkConflictsWithFreeBusy(
+    oauth2Client: OAuth2Client,
+    eventToCheck: calendar_v3.Schema$Event,
+    calendarsToCheck: string[]
+  ): Promise<ConflictInfo[]> {
+    const conflicts: ConflictInfo[] = [];
+
+    if (!eventToCheck.start || !eventToCheck.end) return conflicts;
+
+    const { start: timeMin, end: timeMax } = getEventDateTime(eventToCheck);
+
+    if (!timeMin || !timeMax) return conflicts;
+
+    const calendar = google.calendar({ version: "v3", auth: oauth2Client });
+    
+    try {
+      const freeBusyResponse = await calendar.freebusy.query({
+        requestBody: {
+          timeMin,
+          timeMax,
+          items: calendarsToCheck.map(id => ({ id }))
+        }
+      });
+
+      for (const [calendarId, calendarInfo] of Object.entries(freeBusyResponse.data.calendars || {})) {
+        if (calendarInfo.busy && calendarInfo.busy.length > 0) {
+          for (const busySlot of calendarInfo.busy) {
+            if (this.conflictAnalyzer.checkBusyConflict(eventToCheck, busySlot)) {
+              conflicts.push({
+                type: 'overlap',
+                calendar: calendarId,
+                event: {
+                  id: 'busy-time',
+                  title: 'Busy (details unavailable)',
+                  start: busySlot.start || undefined,
+                  end: busySlot.end || undefined
+                }
+              });
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check free/busy:', error);
+    }
+
+    return conflicts;
+  }
+}
+</file>
+
+<file path="src/tests/integration/conflict-detection-integration.test.ts">
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { initializeOAuth2Client } from '../../auth/client.js';
+import { TokenManager } from '../../auth/tokenManager.js';
+import { TestDataFactory } from './test-data-factory.js';
+import { getTextContent } from '../unit/helpers/content.js';
+import {
+  createAndVerifyEvent,
+  updateAndVerifyEvent,
+  createNonOverlappingEventPair,
+  createOverlappingEventPair
+} from './integration-test-helpers.js';
+
+const ONE_HOUR_MS = 60 * 60 * 1000;
+const ONE_DAY_MS = 24 * ONE_HOUR_MS;
+const HALF_HOUR_MS = 30 * 60 * 1000;
+
+/**
+ * Conflict Detection Integration Tests (Option A: MCP Protocol)
+ *
+ * PURPOSE: Test conflict and duplicate detection via MCP protocol
+ * - Uses real MCP server spawned as child process
+ * - Calls tools via stdio transport (Option A pattern)
+ * - Uses real Google Calendar API with Doppler credentials
+ * - Tests overlap detection, duplicate detection, non-conflict cases
+ * - Real event creation and cleanup
+ *
+ * RUN: doppler run --project integrity-studio --config dev -- npm run test:integration
+ * OR: GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json doppler run -- npm run test:integration
+ */
+
+describe('Conflict Detection Integration (MCP Protocol)', () => {
+  let mcpClient: Client;
+  const createdEventIds: string[] = [];
+  const TEST_CALENDAR_ID = TestDataFactory.getTestCalendarId();
+
+  beforeAll(async () => {
+    // 1. Auth guard: verify real credentials are available
+    const oauth2Client = await initializeOAuth2Client();
+    const tokenManager = new TokenManager(oauth2Client);
+    const isAuth = await tokenManager.isAuthenticated();
+
+    if (!isAuth) {
+      throw new Error(
+        'No valid tokens found. Run: npm run auth\n' +
+          'For integration tests with Doppler: ' +
+          'doppler run --project integrity-studio --config dev -- npm run test:integration'
+      );
+    }
+
+    // 2. Start MCP server via stdio transport
+    const cleanEnv = Object.fromEntries(
+      Object.entries(process.env).filter(([, value]) => value !== undefined)
+    ) as Record<string, string>;
+    cleanEnv.NODE_ENV = 'test';
+
+    mcpClient = new Client(
+      {
+        name: 'conflict-detection-test',
+        version: '1.0.0'
+      },
+      {
+        capabilities: {}
+      }
+    );
+
+    const transport = new StdioClientTransport({
+      command: 'node',
+      args: ['build/index.js'],
+      env: cleanEnv
+    });
+
+    await mcpClient.connect(transport);
+
+    // 3. Verify tools are available
+    const tools = await mcpClient.listTools();
+    const toolNames = tools.tools.map((t) => t.name);
+    expect(toolNames).toContain('create-event');
+    expect(toolNames).toContain('update-event');
+    expect(toolNames).toContain('delete-event');
+    expect(toolNames).toContain('get-event');
+  }, 30000);
+
+  afterAll(async () => {
+    // Cleanup: Delete all created test events in parallel
+    const deleteResults = await Promise.allSettled(
+      createdEventIds.map((eventId) =>
+        mcpClient.callTool({
+          name: 'delete-event',
+          arguments: {
+            calendarId: TEST_CALENDAR_ID,
+            eventId
+          }
+        })
+      )
+    );
+
+    deleteResults.forEach((result, idx) => {
+      if (result.status === 'rejected') {
+        console.warn(`Failed to cleanup event ${createdEventIds[idx]}:`, result.reason);
+      }
+    });
+
+    // Close MCP connection
+    if (mcpClient) {
+      await mcpClient.close();
+    }
+  }, 30000);
+
+  describe('Event Creation Without Conflicts', () => {
+    it('should create non-overlapping events without conflict', async () => {
+      const now = new Date();
+      const { event1Id, event2Id } = await createNonOverlappingEventPair(
+        mcpClient,
+        TEST_CALENDAR_ID,
+        now,
+        createdEventIds
+      );
+
+      expect(event1Id).toBeTruthy();
+      expect(event2Id).toBeTruthy();
+    });
+  });
+
+  describe('Conflict Detection: Overlapping Times', () => {
+    it('should detect overlap when updating event to conflict with existing', async () => {
+      const now = new Date();
+      const { event1Id, event2Id } = await createOverlappingEventPair(
+        mcpClient,
+        TEST_CALENDAR_ID,
+        now,
+        createdEventIds
+      );
+
+      // Get the overlapping times from the helper
+      const start1 = new Date(now.getTime() + 3 * ONE_HOUR_MS);
+      const start2 = new Date(start1.getTime() + HALF_HOUR_MS);
+      const end2 = new Date(start2.getTime() + ONE_HOUR_MS);
+
+      // Update event 2 to overlap with event 1 - check for conflicts
+      const { text } = await updateAndVerifyEvent(
+        mcpClient,
+        TEST_CALENDAR_ID,
+        event2Id,
+        start2,
+        end2,
+        true
+      );
+
+      expect(text).toBeTruthy();
+    });
+  });
+
+  describe('Conflict Detection: Non-Overlapping Times', () => {
+    it('should not detect conflicts for truly non-overlapping events', async () => {
+      const now = new Date();
+      const { event1Id, event2Id } = await createNonOverlappingEventPair(
+        mcpClient,
+        TEST_CALENDAR_ID,
+        now,
+        createdEventIds
+      );
+
+      // Get the non-overlapping times
+      const start1 = new Date(now.getTime() + 4 * ONE_HOUR_MS);
+      const end1 = new Date(start1.getTime() + ONE_HOUR_MS);
+      const start2 = new Date(end1.getTime() + HALF_HOUR_MS);
+      const end2 = new Date(start2.getTime() + ONE_HOUR_MS);
+
+      // Update event 2 to maintain gap - should not report conflict
+      const { text } = await updateAndVerifyEvent(
+        mcpClient,
+        TEST_CALENDAR_ID,
+        event2Id,
+        start2,
+        end2,
+        true
+      );
+
+      expect(text).toContain('No-Conflict Event 2');
+    });
+  });
+
+  describe('Duplicate Detection', () => {
+    it('should handle creation of similar events', async () => {
+      const now = new Date();
+      const start = new Date(now.getTime() + 5 * ONE_HOUR_MS);
+      const end = new Date(start.getTime() + ONE_HOUR_MS);
+
+      const { eventId: eventId1 } = await createAndVerifyEvent(
+        mcpClient,
+        TEST_CALENDAR_ID,
+        'Duplicate Test Event',
+        start,
+        end,
+        createdEventIds
+      );
+
+      expect(eventId1).toBeTruthy();
+
+      // Create second event with same summary and similar time
+      const FIVE_MIN_MS = 5 * 60 * 1000;
+      const start2 = new Date(start.getTime() + FIVE_MIN_MS);
+      const end2 = new Date(end.getTime() + FIVE_MIN_MS);
+
+      const { eventId: eventId2 } = await createAndVerifyEvent(
+        mcpClient,
+        TEST_CALENDAR_ID,
+        'Duplicate Test Event',
+        start2,
+        end2,
+        createdEventIds
+      );
+
+      expect(eventId2).toBeTruthy();
+      // Both events created successfully (duplicates not blocked, just detected)
+      expect(eventId1).not.toBe(eventId2);
+    });
+  });
+
+  describe('Recurring Events and Conflict Detection', () => {
+    it('should handle conflict detection with recurring events', async () => {
+      const recurringEvent = TestDataFactory.createRecurringEvent({
+        summary: 'Recurring Conflict Base'
+      });
+
+      // Create recurring event
+      const result1 = await mcpClient.callTool({
+        name: 'create-event',
+        arguments: {
+          calendarId: TEST_CALENDAR_ID,
+          ...recurringEvent
+        }
+      });
+
+      const id = TestDataFactory.extractEventIdFromResponse(result1);
+      if (id) createdEventIds.push(id);
+
+      // Create single event that might overlap with one recurrence
+      const now = new Date();
+      const overlapStart = new Date(now.getTime() + ONE_DAY_MS);
+      overlapStart.setUTCHours(11, 0, 0, 0);
+
+      const { eventId: eventId2 } = await createAndVerifyEvent(
+        mcpClient,
+        TEST_CALENDAR_ID,
+        'Overlaps Recurring Instance',
+        overlapStart,
+        new Date(overlapStart.getTime() + ONE_HOUR_MS),
+        createdEventIds
+      );
+
+      expect(eventId2).toBeTruthy();
+    });
+  });
+});
+</file>
+
 <file path="src/tests/integration/test-data-factory.ts">
 // Test data factory utilities for integration tests
 import { tryGetTextContent } from '../unit/helpers/index.js';
@@ -43132,7 +43956,12 @@ import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
  * Mock the googleapis module with standard calendar and calendarList methods.
  * Returns mocked googleapis for use in vi.mock() calls.
  */
-export function createGoogleCalendarMocks(): ReturnType<typeof vi.fn> {
+interface GoogleCalendarMocks {
+  google: { calendar: ReturnType<typeof vi.fn> };
+  calendar_v3: Record<string, never>;
+}
+
+export function createGoogleCalendarMocks(): GoogleCalendarMocks {
   return {
     google: {
       calendar: vi.fn(() => ({
@@ -44934,214 +45763,6 @@ export class SearchEventsHandler extends BaseToolHandler {
 }
 </file>
 
-<file path="src/handlers/core/UpdateEventHandler.ts">
-import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { OAuth2Client } from "google-auth-library";
-import { UpdateEventInput } from "../../tools/registry.js";
-import { BaseToolHandler } from "./BaseToolHandler.js";
-import { calendar_v3 } from 'googleapis';
-import { RecurringEventHelpers, RecurringEventError, RECURRING_EVENT_ERRORS } from './RecurringEventHelpers.js';
-import { createEventResponseWithConflicts } from "../utils.js";
-import { ConflictDetectionService } from "../../services/conflict-detection/index.js";
-import { createTimeObject } from "../../utils/timezone-utils.js";
-import {
-  buildEventForConflictCheckUpdate,
-  performConflictCheck,
-} from "./eventManipulationUtils.js";
-
-export class UpdateEventHandler extends BaseToolHandler {
-    private conflictDetectionService: ConflictDetectionService;
-    
-    constructor() {
-        super();
-        this.conflictDetectionService = new ConflictDetectionService();
-    }
-    
-    async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult> {
-        const validArgs = args as UpdateEventInput;
-
-        let conflicts = null;
-        if (validArgs.checkConflicts !== false && (validArgs.start || validArgs.end)) {
-            const calendar = this.getCalendar(oauth2Client);
-            const existingEvent = await calendar.events.get({
-                calendarId: validArgs.calendarId,
-                eventId: validArgs.eventId
-            });
-
-            if (!existingEvent.data) {
-                throw new Error('Event not found');
-            }
-
-            const timezone = validArgs.timeZone || await this.getCalendarTimezone(oauth2Client, validArgs.calendarId);
-            const eventToCheck = buildEventForConflictCheckUpdate(validArgs, existingEvent.data, timezone);
-
-            conflicts = await performConflictCheck(
-                this.conflictDetectionService,
-                oauth2Client,
-                eventToCheck,
-                validArgs.calendarId,
-                {
-                    checkDuplicates: false,
-                    checkConflicts: true,
-                    calendarsToCheck: validArgs.calendarsToCheck || [validArgs.calendarId],
-                }
-            );
-        }
-
-        const event = await this.updateEventWithScope(oauth2Client, validArgs);
-        const text = createEventResponseWithConflicts(event, validArgs.calendarId, conflicts ?? undefined, "updated");
-
-        return this.textResult(text);
-    }
-
-    private async updateEventWithScope(
-        client: OAuth2Client,
-        args: UpdateEventInput
-    ): Promise<calendar_v3.Schema$Event> {
-        try {
-            const calendar = this.getCalendar(client);
-            const helpers = new RecurringEventHelpers(calendar);
-
-            // Get calendar's default timezone if not provided
-            const defaultTimeZone = await this.getCalendarTimezone(client, args.calendarId);
-
-            // Fetch event and detect type in single API call
-            const { event, type: eventType } = await helpers.getEventAndType(args.eventId, args.calendarId);
-
-            if (args.modificationScope && args.modificationScope !== 'all' && eventType !== 'recurring') {
-                throw new RecurringEventError(
-                    'Scope other than "all" only applies to recurring events',
-                    RECURRING_EVENT_ERRORS.NON_RECURRING_SCOPE
-                );
-            }
-
-            switch (args.modificationScope) {
-                case 'thisEventOnly':
-                    return this.updateSingleInstance(helpers, args, defaultTimeZone);
-                case 'all':
-                case undefined:
-                    return this.updateAllInstances(helpers, args, defaultTimeZone);
-                case 'thisAndFollowing':
-                    return this.updateFutureInstances(helpers, args, defaultTimeZone, event);
-                default:
-                    throw new RecurringEventError(
-                        `Invalid modification scope: ${args.modificationScope}`,
-                        RECURRING_EVENT_ERRORS.INVALID_SCOPE
-                    );
-            }
-        } catch (error) {
-            if (error instanceof RecurringEventError) {
-                throw error;
-            }
-            throw this.handleGoogleApiError(error);
-        }
-    }
-
-    private async updateSingleInstance(
-        helpers: RecurringEventHelpers,
-        args: UpdateEventInput,
-        defaultTimeZone: string
-    ): Promise<calendar_v3.Schema$Event> {
-        if (!args.originalStartTime) {
-            throw new RecurringEventError(
-                'originalStartTime is required for single instance updates',
-                RECURRING_EVENT_ERRORS.MISSING_ORIGINAL_TIME
-            );
-        }
-
-        const calendar = helpers.getCalendar();
-        const instanceId = helpers.formatInstanceId(args.eventId, args.originalStartTime);
-        
-        const response = await calendar.events.patch({
-            calendarId: args.calendarId,
-            eventId: instanceId,
-            requestBody: helpers.buildUpdateRequestBody(args, defaultTimeZone)
-        });
-
-        if (!response.data) throw new Error('Failed to update event instance');
-        return response.data;
-    }
-
-    private async updateAllInstances(
-        helpers: RecurringEventHelpers,
-        args: UpdateEventInput,
-        defaultTimeZone: string
-    ): Promise<calendar_v3.Schema$Event> {
-        const calendar = helpers.getCalendar();
-        
-        const response = await calendar.events.patch({
-            calendarId: args.calendarId,
-            eventId: args.eventId,
-            requestBody: helpers.buildUpdateRequestBody(args, defaultTimeZone)
-        });
-
-        if (!response.data) throw new Error('Failed to update event');
-        return response.data;
-    }
-
-    private async updateFutureInstances(
-        helpers: RecurringEventHelpers,
-        args: UpdateEventInput,
-        defaultTimeZone: string,
-        originalEvent?: calendar_v3.Schema$Event
-    ): Promise<calendar_v3.Schema$Event> {
-        if (!args.futureStartDate) {
-            throw new RecurringEventError(
-                'futureStartDate is required for future instance updates',
-                RECURRING_EVENT_ERRORS.MISSING_FUTURE_DATE
-            );
-        }
-
-        const calendar = helpers.getCalendar();
-        const effectiveTimeZone = args.timeZone || defaultTimeZone;
-
-        // Use passed event or fetch if not provided (for backward compatibility)
-        let eventData = originalEvent;
-        if (!eventData) {
-            const originalResponse = await calendar.events.get({
-                calendarId: args.calendarId,
-                eventId: args.eventId
-            });
-            eventData = originalResponse.data;
-        }
-
-        if (!eventData.recurrence) {
-            throw new Error('Event does not have recurrence rules');
-        }
-
-        // 1. Calculate UNTIL date and update original event
-        const untilDate = helpers.calculateUntilDate(args.futureStartDate);
-        const updatedRecurrence = helpers.updateRecurrenceWithUntil(eventData.recurrence, untilDate);
-
-        await calendar.events.patch({
-            calendarId: args.calendarId,
-            eventId: args.eventId,
-            requestBody: { recurrence: updatedRecurrence }
-        });
-
-        // 2. Create new recurring event starting from future date
-        const newStartTime = args.start || args.futureStartDate;
-        const newEndTime = args.end || helpers.calculateEndTime(newStartTime, eventData);
-
-        const newEvent = {
-            ...helpers.cleanEventForDuplication(eventData),
-            ...helpers.buildUpdateRequestBody(args, defaultTimeZone),
-            start: createTimeObject(newStartTime, effectiveTimeZone),
-            end: createTimeObject(newEndTime, effectiveTimeZone)
-        };
-
-        const response = await calendar.events.insert({
-            calendarId: args.calendarId,
-            requestBody: newEvent
-        });
-
-        if (!response.data) throw new Error('Failed to create new recurring event');
-        return response.data;
-    }
-
-}
-</file>
-
 <file path="src/handlers/utils.ts">
 import { calendar_v3 } from "googleapis";
 import { ConflictCheckResult } from "../services/conflict-detection/types.js";
@@ -45378,622 +45999,6 @@ export function createEventResponseWithConflicts(
     
     return `${successMessage}\n\n${eventDetails}${conflictWarnings}`;
 }
-</file>
-
-<file path="src/services/conflict-detection/ConflictDetectionService.ts">
-import { OAuth2Client } from "google-auth-library";
-import { google, calendar_v3 } from "googleapis";
-import {
-  ConflictCheckResult,
-  ConflictInfo,
-  DuplicateInfo,
-  ConflictDetectionOptions
-} from "./types.js";
-import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
-import { ConflictAnalyzer } from "./ConflictAnalyzer.js";
-import { CONFLICT_DETECTION_CONFIG } from "./config.js";
-import { getEventUrl } from "../../handlers/utils.js";
-import {
-  resolveTimeRange,
-  hasTimezoneInDatetime,
-  resolveTimeZone,
-  isValidIANATimeZone
-} from "../../utils/timezone-utils.js";
-
-/**
- * Extract datetime and date from event start/end objects.
- * Returns the dateTime if available, falls back to date for all-day events.
- * Handles null values from Google Calendar API.
- */
-function getEventDateTime(event: calendar_v3.Schema$Event): { start?: string; end?: string } {
-  return {
-    start: event.start?.dateTime || event.start?.date || undefined,
-    end: event.end?.dateTime || event.end?.date || undefined,
-  };
-}
-
-/**
- * Format event times for conflict/overlap info.
- * Safely extracts both dateTime and date fields from event objects.
- * Handles null values from Google Calendar API.
- */
-function formatEventTimesForInfo(event: calendar_v3.Schema$Event): { start?: string; end?: string } {
-  return {
-    start: event.start?.dateTime || event.start?.date || undefined,
-    end: event.end?.dateTime || event.end?.date || undefined,
-  };
-}
-
-/**
- * Service for detecting event conflicts and duplicates.
- *
- * IMPORTANT: This service relies on Google Calendar's list API to find existing events.
- * Due to eventual consistency in Google Calendar, recently created events may not
- * immediately appear in list queries. This is a known limitation of the Google Calendar API
- * and affects duplicate detection for events created in quick succession.
- *
- * In real-world usage, this is rarely an issue as there's natural time between event creation.
- */
-export class ConflictDetectionService {
-  private similarityChecker: EventSimilarityChecker;
-  private conflictAnalyzer: ConflictAnalyzer;
-
-  constructor() {
-    this.similarityChecker = new EventSimilarityChecker();
-    this.conflictAnalyzer = new ConflictAnalyzer();
-  }
-
-  /**
-   * Check for conflicts and duplicates when creating or updating an event
-   */
-  async checkConflicts(
-    oauth2Client: OAuth2Client,
-    event: calendar_v3.Schema$Event,
-    calendarId: string,
-    options: ConflictDetectionOptions = {}
-  ): Promise<ConflictCheckResult> {
-    const {
-      checkDuplicates = true,
-      checkConflicts = true,
-      calendarsToCheck = [calendarId],
-      duplicateSimilarityThreshold = CONFLICT_DETECTION_CONFIG.DEFAULT_DUPLICATE_THRESHOLD,
-      includeDeclinedEvents = false
-    } = options;
-
-    const result: ConflictCheckResult = {
-      hasConflicts: false,
-      conflicts: [],
-      duplicates: []
-    };
-
-    if (!event.start || !event.end) {
-      return result;
-    }
-
-    // Get the time range for checking
-    const { start: timeMin, end: timeMax } = getEventDateTime(event);
-
-    if (!timeMin || !timeMax) {
-      return result;
-    }
-
-    // Extract and validate timezone with proper fallback chain
-    const rawTimezone = event.start?.timeZone || event.end?.timeZone;
-    const timezone = rawTimezone && isValidIANATimeZone(rawTimezone)
-      ? rawTimezone
-      : undefined;
-
-    // The Google Calendar API requires RFC3339 format for timeMin/timeMax
-    // If we have timezone-naive datetimes with a timezone field, convert them to proper RFC3339
-    const needsConversion = timezone && timeMin && !hasTimezoneInDatetime(timeMin);
-
-    let searchTimeMin: string | undefined = timeMin;
-    let searchTimeMax: string | undefined = timeMax;
-
-    if (needsConversion) {
-      const timeRange = resolveTimeRange(timeMin!, timeMax!, timezone!);
-      searchTimeMin = timeRange.timeMin;
-      searchTimeMax = timeRange.timeMax;
-    }
-
-    // Check each calendar
-    for (const checkCalendarId of calendarsToCheck) {
-      try {
-        // Only search if we have valid time bounds
-        if (!searchTimeMin || !searchTimeMax) {
-          continue;
-        }
-
-        // Get events in the search time range, passing timezone for proper interpretation
-        const events = await this.getEventsInTimeRange(
-          oauth2Client,
-          checkCalendarId,
-          searchTimeMin,
-          searchTimeMax,
-          timezone || undefined
-        );
-
-        // Check for duplicates
-        if (checkDuplicates) {
-          const duplicates = this.findDuplicates(
-            event,
-            events,
-            checkCalendarId,
-            duplicateSimilarityThreshold
-          );
-          result.duplicates.push(...duplicates);
-        }
-
-        // Check for conflicts
-        if (checkConflicts) {
-          const conflicts = this.findConflicts(
-            event,
-            events,
-            checkCalendarId,
-            includeDeclinedEvents
-          );
-          result.conflicts.push(...conflicts);
-        }
-      } catch (error) {
-        // If we can't access a calendar, skip it silently
-        // Errors are expected for calendars without access permissions
-      }
-    }
-
-    result.hasConflicts = result.conflicts.length > 0 || result.duplicates.length > 0;
-    return result;
-  }
-
-  /**
-   * Get events in a specific time range from a calendar
-   */
-  private async getEventsInTimeRange(
-    oauth2Client: OAuth2Client,
-    calendarId: string,
-    timeMin: string,
-    timeMax: string,
-    timeZone?: string
-  ): Promise<calendar_v3.Schema$Event[]> {
-    // Fetch from API
-    const calendar = google.calendar({ version: "v3", auth: oauth2Client });
-    
-    // Build list parameters
-    const listParams: any = {
-      calendarId,
-      timeMin,
-      timeMax,
-      singleEvents: true,
-      orderBy: 'startTime',
-      maxResults: 250
-    };
-    
-    // The Google Calendar API accepts both:
-    // 1. Timezone-aware datetimes (with Z or offset)
-    // 2. Timezone-naive datetimes with a timeZone parameter
-    // We pass the timeZone parameter when available for consistency
-    if (timeZone) {
-      listParams.timeZone = timeZone;
-    }
-    
-    
-    // Use exact time range without extension to avoid false positives
-    const response = await calendar.events.list(listParams);
-
-    const events = response?.data?.items || [];
-    
-    return events;
-  }
-
-  /**
-   * Find duplicate events based on similarity
-   */
-  private findDuplicates(
-    newEvent: calendar_v3.Schema$Event,
-    existingEvents: calendar_v3.Schema$Event[],
-    calendarId: string,
-    threshold: number
-  ): DuplicateInfo[] {
-    const duplicates: DuplicateInfo[] = [];
-
-
-    for (const existingEvent of existingEvents) {
-      // Skip if it's the same event (for updates)
-      if (existingEvent.id === newEvent.id) continue;
-      
-      // Skip cancelled events
-      if (existingEvent.status === 'cancelled') continue;
-
-      const similarity = this.similarityChecker.checkSimilarity(newEvent, existingEvent);
-      
-      
-      if (similarity >= threshold) {
-        duplicates.push({
-          event: {
-            id: existingEvent.id!,
-            title: existingEvent.summary || 'Untitled Event',
-            url: getEventUrl(existingEvent, calendarId) || undefined,
-            similarity: Math.round(similarity * 100) / 100
-          },
-          fullEvent: existingEvent,
-          calendarId: calendarId,
-          suggestion: similarity >= CONFLICT_DETECTION_CONFIG.DUPLICATE_THRESHOLDS.BLOCKING
-            ? 'This appears to be a duplicate. Consider updating the existing event instead.'
-            : 'This event is very similar to an existing one. Is this intentional?'
-        });
-      }
-    }
-
-
-    return duplicates;
-  }
-
-  /**
-   * Find conflicting events based on time overlap
-   */
-  private findConflicts(
-    newEvent: calendar_v3.Schema$Event,
-    existingEvents: calendar_v3.Schema$Event[],
-    calendarId: string,
-    includeDeclinedEvents: boolean
-  ): ConflictInfo[] {
-    const conflicts: ConflictInfo[] = [];
-    const overlappingEvents = this.conflictAnalyzer.findOverlappingEvents(existingEvents, newEvent);
-
-    for (const conflictingEvent of overlappingEvents) {
-      // Skip declined events if configured
-      if (!includeDeclinedEvents && this.isEventDeclined(conflictingEvent)) {
-        continue;
-      }
-
-      const overlap = this.conflictAnalyzer.analyzeOverlap(newEvent, conflictingEvent);
-
-      if (overlap.hasOverlap) {
-        const { start, end } = formatEventTimesForInfo(conflictingEvent);
-        conflicts.push({
-          type: 'overlap',
-          calendar: calendarId,
-          event: {
-            id: conflictingEvent.id!,
-            title: conflictingEvent.summary || 'Untitled Event',
-            url: getEventUrl(conflictingEvent, calendarId) || undefined,
-            start,
-            end
-          },
-          fullEvent: conflictingEvent,
-          overlap: {
-            duration: overlap.duration!,
-            percentage: overlap.percentage!,
-            startTime: overlap.startTime!,
-            endTime: overlap.endTime!
-          }
-        });
-      }
-    }
-
-    return conflicts;
-  }
-
-  /**
-   * Check if the current user has declined an event
-   */
-  private isEventDeclined(_event: calendar_v3.Schema$Event): boolean {
-    // For now, we'll skip this check since we don't have easy access to the user's email
-    // This could be enhanced later by passing the user email through the service
-    return false;
-  }
-
-  /**
-   * Check for conflicts using free/busy data (alternative method)
-   */
-  async checkConflictsWithFreeBusy(
-    oauth2Client: OAuth2Client,
-    eventToCheck: calendar_v3.Schema$Event,
-    calendarsToCheck: string[]
-  ): Promise<ConflictInfo[]> {
-    const conflicts: ConflictInfo[] = [];
-
-    if (!eventToCheck.start || !eventToCheck.end) return conflicts;
-
-    const { start: timeMin, end: timeMax } = getEventDateTime(eventToCheck);
-
-    if (!timeMin || !timeMax) return conflicts;
-
-    const calendar = google.calendar({ version: "v3", auth: oauth2Client });
-    
-    try {
-      const freeBusyResponse = await calendar.freebusy.query({
-        requestBody: {
-          timeMin,
-          timeMax,
-          items: calendarsToCheck.map(id => ({ id }))
-        }
-      });
-
-      for (const [calendarId, calendarInfo] of Object.entries(freeBusyResponse.data.calendars || {})) {
-        if (calendarInfo.busy && calendarInfo.busy.length > 0) {
-          for (const busySlot of calendarInfo.busy) {
-            if (this.conflictAnalyzer.checkBusyConflict(eventToCheck, busySlot)) {
-              conflicts.push({
-                type: 'overlap',
-                calendar: calendarId,
-                event: {
-                  id: 'busy-time',
-                  title: 'Busy (details unavailable)',
-                  start: busySlot.start || undefined,
-                  end: busySlot.end || undefined
-                }
-              });
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to check free/busy:', error);
-    }
-
-    return conflicts;
-  }
-}
-</file>
-
-<file path="src/tests/integration/conflict-detection-integration.test.ts">
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { initializeOAuth2Client } from '../../auth/client.js';
-import { TokenManager } from '../../auth/tokenManager.js';
-import { TestDataFactory } from './test-data-factory.js';
-import { getTextContent } from '../unit/helpers/content.js';
-import {
-  createAndVerifyEvent,
-  updateAndVerifyEvent,
-  createNonOverlappingEventPair,
-  createOverlappingEventPair
-} from './integration-test-helpers.js';
-
-const ONE_HOUR_MS = 60 * 60 * 1000;
-const ONE_DAY_MS = 24 * ONE_HOUR_MS;
-const HALF_HOUR_MS = 30 * 60 * 1000;
-
-/**
- * Conflict Detection Integration Tests (Option A: MCP Protocol)
- *
- * PURPOSE: Test conflict and duplicate detection via MCP protocol
- * - Uses real MCP server spawned as child process
- * - Calls tools via stdio transport (Option A pattern)
- * - Uses real Google Calendar API with Doppler credentials
- * - Tests overlap detection, duplicate detection, non-conflict cases
- * - Real event creation and cleanup
- *
- * RUN: doppler run --project integrity-studio --config dev -- npm run test:integration
- * OR: GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json doppler run -- npm run test:integration
- */
-
-describe('Conflict Detection Integration (MCP Protocol)', () => {
-  let mcpClient: Client;
-  const createdEventIds: string[] = [];
-  const TEST_CALENDAR_ID = TestDataFactory.getTestCalendarId();
-
-  beforeAll(async () => {
-    // 1. Auth guard: verify real credentials are available
-    const oauth2Client = await initializeOAuth2Client();
-    const tokenManager = new TokenManager(oauth2Client);
-    const isAuth = await tokenManager.isAuthenticated();
-
-    if (!isAuth) {
-      throw new Error(
-        'No valid tokens found. Run: npm run auth\n' +
-          'For integration tests with Doppler: ' +
-          'doppler run --project integrity-studio --config dev -- npm run test:integration'
-      );
-    }
-
-    // 2. Start MCP server via stdio transport
-    const cleanEnv = Object.fromEntries(
-      Object.entries(process.env).filter(([, value]) => value !== undefined)
-    ) as Record<string, string>;
-    cleanEnv.NODE_ENV = 'test';
-
-    mcpClient = new Client(
-      {
-        name: 'conflict-detection-test',
-        version: '1.0.0'
-      },
-      {
-        capabilities: {}
-      }
-    );
-
-    const transport = new StdioClientTransport({
-      command: 'node',
-      args: ['build/index.js'],
-      env: cleanEnv
-    });
-
-    await mcpClient.connect(transport);
-
-    // 3. Verify tools are available
-    const tools = await mcpClient.listTools();
-    const toolNames = tools.tools.map((t) => t.name);
-    expect(toolNames).toContain('create-event');
-    expect(toolNames).toContain('update-event');
-    expect(toolNames).toContain('delete-event');
-    expect(toolNames).toContain('get-event');
-  }, 30000);
-
-  afterAll(async () => {
-    // Cleanup: Delete all created test events in parallel
-    const deleteResults = await Promise.allSettled(
-      createdEventIds.map((eventId) =>
-        mcpClient.callTool({
-          name: 'delete-event',
-          arguments: {
-            calendarId: TEST_CALENDAR_ID,
-            eventId
-          }
-        })
-      )
-    );
-
-    deleteResults.forEach((result, idx) => {
-      if (result.status === 'rejected') {
-        console.warn(`Failed to cleanup event ${createdEventIds[idx]}:`, result.reason);
-      }
-    });
-
-    // Close MCP connection
-    if (mcpClient) {
-      await mcpClient.close();
-    }
-  }, 30000);
-
-  describe('Event Creation Without Conflicts', () => {
-    it('should create non-overlapping events without conflict', async () => {
-      const now = new Date();
-      const { event1Id, event2Id } = await createNonOverlappingEventPair(
-        mcpClient,
-        TEST_CALENDAR_ID,
-        now,
-        createdEventIds
-      );
-
-      expect(event1Id).toBeTruthy();
-      expect(event2Id).toBeTruthy();
-    });
-  });
-
-  describe('Conflict Detection: Overlapping Times', () => {
-    it('should detect overlap when updating event to conflict with existing', async () => {
-      const now = new Date();
-      const { event1Id, event2Id } = await createOverlappingEventPair(
-        mcpClient,
-        TEST_CALENDAR_ID,
-        now,
-        createdEventIds
-      );
-
-      // Get the overlapping times from the helper
-      const start1 = new Date(now.getTime() + 3 * ONE_HOUR_MS);
-      const start2 = new Date(start1.getTime() + HALF_HOUR_MS);
-      const end2 = new Date(start2.getTime() + ONE_HOUR_MS);
-
-      // Update event 2 to overlap with event 1 - check for conflicts
-      const { text } = await updateAndVerifyEvent(
-        mcpClient,
-        TEST_CALENDAR_ID,
-        event2Id,
-        start2,
-        end2,
-        true
-      );
-
-      expect(text).toBeTruthy();
-    });
-  });
-
-  describe('Conflict Detection: Non-Overlapping Times', () => {
-    it('should not detect conflicts for truly non-overlapping events', async () => {
-      const now = new Date();
-      const { event1Id, event2Id } = await createNonOverlappingEventPair(
-        mcpClient,
-        TEST_CALENDAR_ID,
-        now,
-        createdEventIds
-      );
-
-      // Get the non-overlapping times
-      const start1 = new Date(now.getTime() + 4 * ONE_HOUR_MS);
-      const end1 = new Date(start1.getTime() + ONE_HOUR_MS);
-      const start2 = new Date(end1.getTime() + HALF_HOUR_MS);
-      const end2 = new Date(start2.getTime() + ONE_HOUR_MS);
-
-      // Update event 2 to maintain gap - should not report conflict
-      const { text } = await updateAndVerifyEvent(
-        mcpClient,
-        TEST_CALENDAR_ID,
-        event2Id,
-        start2,
-        end2,
-        true
-      );
-
-      expect(text).toContain('No-Conflict Event 2');
-    });
-  });
-
-  describe('Duplicate Detection', () => {
-    it('should handle creation of similar events', async () => {
-      const now = new Date();
-      const start = new Date(now.getTime() + 5 * ONE_HOUR_MS);
-      const end = new Date(start.getTime() + ONE_HOUR_MS);
-
-      const { eventId: eventId1 } = await createAndVerifyEvent(
-        mcpClient,
-        TEST_CALENDAR_ID,
-        'Duplicate Test Event',
-        start,
-        end,
-        createdEventIds
-      );
-
-      expect(eventId1).toBeTruthy();
-
-      // Create second event with same summary and similar time
-      const FIVE_MIN_MS = 5 * 60 * 1000;
-      const start2 = new Date(start.getTime() + FIVE_MIN_MS);
-      const end2 = new Date(end.getTime() + FIVE_MIN_MS);
-
-      const { eventId: eventId2 } = await createAndVerifyEvent(
-        mcpClient,
-        TEST_CALENDAR_ID,
-        'Duplicate Test Event',
-        start2,
-        end2,
-        createdEventIds
-      );
-
-      expect(eventId2).toBeTruthy();
-      // Both events created successfully (duplicates not blocked, just detected)
-      expect(eventId1).not.toBe(eventId2);
-    });
-  });
-
-  describe('Recurring Events and Conflict Detection', () => {
-    it('should handle conflict detection with recurring events', async () => {
-      const recurringEvent = TestDataFactory.createRecurringEvent({
-        summary: 'Recurring Conflict Base'
-      });
-
-      // Create recurring event
-      const result1 = await mcpClient.callTool({
-        name: 'create-event',
-        arguments: {
-          calendarId: TEST_CALENDAR_ID,
-          ...recurringEvent
-        }
-      });
-
-      const id = TestDataFactory.extractEventIdFromResponse(result1);
-      if (id) createdEventIds.push(id);
-
-      // Create single event that might overlap with one recurrence
-      const now = new Date();
-      const overlapStart = new Date(now.getTime() + ONE_DAY_MS);
-      overlapStart.setUTCHours(11, 0, 0, 0);
-
-      const { eventId: eventId2 } = await createAndVerifyEvent(
-        mcpClient,
-        TEST_CALENDAR_ID,
-        'Overlaps Recurring Instance',
-        overlapStart,
-        new Date(overlapStart.getTime() + ONE_HOUR_MS),
-        createdEventIds
-      );
-
-      expect(eventId2).toBeTruthy();
-    });
-  });
-});
 </file>
 
 <file path="src/tests/unit/utils/date-utils.test.ts">
@@ -46734,7 +46739,7 @@ export class ListEventsHandler extends BaseToolHandler {
                 timeMax = resolved.timeMax;
             }
 
-            const fieldMask = buildListFieldMask(options.fields);
+            const fieldMask = buildListFieldMask(options.fields) ?? null;
 
             const response = await calendar.events.list({
                 calendarId,
@@ -46762,7 +46767,7 @@ export class ListEventsHandler extends BaseToolHandler {
         options: ListEventsOptions
     ): Promise<ExtendedEvent[]> {
         const batchHandler = new BatchRequestHandler(client);
-        const fieldMask = buildListFieldMask(options.fields);
+        const fieldMask = buildListFieldMask(options.fields) ?? null;
 
         // Batch timezone fetches to avoid N+1 API calls
         const timezones = await Promise.all(
@@ -46773,7 +46778,7 @@ export class ListEventsHandler extends BaseToolHandler {
 
         const requests = calendarIds.map((calendarId, i) => ({
             method: "GET" as const,
-            path: this.buildEventsPath(calendarId, timezones[i], options, fieldMask)
+            path: this.buildEventsPath(calendarId, timezones[i]!, options, fieldMask)
         }));
 
         const responses = await batchHandler.executeBatch(requests);
@@ -46821,6 +46826,198 @@ export class ListEventsHandler extends BaseToolHandler {
     }
 
 }
+</file>
+
+<file path="src/handlers/core/RecurringEventHelpers.ts">
+import { calendar_v3 } from 'googleapis';
+import {
+  TIME_DURATIONS,
+  formatBasicDateTime,
+  oneDayBefore,
+  stripUntilAndCount,
+  buildUntilClause,
+  isRRuleString,
+  durationMs,
+  addMilliseconds,
+  formatRFC3339,
+} from '../../utils/date-utils.js';
+import { createTimeObject, applyTimezone } from '../../utils/timezone-utils.js';
+import { buildCoreEvent, buildOptionalEventFields } from './eventManipulationUtils.js';
+import { UpdateEventInput } from '../../tools/registry.js';
+
+export class RecurringEventHelpers {
+  private calendar: calendar_v3.Calendar;
+
+  constructor(calendar: calendar_v3.Calendar) {
+    this.calendar = calendar;
+  }
+
+  getCalendar(): calendar_v3.Calendar {
+    return this.calendar;
+  }
+
+  /**
+   * Detects if an event is recurring or single
+   */
+  async detectEventType(eventId: string, calendarId: string): Promise<'recurring' | 'single'> {
+    const response = await this.calendar.events.get({
+      calendarId,
+      eventId
+    });
+
+    const event = response.data;
+    return (event.recurrence?.length ?? 0) > 0 ? 'recurring' : 'single';
+  }
+
+  /**
+   * Fetches an event and detects if it's recurring or single.
+   * Returns both the event object and its type to avoid redundant fetches.
+   */
+  async getEventAndType(eventId: string, calendarId: string): Promise<{
+    event: calendar_v3.Schema$Event;
+    type: 'recurring' | 'single';
+  }> {
+    const response = await this.calendar.events.get({
+      calendarId,
+      eventId
+    });
+
+    const event = response.data;
+    const type = (event.recurrence?.length ?? 0) > 0 ? 'recurring' : 'single';
+    return { event, type };
+  }
+
+  /**
+   * Formats an instance ID for single instance updates
+   */
+  formatInstanceId(eventId: string, originalStartTime: string): string {
+    const utcDate = new Date(originalStartTime);
+    const basicTimeFormat = formatBasicDateTime(utcDate);
+    return `${eventId}_${basicTimeFormat}`;
+  }
+
+  /**
+   * Calculates the UNTIL date for future instance updates
+   */
+  calculateUntilDate(futureStartDate: string): string {
+    const futureDate = new Date(futureStartDate);
+    const untilDate = oneDayBefore(futureDate);
+    return formatBasicDateTime(untilDate);
+  }
+
+  /**
+   * Calculates end time based on original duration
+   */
+  calculateEndTime(newStartTime: string, originalEvent: calendar_v3.Schema$Event): string {
+    const newStart = new Date(newStartTime);
+    const originalStart = new Date(originalEvent.start!.dateTime!);
+    const originalEnd = new Date(originalEvent.end!.dateTime!);
+    const eventDurationMs = durationMs(originalStart, originalEnd);
+
+    return formatRFC3339(addMilliseconds(newStart, eventDurationMs));
+  }
+
+  /**
+   * Updates recurrence rule with UNTIL clause
+   */
+  updateRecurrenceWithUntil(recurrence: string[], untilDate: string): string[] {
+    if (!recurrence || recurrence.length === 0) {
+      throw new Error('No recurrence rule found');
+    }
+
+    const updatedRecurrence: string[] = [];
+    let foundRRule = false;
+
+    for (const rule of recurrence) {
+      if (isRRuleString(rule)) {
+        foundRRule = true;
+        const updatedRule = stripUntilAndCount(rule) + `;UNTIL=${untilDate}`;
+        updatedRecurrence.push(updatedRule);
+      } else {
+        updatedRecurrence.push(rule);
+      }
+    }
+
+    if (!foundRRule) {
+      throw new Error('No RRULE found in recurrence rules');
+    }
+
+    return updatedRecurrence;
+  }
+
+  /**
+   * Cleans event fields for new event creation
+   */
+  cleanEventForDuplication(event: calendar_v3.Schema$Event): calendar_v3.Schema$Event {
+    const cleanedEvent = { ...event };
+    
+    // Remove fields that shouldn't be duplicated
+    delete cleanedEvent.id;
+    delete cleanedEvent.etag;
+    delete cleanedEvent.iCalUID;
+    delete cleanedEvent.created;
+    delete cleanedEvent.updated;
+    delete cleanedEvent.htmlLink;
+    delete cleanedEvent.hangoutLink;
+    
+    return cleanedEvent;
+  }
+
+  /**
+   * Builds request body for event updates
+   */
+  buildUpdateRequestBody(args: UpdateEventInput, defaultTimeZone?: string): calendar_v3.Schema$Event {
+    const effectiveTimeZone = args.timeZone || defaultTimeZone;
+    const coreFields = buildCoreEvent(args, effectiveTimeZone || 'UTC');
+    const optionalFields = buildOptionalEventFields(args);
+
+    const requestBody: calendar_v3.Schema$Event = {
+      ...coreFields,
+      ...optionalFields,
+    };
+
+    // Remove undefined and null values, but keep empty strings/arrays
+    Object.keys(requestBody).forEach(key => {
+      if ((requestBody as any)[key] === undefined || (requestBody as any)[key] === null) {
+        delete (requestBody as any)[key];
+      }
+    });
+
+    // Apply timezone if provided, ensures start/end objects exist with timezone set
+    if (effectiveTimeZone) {
+      const { start, end } = applyTimezone(
+        requestBody.start as any,
+        requestBody.end as any,
+        effectiveTimeZone
+      );
+      requestBody.start = start;
+      requestBody.end = end;
+    }
+
+    return requestBody;
+  }
+}
+
+/**
+ * Custom error class for recurring event errors
+ */
+export class RecurringEventError extends Error {
+  public code: string;
+
+  constructor(message: string, code: string) {
+    super(message);
+    this.name = 'RecurringEventError';
+    this.code = code;
+  }
+}
+
+export const RECURRING_EVENT_ERRORS = {
+  INVALID_SCOPE: 'INVALID_MODIFICATION_SCOPE',
+  MISSING_ORIGINAL_TIME: 'MISSING_ORIGINAL_START_TIME',
+  MISSING_FUTURE_DATE: 'MISSING_FUTURE_START_DATE',
+  PAST_FUTURE_DATE: 'FUTURE_DATE_IN_PAST',
+  NON_RECURRING_SCOPE: 'SCOPE_NOT_APPLICABLE_TO_SINGLE_EVENT'
+};
 </file>
 
 <file path="src/utils/batchProcessor.ts">
@@ -47039,198 +47236,6 @@ export async function processBatchItemsChunked<T, TItem = string>(
     "vitest": "^3.1.1"
   }
 }
-</file>
-
-<file path="src/handlers/core/RecurringEventHelpers.ts">
-import { calendar_v3 } from 'googleapis';
-import {
-  TIME_DURATIONS,
-  formatBasicDateTime,
-  oneDayBefore,
-  stripUntilAndCount,
-  buildUntilClause,
-  isRRuleString,
-  durationMs,
-  addMilliseconds,
-  formatRFC3339,
-} from '../../utils/date-utils.js';
-import { createTimeObject, applyTimezone } from '../../utils/timezone-utils.js';
-import { buildCoreEvent, buildOptionalEventFields } from './eventManipulationUtils.js';
-import { UpdateEventInput } from '../../tools/registry.js';
-
-export class RecurringEventHelpers {
-  private calendar: calendar_v3.Calendar;
-
-  constructor(calendar: calendar_v3.Calendar) {
-    this.calendar = calendar;
-  }
-
-  getCalendar(): calendar_v3.Calendar {
-    return this.calendar;
-  }
-
-  /**
-   * Detects if an event is recurring or single
-   */
-  async detectEventType(eventId: string, calendarId: string): Promise<'recurring' | 'single'> {
-    const response = await this.calendar.events.get({
-      calendarId,
-      eventId
-    });
-
-    const event = response.data;
-    return (event.recurrence?.length ?? 0) > 0 ? 'recurring' : 'single';
-  }
-
-  /**
-   * Fetches an event and detects if it's recurring or single.
-   * Returns both the event object and its type to avoid redundant fetches.
-   */
-  async getEventAndType(eventId: string, calendarId: string): Promise<{
-    event: calendar_v3.Schema$Event;
-    type: 'recurring' | 'single';
-  }> {
-    const response = await this.calendar.events.get({
-      calendarId,
-      eventId
-    });
-
-    const event = response.data;
-    const type = (event.recurrence?.length ?? 0) > 0 ? 'recurring' : 'single';
-    return { event, type };
-  }
-
-  /**
-   * Formats an instance ID for single instance updates
-   */
-  formatInstanceId(eventId: string, originalStartTime: string): string {
-    const utcDate = new Date(originalStartTime);
-    const basicTimeFormat = formatBasicDateTime(utcDate);
-    return `${eventId}_${basicTimeFormat}`;
-  }
-
-  /**
-   * Calculates the UNTIL date for future instance updates
-   */
-  calculateUntilDate(futureStartDate: string): string {
-    const futureDate = new Date(futureStartDate);
-    const untilDate = oneDayBefore(futureDate);
-    return formatBasicDateTime(untilDate);
-  }
-
-  /**
-   * Calculates end time based on original duration
-   */
-  calculateEndTime(newStartTime: string, originalEvent: calendar_v3.Schema$Event): string {
-    const newStart = new Date(newStartTime);
-    const originalStart = new Date(originalEvent.start!.dateTime!);
-    const originalEnd = new Date(originalEvent.end!.dateTime!);
-    const eventDurationMs = durationMs(originalStart, originalEnd);
-
-    return formatRFC3339(addMilliseconds(newStart, eventDurationMs));
-  }
-
-  /**
-   * Updates recurrence rule with UNTIL clause
-   */
-  updateRecurrenceWithUntil(recurrence: string[], untilDate: string): string[] {
-    if (!recurrence || recurrence.length === 0) {
-      throw new Error('No recurrence rule found');
-    }
-
-    const updatedRecurrence: string[] = [];
-    let foundRRule = false;
-
-    for (const rule of recurrence) {
-      if (isRRuleString(rule)) {
-        foundRRule = true;
-        const updatedRule = stripUntilAndCount(rule) + `;UNTIL=${untilDate}`;
-        updatedRecurrence.push(updatedRule);
-      } else {
-        updatedRecurrence.push(rule);
-      }
-    }
-
-    if (!foundRRule) {
-      throw new Error('No RRULE found in recurrence rules');
-    }
-
-    return updatedRecurrence;
-  }
-
-  /**
-   * Cleans event fields for new event creation
-   */
-  cleanEventForDuplication(event: calendar_v3.Schema$Event): calendar_v3.Schema$Event {
-    const cleanedEvent = { ...event };
-    
-    // Remove fields that shouldn't be duplicated
-    delete cleanedEvent.id;
-    delete cleanedEvent.etag;
-    delete cleanedEvent.iCalUID;
-    delete cleanedEvent.created;
-    delete cleanedEvent.updated;
-    delete cleanedEvent.htmlLink;
-    delete cleanedEvent.hangoutLink;
-    
-    return cleanedEvent;
-  }
-
-  /**
-   * Builds request body for event updates
-   */
-  buildUpdateRequestBody(args: UpdateEventInput, defaultTimeZone?: string): calendar_v3.Schema$Event {
-    const effectiveTimeZone = args.timeZone || defaultTimeZone;
-    const coreFields = buildCoreEvent(args, effectiveTimeZone || 'UTC');
-    const optionalFields = buildOptionalEventFields(args);
-
-    const requestBody: calendar_v3.Schema$Event = {
-      ...coreFields,
-      ...optionalFields,
-    };
-
-    // Remove undefined and null values, but keep empty strings/arrays
-    Object.keys(requestBody).forEach(key => {
-      if ((requestBody as any)[key] === undefined || (requestBody as any)[key] === null) {
-        delete (requestBody as any)[key];
-      }
-    });
-
-    // Apply timezone if provided, ensures start/end objects exist with timezone set
-    if (effectiveTimeZone) {
-      const { start, end } = applyTimezone(
-        requestBody.start as any,
-        requestBody.end as any,
-        effectiveTimeZone
-      );
-      requestBody.start = start;
-      requestBody.end = end;
-    }
-
-    return requestBody;
-  }
-}
-
-/**
- * Custom error class for recurring event errors
- */
-export class RecurringEventError extends Error {
-  public code: string;
-
-  constructor(message: string, code: string) {
-    super(message);
-    this.name = 'RecurringEventError';
-    this.code = code;
-  }
-}
-
-export const RECURRING_EVENT_ERRORS = {
-  INVALID_SCOPE: 'INVALID_MODIFICATION_SCOPE',
-  MISSING_ORIGINAL_TIME: 'MISSING_ORIGINAL_START_TIME',
-  MISSING_FUTURE_DATE: 'MISSING_FUTURE_START_DATE',
-  PAST_FUTURE_DATE: 'FUTURE_DATE_IN_PAST',
-  NON_RECURRING_SCOPE: 'SCOPE_NOT_APPLICABLE_TO_SINGLE_EVENT'
-};
 </file>
 
 <file path="src/tests/unit/helpers/event-test-data.ts">
@@ -49782,19 +49787,6 @@ vitest.config.ts
 <files>
 This section contains the contents of the repository's files.
 
-<file path=".claude/ralph-loop.local.md">
----
-active: true
-iteration: 1
-session_id: 
-max_iterations: 10
-completion_promise: "RALPH_COMPLETE"
-started_at: "2026-03-26T10:21:30Z"
----
-
-run /simplify on docs/repomix/repo-compressed.xml contents, accept all changes, run /otel-session-summary, address issues, run npm run repomix, repeat until clean
-</file>
-
 <file path="lib/gmail-client.mjs">
 /**
  * Creates an authenticated Gmail client.
@@ -50305,6 +50297,17 @@ constructor(apiKey: string, mcpClient: Client)
 async sendMessage(prompt: string): Promise<LLMResponse>
 </file>
 
+<file path="src/tests/integration/UpdateEventHandler.recurring.integration.test.ts">
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { OAuth2Client } from 'google-auth-library';
+import { google, calendar_v3 } from 'googleapis';
+import { initializeOAuth2Client } from '../../auth/client.js';
+import { TokenManager } from '../../auth/tokenManager.js';
+import { UpdateEventHandler } from '../../handlers/core/UpdateEventHandler.js';
+⋮----
+async function createTestEvent(overrides: any =
+</file>
+
 <file path="src/tests/unit/handlers/create-event-blocking.test.ts">
 import { describe, it, expect, vi } from 'vitest';
 import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
@@ -50469,6 +50472,41 @@ function showVersion(): void
 async function initializeApp(config: any): Promise<GoogleCalendarMcpServer>
 ⋮----
 function parseCliArgs():
+</file>
+
+<file path="src/server.ts">
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
+import { OAuth2Client } from "google-auth-library";
+import { initializeOAuth2Client } from './auth/client.js';
+import { AuthServer } from './auth/server.js';
+import { TokenManager } from './auth/tokenManager.js';
+import { ToolRegistry } from './tools/registry.js';
+import { StdioTransportHandler } from './transports/stdio.js';
+import { HttpTransportHandler, HttpTransportConfig } from './transports/http.js';
+import { ServerConfig } from './config/TransportConfig.js';
+export class GoogleCalendarMcpServer
+⋮----
+constructor(config: ServerConfig)
+async initialize(): Promise<void>
+private async handleStartupAuthentication(): Promise<void>
+private registerTools(): void
+private async ensureAuthenticated(): Promise<void>
+private async executeWithHandler(handler: any, args: any): Promise<
+async start(): Promise<void>
+private setupGracefulShutdown(): void
+⋮----
+const cleanup = async () =>
+⋮----
+getServer(): McpServer
+</file>
+
+<file path="src/verify-tokens.ts">
+import { initializeOAuth2Client } from './auth/client.js';
+import { TokenManager } from './auth/tokenManager.js';
+import fs from 'fs/promises';
+import { getSecureTokenPath } from './auth/utils.js';
+async function verifyAndRefreshTokens()
 </file>
 
 <file path=".env.test">
@@ -50644,6 +50682,19 @@ import { defineConfig } from 'vitest/config'
 import { loadEnv } from 'vite'
 ⋮----
 // Increase timeout for AI API calls
+</file>
+
+<file path=".claude/ralph-loop.local.md">
+---
+active: true
+iteration: 3
+session_id: 
+max_iterations: 10
+completion_promise: "RALPH_COMPLETE"
+started_at: "2026-03-26T10:21:30Z"
+---
+
+run /simplify on docs/repomix/repo-compressed.xml contents, accept all changes, run /otel-session-summary, address issues, run npm run repomix, repeat until clean
 </file>
 
 <file path="lib/date-based-filter.mjs">
@@ -51020,6 +51071,28 @@ When complete, output exactly:
 }
 </file>
 
+<file path="src/auth/server.ts">
+import { OAuth2Client } from 'google-auth-library';
+import { TokenManager } from './tokenManager.js';
+import http from 'http';
+import { URL } from 'url';
+import open from 'open';
+import { loadCredentials } from './client.js';
+import { getAccountMode, isNodeError } from './utils.js';
+⋮----
+function buildAuthHtml(title: string, body: string): string
+⋮----
+export class AuthServer
+⋮----
+constructor(oauth2Client: OAuth2Client)
+private createServer(): http.Server
+async start(openBrowser = true): Promise<boolean>
+private async startWithTimeout(openBrowser = true): Promise<boolean>
+private async startServerOnAvailablePort(): Promise<number | null>
+public getRunningPort(): number | null
+async stop(): Promise<void>
+</file>
+
 <file path="src/handlers/core/BatchRequestHandler.ts">
 import { OAuth2Client } from "google-auth-library";
 import { formatErrorMessage } from "./errorFormatting.js";
@@ -51334,17 +51407,6 @@ createEvent(overrides?: Partial<Record<string, any>>): Record<string, any>
 getEvent(overrides?: Partial<Record<string, any>>): Record<string, any>
 </file>
 
-<file path="src/tests/integration/UpdateEventHandler.recurring.integration.test.ts">
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { OAuth2Client } from 'google-auth-library';
-import { google, calendar_v3 } from 'googleapis';
-import { initializeOAuth2Client } from '../../auth/client.js';
-import { TokenManager } from '../../auth/tokenManager.js';
-import { UpdateEventHandler } from '../../handlers/core/UpdateEventHandler.js';
-⋮----
-async function createTestEvent(overrides: any =
-</file>
-
 <file path="src/tests/unit/handlers/BatchRequestHandler.test.ts">
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { OAuth2Client } from 'google-auth-library';
@@ -51445,41 +51507,6 @@ export class HttpTransportHandler
 ⋮----
 constructor(server: McpServer, config: HttpTransportConfig =
 async connect(): Promise<void>
-</file>
-
-<file path="src/server.ts">
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { OAuth2Client } from "google-auth-library";
-import { initializeOAuth2Client } from './auth/client.js';
-import { AuthServer } from './auth/server.js';
-import { TokenManager } from './auth/tokenManager.js';
-import { ToolRegistry } from './tools/registry.js';
-import { StdioTransportHandler } from './transports/stdio.js';
-import { HttpTransportHandler, HttpTransportConfig } from './transports/http.js';
-import { ServerConfig } from './config/TransportConfig.js';
-export class GoogleCalendarMcpServer
-⋮----
-constructor(config: ServerConfig)
-async initialize(): Promise<void>
-private async handleStartupAuthentication(): Promise<void>
-private registerTools(): void
-private async ensureAuthenticated(): Promise<void>
-private async executeWithHandler(handler: any, args: any): Promise<
-async start(): Promise<void>
-private setupGracefulShutdown(): void
-⋮----
-const cleanup = async () =>
-⋮----
-getServer(): McpServer
-</file>
-
-<file path="src/verify-tokens.ts">
-import { initializeOAuth2Client } from './auth/client.js';
-import { TokenManager } from './auth/tokenManager.js';
-import fs from 'fs/promises';
-import { getSecureTokenPath } from './auth/utils.js';
-async function verifyAndRefreshTokens()
 </file>
 
 <file path="analyze_emails.mjs">
@@ -51854,28 +51881,6 @@ async function verifyAndRefreshTokens()
 /** Gmail label names for email categories */
 </file>
 
-<file path="src/auth/server.ts">
-import { OAuth2Client } from 'google-auth-library';
-import { TokenManager } from './tokenManager.js';
-import http from 'http';
-import { URL } from 'url';
-import open from 'open';
-import { loadCredentials } from './client.js';
-import { getAccountMode, isNodeError } from './utils.js';
-⋮----
-function buildAuthHtml(title: string, body: string): string
-⋮----
-export class AuthServer
-⋮----
-constructor(oauth2Client: OAuth2Client)
-private createServer(): http.Server
-async start(openBrowser = true): Promise<boolean>
-private async startWithTimeout(openBrowser = true): Promise<boolean>
-private async startServerOnAvailablePort(): Promise<number | null>
-public getRunningPort(): number | null
-async stop(): Promise<void>
-</file>
-
 <file path="src/handlers/core/BaseToolHandler.ts">
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
@@ -51903,10 +51908,10 @@ import { CreateEventInput, UpdateEventInput } from '../../tools/registry.js';
 import { createTimeObject } from '../../utils/timezone-utils.js';
 import { ConflictDetectionService } from '../../services/conflict-detection/index.js';
 import { CONFLICT_DETECTION_CONFIG } from '../../services/conflict-detection/config.js';
-function conditionallyAddFields<T extends Record<string, any>>(
-  source: T,
+function conditionallyAddFields(
+  source: Record<string, any>,
   target: Record<string, any>,
-  fieldNames: (keyof T)[]
+  fieldNames: readonly string[]
 ): void
 export function buildCoreEvent(
   input: CreateEventInput | UpdateEventInput,
@@ -52226,6 +52231,119 @@ export function processBatchResponses<T extends ExtendedEvent = ExtendedEvent>(
 ): BatchResponseResult<T>
 </file>
 
+<file path="src/handlers/core/UpdateEventHandler.ts">
+import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { OAuth2Client } from "google-auth-library";
+import { UpdateEventInput } from "../../tools/registry.js";
+import { BaseToolHandler } from "./BaseToolHandler.js";
+import { calendar_v3 } from 'googleapis';
+import { RecurringEventHelpers, RecurringEventError, RECURRING_EVENT_ERRORS } from './RecurringEventHelpers.js';
+import { createEventResponseWithConflicts } from "../utils.js";
+import { ConflictDetectionService } from "../../services/conflict-detection/index.js";
+import { createTimeObject } from "../../utils/timezone-utils.js";
+import {
+  buildEventForConflictCheckUpdate,
+  performConflictCheck,
+} from "./eventManipulationUtils.js";
+export class UpdateEventHandler extends BaseToolHandler
+⋮----
+constructor()
+async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult>
+private async updateEventWithScope(
+        client: OAuth2Client,
+        args: UpdateEventInput
+): Promise<calendar_v3.Schema$Event>
+private async updateSingleInstance(
+        helpers: RecurringEventHelpers,
+        args: UpdateEventInput,
+        defaultTimeZone: string
+): Promise<calendar_v3.Schema$Event>
+private async updateAllInstances(
+        helpers: RecurringEventHelpers,
+        args: UpdateEventInput,
+        defaultTimeZone: string
+): Promise<calendar_v3.Schema$Event>
+private async updateFutureInstances(
+        helpers: RecurringEventHelpers,
+        args: UpdateEventInput,
+        defaultTimeZone: string,
+        originalEvent?: calendar_v3.Schema$Event
+): Promise<calendar_v3.Schema$Event>
+</file>
+
+<file path="src/services/conflict-detection/ConflictDetectionService.ts">
+import { OAuth2Client } from "google-auth-library";
+import { google, calendar_v3 } from "googleapis";
+import {
+  ConflictCheckResult,
+  ConflictInfo,
+  DuplicateInfo,
+  ConflictDetectionOptions
+} from "./types.js";
+import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
+import { ConflictAnalyzer } from "./ConflictAnalyzer.js";
+import { CONFLICT_DETECTION_CONFIG } from "./config.js";
+import { getEventUrl } from "../../handlers/utils.js";
+import {
+  resolveTimeRange,
+  hasTimezoneInDatetime,
+  resolveTimeZone,
+  isValidIANATimeZone
+} from "../../utils/timezone-utils.js";
+function getEventDateTime(event: calendar_v3.Schema$Event):
+function formatEventTimesForInfo(event: calendar_v3.Schema$Event):
+export class ConflictDetectionService
+⋮----
+constructor()
+async checkConflicts(
+    oauth2Client: OAuth2Client,
+    event: calendar_v3.Schema$Event,
+    calendarId: string,
+    options: ConflictDetectionOptions = {}
+): Promise<ConflictCheckResult>
+private async getEventsInTimeRange(
+    oauth2Client: OAuth2Client,
+    calendarId: string,
+    timeMin: string,
+    timeMax: string,
+    timeZone?: string
+): Promise<calendar_v3.Schema$Event[]>
+private findDuplicates(
+    newEvent: calendar_v3.Schema$Event,
+    existingEvents: calendar_v3.Schema$Event[],
+    calendarId: string,
+    threshold: number
+): DuplicateInfo[]
+private findConflicts(
+    newEvent: calendar_v3.Schema$Event,
+    existingEvents: calendar_v3.Schema$Event[],
+    calendarId: string,
+    includeDeclinedEvents: boolean
+): ConflictInfo[]
+private isEventDeclined(_event: calendar_v3.Schema$Event): boolean
+async checkConflictsWithFreeBusy(
+    oauth2Client: OAuth2Client,
+    eventToCheck: calendar_v3.Schema$Event,
+    calendarsToCheck: string[]
+): Promise<ConflictInfo[]>
+</file>
+
+<file path="src/tests/integration/conflict-detection-integration.test.ts">
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { initializeOAuth2Client } from '../../auth/client.js';
+import { TokenManager } from '../../auth/tokenManager.js';
+import { TestDataFactory } from './test-data-factory.js';
+import { getTextContent } from '../unit/helpers/content.js';
+import {
+  createAndVerifyEvent,
+  updateAndVerifyEvent,
+  createNonOverlappingEventPair,
+  createOverlappingEventPair
+} from './integration-test-helpers.js';
+</file>
+
 <file path="src/tests/integration/test-data-factory.ts">
 import { tryGetTextContent } from '../unit/helpers/index.js';
 import { formatTZNaiveDateTime, formatRFC3339 } from '../../utils/date-utils.js';
@@ -52341,7 +52459,11 @@ import { vi } from 'vitest';
 import { OAuth2Client } from 'google-auth-library';
 import { makeCalendarMock } from './factories.js';
 import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
-export function createGoogleCalendarMocks(): ReturnType<typeof vi.fn>
+interface GoogleCalendarMocks {
+  google: { calendar: ReturnType<typeof vi.fn> };
+  calendar_v3: Record<string, never>;
+}
+export function createGoogleCalendarMocks(): GoogleCalendarMocks
 export interface HandlerSetup {
   mockOAuth2Client: OAuth2Client;
   handler: ListEventsHandler;
@@ -52514,46 +52636,6 @@ private async searchEvents(
 ): Promise<calendar_v3.Schema$Event[]>
 </file>
 
-<file path="src/handlers/core/UpdateEventHandler.ts">
-import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { OAuth2Client } from "google-auth-library";
-import { UpdateEventInput } from "../../tools/registry.js";
-import { BaseToolHandler } from "./BaseToolHandler.js";
-import { calendar_v3 } from 'googleapis';
-import { RecurringEventHelpers, RecurringEventError, RECURRING_EVENT_ERRORS } from './RecurringEventHelpers.js';
-import { createEventResponseWithConflicts } from "../utils.js";
-import { ConflictDetectionService } from "../../services/conflict-detection/index.js";
-import { createTimeObject } from "../../utils/timezone-utils.js";
-import {
-  buildEventForConflictCheckUpdate,
-  performConflictCheck,
-} from "./eventManipulationUtils.js";
-export class UpdateEventHandler extends BaseToolHandler
-⋮----
-constructor()
-async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult>
-private async updateEventWithScope(
-        client: OAuth2Client,
-        args: UpdateEventInput
-): Promise<calendar_v3.Schema$Event>
-private async updateSingleInstance(
-        helpers: RecurringEventHelpers,
-        args: UpdateEventInput,
-        defaultTimeZone: string
-): Promise<calendar_v3.Schema$Event>
-private async updateAllInstances(
-        helpers: RecurringEventHelpers,
-        args: UpdateEventInput,
-        defaultTimeZone: string
-): Promise<calendar_v3.Schema$Event>
-private async updateFutureInstances(
-        helpers: RecurringEventHelpers,
-        args: UpdateEventInput,
-        defaultTimeZone: string,
-        originalEvent?: calendar_v3.Schema$Event
-): Promise<calendar_v3.Schema$Event>
-</file>
-
 <file path="src/handlers/utils.ts">
 import { calendar_v3 } from "googleapis";
 import { ConflictCheckResult } from "../services/conflict-detection/types.js";
@@ -52602,79 +52684,6 @@ export function createEventResponseWithConflicts(
     conflicts?: ConflictCheckResult,
     actionVerb: string = "created"
 ): string
-</file>
-
-<file path="src/services/conflict-detection/ConflictDetectionService.ts">
-import { OAuth2Client } from "google-auth-library";
-import { google, calendar_v3 } from "googleapis";
-import {
-  ConflictCheckResult,
-  ConflictInfo,
-  DuplicateInfo,
-  ConflictDetectionOptions
-} from "./types.js";
-import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
-import { ConflictAnalyzer } from "./ConflictAnalyzer.js";
-import { CONFLICT_DETECTION_CONFIG } from "./config.js";
-import { getEventUrl } from "../../handlers/utils.js";
-import {
-  resolveTimeRange,
-  hasTimezoneInDatetime,
-  resolveTimeZone,
-  isValidIANATimeZone
-} from "../../utils/timezone-utils.js";
-function getEventDateTime(event: calendar_v3.Schema$Event):
-function formatEventTimesForInfo(event: calendar_v3.Schema$Event):
-export class ConflictDetectionService
-⋮----
-constructor()
-async checkConflicts(
-    oauth2Client: OAuth2Client,
-    event: calendar_v3.Schema$Event,
-    calendarId: string,
-    options: ConflictDetectionOptions = {}
-): Promise<ConflictCheckResult>
-private async getEventsInTimeRange(
-    oauth2Client: OAuth2Client,
-    calendarId: string,
-    timeMin: string,
-    timeMax: string,
-    timeZone?: string
-): Promise<calendar_v3.Schema$Event[]>
-private findDuplicates(
-    newEvent: calendar_v3.Schema$Event,
-    existingEvents: calendar_v3.Schema$Event[],
-    calendarId: string,
-    threshold: number
-): DuplicateInfo[]
-private findConflicts(
-    newEvent: calendar_v3.Schema$Event,
-    existingEvents: calendar_v3.Schema$Event[],
-    calendarId: string,
-    includeDeclinedEvents: boolean
-): ConflictInfo[]
-private isEventDeclined(_event: calendar_v3.Schema$Event): boolean
-async checkConflictsWithFreeBusy(
-    oauth2Client: OAuth2Client,
-    eventToCheck: calendar_v3.Schema$Event,
-    calendarsToCheck: string[]
-): Promise<ConflictInfo[]>
-</file>
-
-<file path="src/tests/integration/conflict-detection-integration.test.ts">
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { initializeOAuth2Client } from '../../auth/client.js';
-import { TokenManager } from '../../auth/tokenManager.js';
-import { TestDataFactory } from './test-data-factory.js';
-import { getTextContent } from '../unit/helpers/content.js';
-import {
-  createAndVerifyEvent,
-  updateAndVerifyEvent,
-  createNonOverlappingEventPair,
-  createOverlappingEventPair
-} from './integration-test-helpers.js';
 </file>
 
 <file path="src/tests/unit/utils/date-utils.test.ts">
@@ -52753,6 +52762,40 @@ private buildEventsPath(
         options: ListEventsOptions,
         fieldMask: string | null
 ): string
+</file>
+
+<file path="src/handlers/core/RecurringEventHelpers.ts">
+import { calendar_v3 } from 'googleapis';
+import {
+  TIME_DURATIONS,
+  formatBasicDateTime,
+  oneDayBefore,
+  stripUntilAndCount,
+  buildUntilClause,
+  isRRuleString,
+  durationMs,
+  addMilliseconds,
+  formatRFC3339,
+} from '../../utils/date-utils.js';
+import { createTimeObject, applyTimezone } from '../../utils/timezone-utils.js';
+import { buildCoreEvent, buildOptionalEventFields } from './eventManipulationUtils.js';
+import { UpdateEventInput } from '../../tools/registry.js';
+export class RecurringEventHelpers
+⋮----
+constructor(calendar: calendar_v3.Calendar)
+getCalendar(): calendar_v3.Calendar
+async detectEventType(eventId: string, calendarId: string): Promise<'recurring' | 'single'>
+async getEventAndType(eventId: string, calendarId: string): Promise<
+formatInstanceId(eventId: string, originalStartTime: string): string
+calculateUntilDate(futureStartDate: string): string
+calculateEndTime(newStartTime: string, originalEvent: calendar_v3.Schema$Event): string
+updateRecurrenceWithUntil(recurrence: string[], untilDate: string): string[]
+cleanEventForDuplication(event: calendar_v3.Schema$Event): calendar_v3.Schema$Event
+buildUpdateRequestBody(args: UpdateEventInput, defaultTimeZone?: string): calendar_v3.Schema$Event
+⋮----
+export class RecurringEventError extends Error
+⋮----
+constructor(message: string, code: string)
 </file>
 
 <file path="src/utils/batchProcessor.ts">
@@ -52859,40 +52902,6 @@ export async function processBatchItemsChunked<T, TItem = string>(
     "vitest": "^3.1.1"
   }
 }
-</file>
-
-<file path="src/handlers/core/RecurringEventHelpers.ts">
-import { calendar_v3 } from 'googleapis';
-import {
-  TIME_DURATIONS,
-  formatBasicDateTime,
-  oneDayBefore,
-  stripUntilAndCount,
-  buildUntilClause,
-  isRRuleString,
-  durationMs,
-  addMilliseconds,
-  formatRFC3339,
-} from '../../utils/date-utils.js';
-import { createTimeObject, applyTimezone } from '../../utils/timezone-utils.js';
-import { buildCoreEvent, buildOptionalEventFields } from './eventManipulationUtils.js';
-import { UpdateEventInput } from '../../tools/registry.js';
-export class RecurringEventHelpers
-⋮----
-constructor(calendar: calendar_v3.Calendar)
-getCalendar(): calendar_v3.Calendar
-async detectEventType(eventId: string, calendarId: string): Promise<'recurring' | 'single'>
-async getEventAndType(eventId: string, calendarId: string): Promise<
-formatInstanceId(eventId: string, originalStartTime: string): string
-calculateUntilDate(futureStartDate: string): string
-calculateEndTime(newStartTime: string, originalEvent: calendar_v3.Schema$Event): string
-updateRecurrenceWithUntil(recurrence: string[], untilDate: string): string[]
-cleanEventForDuplication(event: calendar_v3.Schema$Event): calendar_v3.Schema$Event
-buildUpdateRequestBody(args: UpdateEventInput, defaultTimeZone?: string): calendar_v3.Schema$Event
-⋮----
-export class RecurringEventError extends Error
-⋮----
-constructor(message: string, code: string)
 </file>
 
 <file path="src/tests/unit/helpers/event-test-data.ts">
@@ -53248,7 +53257,7 @@ export function createFullEventArgs(
 │       ├── repomix-docs.config.json (256 tokens)
 │       ├── repomix-mjs-root.config.json (144 tokens)
 │       └── repomix.config.json (235 tokens)
-└── src/ (162,274 tokens)
+└── src/ (162,308 tokens)
     ├── auth-server.ts (678 tokens)
     ├── index.ts (1,395 tokens)
     ├── server.ts (1,456 tokens)
@@ -53272,13 +53281,13 @@ export function createFullEventArgs(
     │   │   ├── DeleteEventHandler.ts (310 tokens)
     │   │   ├── errorFormatting.ts (351 tokens)
     │   │   ├── eventFormatting.ts (479 tokens)
-    │   │   ├── eventManipulationUtils.ts (1,433 tokens)
+    │   │   ├── eventManipulationUtils.ts (1,426 tokens)
     │   │   ├── FreeBusyEventHandler.ts (787 tokens)
     │   │   ├── GetCurrentTimeHandler.ts (614 tokens)
     │   │   ├── GetEventHandler.ts (546 tokens)
     │   │   ├── ListCalendarsHandler.ts (854 tokens)
     │   │   ├── ListColorsHandler.ts (363 tokens)
-    │   │   ├── ListEventsHandler.ts (1,559 tokens)
+    │   │   ├── ListEventsHandler.ts (1,566 tokens)
     │   │   ├── RecurringEventHelpers.ts (1,512 tokens)
     │   │   ├── SearchEventsHandler.ts (576 tokens)
     │   │   ├── types.ts (107 tokens)
@@ -53312,14 +53321,14 @@ export function createFullEventArgs(
     │   ├── test-data.ts (670 tokens)
     │   ├── test-utils.ts (1,274 tokens)
     │   └── types.ts (825 tokens)
-    ├── tests/ (97,995 tokens)
+    ├── tests/ (98,029 tokens)
     │   ├── integration/ (11,552 tokens)
     │   │   ├── claude-mcp-integration.test.ts (2,227 tokens)
     │   │   ├── conflict-detection-integration.test.ts (2,157 tokens)
     │   │   ├── integration-test-helpers.ts (1,443 tokens)
     │   │   ├── test-data-factory.ts (2,494 tokens)
     │   │   └── UpdateEventHandler.recurring.integration.test.ts (3,231 tokens)
-    │   └── unit/ (86,443 tokens)
+    │   └── unit/ (86,477 tokens)
     │       ├── console-statements.test.ts (1,670 tokens)
     │       ├── index.test.ts (3,169 tokens)
     │       ├── handlers/ (38,866 tokens)
@@ -53337,12 +53346,12 @@ export function createFullEventArgs(
     │       │   ├── UpdateEventHandler.recurring.test.ts (4,476 tokens)
     │       │   ├── utils-conflict-format.test.ts (1,979 tokens)
     │       │   └── utils.test.ts (780 tokens)
-    │       ├── helpers/ (10,306 tokens)
+    │       ├── helpers/ (10,340 tokens)
     │       │   ├── content.ts (585 tokens)
     │       │   ├── event-test-data.ts (1,861 tokens)
     │       │   ├── factories.test.ts (3,278 tokens)
     │       │   ├── factories.ts (3,422 tokens)
-    │       │   ├── handler-setup.ts (317 tokens)
+    │       │   ├── handler-setup.ts (351 tokens)
     │       │   ├── index.ts (231 tokens)
     │       │   ├── test-configs.ts (406 tokens)
     │       │   └── testBuilder.ts (206 tokens)

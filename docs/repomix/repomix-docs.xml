@@ -295,6 +295,186 @@ This section contains the contents of the repository's files.
 211: See [Troubleshooting Guide](troubleshooting.md) for detailed solutions.
 </file>
 
+<file path="docs/AUTH-REFACTORING-OPPORTUNITIES.md">
+  1: # Auth Refactoring Opportunities
+  2: 
+  3: **Analysis Date:** 2026-03-24
+  4: **Goal:** Apply new TokenManager auth methods (`isAuthenticated()`, `getCredentials()`, `refreshCredentials()`, `logout()`) to improve DRY and reduce code duplication.
+  5: 
+  6: ---
+  7: 
+  8: ## Executive Summary
+  9: 
+ 10: 3 refactoring opportunities identified:
+ 11: - **Direct credential access** (1 location) → Use `getCredentials()` method
+ 12: - **Token validation patterns** (3 locations) → Use `isAuthenticated()` method
+ 13: - **Verbose token checking** (2 locations) → Simplify with new methods
+ 14: 
+ 15: **Estimated Effort:** 15-30 minutes | **Impact:** Cleaner API surface, better encapsulation
+ 16: 
+ 17: ---
+ 18: 
+ 19: ## Detailed Opportunities
+ 20: 
+ 21: ### 1. Direct Credential Access (HIGH PRIORITY)
+ 22: 
+ 23: **Location:** `src/verify-tokens.ts:53`
+ 24: 
+ 25: **Current Pattern:**
+ 26: ```typescript
+ 27: // Direct access to oauth2Client credentials
+ 28: const credentials = oauth2Client.credentials;
+ 29: if (credentials.expiry_date) {
+ 30:   const expiresIn = Math.floor((credentials.expiry_date - Date.now()) / 1000);
+ 31:   // ... calculate hours/minutes
+ 32: }
+ 33: ```
+ 34: 
+ 35: **Issue:**
+ 36: - Direct access to internal `oauth2Client.credentials` violates encapsulation
+ 37: - Couples verify-tokens.ts to oauth2Client implementation
+ 38: - No validation that credentials exist
+ 39: 
+ 40: **Refactored Pattern:**
+ 41: ```typescript
+ 42: // Use TokenManager's new public method
+ 43: const credentials = tokenManager.getCredentials();
+ 44: if (credentials?.expiry_date) {
+ 45:   const expiresIn = Math.floor((credentials.expiry_date - Date.now()) / 1000);
+ 46:   // ... calculate hours/minutes
+ 47: }
+ 48: ```
+ 49: 
+ 50: **Benefits:**
+ 51: - ✅ Encapsulation: oauth2Client.credentials is internal detail
+ 52: - ✅ Consistency: Use TokenManager for all credential access
+ 53: - ✅ Safety: null-safe with optional chaining
+ 54: 
+ 55: ---
+ 56: 
+ 57: ### 2. Token Validation Pattern (MEDIUM PRIORITY)
+ 58: 
+ 59: **Locations (3 instances):**
+ 60: 1. `src/server.ts:61` - `await this.tokenManager.validateTokens(accountMode)`
+ 61: 2. `src/server.ts:75` - `await this.tokenManager.validateTokens(accountMode)`
+ 62: 3. `src/auth/server.ts:144` - `await this.tokenManager.validateTokens()`
+ 63: 
+ 64: **Current Pattern:**
+ 65: ```typescript
+ 66: const hasValidTokens = await this.tokenManager.validateTokens();
+ 67: if (!hasValidTokens) {
+ 68:   // handle no auth
+ 69: }
+ 70: ```
+ 71: 
+ 72: **Refactored Pattern:**
+ 73: ```typescript
+ 74: if (!(await this.tokenManager.isAuthenticated())) {
+ 75:   // handle no auth
+ 76: }
+ 77: ```
+ 78: 
+ 79: **Benefits:**
+ 80: - ✅ Intent clarity: `isAuthenticated()` reads better than `validateTokens()`
+ 81: - ✅ DRY: Semantically correct method name
+ 82: - ✅ Consistency: All auth checks use `isAuthenticated()`
+ 83: - ✅ Future-proof: If validation logic changes, only one method to update
+ 84: 
+ 85: **Code Impact:**
+ 86: - `src/server.ts:61` - Rename check and message
+ 87: - `src/server.ts:75` - Rename check
+ 88: - `src/auth/server.ts:144` - Rename check
+ 89: 
+ 90: ---
+ 91: 
+ 92: ### 3. Integration Test Auth Guards (MEDIUM PRIORITY)
+ 93: 
+ 94: **Locations (2 instances):**
+ 95: 1. `src/tests/integration/UpdateEventHandler.recurring.integration.test.ts:32`
+ 96: 2. `src/tests/integration/conflict-detection-integration.test.ts:31`
+ 97: 
+ 98: **Current Pattern:**
+ 99: ```typescript
+100: const hasValidTokens = await tokenManager.validateTokens();
+101: if (!hasValidTokens) {
+102:   test.skip('No valid tokens from Doppler');
+103: }
+104: ```
+105: 
+106: **Refactored Pattern:**
+107: ```typescript
+108: const isAuth = await tokenManager.isAuthenticated();
+109: if (!isAuth) {
+110:   test.skip('No valid tokens from Doppler');
+111: }
+112: ```
+113: 
+114: **Benefits:**
+115: - ✅ Semantic clarity: `isAuthenticated()` is the right method
+116: - ✅ Consistency: Test guards use same auth API as production code
+117: - ✅ Maintainability: Single semantic meaning across codebase
+118: 
+119: ---
+120: 
+121: ## Unused New Methods
+122: 
+123: The following new TokenManager methods have **no current usage**:
+124: - `refreshCredentials()` — Currently `validateTokens()` handles refresh implicitly
+125: - `logout()` — No logout functionality exists in current codebase
+126: 
+127: ### Recommendations
+128: 
+129: **For `refreshCredentials()`:**
+130: - Current usage: `validateTokens()` calls `refresh()` internally
+131: - Could replace `refreshCredentials()` with public method if explicit refresh needed
+132: - **Status:** Keep for future use (e.g., manual token refresh in CLI tools)
+133: 
+134: **For `logout()`:**
+135: - No current use case in MCP server
+136: - Useful for: Multi-account CLI scripts, token cleanup
+137: - **Status:** Keep for future implementation of logout functionality
+138: 
+139: ---
+140: 
+141: ## Refactoring Checklist
+142: 
+143: - [ ] **Refactor:** `src/verify-tokens.ts:53` - Replace `oauth2Client.credentials` with `tokenManager.getCredentials()`
+144: - [ ] **Refactor:** `src/server.ts:61` - Replace `validateTokens()` with `isAuthenticated()`
+145: - [ ] **Refactor:** `src/server.ts:75` - Replace `validateTokens()` with `isAuthenticated()`
+146: - [ ] **Refactor:** `src/auth/server.ts:144` - Replace `validateTokens()` with `isAuthenticated()`
+147: - [ ] **Refactor:** `src/tests/integration/UpdateEventHandler.recurring.integration.test.ts:32` - Use `isAuthenticated()`
+148: - [ ] **Refactor:** `src/tests/integration/conflict-detection-integration.test.ts:31` - Use `isAuthenticated()`
+149: - [ ] **Test:** All auth checks still work (`npm test`)
+150: - [ ] **Verify:** No behavioral changes, only method naming
+151: 
+152: ---
+153: 
+154: ## Testing Strategy
+155: 
+156: **Before & After Parity:**
+157: 1. Run full test suite: `npm test`
+158: 2. Run integration tests: `npm test -- src/tests/integration/`
+159: 3. Manual verification: `npm run verify-tokens`
+160: 
+161: **Commit Scope:**
+162: - Single focused commit: "refactor(auth): replace validateTokens with isAuthenticated"
+163: - Alternative: Per-file commits if changes need isolation
+164: 
+165: ---
+166: 
+167: ## Summary of Changes
+168: 
+169: | File | Change | Method | Impact |
+170: |------|--------|--------|--------|
+171: | `src/verify-tokens.ts` | L53 | `getCredentials()` | Direct credential access |
+172: | `src/server.ts` | L61 | `isAuthenticated()` | Token validation |
+173: | `src/server.ts` | L75 | `isAuthenticated()` | Token validation |
+174: | `src/auth/server.ts` | L144 | `isAuthenticated()` | Token validation |
+175: | `src/tests/integration/*.ts` | L31-32 | `isAuthenticated()` | Test guards |
+176: 
+177: **Total Changes:** 6 locations | **Estimated Time:** 15-30 minutes | **Risk:** Low (semantic renames)
+</file>
+
 <file path="docs/authentication.md">
   1: # Authentication Setup Guide
   2: 
@@ -6759,186 +6939,6 @@ This section contains the contents of the repository's files.
 190: - Integration tests using real MCP protocol with Google Calendar API
 191: - Type-safe content assertions (`{ type: 'text'; text: string }`)
 192: - Dynamic future dates prevent test expiration
-</file>
-
-<file path="docs/AUTH-REFACTORING-OPPORTUNITIES.md">
-  1: # Auth Refactoring Opportunities
-  2: 
-  3: **Analysis Date:** 2026-03-24
-  4: **Goal:** Apply new TokenManager auth methods (`isAuthenticated()`, `getCredentials()`, `refreshCredentials()`, `logout()`) to improve DRY and reduce code duplication.
-  5: 
-  6: ---
-  7: 
-  8: ## Executive Summary
-  9: 
- 10: 3 refactoring opportunities identified:
- 11: - **Direct credential access** (1 location) → Use `getCredentials()` method
- 12: - **Token validation patterns** (3 locations) → Use `isAuthenticated()` method
- 13: - **Verbose token checking** (2 locations) → Simplify with new methods
- 14: 
- 15: **Estimated Effort:** 15-30 minutes | **Impact:** Cleaner API surface, better encapsulation
- 16: 
- 17: ---
- 18: 
- 19: ## Detailed Opportunities
- 20: 
- 21: ### 1. Direct Credential Access (HIGH PRIORITY)
- 22: 
- 23: **Location:** `src/verify-tokens.ts:53`
- 24: 
- 25: **Current Pattern:**
- 26: ```typescript
- 27: // Direct access to oauth2Client credentials
- 28: const credentials = oauth2Client.credentials;
- 29: if (credentials.expiry_date) {
- 30:   const expiresIn = Math.floor((credentials.expiry_date - Date.now()) / 1000);
- 31:   // ... calculate hours/minutes
- 32: }
- 33: ```
- 34: 
- 35: **Issue:**
- 36: - Direct access to internal `oauth2Client.credentials` violates encapsulation
- 37: - Couples verify-tokens.ts to oauth2Client implementation
- 38: - No validation that credentials exist
- 39: 
- 40: **Refactored Pattern:**
- 41: ```typescript
- 42: // Use TokenManager's new public method
- 43: const credentials = tokenManager.getCredentials();
- 44: if (credentials?.expiry_date) {
- 45:   const expiresIn = Math.floor((credentials.expiry_date - Date.now()) / 1000);
- 46:   // ... calculate hours/minutes
- 47: }
- 48: ```
- 49: 
- 50: **Benefits:**
- 51: - ✅ Encapsulation: oauth2Client.credentials is internal detail
- 52: - ✅ Consistency: Use TokenManager for all credential access
- 53: - ✅ Safety: null-safe with optional chaining
- 54: 
- 55: ---
- 56: 
- 57: ### 2. Token Validation Pattern (MEDIUM PRIORITY)
- 58: 
- 59: **Locations (3 instances):**
- 60: 1. `src/server.ts:61` - `await this.tokenManager.validateTokens(accountMode)`
- 61: 2. `src/server.ts:75` - `await this.tokenManager.validateTokens(accountMode)`
- 62: 3. `src/auth/server.ts:144` - `await this.tokenManager.validateTokens()`
- 63: 
- 64: **Current Pattern:**
- 65: ```typescript
- 66: const hasValidTokens = await this.tokenManager.validateTokens();
- 67: if (!hasValidTokens) {
- 68:   // handle no auth
- 69: }
- 70: ```
- 71: 
- 72: **Refactored Pattern:**
- 73: ```typescript
- 74: if (!(await this.tokenManager.isAuthenticated())) {
- 75:   // handle no auth
- 76: }
- 77: ```
- 78: 
- 79: **Benefits:**
- 80: - ✅ Intent clarity: `isAuthenticated()` reads better than `validateTokens()`
- 81: - ✅ DRY: Semantically correct method name
- 82: - ✅ Consistency: All auth checks use `isAuthenticated()`
- 83: - ✅ Future-proof: If validation logic changes, only one method to update
- 84: 
- 85: **Code Impact:**
- 86: - `src/server.ts:61` - Rename check and message
- 87: - `src/server.ts:75` - Rename check
- 88: - `src/auth/server.ts:144` - Rename check
- 89: 
- 90: ---
- 91: 
- 92: ### 3. Integration Test Auth Guards (MEDIUM PRIORITY)
- 93: 
- 94: **Locations (2 instances):**
- 95: 1. `src/tests/integration/UpdateEventHandler.recurring.integration.test.ts:32`
- 96: 2. `src/tests/integration/conflict-detection-integration.test.ts:31`
- 97: 
- 98: **Current Pattern:**
- 99: ```typescript
-100: const hasValidTokens = await tokenManager.validateTokens();
-101: if (!hasValidTokens) {
-102:   test.skip('No valid tokens from Doppler');
-103: }
-104: ```
-105: 
-106: **Refactored Pattern:**
-107: ```typescript
-108: const isAuth = await tokenManager.isAuthenticated();
-109: if (!isAuth) {
-110:   test.skip('No valid tokens from Doppler');
-111: }
-112: ```
-113: 
-114: **Benefits:**
-115: - ✅ Semantic clarity: `isAuthenticated()` is the right method
-116: - ✅ Consistency: Test guards use same auth API as production code
-117: - ✅ Maintainability: Single semantic meaning across codebase
-118: 
-119: ---
-120: 
-121: ## Unused New Methods
-122: 
-123: The following new TokenManager methods have **no current usage**:
-124: - `refreshCredentials()` — Currently `validateTokens()` handles refresh implicitly
-125: - `logout()` — No logout functionality exists in current codebase
-126: 
-127: ### Recommendations
-128: 
-129: **For `refreshCredentials()`:**
-130: - Current usage: `validateTokens()` calls `refresh()` internally
-131: - Could replace `refreshCredentials()` with public method if explicit refresh needed
-132: - **Status:** Keep for future use (e.g., manual token refresh in CLI tools)
-133: 
-134: **For `logout()`:**
-135: - No current use case in MCP server
-136: - Useful for: Multi-account CLI scripts, token cleanup
-137: - **Status:** Keep for future implementation of logout functionality
-138: 
-139: ---
-140: 
-141: ## Refactoring Checklist
-142: 
-143: - [ ] **Refactor:** `src/verify-tokens.ts:53` - Replace `oauth2Client.credentials` with `tokenManager.getCredentials()`
-144: - [ ] **Refactor:** `src/server.ts:61` - Replace `validateTokens()` with `isAuthenticated()`
-145: - [ ] **Refactor:** `src/server.ts:75` - Replace `validateTokens()` with `isAuthenticated()`
-146: - [ ] **Refactor:** `src/auth/server.ts:144` - Replace `validateTokens()` with `isAuthenticated()`
-147: - [ ] **Refactor:** `src/tests/integration/UpdateEventHandler.recurring.integration.test.ts:32` - Use `isAuthenticated()`
-148: - [ ] **Refactor:** `src/tests/integration/conflict-detection-integration.test.ts:31` - Use `isAuthenticated()`
-149: - [ ] **Test:** All auth checks still work (`npm test`)
-150: - [ ] **Verify:** No behavioral changes, only method naming
-151: 
-152: ---
-153: 
-154: ## Testing Strategy
-155: 
-156: **Before & After Parity:**
-157: 1. Run full test suite: `npm test`
-158: 2. Run integration tests: `npm test -- src/tests/integration/`
-159: 3. Manual verification: `npm run verify-tokens`
-160: 
-161: **Commit Scope:**
-162: - Single focused commit: "refactor(auth): replace validateTokens with isAuthenticated"
-163: - Alternative: Per-file commits if changes need isolation
-164: 
-165: ---
-166: 
-167: ## Summary of Changes
-168: 
-169: | File | Change | Method | Impact |
-170: |------|--------|--------|--------|
-171: | `src/verify-tokens.ts` | L53 | `getCredentials()` | Direct credential access |
-172: | `src/server.ts` | L61 | `isAuthenticated()` | Token validation |
-173: | `src/server.ts` | L75 | `isAuthenticated()` | Token validation |
-174: | `src/auth/server.ts` | L144 | `isAuthenticated()` | Token validation |
-175: | `src/tests/integration/*.ts` | L31-32 | `isAuthenticated()` | Test guards |
-176: 
-177: **Total Changes:** 6 locations | **Estimated Time:** 15-30 minutes | **Risk:** Low (semantic renames)
 </file>
 
 <file path="docs/CHANGELOG.md">

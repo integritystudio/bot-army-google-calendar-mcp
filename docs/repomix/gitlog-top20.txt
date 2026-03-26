@@ -1,19 +1,29 @@
+e24c9ed 2026-03-25 chore(docs): regenerate repomix snapshots after recent refactors
+  docs/repomix/repo-compressed.xml
+  docs/repomix/repomix-docs.xml
+  docs/repomix/repomix-git-ranked.xml
+  docs/repomix/repomix.xml
+  docs/repomix/token-tree.txt
+
+e8e0662 2026-03-25 refactor(date-utils): remove dead exports, deduplicate parsing, and inline formatBasicDateTime
+  src/tests/unit/handlers/RecurringEventHelpers.test.ts
+  src/tests/unit/utils/date-utils.test.ts
+
 0f385b2 2026-03-25 refactor(deps): replace manual batch chunking with p-limit
   package-lock.json
 
 43cdafa 2026-03-25 refactor(deps): migrate general date functions from simple-rrule to date-fns
   package-lock.json
   src/tests/unit/helpers/factories.ts
-  src/utils/date-utils.ts
 
 8a3d10a 2026-03-25 fix(deps): move @types/lodash-es to devDependencies
   package-lock.json
 
 97a8339 2026-03-25 refactor(deps): replace custom aggregationHelpers with lodash-es
   package-lock.json
+  src/tests/unit/handlers/BatchListEvents.test.ts
 
 eba0148 2026-03-25 refactor(repomix): also exclude examples from compressed output
-  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -21,7 +31,6 @@ eba0148 2026-03-25 refactor(repomix): also exclude examples from compressed outp
   docs/repomix/token-tree.txt
 
 ad6ca50 2026-03-25 refactor(repomix): exclude config and docs from compressed output
-  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -32,14 +41,12 @@ ad6ca50 2026-03-25 refactor(repomix): exclude config and docs from compressed ou
   README.md
 
 8aaa42b 2026-03-25 chore(repomix): regenerate codebase documentation
-  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
   docs/repomix/token-tree.txt
 
 17ea35c 2026-03-25 refactor(tests): complete fixture consolidation and fix quality issues
-  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -56,7 +63,6 @@ ad6ca50 2026-03-25 refactor(repomix): exclude config and docs from compressed ou
   src/tests/unit/helpers/factories.ts
 
 de7958a 2026-03-25 refactor(recurring-event): use addMilliseconds and formatRFC3339 in calculateEndTime
-  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -68,27 +74,11 @@ de7958a 2026-03-25 refactor(recurring-event): use addMilliseconds and formatRFC3
 
 4d13b70 2026-03-25 chore(repomix): add compressed config and clean up stale root files
   docs/GMAIL_TOOLS_GUIDE.md
-  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
   docs/repomix/token-tree.txt
-
-4735bf6 2026-03-25 refactor(date-utils): add month-end utilities
-  src/utils/date-utils.ts
-
-9d837d5 2026-03-25 refactor(date-utils): add compareDates utility function
-  src/utils/date-utils.ts
-
-5da0c1e 2026-03-25 refactor(date-utils): add duration helpers for multiple time units
-  src/utils/date-utils.ts
-
-b90a881 2026-03-25 refactor(date-utils): use simple-rrule isBefore for date comparisons
-  src/utils/date-utils.ts
-
-33b0143 2026-03-25 refactor(time-utils): leverage simple-rrule functions to reduce custom date code
-  src/utils/date-utils.ts
 
 3901eb5 2026-03-25 refactor(tests): use simple-rrule helpers instead of duration constants
   src/tests/unit/helpers/factories.ts
@@ -96,10 +86,8 @@ b90a881 2026-03-25 refactor(date-utils): use simple-rrule isBefore for date comp
 d3511ea 2026-03-25 refactor(tests): import date-utils directly instead of via factory wrappers
   src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts
 
-3065d2d 2026-03-25 refactor(utils): leverage simple-rrule utilities, remove duplication
-  src/utils/date-utils.ts
-
 9813cd5 2026-03-24 refactor(tests): extract assertion and date-time constants to reduce duplication
+  src/tests/unit/handlers/BatchListEvents.test.ts
   src/tests/unit/utils/date-utils.test.ts
 
 ea42f67 2026-03-24 refactor(tests): consolidate test data factories and remove duplication
@@ -107,6 +95,7 @@ ea42f67 2026-03-24 refactor(tests): consolidate test data factories and remove d
   src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts
 
 8f0af48 2026-03-24 refactor(tests): eliminate duplicate setup and parameterize test tables
+  src/tests/unit/handlers/BatchListEvents.test.ts
   src/tests/unit/utils/date-utils.test.ts
 
 77e1bcc 2026-03-24 refactor(tests): migrate handler tests to makeCalendarMock factory
@@ -114,12 +103,18 @@ ea42f67 2026-03-24 refactor(tests): consolidate test data factories and remove d
   src/tests/unit/helpers/factories.ts
 
 5c97b59 2026-03-24 fix: export makeCalendarMock and correct makeEvent API calls in BatchListEvents tests
-  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
   docs/repomix/token-tree.txt
+  src/tests/unit/handlers/BatchListEvents.test.ts
+
+6cda351 2026-03-24 refactor(tests): extract LIST_EVENTS_API_DEFAULTS and DUPLICATE_SUGGESTION constants
+  src/tests/unit/handlers/BatchListEvents.test.ts
+
+9389b88 2026-03-24 refactor(test): simplify batch list events unit tests
+  src/tests/unit/handlers/BatchListEvents.test.ts
 
 306acb5 2026-03-24 refactor(tests): extract event creation helpers for conflict detection tests
   src/tests/unit/helpers/factories.ts
@@ -134,6 +129,7 @@ da985e2 2026-03-24 refactor(tests): apply factory pattern to handler and service
   src/tests/unit/handlers/CreateEventHandler.test.ts
 
 538ca17 2026-03-24 refactor(tests): use groupBy utility in BatchListEvents test
+  src/tests/unit/handlers/BatchListEvents.test.ts
   src/tests/unit/handlers/CreateEventHandler.test.ts
 
 f89bdf8 2026-03-24 feat(tests): add generic test builder factory and consolidate factories
@@ -141,7 +137,6 @@ f89bdf8 2026-03-24 feat(tests): add generic test builder factory and consolidate
   src/tests/unit/helpers/factories.ts
 
 5fd9ad7 2026-03-24 docs: update CLAUDE.md, BACKLOG, and repomix snapshots
-  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -149,6 +144,7 @@ f89bdf8 2026-03-24 feat(tests): add generic test builder factory and consolidate
   docs/repomix/token-tree.txt
 
 6065ecc 2026-03-24 refactor(handlers): extract batchUtils, unify event building in RecurringEventHelpers
+  src/tests/unit/handlers/BatchListEvents.test.ts
   src/tests/unit/handlers/RecurringEventHelpers.test.ts
   src/tests/unit/helpers/factories.ts
 
@@ -165,7 +161,6 @@ ce1c3b9 2026-03-24 docs: update CLAUDE.md and README to reflect 100% backlog com
   README.md
 
 74a15a0 2026-03-24 docs(backlog): mark issues 3, 4, 5 resolved with Option A implementation
-  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -173,7 +168,6 @@ ce1c3b9 2026-03-24 docs: update CLAUDE.md and README to reflect 100% backlog com
   docs/repomix/token-tree.txt
 
 b9cae30 2026-03-24 test(integration): add conflict detection integration tests via MCP protocol
-  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -220,7 +214,6 @@ b33938a 2026-03-24 refactor(tests): implement mock strategy with realistic API r
   src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts
 
 e0fb9d1 2026-03-24 refactor(gmail-labels): apply shared lib helpers to create-* scripts
-  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -229,6 +222,9 @@ e0fb9d1 2026-03-24 refactor(gmail-labels): apply shared lib helpers to create-* 
 
 7853b20 2026-03-24 test(integration): add Doppler-backed integration tests for UpdateEventHandler recurring events
   src/tools/registry.ts
+
+72775f7 2026-03-24 docs: add comprehensive deliverables summary
+  docs/DELIVERABLES.md
 
 c506407 2026-03-24 docs: add comprehensive implementation guide for Phase 1
   docs/IMPLEMENTATION-GUIDE.md
@@ -239,6 +235,9 @@ c506407 2026-03-24 docs: add comprehensive implementation guide for Phase 1
 0a0278b 2026-03-24 fix(factories): resolve originalStartTime type mismatch in makeRecurringEventInstance
   README.md
   src/tests/unit/helpers/factories.ts
+
+d15ac9b 2026-03-24 fix: BatchListEvents test error message assertion
+  src/tests/unit/handlers/BatchListEvents.test.ts
 
 783f439 2026-03-24 fix: resolve pre-existing TypeScript and test failures
   src/tests/unit/helpers/factories.ts
@@ -255,13 +254,11 @@ da37cc7 2026-03-24 refactor(test-quality): eliminate API redundancy and loop ant
 
 b1a6b28 2026-03-23 feat(date-utils): add ISO 8601 datetime format validation and parsing
   src/tests/unit/utils/date-utils.test.ts
-  src/utils/date-utils.ts
 
 d0f808e 2026-03-23 feat(date-utils): add RRULE pattern constants and helper functions
   src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts
   src/tests/unit/helpers/factories.ts
   src/tests/unit/utils/date-utils.test.ts
-  src/utils/date-utils.ts
 
 241167c 2026-03-23 refactor(RecurringEventHelpers): eliminate duplication and magic numbers
   src/tests/unit/handlers/RecurringEventHelpers.test.ts
@@ -278,6 +275,7 @@ b8fab89 2026-03-23 feat(test-helpers): add shared event and error factories
 02fada6 2026-03-23 refactor(tests): consolidate text content access with shared helper
   scripts/repomix/deploy-traditional-server.sh
   scripts/repomix/verify-bugfixes.sh
+  src/tests/unit/handlers/BatchListEvents.test.ts
 
 83385e5 2026-03-23 refactor(gmail): apply DRY principles across all Gmail handlers
   src/tools/registry.ts
@@ -324,6 +322,7 @@ cb2d2f4 2026-03-23 feat: add label verification and bulk labeling scripts
 ed920d0 2026-03-23 chore: initial commit with google calendar mcp project
   README.md
   package-lock.json
+  src/tests/unit/handlers/BatchListEvents.test.ts
   src/tests/unit/handlers/CreateEventHandler.test.ts
   src/tests/unit/handlers/RecurringEventHelpers.test.ts
   src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts

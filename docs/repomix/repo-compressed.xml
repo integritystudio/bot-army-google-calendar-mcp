@@ -561,6 +561,42 @@ export function getLegacyTokenPath()
 export function getAccountMode()
 </file>
 
+<file path="src/auth/tokenManager.ts">
+import { OAuth2Client, Credentials } from 'google-auth-library';
+import fs from 'fs/promises';
+import { getSecureTokenPath, getAccountMode, getLegacyTokenPath, isNodeError, toErrorMessage } from './utils.js';
+import { GaxiosError } from 'gaxios';
+import { mkdir } from 'fs/promises';
+import { dirname } from 'path';
+interface MultiAccountTokens {
+  normal?: Credentials;
+  test?: Credentials;
+}
+⋮----
+export class TokenManager
+⋮----
+constructor(oauth2Client: OAuth2Client)
+public getTokenPath(): string
+public getAccountMode(): 'normal' | 'test'
+public setAccountMode(mode: 'normal' | 'test'): void
+private async ensureTokenDirectoryExists(): Promise<void>
+private async loadMultiAccountTokens(): Promise<MultiAccountTokens>
+private async saveMultiAccountTokens(multiAccountTokens: MultiAccountTokens): Promise<void>
+private setupTokenRefresh(): void
+private async migrateLegacyTokens(): Promise<boolean>
+async loadSavedTokens(): Promise<boolean>
+async refreshTokensIfNeeded(): Promise<boolean>
+async validateTokens(accountMode?: 'normal' | 'test'): Promise<boolean>
+async saveTokens(tokens: Credentials): Promise<void>
+async clearTokens(): Promise<void>
+async listAvailableAccounts(): Promise<string[]>
+async switchAccount(newMode: 'normal' | 'test'): Promise<boolean>
+async isAuthenticated(): Promise<boolean>
+getCredentials(): Credentials
+async refreshCredentials(): Promise<boolean>
+async logout(): Promise<void>
+</file>
+
 <file path="src/auth/utils.ts">
 import { fileURLToPath } from 'url';
 import { getSecureTokenPath as getSharedSecureTokenPath, getLegacyTokenPath as getSharedLegacyTokenPath, getAccountMode as getSharedAccountMode } from './paths.js';
@@ -1007,6 +1043,24 @@ export function buildListFieldMask(
 import { initializeOAuth2Client } from './auth/client.js';
 import { AuthServer } from './auth/server.js';
 async function runAuthServer()
+</file>
+
+<file path="src/index.ts">
+import { fileURLToPath } from "url";
+import { GoogleCalendarMcpServer } from './server.js';
+import { parseArgs } from './config/TransportConfig.js';
+import { readFileSync } from "fs";
+import { join, dirname } from "path";
+import { initializeOAuth2Client } from './auth/client.js';
+import { AuthServer } from './auth/server.js';
+⋮----
+async function main()
+async function runAuthServer(): Promise<void>
+function showHelp(): void
+function showVersion(): void
+async function initializeApp(config: any): Promise<GoogleCalendarMcpServer>
+⋮----
+function parseCliArgs():
 </file>
 
 <file path=".env.test">
@@ -2273,42 +2327,6 @@ export async function resolveLabelIds(gmail, labelNames)
 }
 </file>
 
-<file path="src/auth/tokenManager.ts">
-import { OAuth2Client, Credentials } from 'google-auth-library';
-import fs from 'fs/promises';
-import { getSecureTokenPath, getAccountMode, getLegacyTokenPath, isNodeError, toErrorMessage } from './utils.js';
-import { GaxiosError } from 'gaxios';
-import { mkdir } from 'fs/promises';
-import { dirname } from 'path';
-interface MultiAccountTokens {
-  normal?: Credentials;
-  test?: Credentials;
-}
-⋮----
-export class TokenManager
-⋮----
-constructor(oauth2Client: OAuth2Client)
-public getTokenPath(): string
-public getAccountMode(): 'normal' | 'test'
-public setAccountMode(mode: 'normal' | 'test'): void
-private async ensureTokenDirectoryExists(): Promise<void>
-private async loadMultiAccountTokens(): Promise<MultiAccountTokens>
-private async saveMultiAccountTokens(multiAccountTokens: MultiAccountTokens): Promise<void>
-private setupTokenRefresh(): void
-private async migrateLegacyTokens(): Promise<boolean>
-async loadSavedTokens(): Promise<boolean>
-async refreshTokensIfNeeded(): Promise<boolean>
-async validateTokens(accountMode?: 'normal' | 'test'): Promise<boolean>
-async saveTokens(tokens: Credentials): Promise<void>
-async clearTokens(): Promise<void>
-async listAvailableAccounts(): Promise<string[]>
-async switchAccount(newMode: 'normal' | 'test'): Promise<boolean>
-async isAuthenticated(): Promise<boolean>
-getCredentials(): Credentials
-async refreshCredentials(): Promise<boolean>
-async logout(): Promise<void>
-</file>
-
 <file path="src/handlers/core/BatchRequestHandler.ts">
 import { OAuth2Client } from "google-auth-library";
 import { formatErrorMessage } from "./errorFormatting.js";
@@ -2573,24 +2591,6 @@ export type PatternApplicationStats = z.infer<typeof PatternApplicationStatsSche
 
 </file>
 
-<file path="src/services/conflict-detection/ConflictAnalyzer.ts">
-import { calendar_v3 } from "googleapis";
-import { EventTimeRange } from "./types.js";
-import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
-import { durationMs, durationHours, durationMinutes } from "../../utils/date-utils.js";
-export class ConflictAnalyzer
-⋮----
-constructor()
-analyzeOverlap(event1: calendar_v3.Schema$Event, event2: calendar_v3.Schema$Event):
-private getEventTimeRange(event: calendar_v3.Schema$Event): EventTimeRange | null
-private formatDuration(milliseconds: number): string
-checkBusyConflict(event: calendar_v3.Schema$Event, busySlot:
-findOverlappingEvents(
-    events: calendar_v3.Schema$Event[],
-    targetEvent: calendar_v3.Schema$Event
-): calendar_v3.Schema$Event[]
-</file>
-
 <file path="src/services/conflict-detection/EventSimilarityChecker.ts">
 import { calendar_v3 } from "googleapis";
 import { durationDays } from "../../utils/date-utils.js";
@@ -2742,24 +2742,6 @@ constructor(server: McpServer, config: HttpTransportConfig =
 async connect(): Promise<void>
 </file>
 
-<file path="src/index.ts">
-import { fileURLToPath } from "url";
-import { GoogleCalendarMcpServer } from './server.js';
-import { parseArgs } from './config/TransportConfig.js';
-import { readFileSync } from "fs";
-import { join, dirname } from "path";
-import { initializeOAuth2Client } from './auth/client.js';
-import { AuthServer } from './auth/server.js';
-⋮----
-async function main()
-async function runAuthServer(): Promise<void>
-function showHelp(): void
-function showVersion(): void
-async function initializeApp(config: any): Promise<GoogleCalendarMcpServer>
-⋮----
-function parseCliArgs():
-</file>
-
 <file path="src/server.ts">
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
@@ -2869,6 +2851,24 @@ export class GmailCreateLabelHandler extends BaseToolHandler
 ⋮----
 async runTool(args: GmailCreateLabelInput, oauth2Client: OAuth2Client): Promise<CallToolResult>
 async execute(input: GmailCreateLabelInput, oauth2Client: OAuth2Client): Promise<any>
+</file>
+
+<file path="src/services/conflict-detection/ConflictAnalyzer.ts">
+import { calendar_v3 } from "googleapis";
+import { EventTimeRange } from "./types.js";
+import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
+import { durationMs, durationMinutes } from "../../utils/date-utils.js";
+export class ConflictAnalyzer
+⋮----
+constructor()
+analyzeOverlap(event1: calendar_v3.Schema$Event, event2: calendar_v3.Schema$Event):
+private getEventTimeRange(event: calendar_v3.Schema$Event): EventTimeRange | null
+private formatDuration(milliseconds: number): string
+checkBusyConflict(event: calendar_v3.Schema$Event, busySlot:
+findOverlappingEvents(
+    events: calendar_v3.Schema$Event[],
+    targetEvent: calendar_v3.Schema$Event
+): calendar_v3.Schema$Event[]
 </file>
 
 <file path="src/testing/test-utils.ts">
@@ -2981,25 +2981,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GetEventHandler } from '../../../handlers/core/GetEventHandler.js';
 import { OAuth2Client } from 'google-auth-library';
 import { getTextContent, makeEvent, makeCalendarMock } from '../helpers/index.js';
-</file>
-
-<file path="src/tests/unit/handlers/RecurringEventHelpers.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { calendar_v3 } from 'googleapis';
-import { RecurringEventHelpers } from '../../../handlers/core/RecurringEventHelpers.js';
-import { makeCalendarMock, makeEvent } from '../helpers/factories.js';
-import {
-  SYSTEM_FIELDS,
-  createTestEventWithTZOffset,
-  createCompleteTestEvent,
-  createUpdateEventArgsWithTimes,
-  createUpdateEventArgsWithAttendees,
-  createComplexUpdateEventArgs
-} from '../helpers/event-test-data.js';
-⋮----
-function resolveWith(overrides: Partial<calendar_v3.Schema$Event>)
-⋮----
-function expectSystemFieldsRemoved(result: calendar_v3.Schema$Event): void
 </file>
 
 <file path="src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts">
@@ -3236,6 +3217,25 @@ static extractAllEventIds(response: any): string[]
 static getInvalidTestData()
 </file>
 
+<file path="src/tests/unit/handlers/RecurringEventHelpers.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { calendar_v3 } from 'googleapis';
+import { RecurringEventHelpers } from '../../../handlers/core/RecurringEventHelpers.js';
+import { makeCalendarMock, makeEvent } from '../helpers/factories.js';
+import {
+  SYSTEM_FIELDS,
+  createTestEventWithTZOffset,
+  createCompleteTestEvent,
+  createUpdateEventArgsWithTimes,
+  createUpdateEventArgsWithAttendees,
+  createComplexUpdateEventArgs
+} from '../helpers/event-test-data.js';
+⋮----
+function resolveWith(overrides: Partial<calendar_v3.Schema$Event>)
+⋮----
+function expectSystemFieldsRemoved(result: calendar_v3.Schema$Event): void
+</file>
+
 <file path="src/tests/unit/handlers/utils-conflict-format.test.ts">
 import { describe, it, expect } from 'vitest';
 import { formatConflictWarnings } from '../../../handlers/utils.js';
@@ -3267,40 +3267,6 @@ export function setupListEventsHandler(): HandlerSetup
 import { describe, it, expect } from 'vitest';
 import { EventSimilarityChecker } from '../../../../services/conflict-detection/EventSimilarityChecker.js';
 import { makeEvent, makeTeamMeetingEvent } from '../../helpers/factories.js';
-</file>
-
-<file path="src/tests/unit/utils/date-utils.test.ts">
-import { describe, it, expect } from 'vitest';
-import {
-  TIME_DURATIONS,
-  addDays,
-  addMilliseconds,
-  durationMs,
-  formatBasicDateTime,
-  formatISODateTime,
-  formatTZNaiveDateTime,
-  formatRFC3339,
-  getFutureDate,
-  getPastDate,
-  isFutureDate,
-  isPastDate,
-  oneDayBefore,
-  getOneDayBeforeFormatted,
-  RRULE_PATTERNS,
-  stripUntilAndCount,
-  buildUntilClause,
-  isRRuleString,
-  extractAndPreserveNonRRuleRecurrence,
-  DATETIME_FORMATS,
-  DATETIME_ERRORS,
-  isValidISODateTime,
-  isValidISODate,
-  isTimeZoneAware,
-  isTimeZoneNaive,
-  isAllDayEvent,
-  parseDateTimeString,
-  parseBasicDateTime,
-} from '../../../utils/date-utils.js';
 </file>
 
 <file path="src/tests/unit/index.test.ts">
@@ -3521,6 +3487,39 @@ import { OAuth2Client } from 'google-auth-library';
 import { calendar_v3 } from 'googleapis';
 import { getTextContent, makeEvent, makeGaxiosError, makeCalendarMock } from '../helpers/index.js';
 import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
+</file>
+
+<file path="src/tests/unit/utils/date-utils.test.ts">
+import { describe, it, expect } from 'vitest';
+import {
+  TIME_DURATIONS,
+  addDays,
+  addMilliseconds,
+  durationMs,
+  formatBasicDateTime,
+  formatTZNaiveDateTime,
+  formatRFC3339,
+  getFutureDate,
+  getPastDate,
+  isFutureDate,
+  isPastDate,
+  oneDayBefore,
+  getOneDayBeforeFormatted,
+  RRULE_PATTERNS,
+  stripUntilAndCount,
+  buildUntilClause,
+  isRRuleString,
+  extractAndPreserveNonRRuleRecurrence,
+  DATETIME_FORMATS,
+  DATETIME_ERRORS,
+  isValidISODateTime,
+  isValidISODate,
+  isTimeZoneAware,
+  isTimeZoneNaive,
+  isAllDayEvent,
+  parseDateTimeString,
+  parseBasicDateTime,
+} from '../../../utils/date-utils.js';
 </file>
 
 <file path="src/utils/timezone-utils.ts">
@@ -3893,89 +3892,50 @@ import {
 import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from '../../../testing/constants.js';
 </file>
 
+<file path="src/tests/unit/handlers/BatchListEvents.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { OAuth2Client } from 'google-auth-library';
+import { getTextContent, assertTextContentContains, makeEvent, makeEventWithCalendarId, setupListEventsHandler } from '../helpers/index.js';
+import { LIST_EVENTS_API_DEFAULTS, TIME_MIN, TIME_MAX } from '../helpers/test-configs.js';
+import { ToolSchemas } from '../../../tools/registry.js';
+import { ExtendedEvent } from '../../../handlers/core/batchUtils.js';
+⋮----
+import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
+import { processBatchResponses } from '../../../handlers/core/batchUtils.js';
+import { groupBy } from 'lodash-es';
+⋮----
+const sortByStartTime = (a: ExtendedEvent, b: ExtendedEvent) =>
+</file>
+
 <file path="src/utils/date-utils.ts">
 import {
   addDays as _addDays,
   addMilliseconds as _addMilliseconds,
-  addMonths as _addMonths,
-  addYears as _addYears,
-  compareAsc,
   differenceInDays as _differenceInDays,
-  differenceInHours as _differenceInHours,
   differenceInMilliseconds,
   differenceInMinutes as _differenceInMinutes,
-  differenceInSeconds as _differenceInSeconds,
-  getDaysInMonth,
   isBefore,
-  isLastDayOfMonth,
 } from 'date-fns';
-import { toRRuleDateString } from 'simple-rrule';
 ⋮----
 export function addDays(date: Date, days: number): Date
 export function addMilliseconds(date: Date, ms: number): Date
-export function addMonths(date: Date, months: number): Date
-export function addYears(date: Date, years: number): Date
-export function getDaysInCurrentMonth(date: Date): number
-export function isMonthEnd(date: Date): boolean
 export function durationMs(from: Date, to: Date): number
 export function durationDays(from: Date, to: Date): number
-export function durationHours(from: Date, to: Date): number
 export function durationMinutes(from: Date, to: Date): number
-export function durationSeconds(from: Date, to: Date): number
 export function formatBasicDateTime(date: Date): string
-export function formatISODateTime(date: Date): string
 export function formatTZNaiveDateTime(date: Date): string
 export function formatRFC3339(date: Date): string
 export function getFutureDate(daysFromNow: number): Date
 export function getPastDate(daysAgo: number): Date
 export function isFutureDate(dateString: string): boolean
 export function isPastDate(dateString: string): boolean
-export function compareDates(first: Date, second: Date): number
 export function oneDayBefore(date: Date): Date
 export function getOneDayBeforeFormatted(date: Date): string
 ⋮----
 export function stripUntilAndCount(rruleString: string): string
-/**
- * Build an UNTIL clause for an RRULE in basic format.
- * @param date Date to use as the UNTIL boundary
- * @returns UNTIL clause string (e.g., ";UNTIL=20240615T100000Z")
- */
 export function buildUntilClause(date: Date): string
-/**
- * Check if a rule string is an RRULE (vs EXDATE/RDATE/other).
- * @param ruleString Recurrence rule string to check
- * @returns true if the string starts with "RRULE:"
- */
 export function isRRuleString(ruleString: string): boolean
-/**
- * Separate RRULE strings from other recurrence types (EXDATE, RDATE).
- * Preserves non-RRULE recurrence patterns when splitting series.
- * @param recurrence Array of recurrence rule strings
- * @returns Object with separated rrules and other recurrence types
- */
 export function extractAndPreserveNonRRuleRecurrence(recurrence: string[]):
-/**
- * ISO 8601 datetime format validation patterns.
- * Used to validate and parse datetime strings in various formats.
- */
-⋮----
-/** ISO 8601 datetime with timezone info (Z or ±HH:MM) */
-⋮----
-/** ISO 8601 datetime without timezone (naive) */
-⋮----
-/** ISO 8601 date only (all-day events) */
-⋮----
-/** Basic ISO datetime format used in RRULE UNTIL clauses */
-⋮----
-/** Parse ISO 8601 datetime components */
-⋮----
-/** Parse ISO 8601 date components */
-⋮----
-/** Parse basic format datetime components */
-⋮----
-/**
- * Error messages for datetime validation failures.
- */
 ⋮----
 export interface DateTimeComponents {
   year: number;
@@ -3991,23 +3951,9 @@ export function isValidISODate(date: string): boolean
 export function isTimeZoneAware(datetime: string): boolean
 export function isTimeZoneNaive(datetime: string): boolean
 export function isAllDayEvent(datetime: string): boolean
+function parseComponents(match: RegExpMatchArray, source: string): DateTimeComponents
 export function parseDateTimeString(datetime: string): DateTimeComponents
 export function parseBasicDateTime(basicFormat: string): DateTimeComponents
-</file>
-
-<file path="src/tests/unit/handlers/BatchListEvents.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { OAuth2Client } from 'google-auth-library';
-import { getTextContent, assertTextContentContains, makeEvent, makeEventWithCalendarId, setupListEventsHandler } from '../helpers/index.js';
-import { LIST_EVENTS_API_DEFAULTS, TIME_MIN, TIME_MAX } from '../helpers/test-configs.js';
-import { ToolSchemas } from '../../../tools/registry.js';
-import { ExtendedEvent } from '../../../handlers/core/batchUtils.js';
-⋮----
-import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
-import { processBatchResponses } from '../../../handlers/core/batchUtils.js';
-import { groupBy } from 'lodash-es';
-⋮----
-const sortByStartTime = (a: ExtendedEvent, b: ExtendedEvent) =>
 </file>
 
 <file path="src/tests/unit/helpers/factories.ts">

@@ -46,8 +46,6 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
-.claude/
-  ralph-loop.local.md
 lib/
   constants.mjs
   date-based-filter.mjs
@@ -296,6 +294,93 @@ vitest.config.ts
 <files>
 This section contains the contents of the repository's files.
 
+<file path="lib/email-analyzer.mjs">
+/**
+ * Score content against keyword lists
+ * @param {string} content - Text to score
+ * @param {string[]} highKeywords - Keywords indicating high score
+ * @param {string[]} lowKeywords - Keywords indicating low score
+ * @returns {number} Score value (2, 5, or 9)
+ */
+export function scoreContent(content, highKeywords, lowKeywords)
+⋮----
+/**
+ * Categorize an email by urgency and importance
+ * @param {Object} msg - Email message object
+ * @returns {Object} Categorization with urgency and importance levels
+ */
+export function categorizeEmail(msg)
+⋮----
+/**
+ * Print email subsections with configurable truncation
+ * @param {string} title - Section title
+ * @param {Object[]} subsections - Email subsections with labels and emails
+ * @param {Object} displayConfig - Display configuration (fromMax, subjectMax, snippetMax)
+ */
+export function printSection(title, subsections, displayConfig =
+⋮----
+// Validate subsections
+</file>
+
+<file path="lib/gmail-batch.mjs">
+/**
+ * Gmail batch operations utility for efficient bulk filter management.
+ * Uses Gmail's batch API to process up to 100 filters per API call.
+ * Provides error handling and per-item response tracking.
+ */
+⋮----
+/**
+ * Create multiple filters using Gmail's batch API.
+ * Groups filters into batches of up to 100 and processes each batch.
+ * Returns response for each filter with success status and ID/error.
+ *
+ * @param {Object} gmail - Authenticated Gmail client
+ * @param {string} userId - User ID (typically 'me')
+ * @param {Array} filters - Array of filter definitions to create
+ * @returns {Promise<Array>} Array of responses, one per input filter
+ */
+export async function batchCreateFilters(gmail, userId, filters)
+⋮----
+// Validate input
+⋮----
+// Process filters in batches
+⋮----
+/**
+ * Process a single batch of filters.
+ * Creates individual filter requests and executes them in parallel.
+ *
+ * @private
+ * @param {Object} gmail - Authenticated Gmail client
+ * @param {string} userId - User ID
+ * @param {FilterDefinition[]} batch - Batch of filter definitions
+ * @returns {Promise<FilterResponse[]>} Responses for this batch
+ */
+async function processBatch(gmail, userId, batch)
+⋮----
+/**
+ * Create a single filter with error handling.
+ *
+ * @private
+ * @param {Object} gmail - Authenticated Gmail client
+ * @param {string} userId - User ID
+ * @param {Object} filter - Filter definition
+ * @returns {Promise<Object>} Response with success status
+ */
+async function createSingleFilter(gmail, userId, filter)
+⋮----
+/**
+ * Create multiple filters with individual result tracking and summary.
+ * This is a convenience wrapper that calls batchCreateFilters and provides
+ * a summary of successes and failures.
+ *
+ * @param {Object} gmail - Authenticated Gmail client
+ * @param {string} userId - User ID
+ * @param {Array} filters - Filters to create
+ * @returns {Promise<Object>} Summary object with successful/failed counts and results
+ */
+export async function batchCreateFiltersWithSummary(gmail, userId, filters)
+</file>
+
 <file path="lib/gmail-client.mjs">
 /**
  * Creates an authenticated Gmail client.
@@ -316,6 +401,70 @@ export function createGmailClient()
 // While TOCTOU (Time-of-check, time-of-use) risk is very low in local dev,
 // this approach minimizes the window between reads and ensures token/credentials
 // are coherent at the time of OAuth2Client creation.
+</file>
+
+<file path="lib/gmail-label-utils.mjs">
+/**
+ * Gmail label creation and pattern application utilities.
+ * Shared helpers for bulk label operations across create-*.mjs scripts.
+ */
+⋮----
+/**
+ * Create Gmail labels and track their IDs.
+ * Handles conflicts when labels already exist by fetching existing ID.
+ *
+ * @param {Object} gmail - Gmail API client
+ * @param {string[]} labelNames - Array of label names to create (can be hierarchical: "Parent/Child")
+ * @param {Object} labelIds - Object to store mapping of label names to their IDs
+ * @param {Map} existingLabelMap - Map of existing label names to IDs (for conflict resolution)
+ * @returns {Promise<void>}
+ */
+export async function createLabels(gmail, labelNames, labelIds, existingLabelMap)
+⋮----
+// Validate labelNames
+⋮----
+/**
+ * Apply label patterns to existing emails based on query criteria.
+ * Searches for emails matching pattern queries and labels them accordingly.
+ *
+ * @param {Object} gmail - Gmail API client
+ * @param {Array} patterns - Array of patterns with label names and queries
+ * @param {Object} labelIds - Map of label names to their IDs (populated by createLabels)
+ * @returns {Promise<number>} Total number of emails labeled
+ */
+export async function applyPatterns(gmail, patterns, labelIds)
+⋮----
+// Validate input
+⋮----
+/**
+ * Build a cache of all label names to their IDs.
+ * Enables runtime label ID resolution instead of hardcoded values.
+ *
+ * @param {Object} gmail - Gmail API client
+ * @returns {Promise<Map<string, string>>} Map of label names to their IDs
+ */
+export async function buildLabelCache(gmail)
+⋮----
+/**
+ * Resolve a single label ID by name using a cache for efficiency.
+ *
+ * @param {Object} gmail - Gmail API client
+ * @param {string} labelName - Name of the label (e.g., "Events/Workshops")
+ * @param {Map<string, string>} labelCache - Cache of label names to IDs
+ * @returns {Promise<string|null>} Label ID or null if not found
+ */
+export async function resolveLabelId(gmail, labelName, labelCache)
+⋮----
+// Cache miss - rebuild and retry (labels may have been created)
+⋮----
+/**
+ * Resolve multiple label IDs by name at once.
+ *
+ * @param {Object} gmail - Gmail API client
+ * @param {string[]} labelNames - Array of label names to resolve
+ * @returns {Promise<Map<string, string>>} Map of label names to their IDs
+ */
+export async function resolveLabelIds(gmail, labelNames)
 </file>
 
 <file path="scripts/repomix/repomix-docs.config.json">
@@ -622,6 +771,58 @@ async runTool(_args: any, oauth2Client: OAuth2Client): Promise<CallToolResult>
 async execute(oauth2Client: OAuth2Client): Promise<any>
 </file>
 
+<file path="src/schemas/email-analyzer-types.ts">
+import { z } from 'zod';
+⋮----
+export type EmailMessage = z.infer<typeof EmailMessageSchema>;
+⋮----
+export type EmailCategory = z.infer<typeof EmailCategorySchema>;
+⋮----
+export type PrintSectionConfig = z.infer<typeof PrintSectionConfigSchema>;
+⋮----
+export type EmailSubsection = z.infer<typeof EmailSubsectionSchema>;
+⋮----
+export type AnalyzerConfig = z.infer<typeof AnalyzerConfigSchema>;
+</file>
+
+<file path="src/schemas/gmail-batch-types.ts">
+import { z } from 'zod';
+⋮----
+export type FilterCriteria = z.infer<typeof FilterCriteriaSchema>;
+⋮----
+export type FilterAction = z.infer<typeof FilterActionSchema>;
+⋮----
+export type FilterDefinition = z.infer<typeof FilterDefinitionSchema>;
+⋮----
+export type FilterDefinitions = z.infer<typeof FilterDefinitionsSchema>;
+⋮----
+export type FilterResponse = z.infer<typeof FilterResponseSchema>;
+⋮----
+export type FilterResponses = z.infer<typeof FilterResponsesSchema>;
+⋮----
+export type BatchSummary = z.infer<typeof BatchSummarySchema>;
+</file>
+
+<file path="src/schemas/gmail-label-utils-types.ts">
+import { z } from 'zod';
+⋮----
+export type LabelPattern = z.infer<typeof LabelPatternSchema>;
+⋮----
+export type LabelPatterns = z.infer<typeof LabelPatternsSchema>;
+⋮----
+export type LabelIdMap = z.infer<typeof LabelIdMapSchema>;
+⋮----
+export type LabelCache = Map<string, string>;
+⋮----
+export type LabelCreationResult = z.infer<typeof LabelCreationResultSchema>;
+⋮----
+export type PatternApplicationStats = z.infer<typeof PatternApplicationStatsSchema>;
+</file>
+
+<file path="src/schemas/index.ts">
+
+</file>
+
 <file path="src/schemas/types.ts">
 export interface CalendarListEntry {
   id?: string | null;
@@ -874,6 +1075,30 @@ import { ToolRegistry } from '../../../tools/registry.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ToolRegistry, ToolSchemas } from '../../../tools/registry.js';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+</file>
+
+<file path="src/tests/unit/types/gmail-batch-types.test.ts">
+import { describe, it, expect } from 'vitest';
+import {
+  FilterCriteriaSchema,
+  FilterActionSchema,
+  FilterDefinitionSchema,
+  FilterDefinitionsSchema,
+  FilterResponseSchema,
+  FilterResponsesSchema,
+  BatchSummarySchema
+} from '../../../schemas/gmail-batch-types';
+</file>
+
+<file path="src/tests/unit/types/gmail-label-utils-types.test.ts">
+import { describe, it, expect } from 'vitest';
+import {
+  LabelPatternSchema,
+  LabelPatternsSchema,
+  LabelIdMapSchema,
+  LabelCreationResultSchema,
+  PatternApplicationStatsSchema
+} from '../../../schemas/gmail-label-utils-types';
 </file>
 
 <file path="src/tests/unit/utils/event-id-validator.test.ts">
@@ -1193,19 +1418,6 @@ import { loadEnv } from 'vite'
 // Increase timeout for AI API calls
 </file>
 
-<file path=".claude/ralph-loop.local.md">
----
-active: true
-iteration: 3
-session_id: 
-max_iterations: 10
-completion_promise: "RALPH_COMPLETE"
-started_at: "2026-03-26T10:21:30Z"
----
-
-run /simplify on docs/repomix/repo-compressed.xml contents, accept all changes, run /otel-session-summary, address issues, run npm run repomix, repeat until clean
-</file>
-
 <file path="lib/date-based-filter.mjs">
 /**
  * Date-based email filter utility
@@ -1277,34 +1489,6 @@ export function getGmailAction(status, futureLabel, archivePast = true)
 export function classifyEmails(emails, futureLabel, archivePast = true)
 </file>
 
-<file path="lib/email-analyzer.mjs">
-/**
- * Score content against keyword lists
- * @param {string} content - Text to score
- * @param {string[]} highKeywords - Keywords indicating high score
- * @param {string[]} lowKeywords - Keywords indicating low score
- * @returns {number} Score value (2, 5, or 9)
- */
-export function scoreContent(content, highKeywords, lowKeywords)
-⋮----
-/**
- * Categorize an email by urgency and importance
- * @param {Object} msg - Email message object
- * @returns {Object} Categorization with urgency and importance levels
- */
-export function categorizeEmail(msg)
-⋮----
-/**
- * Print email subsections with configurable truncation
- * @param {string} title - Section title
- * @param {Object[]} subsections - Email subsections with labels and emails
- * @param {Object} displayConfig - Display configuration (fromMax, subjectMax, snippetMax)
- */
-export function printSection(title, subsections, displayConfig =
-⋮----
-// Validate subsections
-</file>
-
 <file path="lib/email-utils.mjs">
 /**
  * Extracts a named header value from a Gmail message headers array.
@@ -1336,129 +1520,6 @@ export function extractDisplayName(from)
  * @returns {string}
  */
 export function extractEmailAddress(from)
-</file>
-
-<file path="lib/gmail-batch.mjs">
-/**
- * Gmail batch operations utility for efficient bulk filter management.
- * Uses Gmail's batch API to process up to 100 filters per API call.
- * Provides error handling and per-item response tracking.
- */
-⋮----
-/**
- * Create multiple filters using Gmail's batch API.
- * Groups filters into batches of up to 100 and processes each batch.
- * Returns response for each filter with success status and ID/error.
- *
- * @param {Object} gmail - Authenticated Gmail client
- * @param {string} userId - User ID (typically 'me')
- * @param {Array} filters - Array of filter definitions to create
- * @returns {Promise<Array>} Array of responses, one per input filter
- */
-export async function batchCreateFilters(gmail, userId, filters)
-⋮----
-// Validate input
-⋮----
-// Process filters in batches
-⋮----
-/**
- * Process a single batch of filters.
- * Creates individual filter requests and executes them in parallel.
- *
- * @private
- * @param {Object} gmail - Authenticated Gmail client
- * @param {string} userId - User ID
- * @param {FilterDefinition[]} batch - Batch of filter definitions
- * @returns {Promise<FilterResponse[]>} Responses for this batch
- */
-async function processBatch(gmail, userId, batch)
-⋮----
-/**
- * Create a single filter with error handling.
- *
- * @private
- * @param {Object} gmail - Authenticated Gmail client
- * @param {string} userId - User ID
- * @param {Object} filter - Filter definition
- * @returns {Promise<Object>} Response with success status
- */
-async function createSingleFilter(gmail, userId, filter)
-⋮----
-/**
- * Create multiple filters with individual result tracking and summary.
- * This is a convenience wrapper that calls batchCreateFilters and provides
- * a summary of successes and failures.
- *
- * @param {Object} gmail - Authenticated Gmail client
- * @param {string} userId - User ID
- * @param {Array} filters - Filters to create
- * @returns {Promise<Object>} Summary object with successful/failed counts and results
- */
-export async function batchCreateFiltersWithSummary(gmail, userId, filters)
-</file>
-
-<file path="lib/gmail-label-utils.mjs">
-/**
- * Gmail label creation and pattern application utilities.
- * Shared helpers for bulk label operations across create-*.mjs scripts.
- */
-⋮----
-/**
- * Create Gmail labels and track their IDs.
- * Handles conflicts when labels already exist by fetching existing ID.
- *
- * @param {Object} gmail - Gmail API client
- * @param {string[]} labelNames - Array of label names to create (can be hierarchical: "Parent/Child")
- * @param {Object} labelIds - Object to store mapping of label names to their IDs
- * @param {Map} existingLabelMap - Map of existing label names to IDs (for conflict resolution)
- * @returns {Promise<void>}
- */
-export async function createLabels(gmail, labelNames, labelIds, existingLabelMap)
-⋮----
-// Validate labelNames
-⋮----
-/**
- * Apply label patterns to existing emails based on query criteria.
- * Searches for emails matching pattern queries and labels them accordingly.
- *
- * @param {Object} gmail - Gmail API client
- * @param {Array} patterns - Array of patterns with label names and queries
- * @param {Object} labelIds - Map of label names to their IDs (populated by createLabels)
- * @returns {Promise<number>} Total number of emails labeled
- */
-export async function applyPatterns(gmail, patterns, labelIds)
-⋮----
-// Validate input
-⋮----
-/**
- * Build a cache of all label names to their IDs.
- * Enables runtime label ID resolution instead of hardcoded values.
- *
- * @param {Object} gmail - Gmail API client
- * @returns {Promise<Map<string, string>>} Map of label names to their IDs
- */
-export async function buildLabelCache(gmail)
-⋮----
-/**
- * Resolve a single label ID by name using a cache for efficiency.
- *
- * @param {Object} gmail - Gmail API client
- * @param {string} labelName - Name of the label (e.g., "Events/Workshops")
- * @param {Map<string, string>} labelCache - Cache of label names to IDs
- * @returns {Promise<string|null>} Label ID or null if not found
- */
-export async function resolveLabelId(gmail, labelName, labelCache)
-⋮----
-// Cache miss - rebuild and retry (labels may have been created)
-⋮----
-/**
- * Resolve multiple label IDs by name at once.
- *
- * @param {Object} gmail - Gmail API client
- * @param {string[]} labelNames - Array of label names to resolve
- * @returns {Promise<Map<string, string>>} Map of label names to their IDs
- */
-export async function resolveLabelIds(gmail, labelNames)
 </file>
 
 <file path="scripts/repomix/ralph-mjs-task.md">
@@ -1814,58 +1875,6 @@ export function escapeSearchQuery(text: string): string
 export function validateInput(data: Record<string, any>, field: string): void
 </file>
 
-<file path="src/schemas/email-analyzer-types.ts">
-import { z } from 'zod';
-⋮----
-export type EmailMessage = z.infer<typeof EmailMessageSchema>;
-⋮----
-export type EmailCategory = z.infer<typeof EmailCategorySchema>;
-⋮----
-export type PrintSectionConfig = z.infer<typeof PrintSectionConfigSchema>;
-⋮----
-export type EmailSubsection = z.infer<typeof EmailSubsectionSchema>;
-⋮----
-export type AnalyzerConfig = z.infer<typeof AnalyzerConfigSchema>;
-</file>
-
-<file path="src/schemas/gmail-batch-types.ts">
-import { z } from 'zod';
-⋮----
-export type FilterCriteria = z.infer<typeof FilterCriteriaSchema>;
-⋮----
-export type FilterAction = z.infer<typeof FilterActionSchema>;
-⋮----
-export type FilterDefinition = z.infer<typeof FilterDefinitionSchema>;
-⋮----
-export type FilterDefinitions = z.infer<typeof FilterDefinitionsSchema>;
-⋮----
-export type FilterResponse = z.infer<typeof FilterResponseSchema>;
-⋮----
-export type FilterResponses = z.infer<typeof FilterResponsesSchema>;
-⋮----
-export type BatchSummary = z.infer<typeof BatchSummarySchema>;
-</file>
-
-<file path="src/schemas/gmail-label-utils-types.ts">
-import { z } from 'zod';
-⋮----
-export type LabelPattern = z.infer<typeof LabelPatternSchema>;
-⋮----
-export type LabelPatterns = z.infer<typeof LabelPatternsSchema>;
-⋮----
-export type LabelIdMap = z.infer<typeof LabelIdMapSchema>;
-⋮----
-export type LabelCache = Map<string, string>;
-⋮----
-export type LabelCreationResult = z.infer<typeof LabelCreationResultSchema>;
-⋮----
-export type PatternApplicationStats = z.infer<typeof PatternApplicationStatsSchema>;
-</file>
-
-<file path="src/schemas/index.ts">
-
-</file>
-
 <file path="src/services/conflict-detection/EventSimilarityChecker.ts">
 import { calendar_v3 } from "googleapis";
 import { durationDays } from "../../utils/date-utils.js";
@@ -1962,28 +1971,20 @@ import { ToolSchemas } from '../../../tools/registry.js';
 import { TEST_EVENT_DEFAULTS } from '../../../testing/constants.js';
 </file>
 
-<file path="src/tests/unit/types/gmail-batch-types.test.ts">
+<file path="src/tests/unit/types/email-analyzer-types.test.ts">
 import { describe, it, expect } from 'vitest';
 import {
-  FilterCriteriaSchema,
-  FilterActionSchema,
-  FilterDefinitionSchema,
-  FilterDefinitionsSchema,
-  FilterResponseSchema,
-  FilterResponsesSchema,
-  BatchSummarySchema
-} from '../../../schemas/gmail-batch-types';
-</file>
-
-<file path="src/tests/unit/types/gmail-label-utils-types.test.ts">
-import { describe, it, expect } from 'vitest';
+  EmailMessageSchema,
+  EmailCategorySchema,
+  PrintSectionConfigSchema,
+  EmailSubsectionSchema,
+  AnalyzerConfigSchema
+} from '../../../schemas/email-analyzer-types';
 import {
-  LabelPatternSchema,
-  LabelPatternsSchema,
-  LabelIdMapSchema,
-  LabelCreationResultSchema,
-  PatternApplicationStatsSchema
-} from '../../../schemas/gmail-label-utils-types';
+  ANALYZER_CONFIG_COMPLETE,
+  ANALYZER_CONFIG_INVALID_KEYWORDS,
+  ANALYZER_CONFIG_WITH_EXTRA
+} from '../helpers/test-configs';
 </file>
 
 <file path="src/tests/unit/utils/timezone-utils.test.ts">
@@ -2410,57 +2411,6 @@ protected async getCalendarDetails(client: OAuth2Client, calendarId: string): Pr
 protected async getCalendarTimezone(client: OAuth2Client, calendarId: string): Promise<string>
 </file>
 
-<file path="src/handlers/core/eventManipulationUtils.ts">
-import { calendar_v3 } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
-import { CreateEventInput, UpdateEventInput } from '../../tools/registry.js';
-import { createTimeObject } from '../../utils/timezone-utils.js';
-import { ConflictDetectionService } from '../../services/conflict-detection/index.js';
-import { CONFLICT_DETECTION_CONFIG } from '../../services/conflict-detection/config.js';
-function conditionallyAddFields(
-  source: Record<string, any>,
-  target: Record<string, any>,
-  fieldNames: readonly string[]
-): void
-export function buildCoreEvent(
-  input: CreateEventInput | UpdateEventInput,
-  timezone: string,
-  existingEvent?: calendar_v3.Schema$Event
-): Pick<calendar_v3.Schema$Event, 'summary' | 'description' | 'start' | 'end' | 'attendees' | 'location'>
-export function buildOptionalEventFields(
-  input: CreateEventInput | UpdateEventInput
-): Pick<calendar_v3.Schema$Event, 'colorId' | 'reminders' | 'recurrence' | 'transparency' | 'visibility' | 'guestsCanInviteOthers' | 'guestsCanModify' | 'guestsCanSeeOtherGuests' | 'anyoneCanAddSelf' | 'conferenceData' | 'extendedProperties' | 'attachments' | 'source'>
-export function buildEventForConflictCheckCreate(
-  input: CreateEventInput,
-  timezone: string
-): calendar_v3.Schema$Event
-export function buildEventForConflictCheckUpdate(
-  input: UpdateEventInput,
-  existingEvent: calendar_v3.Schema$Event,
-  timezone: string
-): calendar_v3.Schema$Event
-export function buildEventRequestBodyCreate(
-  input: CreateEventInput,
-  timezone: string
-): calendar_v3.Schema$Event
-export interface ConflictCheckOptions {
-  checkDuplicates?: boolean;
-  checkConflicts?: boolean;
-  calendarsToCheck?: string[];
-  duplicateSimilarityThreshold?: number;
-}
-export async function performConflictCheck(
-  conflictService: ConflictDetectionService,
-  oauth2Client: OAuth2Client,
-  eventToCheck: calendar_v3.Schema$Event,
-  calendarId: string,
-  options: ConflictCheckOptions = {}
-): Promise<any>
-export function getConferenceAndAttachmentOptions(
-  input: CreateEventInput | UpdateEventInput
-):
-</file>
-
 <file path="src/handlers/core/FreeBusyEventHandler.ts">
 import { BaseToolHandler } from './BaseToolHandler.js';
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
@@ -2477,6 +2427,46 @@ private async queryFreeBusy(
 ): Promise<FreeBusyResponse>
 private isLessThanThreeMonths (timeMin: string, timeMax: string): boolean
 private generateAvailabilitySummary(response: FreeBusyResponse): string
+</file>
+
+<file path="src/handlers/core/UpdateEventHandler.ts">
+import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { OAuth2Client } from "google-auth-library";
+import { UpdateEventInput } from "../../tools/registry.js";
+import { BaseToolHandler } from "./BaseToolHandler.js";
+import { calendar_v3 } from 'googleapis';
+import { RecurringEventHelpers, RecurringEventError, RECURRING_EVENT_ERRORS } from './RecurringEventHelpers.js';
+import { createEventResponseWithConflicts } from "../utils.js";
+import { ConflictDetectionService } from "../../services/conflict-detection/index.js";
+import { createTimeObject } from "../../utils/timezone-utils.js";
+import {
+  buildEventForConflictCheckUpdate,
+  performConflictCheck,
+} from "./eventManipulationUtils.js";
+export class UpdateEventHandler extends BaseToolHandler
+⋮----
+constructor()
+async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult>
+private async updateEventWithScope(
+        client: OAuth2Client,
+        args: UpdateEventInput
+): Promise<calendar_v3.Schema$Event>
+private async updateSingleInstance(
+        helpers: RecurringEventHelpers,
+        args: UpdateEventInput,
+        defaultTimeZone: string
+): Promise<calendar_v3.Schema$Event>
+private async updateAllInstances(
+        helpers: RecurringEventHelpers,
+        args: UpdateEventInput,
+        defaultTimeZone: string
+): Promise<calendar_v3.Schema$Event>
+private async updateFutureInstances(
+        helpers: RecurringEventHelpers,
+        args: UpdateEventInput,
+        defaultTimeZone: string,
+        originalEvent?: calendar_v3.Schema$Event
+): Promise<calendar_v3.Schema$Event>
 </file>
 
 <file path="src/handlers/gmail/GmailCreateLabelHandler.ts">
@@ -2660,22 +2650,6 @@ import { ConflictAnalyzer } from '../../../../services/conflict-detection/Confli
 import { makeEvent, makeConflictingEvents } from '../../helpers/factories.js';
 </file>
 
-<file path="src/tests/unit/types/email-analyzer-types.test.ts">
-import { describe, it, expect } from 'vitest';
-import {
-  EmailMessageSchema,
-  EmailCategorySchema,
-  PrintSectionConfigSchema,
-  EmailSubsectionSchema,
-  AnalyzerConfigSchema
-} from '../../../schemas/email-analyzer-types';
-import {
-  ANALYZER_CONFIG_COMPLETE,
-  ANALYZER_CONFIG_INVALID_KEYWORDS,
-  ANALYZER_CONFIG_WITH_EXTRA
-} from '../helpers/test-configs';
-</file>
-
 <file path="label-remaining-unread.mjs">
 
 </file>
@@ -2740,44 +2714,55 @@ export function processBatchResponses<T extends ExtendedEvent = ExtendedEvent>(
 ): BatchResponseResult<T>
 </file>
 
-<file path="src/handlers/core/UpdateEventHandler.ts">
-import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { OAuth2Client } from "google-auth-library";
-import { UpdateEventInput } from "../../tools/registry.js";
-import { BaseToolHandler } from "./BaseToolHandler.js";
+<file path="src/handlers/core/eventManipulationUtils.ts">
 import { calendar_v3 } from 'googleapis';
-import { RecurringEventHelpers, RecurringEventError, RECURRING_EVENT_ERRORS } from './RecurringEventHelpers.js';
-import { createEventResponseWithConflicts } from "../utils.js";
-import { ConflictDetectionService } from "../../services/conflict-detection/index.js";
-import { createTimeObject } from "../../utils/timezone-utils.js";
-import {
-  buildEventForConflictCheckUpdate,
-  performConflictCheck,
-} from "./eventManipulationUtils.js";
-export class UpdateEventHandler extends BaseToolHandler
-⋮----
-constructor()
-async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult>
-private async updateEventWithScope(
-        client: OAuth2Client,
-        args: UpdateEventInput
-): Promise<calendar_v3.Schema$Event>
-private async updateSingleInstance(
-        helpers: RecurringEventHelpers,
-        args: UpdateEventInput,
-        defaultTimeZone: string
-): Promise<calendar_v3.Schema$Event>
-private async updateAllInstances(
-        helpers: RecurringEventHelpers,
-        args: UpdateEventInput,
-        defaultTimeZone: string
-): Promise<calendar_v3.Schema$Event>
-private async updateFutureInstances(
-        helpers: RecurringEventHelpers,
-        args: UpdateEventInput,
-        defaultTimeZone: string,
-        originalEvent?: calendar_v3.Schema$Event
-): Promise<calendar_v3.Schema$Event>
+import { OAuth2Client } from 'google-auth-library';
+import { CreateEventInput, UpdateEventInput } from '../../tools/registry.js';
+import { createTimeObject } from '../../utils/timezone-utils.js';
+import { ConflictDetectionService } from '../../services/conflict-detection/index.js';
+import { CONFLICT_DETECTION_CONFIG } from '../../services/conflict-detection/config.js';
+function conditionallyAddFields(
+  source: Record<string, any>,
+  target: Record<string, any>,
+  fieldNames: readonly string[]
+): void
+export function buildCoreEvent(
+  input: CreateEventInput | UpdateEventInput,
+  timezone: string,
+  existingEvent?: calendar_v3.Schema$Event
+): Pick<calendar_v3.Schema$Event, 'summary' | 'description' | 'start' | 'end' | 'attendees' | 'location'>
+export function buildOptionalEventFields(
+  input: CreateEventInput | UpdateEventInput
+): Pick<calendar_v3.Schema$Event, 'colorId' | 'reminders' | 'recurrence' | 'transparency' | 'visibility' | 'guestsCanInviteOthers' | 'guestsCanModify' | 'guestsCanSeeOtherGuests' | 'anyoneCanAddSelf' | 'conferenceData' | 'extendedProperties' | 'attachments' | 'source'>
+export function buildEventForConflictCheckCreate(
+  input: CreateEventInput,
+  timezone: string
+): calendar_v3.Schema$Event
+export function buildEventForConflictCheckUpdate(
+  input: UpdateEventInput,
+  existingEvent: calendar_v3.Schema$Event,
+  timezone: string
+): calendar_v3.Schema$Event
+export function buildEventRequestBodyCreate(
+  input: CreateEventInput,
+  timezone: string
+): calendar_v3.Schema$Event
+export interface ConflictCheckOptions {
+  checkDuplicates?: boolean;
+  checkConflicts?: boolean;
+  calendarsToCheck?: string[];
+  duplicateSimilarityThreshold?: number;
+}
+export async function performConflictCheck(
+  conflictService: ConflictDetectionService,
+  oauth2Client: OAuth2Client,
+  eventToCheck: calendar_v3.Schema$Event,
+  calendarId: string,
+  options: ConflictCheckOptions = {}
+): Promise<any>
+export function getConferenceAndAttachmentOptions(
+  input: CreateEventInput | UpdateEventInput
+):
 </file>
 
 <file path="src/services/conflict-detection/ConflictDetectionService.ts">
@@ -2961,24 +2946,6 @@ import { ConflictCheckResult } from '../../../services/conflict-detection/types.
 import { calendar_v3 } from 'googleapis';
 import { makeEvent } from '../helpers/index.js';
 import { DUPLICATE_SUGGESTION } from '../helpers/test-configs.js';
-</file>
-
-<file path="src/tests/unit/helpers/handler-setup.ts">
-import { vi } from 'vitest';
-import { OAuth2Client } from 'google-auth-library';
-import { makeCalendarMock } from './factories.js';
-import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
-interface GoogleCalendarMocks {
-  google: { calendar: ReturnType<typeof vi.fn> };
-  calendar_v3: Record<string, never>;
-}
-export function createGoogleCalendarMocks(): GoogleCalendarMocks
-export interface HandlerSetup {
-  mockOAuth2Client: OAuth2Client;
-  handler: ListEventsHandler;
-  mockCalendarApi: ReturnType<typeof makeCalendarMock>;
-}
-export function setupListEventsHandler(): HandlerSetup
 </file>
 
 <file path="src/tests/unit/helpers/test-configs.ts">
@@ -3195,6 +3162,24 @@ export function createEventResponseWithConflicts(
 ): string
 </file>
 
+<file path="src/tests/unit/helpers/handler-setup.ts">
+import { vi } from 'vitest';
+import { OAuth2Client } from 'google-auth-library';
+import { makeCalendarMock } from './factories.js';
+import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
+interface GoogleCalendarMocks {
+  google: { calendar: ReturnType<typeof vi.fn> };
+  calendar_v3: Record<string, never>;
+}
+export function createGoogleCalendarMocks(): GoogleCalendarMocks
+export interface HandlerSetup {
+  mockOAuth2Client: OAuth2Client;
+  handler: ListEventsHandler;
+  mockCalendarApi: ReturnType<typeof makeCalendarMock>;
+}
+export function setupListEventsHandler(): HandlerSetup
+</file>
+
 <file path="src/tests/unit/utils/date-utils.test.ts">
 import { describe, it, expect } from 'vitest';
 import {
@@ -3226,51 +3211,6 @@ import {
   parseDateTimeString,
   parseBasicDateTime,
 } from '../../../utils/date-utils.js';
-</file>
-
-<file path="src/handlers/core/ListEventsHandler.ts">
-import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { OAuth2Client } from "google-auth-library";
-import { BaseToolHandler } from "./BaseToolHandler.js";
-import { BatchRequestHandler } from "./BatchRequestHandler.js";
-import { resolveTimeRange } from "../../utils/timezone-utils.js";
-import { buildListFieldMask } from "../../utils/field-mask-builder.js";
-import { processBatchResponses } from "./batchUtils.js";
-import { formatEventsList } from "./eventFormatting.js";
-import { ListEventsOptions, ExtendedEvent } from "./types.js";
-interface ListEventsArgs {
-  calendarId: string | string[];
-  timeMin?: string;
-  timeMax?: string;
-  timeZone?: string;
-  fields?: string[];
-  privateExtendedProperty?: string[];
-  sharedExtendedProperty?: string[];
-}
-export class ListEventsHandler extends BaseToolHandler
-⋮----
-async runTool(args: ListEventsArgs, oauth2Client: OAuth2Client): Promise<CallToolResult>
-private async fetchEvents(
-        client: OAuth2Client,
-        calendarIds: string[],
-        options: ListEventsOptions
-): Promise<ExtendedEvent[]>
-private async fetchSingleCalendarEvents(
-        client: OAuth2Client,
-        calendarId: string,
-        options: ListEventsOptions
-): Promise<ExtendedEvent[]>
-private async fetchMultipleCalendarEvents(
-        client: OAuth2Client,
-        calendarIds: string[],
-        options: ListEventsOptions
-): Promise<ExtendedEvent[]>
-private buildEventsPath(
-        calendarId: string,
-        timezone: string,
-        options: ListEventsOptions,
-        fieldMask: string | null
-): string
 </file>
 
 <file path="src/handlers/core/RecurringEventHelpers.ts">
@@ -3411,6 +3351,51 @@ export async function processBatchItemsChunked<T, TItem = string>(
     "vitest": "^3.1.1"
   }
 }
+</file>
+
+<file path="src/handlers/core/ListEventsHandler.ts">
+import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { OAuth2Client } from "google-auth-library";
+import { BaseToolHandler } from "./BaseToolHandler.js";
+import { BatchRequestHandler } from "./BatchRequestHandler.js";
+import { resolveTimeRange } from "../../utils/timezone-utils.js";
+import { buildListFieldMask } from "../../utils/field-mask-builder.js";
+import { processBatchResponses } from "./batchUtils.js";
+import { formatEventsList } from "./eventFormatting.js";
+import { ListEventsOptions, ExtendedEvent } from "./types.js";
+interface ListEventsArgs {
+  calendarId: string | string[];
+  timeMin?: string;
+  timeMax?: string;
+  timeZone?: string;
+  fields?: string[];
+  privateExtendedProperty?: string[];
+  sharedExtendedProperty?: string[];
+}
+export class ListEventsHandler extends BaseToolHandler
+⋮----
+async runTool(args: ListEventsArgs, oauth2Client: OAuth2Client): Promise<CallToolResult>
+private async fetchEvents(
+        client: OAuth2Client,
+        calendarIds: string[],
+        options: ListEventsOptions
+): Promise<ExtendedEvent[]>
+private async fetchSingleCalendarEvents(
+        client: OAuth2Client,
+        calendarId: string,
+        options: ListEventsOptions
+): Promise<ExtendedEvent[]>
+private async fetchMultipleCalendarEvents(
+        client: OAuth2Client,
+        calendarIds: string[],
+        options: ListEventsOptions
+): Promise<ExtendedEvent[]>
+private buildEventsPath(
+        calendarId: string,
+        timezone: string,
+        options: ListEventsOptions,
+        fieldMask: string | null
+): string
 </file>
 
 <file path="src/tests/unit/helpers/event-test-data.ts">

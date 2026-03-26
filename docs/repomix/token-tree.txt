@@ -95,8 +95,6 @@
 ├── verify-refactor.mjs (432 tokens)
 ├── verify-tokens.mjs (868 tokens)
 ├── vitest.config.ts (216 tokens)
-├── .claude/ (118 tokens)
-│   └── ralph-loop.local.md (118 tokens)
 ├── lib/ (8,356 tokens)
 │   ├── constants.mjs (799 tokens)
 │   ├── date-based-filter.mjs (2,420 tokens)

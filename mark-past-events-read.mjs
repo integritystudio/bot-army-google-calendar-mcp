@@ -2,28 +2,22 @@ import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, GMAIL_UNREAD, LABEL_EVENTS } from './lib/constants.mjs';
 import { extractEventDate, isPastEvent } from './lib/date-based-filter.mjs';
 import { getHeader } from './lib/email-utils.mjs';
+import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
 
 async function markPastEventsRead() {
   const gmail = createGmailClient();
 
-  console.log('📅 MARKING PAST EVENTS AS READ\n');
-  console.log('═'.repeat(80) + '\n');
-
   try {
-    const searchQuery = `label:${LABEL_EVENTS} is:unread`;
     const searchResponse = await gmail.users.messages.list({
       userId: USER_ID,
-      q: searchQuery,
+      q: `label:${LABEL_EVENTS} is:unread`,
       maxResults: 500
     });
 
     const messageIds = searchResponse.data.messages || [];
-    console.log(`Found ${messageIds.length} unread event emails\n`);
+    console.log(`Found ${messageIds.length} unread event emails`);
 
-    if (messageIds.length === 0) {
-      console.log('✅ No unread events to process\n');
-      return;
-    }
+    if (messageIds.length === 0) return;
 
     const fullMsgs = await Promise.all(
       messageIds.map(msg =>
@@ -51,35 +45,12 @@ async function markPastEventsRead() {
       })
       .map(fullMsg => fullMsg.data.id);
 
-    console.log(`Identified ${pastIds.length} past events\n`);
+    console.log(`Identified ${pastIds.length} past events`);
+    if (pastIds.length === 0) return;
 
-    if (pastIds.length === 0) {
-      console.log('✅ No past events found\n');
-      return;
-    }
-
-    const batchSize = 50;
-
-    for (let i = 0; i < pastIds.length; i += batchSize) {
-      const batch = pastIds.slice(i, i + batchSize);
-
-      await gmail.users.messages.batchModify({
-        userId: USER_ID,
-        requestBody: {
-          ids: batch,
-          removeLabelIds: [GMAIL_UNREAD]
-        }
-      });
-
-      const processed = i + batch.length;
-      console.log(`  ✅ Marked ${processed}/${pastIds.length} as read`);
-    }
-
-    console.log('\n' + '═'.repeat(80));
-    console.log('COMPLETE\n');
-    console.log(`✅ Past events marked as read: ${pastIds.length}`);
-    console.log(`📊 Future events remaining unread: ${messageIds.length - pastIds.length}\n`);
-    console.log('═'.repeat(80) + '\n');
+    await batchModifyMessages(gmail, pastIds, { removeLabelIds: [GMAIL_UNREAD] });
+    console.log(`Past events marked as read: ${pastIds.length}`);
+    console.log(`Future events remaining unread: ${messageIds.length - pastIds.length}`);
 
   } catch (error) {
     console.error('Error:', error.message);

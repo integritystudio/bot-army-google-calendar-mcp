@@ -1,3 +1,9 @@
+a806310 2026-03-26 chore(docs): regenerate repomix snapshots after lint fix commits
+  docs/repomix/repo-compressed.xml
+  docs/repomix/repomix-docs.xml
+  docs/repomix/repomix-git-ranked.xml
+  docs/repomix/repomix.xml
+
 aeffe16 2026-03-26 chore(docs): regenerate repomix snapshots after simplify refactors
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-git-ranked.xml

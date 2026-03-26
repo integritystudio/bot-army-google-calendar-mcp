@@ -1,10 +1,11 @@
 /**
  * Create Gmail filters and apply them to existing emails.
- * Consolidates create-simple-filters.mjs and create-unread-filters.mjs.
+ * Consolidates create-simple-filters.mjs, create-unread-filters.mjs, and create-remaining-filters.mjs.
  *
  * Usage:
- *   node create-gmail-filters.mjs            # create all filters + apply to existing
- *   node create-gmail-filters.mjs --apply    # apply labels to existing emails only
+ *   node create-gmail-filters.mjs              # create core filters + apply to existing
+ *   node create-gmail-filters.mjs --apply      # apply labels to existing emails only
+ *   node create-gmail-filters.mjs --remaining  # create/apply remaining category filters (grouped by label)
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import {
@@ -19,11 +20,14 @@ import {
   LABEL_EVENTS,
   LABEL_MEETING_NOTES,
   LABEL_MONITORING,
+  LABEL_COMMUNITIES,
+  LABEL_SERVICES,
 } from './lib/constants.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
 import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 
 const applyOnly = process.argv.includes('--apply');
+const remainingMode = process.argv.includes('--remaining');
 
 /**
  * Each entry: label name, Gmail filter criteria query string, and a separate
@@ -95,8 +99,98 @@ const FILTER_CONFIGS = [
   },
 ];
 
+/** Grouped filter categories for the --remaining mode */
+const REMAINING_CATEGORIES = [
+  {
+    labelName: LABEL_PRODUCT_UPDATES,
+    filters: [
+      { query: 'from:workspace-noreply@google.com', name: 'Google Workspace' },
+      { query: 'from:GoogleCloudStartups@google.com', name: 'Google Cloud Startups' },
+      { query: 'from:no-reply@discuss.google.d', name: 'Google Developer Forums' },
+      { query: 'from:analytics-noreply@google.com', name: 'Google Analytics' },
+      { query: 'from:noreply@notifications.hubspot.com', name: 'HubSpot' },
+      { query: 'from:notifications@mail.postman.com', name: 'Postman' },
+      { query: 'from:zeno@updates.resend.com', name: 'Resend' },
+      { query: 'from:(support@mixpanel.com OR content@mixpanel.com)', name: 'Mixpanel' },
+      { query: 'from:noreply@tm.openai.com', name: 'OpenAI' },
+      { query: 'from:communications@yodlee.com', name: 'Yodlee' },
+      { query: 'from:hello@adapty.io', name: 'Adapty' },
+      { query: 'from:no-reply@comms.datahub.com', name: 'DataHub' },
+      { query: 'from:arthur@storylane.io', name: 'Storylane' },
+    ],
+  },
+  {
+    labelName: LABEL_COMMUNITIES,
+    filters: [
+      { query: 'from:wtm@technovation.org', name: 'Women Techmakers' },
+    ],
+  },
+  {
+    labelName: LABEL_SERVICES,
+    filters: [
+      { query: 'from:memberservices@founderscard.com', name: 'FoundersCard' },
+      { query: 'from:notifications@link.com', name: 'Link' },
+      { query: 'from:bot@notifications.heroku.com', name: 'Heroku' },
+      { query: 'from:my-saved-home@mail.zillow.com', name: 'Zillow' },
+      { query: 'from:upcoming@americanbestech.com', name: 'American Best' },
+      { query: 'from:alerts@mail.zapier.com', name: 'Zapier' },
+    ],
+  },
+];
+
+async function runRemainingFilters(gmail) {
+  console.log('CREATING FILTERS FOR REMAINING CATEGORIES\n');
+  console.log('═'.repeat(80) + '\n');
+
+  let totalCreated = 0;
+  let totalErrors = 0;
+
+  for (const categoryConfig of REMAINING_CATEGORIES) {
+    console.log(`\n${categoryConfig.labelName.toUpperCase()}\n`);
+    const labelId = await ensureLabelExists(gmail, categoryConfig.labelName);
+    for (const filter of categoryConfig.filters) {
+      const filterId = await createGmailFilter(
+        gmail,
+        { query: filter.query },
+        { addLabelIds: [labelId], removeLabelIds: [GMAIL_INBOX] },
+      );
+      if (filterId !== null) {
+        console.log(`  ${filter.name}${filterId ? '' : ' (already exists)'}`);
+        if (filterId) totalCreated++;
+      } else {
+        console.log(`  Error: ${filter.name}`);
+        totalErrors++;
+      }
+    }
+  }
+
+  console.log('\n' + '═'.repeat(80));
+  console.log('\nAPPLYING TO EXISTING EMAILS\n');
+
+  let emailsProcessed = 0;
+  for (const categoryConfig of REMAINING_CATEGORIES) {
+    const labelId = await ensureLabelExists(gmail, categoryConfig.labelName).catch(() => null);
+    if (!labelId) continue;
+    const queries = categoryConfig.filters.map(f => `(${f.query})`).join(' OR ');
+    const count = await searchAndModify(gmail, queries, { addLabelIds: [labelId], removeLabelIds: [GMAIL_INBOX] }, 100);
+    if (count > 0) {
+      console.log(`${categoryConfig.labelName}: ${count} emails labeled and archived`);
+      emailsProcessed += count;
+    }
+  }
+
+  console.log('═'.repeat(80));
+  console.log(`Filters created: ${totalCreated} | Errors: ${totalErrors} | Emails processed: ${emailsProcessed}\n`);
+  console.log('═'.repeat(80) + '\n');
+}
+
 async function run() {
   const gmail = createGmailClient();
+
+  if (remainingMode) {
+    await runRemainingFilters(gmail);
+    return;
+  }
 
   console.log(applyOnly ? 'APPLYING LABELS TO EXISTING EMAILS\n' : 'CREATING AUTO-ARCHIVE FILTERS\n');
   console.log('═'.repeat(80) + '\n');

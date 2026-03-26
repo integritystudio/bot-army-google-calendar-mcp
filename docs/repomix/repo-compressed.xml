@@ -51,9 +51,12 @@ lib/
   date-based-filter.mjs
   email-analyzer.mjs
   email-utils.mjs
+  gmail-batch-utils.mjs
   gmail-batch.mjs
   gmail-client.mjs
+  gmail-filter-utils.mjs
   gmail-label-utils.mjs
+  gmail-message-utils.mjs
 scripts/
   repomix/
     ralph-mjs-task.md
@@ -196,7 +199,6 @@ src/
   verify-tokens.ts
 .env.test
 .gitignore
-analyze_emails.mjs
 analyze-ccv-newsletter.mjs
 analyze-community-events.mjs
 analyze-events-detailed.mjs
@@ -211,7 +213,6 @@ archive-dmarc-emails.mjs
 archive-old-meeting-responses.mjs
 archive-signoz-dmarc.mjs
 auth-gmail.mjs
-check_emails.mjs
 check-gmail.mjs
 check-google-dev-labels.mjs
 check-status.mjs
@@ -261,7 +262,6 @@ list-unread-emails.mjs
 mark-all-labeled-read.mjs
 mark-archived-as-read.mjs
 mark-past-events-read.mjs
-mark-product-updates-read-v2.mjs
 mark-product-updates-read.mjs
 mark-signoz-read.mjs
 organize-ccv-emails.mjs
@@ -1522,6 +1522,65 @@ export function extractDisplayName(from)
 export function extractEmailAddress(from)
 </file>
 
+<file path="lib/gmail-batch-utils.mjs">
+/**
+ * Apply label modifications to messages in batches.
+ * @param {Object} gmail - Authenticated Gmail client
+ * @param {Array<string|{id:string}>} messages - Message IDs or message objects
+ * @param {{ addLabelIds?: string[], removeLabelIds?: string[] }} modifications
+ * @param {number} [batchSize]
+ * @returns {Promise<number>} Count of messages processed
+ */
+export async function batchModifyMessages(gmail, messages, modifications, batchSize = DEFAULT_BATCH_SIZE)
+⋮----
+/**
+ * Search for messages and apply label modifications in one operation.
+ * @param {Object} gmail - Authenticated Gmail client
+ * @param {string} query - Gmail search query
+ * @param {{ addLabelIds?: string[], removeLabelIds?: string[] }} modifications
+ * @param {number} [maxResults]
+ * @returns {Promise<number>} Count of messages processed
+ */
+export async function searchAndModify(gmail, query, modifications, maxResults = 500)
+</file>
+
+<file path="lib/gmail-filter-utils.mjs">
+/**
+ * Resolves an existing label ID by name, or creates the label if absent.
+ *
+ * @param {Object} gmail - Gmail API client
+ * @param {string} labelName - Label name (supports hierarchical e.g. "Parent/Child")
+ * @returns {Promise<string>} Label ID
+ */
+export async function ensureLabelExists(gmail, labelName)
+⋮----
+/**
+ * Creates a Gmail filter. Returns the filter ID, or null if it already exists.
+ * Throws for any other error.
+ *
+ * @param {Object} gmail - Gmail API client
+ * @param {Object} criteria - Filter criteria (from, to, subject, query, etc.)
+ * @param {Object} action - Filter action (addLabelIds, removeLabelIds, etc.)
+ * @returns {Promise<string|null>} Filter ID or null if already exists
+ */
+export async function createGmailFilter(gmail, criteria, action)
+</file>
+
+<file path="lib/gmail-message-utils.mjs">
+/**
+ * Fetches messages under a label and returns their metadata (Subject, From, Date).
+ * Handles individual fetch failures by filtering them out.
+ *
+ * @param {Object} gmail - Gmail API client
+ * @param {string} labelId - Label ID to query
+ * @param {Object} [options]
+ * @param {number} [options.maxResults=100] - Max results from messages.list
+ * @param {number} [options.limit] - Cap on how many messages to fetch metadata for
+ * @returns {Promise<{total: number, messages: Array<{subject: string, from: string, date: string}>}>}
+ */
+export async function fetchLabeledMessageMetadata(gmail, labelId,
+</file>
+
 <file path="scripts/repomix/ralph-mjs-task.md">
 # Ralph Loop Task: Simplify and Review MJS Root Files
 
@@ -2019,40 +2078,8 @@ constructor(server: McpServer, config: HttpTransportConfig =
 async connect(): Promise<void>
 </file>
 
-<file path="analyze_emails.mjs">
-async function analyzeUnreadEmails()
-</file>
-
-<file path="analyze-ccv-newsletter.mjs">
-async function analyzeCCVNewsletter()
-</file>
-
-<file path="analyze-community-events.mjs">
-async function analyzeCommunityEvents()
-</file>
-
-<file path="analyze-events-detailed.mjs">
-async function analyzeEventsDetailed()
-</file>
-
-<file path="analyze-remaining-invitations.mjs">
-async function analyzeRemainingInvitations()
-</file>
-
-<file path="analyze-subject-newsletters.mjs">
-async function analyzeSubjectNewsletters()
-</file>
-
 <file path="analyze-unread.mjs">
 async function analyzeUnread()
-</file>
-
-<file path="analyze-work-invitations.mjs">
-async function analyzeWorkInvitations()
-</file>
-
-<file path="analyze-workshops.mjs">
-async function analyzeWorkshops()
 </file>
 
 <file path="apply-billing-filter-to-unread.mjs">
@@ -2063,18 +2090,6 @@ async function applyBillingFilterToUnread()
 async function applyFiltersToUnread()
 </file>
 
-<file path="archive-dmarc-emails.mjs">
-async function archiveDmarcEmails()
-</file>
-
-<file path="archive-old-meeting-responses.mjs">
-
-</file>
-
-<file path="archive-signoz-dmarc.mjs">
-async function archiveSignozAndDmarc()
-</file>
-
 <file path="auth-gmail.mjs">
 // Gmail scopes
 ⋮----
@@ -2083,14 +2098,6 @@ async function authGmail()
 // Save tokens
 ⋮----
 // File doesn't exist yet
-</file>
-
-<file path="check_emails.mjs">
-async function checkUnreadEmails()
-⋮----
-function categorizeEmail(msg)
-⋮----
-function outputResults(categorized)
 </file>
 
 <file path="check-gmail.mjs">
@@ -2115,12 +2122,6 @@ async function checkUnreadEmails()
 async function createAllSubLabels()
 </file>
 
-<file path="create-billing-filter.mjs">
-async function createBillingFilter()
-⋮----
-// Define billing keywords
-</file>
-
 <file path="create-ccv-newsletter-sublabel.mjs">
 async function createCCVNewsletterSubLabel()
 ⋮----
@@ -2133,16 +2134,8 @@ async function createCommunitySubLabels()
 // Resolve parent label ID at runtime instead of hardcoding
 </file>
 
-<file path="create-dmarc-filter.mjs">
-async function createDmarcFilter()
-</file>
-
 <file path="create-event-sublabels.mjs">
 async function createEventSubLabels()
-</file>
-
-<file path="create-eventbrite-filter.mjs">
-async function createEventbriteFilter()
 </file>
 
 <file path="create-events-label.mjs">
@@ -2157,10 +2150,6 @@ async function createEventsMeetupSkipFilter()
 
 <file path="create-invitations-sublabels.mjs">
 async function createInvitationsSubLabels()
-</file>
-
-<file path="create-meet-notes-filter.mjs">
-async function createMeetNotesFilter()
 </file>
 
 <file path="create-newsletter-label.mjs">
@@ -2183,30 +2172,8 @@ async function createNewsletterTypeSubLabels()
 // News aggregate newsletters (digests, roundups, curated)
 </file>
 
-<file path="create-performance-tracking-label.mjs">
-async function createPerformanceTrackingLabel()
-⋮----
-// Pre-fetch existing labels to avoid N+1 queries
-</file>
-
 <file path="create-promotions-filter.mjs">
 async function createPromotionsFilter()
-</file>
-
-<file path="create-remaining-filters.mjs">
-async function createRemainingFilters()
-⋮----
-// Pre-fetch all labels once to avoid N+1 queries
-</file>
-
-<file path="create-sentry-newsletter-sublabel.mjs">
-async function createSentryNewsletterSubLabel()
-⋮----
-// Pre-fetch existing labels to avoid N+1 queries
-</file>
-
-<file path="create-signoz-filter.mjs">
-async function createSignozFilter()
 </file>
 
 <file path="create-social-newsletters-sublabel.mjs">
@@ -2251,30 +2218,6 @@ async function filterEventsByDate()
 
 </file>
 
-<file path="label-final-community.mjs">
-async function labelFinalCommunity()
-</file>
-
-<file path="label-google-cloud-feb.mjs">
-async function labelGoogleCloudFeb()
-</file>
-
-<file path="label-google-dev-forums.mjs">
-
-</file>
-
-<file path="label-google-workspace.mjs">
-async function labelGoogleWorkspace()
-</file>
-
-<file path="label-remaining-community.mjs">
-async function labelRemainingCommunity()
-</file>
-
-<file path="label-sentry-team.mjs">
-async function labelSentryTeam()
-</file>
-
 <file path="list-labels.mjs">
 
 </file>
@@ -2289,48 +2232,6 @@ async function listUnreadEmails()
 // Fallback: categorize by sender/subject
 ⋮----
 // Print categorized results
-</file>
-
-<file path="mark-all-labeled-read.mjs">
-async function markAllLabeledAsRead()
-⋮----
-// Excluding Sentry Alerts and Keep Important
-</file>
-
-<file path="mark-past-events-read.mjs">
-async function markPastEventsRead()
-</file>
-
-<file path="mark-product-updates-read-v2.mjs">
-async function markProductUpdatesRead()
-</file>
-
-<file path="mark-product-updates-read.mjs">
-async function markProductUpdatesRead()
-</file>
-
-<file path="mark-signoz-read.mjs">
-async function markSignozRead()
-</file>
-
-<file path="organize-ccv-emails.mjs">
-async function organizeCCVEmails()
-</file>
-
-<file path="organize-events-sublabels.mjs">
-async function organizeEventsSubLabels()
-</file>
-
-<file path="organize-events.mjs">
-async function organizeEvents()
-</file>
-
-<file path="organize-international-house.mjs">
-async function organizeInternationalHouse()
-</file>
-
-<file path="organize-newsletters.mjs">
-async function organizeNewsletters()
 </file>
 
 <file path="protect-important-inbox.mjs">
@@ -2650,12 +2551,144 @@ import { ConflictAnalyzer } from '../../../../services/conflict-detection/Confli
 import { makeEvent, makeConflictingEvents } from '../../helpers/factories.js';
 </file>
 
-<file path="label-remaining-unread.mjs">
+<file path="analyze-ccv-newsletter.mjs">
+async function analyzeCCVNewsletter()
+</file>
+
+<file path="analyze-community-events.mjs">
+async function analyzeCommunityEvents()
+</file>
+
+<file path="analyze-events-detailed.mjs">
+async function analyzeEventsDetailed()
+</file>
+
+<file path="analyze-remaining-invitations.mjs">
+async function analyzeRemainingInvitations()
+</file>
+
+<file path="analyze-subject-newsletters.mjs">
+async function analyzeSubjectNewsletters()
+</file>
+
+<file path="analyze-work-invitations.mjs">
+async function analyzeWorkInvitations()
+</file>
+
+<file path="analyze-workshops.mjs">
+async function analyzeWorkshops()
+</file>
+
+<file path="archive-dmarc-emails.mjs">
 
 </file>
 
-<file path="mark-archived-as-read.mjs">
-async function markArchivedAsRead()
+<file path="archive-old-meeting-responses.mjs">
+
+</file>
+
+<file path="archive-signoz-dmarc.mjs">
+
+</file>
+
+<file path="create-billing-filter.mjs">
+async function createBillingFilter()
+⋮----
+// Define billing keywords
+</file>
+
+<file path="create-dmarc-filter.mjs">
+
+</file>
+
+<file path="create-eventbrite-filter.mjs">
+
+</file>
+
+<file path="create-meet-notes-filter.mjs">
+
+</file>
+
+<file path="create-performance-tracking-label.mjs">
+async function createPerformanceTrackingLabel()
+⋮----
+// Pre-fetch existing labels to avoid N+1 queries
+</file>
+
+<file path="create-remaining-filters.mjs">
+async function createRemainingFilters()
+⋮----
+// Pre-fetch all labels once to avoid N+1 queries
+</file>
+
+<file path="create-sentry-newsletter-sublabel.mjs">
+async function createSentryNewsletterSubLabel()
+⋮----
+// Pre-fetch existing labels to avoid N+1 queries
+</file>
+
+<file path="create-signoz-filter.mjs">
+
+</file>
+
+<file path="label-final-community.mjs">
+async function labelFinalCommunity()
+</file>
+
+<file path="label-google-cloud-feb.mjs">
+async function labelGoogleCloudFeb()
+</file>
+
+<file path="label-google-dev-forums.mjs">
+
+</file>
+
+<file path="label-google-workspace.mjs">
+async function labelGoogleWorkspace()
+</file>
+
+<file path="label-remaining-community.mjs">
+async function labelRemainingCommunity()
+</file>
+
+<file path="label-sentry-team.mjs">
+async function labelSentryTeam()
+</file>
+
+<file path="mark-all-labeled-read.mjs">
+// Excludes: Sentry Alerts, Keep Important
+</file>
+
+<file path="mark-past-events-read.mjs">
+async function markPastEventsRead()
+</file>
+
+<file path="mark-product-updates-read.mjs">
+
+</file>
+
+<file path="mark-signoz-read.mjs">
+
+</file>
+
+<file path="organize-ccv-emails.mjs">
+async function organizeCCVEmails()
+</file>
+
+<file path="organize-events-sublabels.mjs">
+async function organizeEventsSubLabels()
+</file>
+
+<file path="organize-events.mjs">
+async function organizeEvents()
+</file>
+
+<file path="organize-international-house.mjs">
+async function organizeInternationalHouse()
+</file>
+
+<file path="organize-newsletters.mjs">
+async function organizeNewsletters()
 </file>
 
 <file path="quick-status.mjs">
@@ -2958,6 +2991,39 @@ import { EventSimilarityChecker } from '../../../../services/conflict-detection/
 import { makeEvent, makeTeamMeetingEvent } from '../../helpers/factories.js';
 </file>
 
+<file path="src/tests/unit/utils/date-utils.test.ts">
+import { describe, it, expect } from 'vitest';
+import {
+  TIME_DURATIONS,
+  addDays,
+  addMilliseconds,
+  durationMs,
+  formatBasicDateTime,
+  formatTZNaiveDateTime,
+  formatRFC3339,
+  getFutureDate,
+  getPastDate,
+  isFutureDate,
+  isPastDate,
+  oneDayBefore,
+  getOneDayBeforeFormatted,
+  RRULE_PATTERNS,
+  stripUntilAndCount,
+  buildUntilClause,
+  isRRuleString,
+  extractAndPreserveNonRRuleRecurrence,
+  DATETIME_FORMATS,
+  DATETIME_ERRORS,
+  isValidISODateTime,
+  isValidISODate,
+  isTimeZoneAware,
+  isTimeZoneNaive,
+  isAllDayEvent,
+  parseDateTimeString,
+  parseBasicDateTime,
+} from '../../../utils/date-utils.js';
+</file>
+
 <file path="src/tests/unit/index.test.ts">
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -3075,6 +3141,14 @@ export function resolveTimeRange(
 ):
 </file>
 
+<file path="label-remaining-unread.mjs">
+
+</file>
+
+<file path="mark-archived-as-read.mjs">
+
+</file>
+
 <file path="src/handlers/core/eventFormatting.ts">
 import { formatEventWithDetails } from '../utils.js';
 import { groupBy } from 'lodash-es';
@@ -3178,39 +3252,6 @@ export interface HandlerSetup {
   mockCalendarApi: ReturnType<typeof makeCalendarMock>;
 }
 export function setupListEventsHandler(): HandlerSetup
-</file>
-
-<file path="src/tests/unit/utils/date-utils.test.ts">
-import { describe, it, expect } from 'vitest';
-import {
-  TIME_DURATIONS,
-  addDays,
-  addMilliseconds,
-  durationMs,
-  formatBasicDateTime,
-  formatTZNaiveDateTime,
-  formatRFC3339,
-  getFutureDate,
-  getPastDate,
-  isFutureDate,
-  isPastDate,
-  oneDayBefore,
-  getOneDayBeforeFormatted,
-  RRULE_PATTERNS,
-  stripUntilAndCount,
-  buildUntilClause,
-  isRRuleString,
-  extractAndPreserveNonRRuleRecurrence,
-  DATETIME_FORMATS,
-  DATETIME_ERRORS,
-  isValidISODateTime,
-  isValidISODate,
-  isTimeZoneAware,
-  isTimeZoneNaive,
-  isAllDayEvent,
-  parseDateTimeString,
-  parseBasicDateTime,
-} from '../../../utils/date-utils.js';
 </file>
 
 <file path="src/handlers/core/RecurringEventHelpers.ts">

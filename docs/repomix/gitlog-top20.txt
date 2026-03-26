@@ -1,20 +1,31 @@
+9cb9828 2026-03-26 refactor(gmail): extract batch utils and simplify mark-read scripts
+  docs/repomix/gitlog-top20.txt
+  docs/repomix/repo-compressed.xml
+  docs/repomix/repomix-docs.xml
+  docs/repomix/repomix-git-ranked.xml
+  docs/repomix/repomix.xml
+
 a806310 2026-03-26 chore(docs): regenerate repomix snapshots after lint fix commits
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
 
 aeffe16 2026-03-26 chore(docs): regenerate repomix snapshots after simplify refactors
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
 
 70510b3 2026-03-26 (chore) repomix regen
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
 
 2bdc03f 2026-03-26 refactor(scripts): extract shared constants, add getHeader util, and add new mjs scripts
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repo-mjs-root.xml
   docs/repomix/repomix-docs.xml
@@ -22,12 +33,14 @@ aeffe16 2026-03-26 chore(docs): regenerate repomix snapshots after simplify refa
   docs/repomix/repomix.xml
 
 182f27e 2026-03-25 chore(deps): remove simple-rrule dependency and integration docs
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
   package-lock.json
 
 e24c9ed 2026-03-25 chore(docs): regenerate repomix snapshots after recent refactors
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -52,12 +65,14 @@ e8e0662 2026-03-25 refactor(date-utils): remove dead exports, deduplicate parsin
   src/tests/unit/handlers/BatchListEvents.test.ts
 
 eba0148 2026-03-25 refactor(repomix): also exclude examples from compressed output
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
 
 ad6ca50 2026-03-25 refactor(repomix): exclude config and docs from compressed output
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -67,11 +82,13 @@ ad6ca50 2026-03-25 refactor(repomix): exclude config and docs from compressed ou
   README.md
 
 8aaa42b 2026-03-25 chore(repomix): regenerate codebase documentation
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
 
 17ea35c 2026-03-25 refactor(tests): complete fixture consolidation and fix quality issues
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -87,6 +104,7 @@ ad6ca50 2026-03-25 refactor(repomix): exclude config and docs from compressed ou
   src/tests/unit/helpers/factories.ts
 
 de7958a 2026-03-25 refactor(recurring-event): use addMilliseconds and formatRFC3339 in calculateEndTime
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -97,6 +115,7 @@ de7958a 2026-03-25 refactor(recurring-event): use addMilliseconds and formatRFC3
 
 4d13b70 2026-03-25 chore(repomix): add compressed config and clean up stale root files
   docs/GMAIL_TOOLS_GUIDE.md
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -125,6 +144,7 @@ ea42f67 2026-03-24 refactor(tests): consolidate test data factories and remove d
   src/tests/unit/helpers/factories.ts
 
 5c97b59 2026-03-24 fix: export makeCalendarMock and correct makeEvent API calls in BatchListEvents tests
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -158,6 +178,7 @@ f89bdf8 2026-03-24 feat(tests): add generic test builder factory and consolidate
   src/tests/unit/helpers/factories.ts
 
 5fd9ad7 2026-03-24 docs: update CLAUDE.md, BACKLOG, and repomix snapshots
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -181,12 +202,14 @@ ce1c3b9 2026-03-24 docs: update CLAUDE.md and README to reflect 100% backlog com
   README.md
 
 74a15a0 2026-03-24 docs(backlog): mark issues 3, 4, 5 resolved with Option A implementation
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
 
 b9cae30 2026-03-24 test(integration): add conflict detection integration tests via MCP protocol
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -232,6 +255,7 @@ b33938a 2026-03-24 refactor(tests): implement mock strategy with realistic API r
   src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts
 
 e0fb9d1 2026-03-24 refactor(gmail-labels): apply shared lib helpers to create-* scripts
+  docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
@@ -239,9 +263,6 @@ e0fb9d1 2026-03-24 refactor(gmail-labels): apply shared lib helpers to create-* 
 
 7853b20 2026-03-24 test(integration): add Doppler-backed integration tests for UpdateEventHandler recurring events
   src/tools/registry.ts
-
-72775f7 2026-03-24 docs: add comprehensive deliverables summary
-  docs/DELIVERABLES.md
 
 c506407 2026-03-24 docs: add comprehensive implementation guide for Phase 1
   docs/IMPLEMENTATION-GUIDE.md

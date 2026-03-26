@@ -11,6 +11,7 @@ import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, GMAIL_INBOX, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 import { ensureLabelExists } from './lib/gmail-filter-utils.mjs';
 import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
+import { BANNER, printComplete } from './lib/console-utils.mjs';
 
 const billingMode = process.argv.includes('--billing');
 
@@ -40,7 +41,7 @@ async function protectImportantItems() {
   const gmail = createGmailClient();
 
   console.log('PROTECTING IMPORTANT ITEMS IN INBOX\n');
-  console.log('═'.repeat(80) + '\n');
+  console.log(BANNER + '\n');
 
   const importantLabelId = await ensureLabelExists(gmail, LABEL_KEEP_IMPORTANT);
 
@@ -76,8 +77,7 @@ async function protectImportantItems() {
   const totalLabeled = queryCounts.reduce((sum, n) => sum + n, 0);
   console.log(`Labeled ${totalLabeled} important emails\n`);
 
-  console.log('═'.repeat(80));
-  console.log('COMPLETE\n');
+  printComplete();
 }
 
 async function resolveBillingLabelIds(gmail, mode) {
@@ -111,7 +111,7 @@ async function runBillingFilters() {
       ? 'apply-only'
       : 'create';
 
-  console.log('═'.repeat(80) + '\n');
+  console.log(BANNER + '\n');
   const { billingLabelId, keepImportantLabelId } = await resolveBillingLabelIds(gmail, billingSubMode);
 
   if (billingSubMode === 'create') {
@@ -172,9 +172,7 @@ async function runBillingFilters() {
       console.log(`Applied to ${regularIds.length} regular billing emails (archived)`);
     }
 
-    console.log('\n' + '═'.repeat(80));
-    console.log('COMPLETE\n');
-    console.log(`Rate limit billing: ${rateLimitIds.length} | Regular billing: ${regularIds.length}\n`);
+    printComplete(`Rate limit billing: ${rateLimitIds.length} | Regular billing: ${regularIds.length}\n`);
   }
 
   if (billingSubMode === 'update') {
@@ -214,8 +212,7 @@ async function runBillingFilters() {
       console.log('No urgent billing emails found\n');
     }
 
-    console.log('═'.repeat(80));
-    console.log('COMPLETE\n');
+    printComplete();
   }
 
   if (billingSubMode === 'apply-only') {
@@ -237,14 +234,10 @@ async function runBillingFilters() {
       await batchModifyMessages(gmail, regularIds, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] });
     }
 
-    console.log('\n' + '═'.repeat(80));
-    console.log('COMPLETE\n');
-    console.log(`Urgent billing (kept in inbox): ${urgentIds.length}`);
-    console.log(`Regular billing (archived): ${regularIds.length}`);
-    console.log(`Total processed: ${urgentIds.length + regularIds.length} emails\n`);
+    printComplete(`Urgent billing (kept in inbox): ${urgentIds.length}\nRegular billing (archived): ${regularIds.length}\nTotal processed: ${urgentIds.length + regularIds.length} emails\n`);
   }
 
-  console.log('═'.repeat(80) + '\n');
+  console.log(BANNER + '\n');
 }
 
 const action = billingMode ? runBillingFilters : protectImportantItems;

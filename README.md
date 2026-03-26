@@ -209,7 +209,7 @@ Automated scripts for organizing and filtering large volumes of Gmail with focus
 - `create-remaining-filters.mjs` - Batch create filters for multiple categories (Product Updates, Communities, Services)
 
 **Specialized Filters:**
-- `create-billing-filter.mjs` - Smart billing filter with conditional rate-limit detection
+- `protect-important-inbox.mjs --billing` - Smart billing filter with conditional rate-limit detection (merged from create-billing-filter.mjs)
 - `create-signoz-filter.mjs` - Archive SigNoz monitoring alerts automatically
 - `create-dmarc-filter.mjs` - Organize DMARC authentication reports
 - `create-eventbrite-filter.mjs` - Label and archive Eventbrite event emails
@@ -220,7 +220,7 @@ Automated scripts for organizing and filtering large volumes of Gmail with focus
 - `archive-signoz-dmarc.mjs` - Batch archive monitoring and DMARC report emails using Gmail batch API
 - `mark-signoz-read.mjs` - Mark SigNoz alerts as read in bulk
 - `mark-past-events-read.mjs` - Classify event emails by date and mark past events as read
-- `protect-important-inbox.mjs` - Label critical items to prevent archiving (payments, rate limits, services)
+- `protect-important-inbox.mjs` - Label critical items to prevent archiving; `--billing` mode for smart billing filters
 
 **Event Management:**
 - `filter-events-by-date.mjs` - Classify event emails as future (label + keep) or past (label + archive)

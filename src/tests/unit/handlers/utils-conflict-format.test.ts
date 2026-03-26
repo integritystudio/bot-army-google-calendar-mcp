@@ -2,7 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { formatConflictWarnings } from '../../../handlers/utils.js';
 import { ConflictCheckResult } from '../../../services/conflict-detection/types.js';
 import { makeEvent } from '../helpers/index.js';
-import { CONFLICT_DETECTED_HEADER } from '../../../handlers/utils.js';
+import {
+  CONFLICT_DETECTED_HEADER,
+  CALENDAR_PREFIX,
+  CONFLICTING_EVENT_HEADER,
+  OVERLAP_PREFIX,
+  CONFLICTING_EVENT_DETAILS_LABEL,
+} from '../../../handlers/utils.js';
 
 describe('Enhanced Conflict Response Formatting', () => {
   it('should format conflict warnings with full event details', () => {
@@ -42,10 +48,10 @@ describe('Enhanced Conflict Response Formatting', () => {
     const formatted = formatConflictWarnings(conflicts);
     
     expect(formatted).toContain(CONFLICT_DETECTED_HEADER);
-    expect(formatted).toContain('Calendar: primary');
-    expect(formatted).toContain('Conflicting Event');
-    expect(formatted).toContain('Overlap: 30 minutes (50% of your event)');
-    expect(formatted).toContain('Conflicting event details:');
+    expect(formatted).toContain(`${CALENDAR_PREFIX}primary`);
+    expect(formatted).toContain(CONFLICTING_EVENT_HEADER);
+    expect(formatted).toContain(`${OVERLAP_PREFIX}30 minutes (50% of your event)`);
+    expect(formatted).toContain(CONFLICTING_EVENT_DETAILS_LABEL);
     expect(formatted).toContain('Event: Design Review');
     expect(formatted).toContain('Description: Q4 design review meeting');
     expect(formatted).toContain('Location: Room 201');
@@ -97,11 +103,11 @@ describe('Enhanced Conflict Response Formatting', () => {
 
     const formatted = formatConflictWarnings(conflicts);
     
-    expect(formatted).toContain('Calendar: work@company.com');
-    expect(formatted.match(/━━━ Conflicting Event ━━━/g)).toHaveLength(2);
+    expect(formatted).toContain(`${CALENDAR_PREFIX}work@company.com`);
+    expect(formatted.split(CONFLICTING_EVENT_HEADER).length - 1).toBe(2);
     expect(formatted).toContain('Sprint Planning');
     expect(formatted).toContain('Daily Standup');
-    expect(formatted).toContain('15 minutes (25% of your event)');
-    expect(formatted).toContain('30 minutes (100% of your event)');
+    expect(formatted).toContain(`${OVERLAP_PREFIX}15 minutes (25% of your event)`);
+    expect(formatted).toContain(`${OVERLAP_PREFIX}30 minutes (100% of your event)`);
   });
 });

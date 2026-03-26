@@ -9,6 +9,10 @@ import {
   TIME_START_PREFIX,
   TIME_END_PREFIX,
   DUPLICATE_DETECTED_HEADER,
+  EXISTING_EVENT_DETAILS_LABEL,
+  GUESTS_PREFIX,
+  VIEW_URL_PREFIX,
+  VIEW_EXISTING_EVENT_PREFIX,
 } from '../../../handlers/utils.js';
 
 describe('Duplicate Event Display', () => {
@@ -65,22 +69,22 @@ describe('Duplicate Event Display', () => {
     expect(formatted).toContain(DUPLICATE_SUGGESTIONS.WARNING);
     
     // Verify full event details are shown
-    expect(formatted).toContain('Existing event details:');
+    expect(formatted).toContain(EXISTING_EVENT_DETAILS_LABEL);
     expect(formatted).toContain('Event: Weekly Team Standup');
     expect(formatted).toContain(`${EVENT_ID_PREFIX}dup123`);
     expect(formatted).toContain('Description: Weekly sync with the engineering team');
     expect(formatted).toContain('Location: Conference Room B');
-    
+
     // Verify time formatting
     expect(formatted).toContain(TIME_START_PREFIX);
     expect(formatted).toContain(TIME_END_PREFIX);
     expect(formatted).toContain(TEST_TIMEZONE_ABBREVIATION_WINTER);
-    
+
     // Verify attendees
-    expect(formatted).toContain('Guests: Alice (accepted), Bob (pending)');
-    
+    expect(formatted).toContain(`${GUESTS_PREFIX}Alice (accepted), Bob (pending)`);
+
     // Verify the URL is generated with calendarId
-    expect(formatted).toContain('View: https://calendar.google.com/calendar/event?eid=dup123&cid=primary');
+    expect(formatted).toContain(`${VIEW_URL_PREFIX}https://calendar.google.com/calendar/event?eid=dup123&cid=primary`);
   });
 
   it('should show multiple duplicates with their full details', () => {
@@ -163,7 +167,7 @@ describe('Duplicate Event Display', () => {
     
     expect(formatted).toContain('70% similar');
     expect(formatted).toContain('"Meeting"');
-    expect(formatted).toContain('View existing event: https://calendar.google.com/event/basic-dup');
-    expect(formatted).not.toContain('Existing event details:');
+    expect(formatted).toContain(`${VIEW_EXISTING_EVENT_PREFIX}https://calendar.google.com/event/basic-dup`);
+    expect(formatted).not.toContain(EXISTING_EVENT_DETAILS_LABEL);
   });
 });

@@ -8,6 +8,14 @@ export const TIME_START_PREFIX = 'Start: ';
 export const TIME_END_PREFIX = 'End: ';
 export const DUPLICATE_DETECTED_HEADER = '⚠️ POTENTIAL DUPLICATES DETECTED:';
 export const CONFLICT_DETECTED_HEADER = '⚠️ SCHEDULING CONFLICTS DETECTED:';
+export const EXISTING_EVENT_DETAILS_LABEL = 'Existing event details:';
+export const CONFLICTING_EVENT_DETAILS_LABEL = 'Conflicting event details:';
+export const CONFLICTING_EVENT_HEADER = '━━━ Conflicting Event ━━━';
+export const VIEW_URL_PREFIX = 'View: ';
+export const VIEW_EXISTING_EVENT_PREFIX = 'View existing event: ';
+export const GUESTS_PREFIX = 'Guests: ';
+export const CALENDAR_PREFIX = 'Calendar: ';
+export const OVERLAP_PREFIX = '⚠️  Overlap: ';
 
 /**
  * Generates a Google Calendar event view URL
@@ -108,7 +116,7 @@ function formatAttendees(attendees?: calendar_v3.Schema$EventAttendee[]): string
         return `${name} (${statusText})`;
     }).join(", ");
     
-    return `\nGuests: ${formatted}`;
+    return `\n${GUESTS_PREFIX}${formatted}`;
 }
 
 /**
@@ -150,7 +158,7 @@ export function formatEventWithDetails(event: calendar_v3.Schema$Event, calendar
     const attendeeInfo = formatAttendees(event.attendees);
     
     const eventUrl = getEventUrl(event, calendarId);
-    const urlInfo = eventUrl ? `\nView: ${eventUrl}` : "";
+    const urlInfo = eventUrl ? `\n${VIEW_URL_PREFIX}${eventUrl}` : "";
     
     return `${title}${eventId}${description}${timeInfo}${location}${colorId}${attendeeInfo}${urlInfo}`;
 }
@@ -172,13 +180,13 @@ export function formatConflictWarnings(conflicts: ConflictCheckResult): string {
             
             // Show full event details if available
             if (dup.fullEvent) {
-                warnings += `\n\nExisting event details:`;
+                warnings += `\n\n${EXISTING_EVENT_DETAILS_LABEL}`;
                 warnings += `\n${formatEventWithDetails(dup.fullEvent, dup.calendarId)}`;
             } else {
                 // Fallback to basic info
                 warnings += `\n• "${dup.event.title}"`;
                 if (dup.event.url) {
-                    warnings += `\n  View existing event: ${dup.event.url}`;
+                    warnings += `\n  ${VIEW_EXISTING_EVENT_PREFIX}${dup.event.url}`;
                 }
             }
         }
@@ -190,16 +198,16 @@ export function formatConflictWarnings(conflicts: ConflictCheckResult): string {
         const conflictsByCalendar = groupBy(conflicts.conflicts, (conflict) => conflict.calendar);
         
         for (const [calendar, calendarConflicts] of Object.entries(conflictsByCalendar)) {
-            warnings += `\n\nCalendar: ${calendar}`;
+            warnings += `\n\n${CALENDAR_PREFIX}${calendar}`;
             for (const conflict of calendarConflicts) {
-                warnings += `\n\n━━━ Conflicting Event ━━━`;
+                warnings += `\n\n${CONFLICTING_EVENT_HEADER}`;
                 if (conflict.overlap) {
-                    warnings += `\n⚠️  Overlap: ${conflict.overlap.duration} (${conflict.overlap.percentage}% of your event)`;
+                    warnings += `\n${OVERLAP_PREFIX}${conflict.overlap.duration} (${conflict.overlap.percentage}% of your event)`;
                 }
-                
+
                 // Show full event details if available
                 if (conflict.fullEvent) {
-                    warnings += `\n\nConflicting event details:`;
+                    warnings += `\n\n${CONFLICTING_EVENT_DETAILS_LABEL}`;
                     warnings += `\n${formatEventWithDetails(conflict.fullEvent, calendar)}`;
                 } else {
                     // Fallback to basic info

@@ -25,6 +25,7 @@ import {
 } from './lib/constants.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
 import { searchAndModify } from './lib/gmail-batch-utils.mjs';
+import { BANNER } from './lib/console-utils.mjs';
 
 const applyOnly = process.argv.includes('--apply');
 const remainingMode = process.argv.includes('--remaining');
@@ -140,7 +141,7 @@ const REMAINING_CATEGORIES = [
 
 async function runRemainingFilters(gmail) {
   console.log('CREATING FILTERS FOR REMAINING CATEGORIES\n');
-  console.log('═'.repeat(80) + '\n');
+  console.log(BANNER + '\n');
 
   let totalCreated = 0;
 
@@ -162,7 +163,7 @@ async function runRemainingFilters(gmail) {
     }
   }
 
-  console.log('\n' + '═'.repeat(80));
+  console.log('\n' + BANNER);
   console.log('\nAPPLYING TO EXISTING EMAILS\n');
 
   let emailsProcessed = 0;
@@ -180,9 +181,9 @@ async function runRemainingFilters(gmail) {
     }
   }
 
-  console.log('═'.repeat(80));
+  console.log(BANNER);
   console.log(`Filters created: ${totalCreated} | Emails processed: ${emailsProcessed}\n`);
-  console.log('═'.repeat(80) + '\n');
+  console.log(BANNER + '\n');
 }
 
 async function run() {
@@ -194,7 +195,7 @@ async function run() {
   }
 
   console.log(applyOnly ? 'APPLYING LABELS TO EXISTING EMAILS\n' : 'CREATING AUTO-ARCHIVE FILTERS\n');
-  console.log('═'.repeat(80) + '\n');
+  console.log(BANNER + '\n');
 
   let created = 0;
   let errors = 0;
@@ -236,13 +237,13 @@ async function run() {
     }
   }
 
-  console.log('\n' + '═'.repeat(80));
+  console.log('\n' + BANNER);
   if (!applyOnly) {
     console.log(`Filters created: ${created} | Errors: ${errors} | Emails processed: ${emailsProcessed}\n`);
   } else {
     console.log(`Emails processed: ${emailsProcessed}\n`);
   }
-  console.log('═'.repeat(80) + '\n');
+  console.log(BANNER + '\n');
 }
 
 run().catch(error => {

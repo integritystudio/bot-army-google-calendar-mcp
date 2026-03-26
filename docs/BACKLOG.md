@@ -223,6 +223,61 @@ export function extractEmailAddress(from) {
 ---
 
 
+## Scripts: Fragile Filter-Exists Detection in gmail-filter-utils.mjs
+
+**Status:** 🔲 TODO
+**Complexity:** Low
+**Impact:** Medium (silent breakage if Google API error message changes)
+**Discovery Date:** 2026-03-26
+
+**Issue:**
+`lib/gmail-filter-utils.mjs:44` detects duplicate filter creation by matching the API error message string:
+
+```js
+if (error.message.includes('exists')) return null;
+```
+
+This is fragile — if Google changes the error message format, the condition silently fails and throws an unexpected error instead of returning `null`.
+
+**Fix:**
+Check `error.code` or `error.status` (HTTP 409 Conflict) instead of the message string. Add a comment documenting the expected error format.
+
+```js
+// Google returns 400 with message containing 'exists' for duplicate filters
+if (error.code === 409 || error.message.includes('Filter already exists')) return null;
+```
+
+**Files Affected:**
+- `lib/gmail-filter-utils.mjs` — line 44
+
+---
+
+
+## Scripts: Silent Label Skip in organize-events-sublabels.mjs
+
+**Status:** 🔲 TODO
+**Complexity:** Low
+**Impact:** Low–Medium (silent failures during email organization)
+**Discovery Date:** 2026-03-26
+
+**Issue:**
+`organize-events-sublabels.mjs:54` filters out categories with missing label IDs via `filter(c => c.labelId)` without logging which categories were skipped. Combined with the `.catch(() => 0)` on `searchAndModify`, label lookup failures are completely invisible.
+
+**Fix:**
+Log skipped categories before the filter step:
+
+```js
+const missing = EVENT_CATEGORIES.filter(c => !labelCache.get(c.label));
+if (missing.length > 0) console.warn(`Skipping categories with missing labels: ${missing.map(c => c.label).join(', ')}`);
+const categories = EVENT_CATEGORIES.filter(c => labelCache.get(c.label));
+```
+
+**Files Affected:**
+- `organize-events-sublabels.mjs` — around line 54
+
+---
+
+
 ## Dependencies: Gmail Search Query Building with query-string
 
 **Status:** 🔲 DEFER

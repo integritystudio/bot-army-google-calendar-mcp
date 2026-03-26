@@ -1,8 +1,14 @@
+2bdc03f 2026-03-26 refactor(scripts): extract shared constants, add getHeader util, and add new mjs scripts
+  docs/repomix/repo-compressed.xml
+  docs/repomix/repo-mjs-root.xml
+  docs/repomix/repomix-docs.xml
+  docs/repomix/repomix-git-ranked.xml
+  docs/repomix/repomix.xml
+
 182f27e 2026-03-25 chore(deps): remove simple-rrule dependency and integration docs
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
-  docs/repomix/token-tree.txt
   package-lock.json
 
 e24c9ed 2026-03-25 chore(docs): regenerate repomix snapshots after recent refactors
@@ -10,7 +16,6 @@ e24c9ed 2026-03-25 chore(docs): regenerate repomix snapshots after recent refact
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
-  docs/repomix/token-tree.txt
 
 e8e0662 2026-03-25 refactor(date-utils): remove dead exports, deduplicate parsing, and inline formatBasicDateTime
   src/tests/unit/handlers/RecurringEventHelpers.test.ts
@@ -35,14 +40,12 @@ eba0148 2026-03-25 refactor(repomix): also exclude examples from compressed outp
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
-  docs/repomix/token-tree.txt
 
 ad6ca50 2026-03-25 refactor(repomix): exclude config and docs from compressed output
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
-  docs/repomix/token-tree.txt
 
 0aa6403 2026-03-25 docs: update CLAUDE.md and README.md with code simplification details
   README.md
@@ -51,14 +54,12 @@ ad6ca50 2026-03-25 refactor(repomix): exclude config and docs from compressed ou
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
-  docs/repomix/token-tree.txt
 
 17ea35c 2026-03-25 refactor(tests): complete fixture consolidation and fix quality issues
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
-  docs/repomix/token-tree.txt
   src/tests/unit/helpers/factories.ts
 
 9f8236f 2026-03-25 fix(tests): address code review findings on event fixtures
@@ -74,7 +75,6 @@ de7958a 2026-03-25 refactor(recurring-event): use addMilliseconds and formatRFC3
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
-  docs/repomix/token-tree.txt
 
 74aa495 2026-03-25 fix(types): resolve TypeScript lint errors across core handlers and services
   src/tests/unit/helpers/factories.ts
@@ -85,7 +85,6 @@ de7958a 2026-03-25 refactor(recurring-event): use addMilliseconds and formatRFC3
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
-  docs/repomix/token-tree.txt
 
 3901eb5 2026-03-25 refactor(tests): use simple-rrule helpers instead of duration constants
   src/tests/unit/helpers/factories.ts
@@ -114,7 +113,6 @@ ea42f67 2026-03-24 refactor(tests): consolidate test data factories and remove d
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
-  docs/repomix/token-tree.txt
   src/tests/unit/handlers/BatchListEvents.test.ts
 
 6cda351 2026-03-24 refactor(tests): extract LIST_EVENTS_API_DEFAULTS and DUPLICATE_SUGGESTION constants
@@ -148,7 +146,6 @@ f89bdf8 2026-03-24 feat(tests): add generic test builder factory and consolidate
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
-  docs/repomix/token-tree.txt
 
 6065ecc 2026-03-24 refactor(handlers): extract batchUtils, unify event building in RecurringEventHelpers
   src/tests/unit/handlers/BatchListEvents.test.ts
@@ -172,14 +169,12 @@ ce1c3b9 2026-03-24 docs: update CLAUDE.md and README to reflect 100% backlog com
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
-  docs/repomix/token-tree.txt
 
 b9cae30 2026-03-24 test(integration): add conflict detection integration tests via MCP protocol
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
-  docs/repomix/token-tree.txt
 
 d71d910 2026-03-24 fix(tests): update missed hardcoded futureStartDate at line 276
   src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts
@@ -225,7 +220,6 @@ e0fb9d1 2026-03-24 refactor(gmail-labels): apply shared lib helpers to create-* 
   docs/repomix/repomix-docs.xml
   docs/repomix/repomix-git-ranked.xml
   docs/repomix/repomix.xml
-  docs/repomix/token-tree.txt
 
 7853b20 2026-03-24 test(integration): add Doppler-backed integration tests for UpdateEventHandler recurring events
   src/tools/registry.ts

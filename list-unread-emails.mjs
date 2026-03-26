@@ -8,6 +8,7 @@
  *   node list-unread-emails.mjs --verify # spot-check label application on sample emails
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { BANNER } from './lib/console-utils.mjs';
 import { extractDisplayName, getHeader } from './lib/email-utils.mjs';
 import {
   USER_ID,
@@ -47,7 +48,7 @@ async function listUnreadEmails(gmail) {
   const messageIds = searchResponse.data.messages || [];
 
   console.log('LISTING UNREAD EMAILS\n');
-  console.log('═'.repeat(80) + '\n');
+  console.log(BANNER + '\n');
   console.log(`Total unread: ${messageIds.length}\n`);
 
   if (messageIds.length === 0) {
@@ -99,13 +100,13 @@ async function listUnreadEmails(gmail) {
     if (items.length > PREVIEW_LIMIT) console.log(`  ... and ${items.length - PREVIEW_LIMIT} more`);
   }
 
-  console.log('\n' + '═'.repeat(80));
+  console.log('\n' + BANNER);
   console.log('\nSUMMARY\n');
   for (const [category, items] of Object.entries(categories)) {
     if (items.length > 0) console.log(`  ${category}: ${items.length}`);
   }
   console.log(`\nTotal: ${messageIds.length}`);
-  console.log('═'.repeat(80) + '\n');
+  console.log(BANNER + '\n');
 }
 
 async function showStats(gmail) {

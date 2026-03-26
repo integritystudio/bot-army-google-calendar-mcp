@@ -190,9 +190,71 @@ The following items require design-level decisions before implementation:
 
 ---
 
+## Post-Release Session Updates (2026-03-26)
+
+### Tests: Fix Missed EVENT_ID_PREFIX in duplicate-event-display.test.ts
+- **Fixed:** Line 138 hardcoded literal `'Event ID: morning-standup'` → use `EVENT_ID_PREFIX` constant
+- **Pattern:** Line 70 was already updated; line 138 missed in initial pass
+- **File Modified:** `src/tests/unit/handlers/duplicate-event-display.test.ts`
+- **Impact:** Maintains parity between test assertions and production output formatting
+
+### Tests: Extract Remaining Format-Prefix Strings from Production Source
+- **Added to src/handlers/utils.ts:**
+  - `EXISTING_EVENT_DETAILS_LABEL = 'Existing event details:'`
+  - `CONFLICTING_EVENT_DETAILS_LABEL = 'Conflicting event details:'`
+  - `CONFLICTING_EVENT_HEADER = '━━━ Conflicting Event ━━━'`
+  - `VIEW_URL_PREFIX = 'View: '`
+  - `VIEW_EXISTING_EVENT_PREFIX = 'View existing event: '`
+  - `GUESTS_PREFIX = 'Guests: '`
+  - `CALENDAR_PREFIX = 'Calendar: '`
+  - `OVERLAP_PREFIX = '⚠️  Overlap: '`
+- **Updated test files:**
+  - `src/tests/unit/handlers/duplicate-event-display.test.ts` — assertions on lines 68, 80, 83, 166, 167
+  - `src/tests/unit/handlers/utils-conflict-format.test.ts` — assertions on lines 45-48, 101, 104-105
+- **Benefit:** Single source of truth for format strings; eliminates silent drift risk
+
+### Dependencies: Replace Custom Array Utilities with lodash-es
+- **Added:** `lodash-es` to dependencies
+- **Deleted:** `src/utils/aggregationHelpers.ts` (114 LOC)
+- **Updated imports:**
+  - `src/handlers/core/batchUtils.ts` — import `groupBy` from lodash-es
+  - `src/handlers/core/eventFormatting.ts` — import `groupBy` from lodash-es
+  - `src/tests/integration/test-data-factory.ts` — import `groupBy` from lodash-es
+- **Functions migrated:** `sumBy`, `groupBy`, `countBy`, `keyBy` (renamed from `indexBy`), `uniqBy`
+- **Benefit:** Battle-tested library, better maintainability, tree-shakeable ES modules
+
+### Dependencies: Consolidate Date Utilities with date-fns
+- **Decision:** Evaluated `date-fns` vs `simple-rrule` continuation; implemented hybrid approach
+- **Added:** `date-fns` to dependencies
+- **Refactored:** `src/utils/date-utils.ts` wrapper layer
+- **Replaced wrappers:**
+  - `addDays`, `addMonths`, `addYears` → `date-fns: add()`
+  - `durationMs`, `durationHs`, `durationDays`, `durationMins`, `durationSecs` → `date-fns: difference*()`
+  - `formatRFC3339`, `formatISODateTime` → `date-fns: formatISO()`
+  - `isFutureDate`, `isPastDate` → `date-fns: isFuture()`, `isPast()`
+  - `compareDates` → `date-fns: compareAsc()`
+  - `getDaysInCurrentMonth`, `isMonthEnd` → `date-fns: getDaysInMonth()`, `isLastDayOfMonth()`
+- **Kept:** `simple-rrule` for RRULE parsing and recurrence operations
+- **Result:** ~40 lines of thin wrappers eliminated; simplified integration tests
+
+### Dependencies: Replace Custom Batch Chunking with p-limit
+- **Added:** `p-limit` to dependencies
+- **Refactored:** `src/utils/batchProcessor.ts` — `processBatchItemsChunked()`
+- **Removed:** Manual chunking loop (10+ lines) → `pLimit(batchSize)`
+- **Cleaner API:** Concurrency semantics explicit vs manual slice logic
+- **Benefit:** Battle-tested concurrency control, reduced LOC, edge case handling
+
+### Scripts: Fragile Filter-Exists Detection in gmail-filter-utils.mjs
+- **Fixed:** `lib/gmail-filter-utils.mjs:44` error detection
+- **Changed from:** `error.message.includes('exists')`
+- **Changed to:** `error.code === 409 || error.message.includes('Filter already exists')`
+- **Added:** Comment documenting expected error format
+- **Benefit:** Robust to API message format changes; HTTP 409 is reliable indicator
+
 ## Updated Completion Status
 
-- **Previous:** 20/22 items (91%)
-- **Current:** 22/22 items (100%) ✅
+- **Previous:** 22/22 items (100%)
+- **Current:** 28/28 items (100%) ✅
+- **New items migrated:** 6
 - **Open items:** 0 (all resolved)
 - **Tests passing:** 486/486 (100%)

@@ -41,6 +41,7 @@ The content is organized as follows:
 
 <directory_structure>
 .claude/
+  ralph-loop.local.md
   settings.local.json
 docs/
   changelog/
@@ -367,6 +368,19 @@ vitest.config.ts
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path=".claude/ralph-loop.local.md">
+---
+active: true
+iteration: 1
+session_id: 
+max_iterations: 10
+completion_promise: "RALPH_COMPLETE"
+started_at: "2026-03-26T10:21:30Z"
+---
+
+run /simplify on docs/repomix/repo-compressed.xml contents, accept all changes, run /otel-session-summary, address issues, run npm run repomix, repeat until clean
+</file>
 
 <file path=".claude/settings.local.json">
 {
@@ -12927,6 +12941,77 @@ describe('CreateEventHandler Blocking Logic', () => {
     expect(CONFLICT_DETECTION_CONFIG.DEFAULT_DUPLICATE_THRESHOLD).toBe(0.7);
     expect(CONFLICT_DETECTION_CONFIG.DUPLICATE_THRESHOLDS.WARNING).toBe(0.7);
     expect(CONFLICT_DETECTION_CONFIG.DUPLICATE_THRESHOLDS.BLOCKING).toBe(0.95);
+  });
+});
+</file>
+
+<file path="src/tests/unit/handlers/datetime-utils.test.ts">
+import { describe, it, expect } from 'vitest';
+import { hasTimezoneInDatetime, convertToRFC3339, createTimeObject } from '../../../utils/timezone-utils.js';
+
+describe('Datetime Utilities', () => {
+  describe('hasTimezoneInDatetime', () => {
+    it('should return true for timezone-aware datetime strings', () => {
+      expect(hasTimezoneInDatetime('2024-01-01T10:00:00Z')).toBe(true);
+      expect(hasTimezoneInDatetime('2024-01-01T10:00:00+05:00')).toBe(true);
+      expect(hasTimezoneInDatetime('2024-01-01T10:00:00-08:00')).toBe(true);
+    });
+
+    it('should return false for timezone-naive datetime strings', () => {
+      expect(hasTimezoneInDatetime('2024-01-01T10:00:00')).toBe(false);
+      expect(hasTimezoneInDatetime('2024-01-01 10:00:00')).toBe(false);
+    });
+  });
+
+  describe('convertToRFC3339', () => {
+    it('should return timezone-aware datetime unchanged', () => {
+      const datetime = '2024-01-01T10:00:00Z';
+      expect(convertToRFC3339(datetime, 'America/Los_Angeles')).toBe(datetime);
+    });
+
+    it('should return timezone-aware datetime with offset unchanged', () => {
+      const datetime = '2024-01-01T10:00:00-08:00';
+      expect(convertToRFC3339(datetime, 'America/Los_Angeles')).toBe(datetime);
+    });
+
+    it('should convert timezone-naive datetime using fallback timezone', () => {
+      const datetime = '2024-06-15T14:30:00';
+      const result = convertToRFC3339(datetime, 'UTC');
+      
+      // Should result in a timezone-aware string (the exact time depends on system timezone)
+      expect(result).toMatch(/2024-06-15T\d{2}:\d{2}:\d{2}Z/);
+      expect(result).not.toBe(datetime); // Should be different from input
+    });
+
+    it('should fallback to UTC for invalid timezone conversion', () => {
+      const datetime = '2024-01-01T10:00:00';
+      const result = convertToRFC3339(datetime, 'Invalid/Timezone');
+      
+      // Should fallback to UTC
+      expect(result).toBe('2024-01-01T10:00:00Z');
+    });
+  });
+
+  describe('createTimeObject', () => {
+    it('should create time object without timeZone for timezone-aware datetime', () => {
+      const datetime = '2024-01-01T10:00:00Z';
+      const result = createTimeObject(datetime, 'America/Los_Angeles');
+      
+      expect(result).toEqual({
+        dateTime: datetime
+      });
+    });
+
+    it('should create time object with timeZone for timezone-naive datetime', () => {
+      const datetime = '2024-01-01T10:00:00';
+      const timezone = 'America/Los_Angeles';
+      const result = createTimeObject(datetime, timezone);
+      
+      expect(result).toEqual({
+        dateTime: datetime,
+        timeZone: timezone
+      });
+    });
   });
 });
 </file>
@@ -25603,63 +25688,6 @@ console.log('Email organization setup complete!');
 - [README.md](../README.md) - MCP server overview
 </file>
 
-<file path="lib/constants.mjs">
-/** Gmail user ID (special value 'me' = authenticated user) */
-export const USER_ID = 'me';
-
-/** System label IDs */
-export const GMAIL_INBOX = 'INBOX';
-
-/** Gmail label names for email categories */
-export const LABEL_SENTRY = 'Sentry Alerts';
-export const LABEL_PRODUCT_UPDATES = 'Product Updates';
-export const LABEL_COMMUNITIES = 'Communities';
-export const LABEL_SERVICES = 'Services & Alerts';
-export const LABEL_KEEP_IMPORTANT = 'Keep Important';
-export const LABEL_EVENTS = 'Events';
-export const LABEL_MONITORING = 'Monitoring';
-export const LABEL_BILLING = 'Billing';
-export const LABEL_MEETUP_EVENTS = 'Meetup Events';
-export const LABEL_COMMUNITY_EVENTS = 'Community Events';
-export const LABEL_CALENDLY_NOTIFICATIONS = 'Calendly Notifications';
-export const LABEL_LINKEDIN_UPDATES = 'LinkedIn Updates';
-export const LABEL_DMARC_REPORTS = 'DMARC Reports';
-export const LABEL_MEETING_NOTES = 'Meeting Notes';
-export const LABEL_CCV = 'CCV';
-export const LABEL_UPDATES = 'Updates';
-export const LABEL_ORG_GOOGLE_WORKSPACE = 'Organization: Google Workspace';
-export const LABEL_PERFORMANCE_TRACKING = 'Performance Tracking';
-export const LABEL_SOCIAL = 'Social';
-export const LABEL_MEETING_TRANSCRIPTS = 'Meeting Transcripts';
-export const LABEL_EVENTS_COMMUNITY = 'Events/Community';
-export const LABEL_EVENTS_INVITATIONS_WORK = 'Events/Invitations/Work';
-export const LABEL_EVENTS_WORKSHOPS = 'Events/Workshops';
-export const LABEL_EVENTS_INVITATIONS_COMMUNITY_SERVICES = 'Events/Invitations/Community Services';
-export const LABEL_EVENTS_MEETUP = 'Events/Meetup';
-export const LABEL_EVENTS_CALENDLY = 'Events/Calendly';
-export const LABEL_EVENTS_INVITATIONS = 'Events/Invitations';
-export const LABEL_EVENTS_INVITATIONS_PROFESSIONAL = 'Events/Invitations/Professional';
-export const LABEL_EVENTS_INVITATIONS_CONFERENCES = 'Events/Invitations/Conferences';
-export const LABEL_EVENTS_COMMUNITY_CREATIVE_ARTS = 'Events/Community/Creative-Arts';
-export const LABEL_EVENTS_COMMUNITY_TECH_PROFESSIONAL = 'Events/Community/Tech-Professional';
-export const LABEL_EVENTS_COMMUNITY_SPIRITUAL_WELLNESS = 'Events/Community/Spiritual-Wellness';
-export const LABEL_EVENTS_COMMUNITY_NETWORKING = 'Events/Community/Networking';
-export const LABEL_EVENTS_COMMUNITY_LEARNING_EDUCATION = 'Events/Community/Learning-Education';
-export const LABEL_EVENTS_COMMUNITY_SOCIAL_RECREATION = 'Events/Community/Social-Recreation';
-export const LABEL_EVENTS_COMMUNITY_FOOD_DINING = 'Events/Community/Food-Dining';
-export const LABEL_NEWSLETTERS = 'Newsletters';
-export const LABEL_NEWSLETTERS_SUBJECT_BASED = 'Newsletters/Subject-Based';
-export const LABEL_NEWSLETTERS_CCV = 'Newsletters/CCV';
-
-/** System label IDs */
-export const GMAIL_UNREAD = 'UNREAD';
-export const GMAIL_SENT = 'SENT';
-export const GMAIL_DRAFT = 'DRAFT';
-export const GMAIL_SPAM = 'SPAM';
-export const GMAIL_TRASH = 'TRASH';
-export const GMAIL_IMPORTANT = 'IMPORTANT';
-</file>
-
 <file path="lib/date-based-filter.mjs">
 /**
  * Date-based email filter utility
@@ -28859,77 +28887,6 @@ describe('BatchRequestHandler', () => {
 });
 </file>
 
-<file path="src/tests/unit/handlers/datetime-utils.test.ts">
-import { describe, it, expect } from 'vitest';
-import { hasTimezoneInDatetime, convertToRFC3339, createTimeObject } from '../../../utils/timezone-utils.js';
-
-describe('Datetime Utilities', () => {
-  describe('hasTimezoneInDatetime', () => {
-    it('should return true for timezone-aware datetime strings', () => {
-      expect(hasTimezoneInDatetime('2024-01-01T10:00:00Z')).toBe(true);
-      expect(hasTimezoneInDatetime('2024-01-01T10:00:00+05:00')).toBe(true);
-      expect(hasTimezoneInDatetime('2024-01-01T10:00:00-08:00')).toBe(true);
-    });
-
-    it('should return false for timezone-naive datetime strings', () => {
-      expect(hasTimezoneInDatetime('2024-01-01T10:00:00')).toBe(false);
-      expect(hasTimezoneInDatetime('2024-01-01 10:00:00')).toBe(false);
-    });
-  });
-
-  describe('convertToRFC3339', () => {
-    it('should return timezone-aware datetime unchanged', () => {
-      const datetime = '2024-01-01T10:00:00Z';
-      expect(convertToRFC3339(datetime, 'America/Los_Angeles')).toBe(datetime);
-    });
-
-    it('should return timezone-aware datetime with offset unchanged', () => {
-      const datetime = '2024-01-01T10:00:00-08:00';
-      expect(convertToRFC3339(datetime, 'America/Los_Angeles')).toBe(datetime);
-    });
-
-    it('should convert timezone-naive datetime using fallback timezone', () => {
-      const datetime = '2024-06-15T14:30:00';
-      const result = convertToRFC3339(datetime, 'UTC');
-      
-      // Should result in a timezone-aware string (the exact time depends on system timezone)
-      expect(result).toMatch(/2024-06-15T\d{2}:\d{2}:\d{2}Z/);
-      expect(result).not.toBe(datetime); // Should be different from input
-    });
-
-    it('should fallback to UTC for invalid timezone conversion', () => {
-      const datetime = '2024-01-01T10:00:00';
-      const result = convertToRFC3339(datetime, 'Invalid/Timezone');
-      
-      // Should fallback to UTC
-      expect(result).toBe('2024-01-01T10:00:00Z');
-    });
-  });
-
-  describe('createTimeObject', () => {
-    it('should create time object without timeZone for timezone-aware datetime', () => {
-      const datetime = '2024-01-01T10:00:00Z';
-      const result = createTimeObject(datetime, 'America/Los_Angeles');
-      
-      expect(result).toEqual({
-        dateTime: datetime
-      });
-    });
-
-    it('should create time object with timeZone for timezone-naive datetime', () => {
-      const datetime = '2024-01-01T10:00:00';
-      const timezone = 'America/Los_Angeles';
-      const result = createTimeObject(datetime, timezone);
-      
-      expect(result).toEqual({
-        dateTime: datetime,
-        timeZone: timezone
-      });
-    });
-  });
-});
-</file>
-
 <file path="src/tests/unit/helpers/testBuilder.ts">
 /**
  * Generic test builder factory for creating objects with defaults and overrides
@@ -29876,6 +29833,304 @@ describe('gmail-label-utils types', () => {
           // missing count
         })
       ).toThrow();
+    });
+  });
+});
+</file>
+
+<file path="src/tests/unit/utils/timezone-utils.test.ts">
+import { describe, it, expect } from 'vitest';
+import {
+  isValidIANATimeZone,
+  getSystemTimeZone,
+  validateTimeZone,
+  getTimezoneOffsetMinutes,
+  getTimezoneOffsetString,
+  formatDateInTimeZone,
+  resolveTimeZone,
+  hasTimezoneInDatetime,
+  convertToRFC3339,
+  createTimeObject,
+  applyTimezone,
+} from '../../../utils/timezone-utils.js';
+
+describe('Timezone Utilities', () => {
+  describe('isValidIANATimeZone', () => {
+    it('should recognize valid UTC timezone', () => {
+      expect(isValidIANATimeZone('UTC')).toBe(true);
+      expect(isValidIANATimeZone('Etc/UTC')).toBe(true);
+    });
+
+    it('should recognize valid named timezones', () => {
+      expect(isValidIANATimeZone('America/Los_Angeles')).toBe(true);
+      expect(isValidIANATimeZone('Europe/London')).toBe(true);
+      expect(isValidIANATimeZone('Asia/Tokyo')).toBe(true);
+    });
+
+    it('should reject invalid timezones', () => {
+      expect(isValidIANATimeZone('Invalid/Timezone')).toBe(false);
+      expect(isValidIANATimeZone('NotATimeZone')).toBe(false);
+      expect(isValidIANATimeZone('')).toBe(false);
+    });
+  });
+
+  describe('getSystemTimeZone', () => {
+    it('should return a valid timezone string', () => {
+      const tz = getSystemTimeZone();
+      expect(typeof tz).toBe('string');
+      expect(tz.length).toBeGreaterThan(0);
+      expect(isValidIANATimeZone(tz)).toBe(true);
+    });
+
+    it('should not throw on retrieval', () => {
+      // This test documents that the function doesn't throw
+      expect(() => getSystemTimeZone()).not.toThrow();
+    });
+  });
+
+  describe('validateTimeZone', () => {
+    it('should not throw for valid timezones', () => {
+      expect(() => validateTimeZone('UTC')).not.toThrow();
+      expect(() => validateTimeZone('America/Los_Angeles')).not.toThrow();
+    });
+
+    it('should throw for invalid timezones', () => {
+      expect(() => validateTimeZone('Invalid/Timezone')).toThrow();
+      expect(() => validateTimeZone('NotValid')).toThrow();
+    });
+
+    it('should include timezone in error message', () => {
+      expect(() => validateTimeZone('BadTZ')).toThrow(/BadTZ/);
+    });
+  });
+
+  describe('getTimezoneOffsetMinutes', () => {
+    it('should return 0 for UTC', () => {
+      expect(getTimezoneOffsetMinutes('UTC')).toBe(0);
+    });
+
+    it('should return positive offset for east of UTC', () => {
+      const offset = getTimezoneOffsetMinutes('Asia/Tokyo');
+      expect(offset).toBeGreaterThan(0);
+      // Japan is UTC+9, so 9*60 = 540 minutes
+      expect(offset).toBe(540);
+    });
+
+    it('should return negative offset for west of UTC', () => {
+      const offset = getTimezoneOffsetMinutes('America/Los_Angeles');
+      expect(offset).toBeLessThan(0);
+      // Los Angeles is UTC-7 or UTC-8 depending on DST
+      expect(Math.abs(offset)).toBeGreaterThanOrEqual(420); // -7 hours = -420 minutes
+    });
+  });
+
+  describe('getTimezoneOffsetString', () => {
+    it('should return Z for UTC', () => {
+      expect(getTimezoneOffsetString('UTC')).toBe('Z');
+    });
+
+    it('should return formatted offset string for non-UTC timezones', () => {
+      const offset = getTimezoneOffsetString('Asia/Tokyo');
+      expect(offset).toMatch(/^[+-]\d{2}:\d{2}$/);
+      expect(offset).toBe('+09:00');
+    });
+
+    it('should return negative offset for west of UTC', () => {
+      const offset = getTimezoneOffsetString('America/New_York');
+      expect(offset).toMatch(/^-\d{2}:\d{2}$/);
+    });
+
+    it('should fall back to Z on error', () => {
+      // This tests the error handling
+      expect(typeof getTimezoneOffsetString('UTC')).toBe('string');
+    });
+  });
+
+  describe('formatDateInTimeZone', () => {
+    it('should return object with rfc3339, humanReadable, and offset', () => {
+      const date = new Date('2024-06-15T10:00:00Z');
+      const result = formatDateInTimeZone(date, 'UTC');
+
+      expect(result).toHaveProperty('rfc3339');
+      expect(result).toHaveProperty('humanReadable');
+      expect(result).toHaveProperty('offset');
+    });
+
+    it('should have Z offset for UTC', () => {
+      const date = new Date('2024-06-15T10:00:00Z');
+      const result = formatDateInTimeZone(date, 'UTC');
+
+      expect(result.offset).toBe('Z');
+      expect(result.rfc3339).toMatch(/Z$/);
+    });
+
+    it('should format RFC3339 with timezone offset', () => {
+      const date = new Date('2024-06-15T10:00:00Z');
+      const result = formatDateInTimeZone(date, 'Asia/Tokyo');
+
+      expect(result.rfc3339).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
+    });
+
+    it('should include human-readable format', () => {
+      const date = new Date('2024-06-15T10:00:00Z');
+      const result = formatDateInTimeZone(date, 'America/Los_Angeles');
+
+      expect(result.humanReadable).toMatch(/\d{4}/); // Should include year
+      expect(result.humanReadable).toMatch(/[A-Z]/); // Should include text
+    });
+  });
+
+  describe('resolveTimeZone', () => {
+    it('should return preferred timezone if valid', () => {
+      const result = resolveTimeZone('America/Los_Angeles', 'UTC');
+      expect(result).toBe('America/Los_Angeles');
+    });
+
+    it('should use calendar default if preferred not valid', () => {
+      const result = resolveTimeZone(undefined, 'Europe/London');
+      expect(result).toBe('Europe/London');
+    });
+
+    it('should fall back to system timezone if both not provided', () => {
+      const result = resolveTimeZone(undefined, undefined);
+      expect(isValidIANATimeZone(result)).toBe(true);
+    });
+
+    it('should fall back to system timezone when all invalid', () => {
+      // This tests the fallback chain
+      const result = resolveTimeZone('Invalid', 'AlsoInvalid');
+      // Should use system timezone which is always valid
+      expect(isValidIANATimeZone(result)).toBe(true);
+    });
+
+    it('should validate timezones before using', () => {
+      const result = resolveTimeZone('Invalid/TZ', 'America/Chicago');
+      expect(result).toBe('America/Chicago');
+    });
+  });
+
+  describe('hasTimezoneInDatetime', () => {
+    it('should detect timezone with Z suffix', () => {
+      expect(hasTimezoneInDatetime('2024-06-15T10:00:00Z')).toBe(true);
+    });
+
+    it('should detect timezone with positive offset', () => {
+      expect(hasTimezoneInDatetime('2024-06-15T10:00:00+05:30')).toBe(true);
+    });
+
+    it('should detect timezone with negative offset', () => {
+      expect(hasTimezoneInDatetime('2024-06-15T10:00:00-07:00')).toBe(true);
+    });
+
+    it('should not detect timezone-naive datetime', () => {
+      expect(hasTimezoneInDatetime('2024-06-15T10:00:00')).toBe(false);
+    });
+
+    it('should not detect date-only strings', () => {
+      expect(hasTimezoneInDatetime('2024-06-15')).toBe(false);
+    });
+  });
+
+  describe('convertToRFC3339', () => {
+    it('should return timezone-aware datetime unchanged', () => {
+      const input = '2024-06-15T10:00:00Z';
+      const result = convertToRFC3339(input, 'UTC');
+      expect(result).toBe(input);
+    });
+
+    it('should return timezone-aware with offset unchanged', () => {
+      const input = '2024-06-15T10:00:00+05:30';
+      const result = convertToRFC3339(input, 'UTC');
+      expect(result).toBe(input);
+    });
+
+    it('should convert timezone-naive datetime with fallback timezone', () => {
+      const input = '2024-06-15T10:00:00';
+      const result = convertToRFC3339(input, 'UTC');
+      // Should convert to RFC3339 format
+      expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+    });
+
+    it('should append Z on invalid input', () => {
+      const input = '2024-06-15';
+      const result = convertToRFC3339(input, 'UTC');
+      expect(result).toBe('2024-06-15Z');
+    });
+  });
+
+  describe('createTimeObject', () => {
+    it('should use date field for date-only strings', () => {
+      const result = createTimeObject('2024-06-15', 'UTC');
+      expect(result.date).toBe('2024-06-15');
+      expect(result.dateTime).toBeUndefined();
+      expect(result.timeZone).toBeUndefined();
+    });
+
+    it('should use dateTime field for timezone-aware datetime', () => {
+      const result = createTimeObject('2024-06-15T10:00:00Z', 'UTC');
+      expect(result.dateTime).toBe('2024-06-15T10:00:00Z');
+      expect(result.timeZone).toBeUndefined();
+    });
+
+    it('should include timeZone for timezone-naive datetime', () => {
+      const result = createTimeObject('2024-06-15T10:00:00', 'America/Los_Angeles');
+      expect(result.dateTime).toBe('2024-06-15T10:00:00');
+      expect(result.timeZone).toBe('America/Los_Angeles');
+    });
+
+    it('should not include timeZone for datetime with offset', () => {
+      const result = createTimeObject('2024-06-15T10:00:00+05:30', 'UTC');
+      expect(result.dateTime).toBe('2024-06-15T10:00:00+05:30');
+      expect(result.timeZone).toBeUndefined();
+    });
+  });
+
+  describe('applyTimezone', () => {
+    it('should apply timezone to both start and end objects', () => {
+      const start = { dateTime: '2024-06-15T10:00:00' };
+      const end = { dateTime: '2024-06-15T11:00:00' };
+      const result = applyTimezone(start, end, 'America/Los_Angeles');
+
+      expect(result.start.timeZone).toBe('America/Los_Angeles');
+      expect(result.end.timeZone).toBe('America/Los_Angeles');
+      expect(result.start.dateTime).toBe('2024-06-15T10:00:00');
+      expect(result.end.dateTime).toBe('2024-06-15T11:00:00');
+    });
+
+    it('should create start/end objects if undefined', () => {
+      const result = applyTimezone(undefined, undefined, 'UTC');
+
+      expect(result.start).toEqual({ timeZone: 'UTC' });
+      expect(result.end).toEqual({ timeZone: 'UTC' });
+    });
+
+    it('should handle partial start/end objects', () => {
+      const start = { dateTime: '2024-06-15T10:00:00' };
+      const result = applyTimezone(start, undefined, 'Europe/London');
+
+      expect(result.start.timeZone).toBe('Europe/London');
+      expect(result.start.dateTime).toBe('2024-06-15T10:00:00');
+      expect(result.end).toEqual({ timeZone: 'Europe/London' });
+    });
+
+    it('should handle date-only objects', () => {
+      const start = { date: '2024-06-15' };
+      const end = { date: '2024-06-16' };
+      const result = applyTimezone(start, end, 'Asia/Tokyo');
+
+      expect(result.start.timeZone).toBe('Asia/Tokyo');
+      expect(result.start.date).toBe('2024-06-15');
+      expect(result.end.timeZone).toBe('Asia/Tokyo');
+      expect(result.end.date).toBe('2024-06-16');
+    });
+
+    it('should preserve existing timezone properties when overwriting', () => {
+      const start = { dateTime: '2024-06-15T10:00:00', timeZone: 'UTC' };
+      const end = { dateTime: '2024-06-15T11:00:00', timeZone: 'UTC' };
+      const result = applyTimezone(start, end, 'America/New_York');
+
+      expect(result.start.timeZone).toBe('America/New_York');
+      expect(result.end.timeZone).toBe('America/New_York');
     });
   });
 });
@@ -35723,100 +35978,6 @@ labelRemainingCommunity().catch(error => {
 });
 </file>
 
-<file path="label-remaining-unread.mjs">
-import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID, LABEL_EVENTS, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
-
-const gmail = createGmailClient();
-
-console.log('🏷️  LABELING REMAINING UNREAD EMAILS\n');
-console.log('═'.repeat(80) + '\n');
-
-// Define labeling rules by sender/content pattern
-const labelingRules = [
-  {
-    label: LABEL_EVENTS,
-    queries: [
-      'from:info@email.meetup.com',
-      'from:notifications@email.calendly.com OR from:teamcalendly@send.calendly.com',
-      'from:info@email.meetup.com subject:"Just scheduled"',
-    ]
-  },
-  {
-    label: LABEL_PRODUCT_UPDATES,
-    queries: [
-      'from:googlecloud@google.com OR from:CloudPlatform-noreply@google.com',
-      'from:news@alphasignal.ai',
-      'from:noreply@email.openai.com',
-      'from:lukak@storylane.io',
-      'from:no-reply@email.claude.com'
-    ]
-  },
-  {
-    label: LABEL_COMMUNITIES,
-    queries: [
-      'from:wtm@technovation.org'
-    ]
-  },
-  {
-    label: LABEL_KEEP_IMPORTANT,
-    queries: [
-      'from:capitalcity@a.helpfulvillage.com'
-    ]
-  }
-];
-
-const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
-const labelMap = {};
-labelsResponse.data.labels.forEach(l => { labelMap[l.name] = l.id; });
-
-for (const rule of labelingRules) {
-  if (!labelMap[rule.label]) {
-    console.log(`⚠️  Label not found: ${rule.label}\n`);
-    continue;
-  }
-
-  const queryCounts = await Promise.all(rule.queries.map(async (query) => {
-    const searchResponse = await gmail.users.messages.list({
-      userId: USER_ID,
-      q: `is:unread ${query}`,
-      maxResults: 500
-    });
-
-    const messageIds = searchResponse.data.messages || [];
-    if (messageIds.length === 0) return 0;
-
-    console.log(`${rule.label} - ${query}: ${messageIds.length}`);
-
-    const batchSize = 50;
-    for (let i = 0; i < messageIds.length; i += batchSize) {
-      const batch = messageIds.slice(i, i + batchSize);
-      await gmail.users.messages.batchModify({
-        userId: USER_ID,
-        requestBody: {
-          ids: batch.map(m => m.id),
-          addLabelIds: [labelMap[rule.label]]
-        }
-      });
-    }
-
-    console.log(`  ✅ Labeled ${messageIds.length}`);
-    return messageIds.length;
-  }));
-
-  const totalLabeled = queryCounts.reduce((sum, n) => sum + n, 0);
-
-  if (totalLabeled > 0) {
-    console.log(`\n${rule.label} total: ${totalLabeled}\n`);
-  }
-}
-
-console.log('═'.repeat(80));
-console.log('COMPLETE\n');
-console.log('Remaining unread are now labeled appropriately.\n');
-console.log('═'.repeat(80) + '\n');
-</file>
-
 <file path="label-sentry-team.mjs">
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, GMAIL_INBOX, LABEL_PRODUCT_UPDATES } from './lib/constants.mjs';
@@ -36247,92 +36408,6 @@ async function markAllLabeledAsRead() {
 }
 
 markAllLabeledAsRead().catch(error => {
-  console.error('Error:', error.message);
-  process.exit(1);
-});
-</file>
-
-<file path="mark-archived-as-read.mjs">
-import { createGmailClient } from './lib/gmail-client.mjs';
-import {
-  USER_ID, GMAIL_UNREAD,
-  LABEL_PRODUCT_UPDATES, LABEL_MONITORING, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING,
-} from './lib/constants.mjs';
-
-async function markArchivedAsRead() {
-  const gmail = createGmailClient();
-
-  console.log('📖 MARKING ARCHIVED EMAILS AS READ\n');
-  console.log('═'.repeat(80) + '\n');
-
-  const categoriesToProcess = [
-    LABEL_PRODUCT_UPDATES,
-    LABEL_MONITORING,
-    LABEL_COMMUNITIES,
-    LABEL_SERVICES,
-    LABEL_BILLING,
-  ];
-
-  let totalMarked = 0;
-
-  try {
-    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
-    const labels = labelsResponse.data.labels || [];
-    if (labels.length === 0) {
-      console.log('No labels found\n');
-      return;
-    }
-    const labelMap = {};
-    labels.forEach(l => { labelMap[l.name] = l.id; });
-
-    for (const category of categoriesToProcess) {
-      const labelId = labelMap[category];
-      if (!labelId) continue;
-
-      const searchQuery = `label:"${category}" is:unread -label:INBOX`;
-      const searchResponse = await gmail.users.messages.list({
-        userId: USER_ID,
-        q: searchQuery,
-        maxResults: 500
-      });
-
-      const messageIds = searchResponse.data.messages || [];
-      console.log(`${category}: ${messageIds.length} unread\n`);
-
-      if (messageIds.length === 0) continue;
-
-      const batchSize = 50;
-      for (let i = 0; i < messageIds.length; i += batchSize) {
-        const batch = messageIds.slice(i, i + batchSize).map(m => m.id);
-
-        await gmail.users.messages.batchModify({
-          userId: USER_ID,
-          requestBody: {
-            ids: batch,
-            removeLabelIds: [GMAIL_UNREAD]
-          }
-        });
-
-        totalMarked += batch.length;
-        const processed = i + batch.length;
-        console.log(`  ✅ Marked ${processed}/${messageIds.length} as read`);
-      }
-
-      console.log();
-    }
-
-    console.log('═'.repeat(80));
-    console.log('COMPLETE\n');
-    console.log(`📖 Total emails marked as read: ${totalMarked}\n`);
-    console.log('═'.repeat(80) + '\n');
-
-  } catch (error) {
-    console.error('Error:', error.message);
-    process.exit(1);
-  }
-}
-
-markArchivedAsRead().catch(error => {
   console.error('Error:', error.message);
   process.exit(1);
 });
@@ -37500,57 +37575,6 @@ protectImportantItems().catch(error => {
 });
 </file>
 
-<file path="quick-status.mjs">
-import { createGmailClient } from './lib/gmail-client.mjs';
-import {
-  USER_ID,
-  LABEL_SENTRY, LABEL_KEEP_IMPORTANT, LABEL_EVENTS, LABEL_MONITORING,
-  LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING,
-} from './lib/constants.mjs';
-
-const gmail = createGmailClient();
-
-console.log('📊 QUICK STATUS\n');
-
-const profile = await gmail.users.getProfile({ userId: USER_ID });
-console.log(`Total messages: ${profile.data.messagesTotal}`);
-console.log(`Total threads: ${profile.data.threadsTotal}`);
-
-const unreadResult = await gmail.users.messages.list({
-  userId: USER_ID,
-  q: 'is:unread'
-});
-
-console.log(`Unread (is:unread): ${unreadResult.data.resultSizeEstimate}`);
-
-const inboxResult = await gmail.users.messages.list({
-  userId: USER_ID,
-  q: 'is:unread in:inbox'
-});
-
-console.log(`Unread in inbox: ${inboxResult.data.resultSizeEstimate}`);
-
-const labels = [LABEL_SENTRY, LABEL_KEEP_IMPORTANT, LABEL_EVENTS, LABEL_MONITORING, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING];
-const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
-const labelMap = {};
-labelsResponse.data.labels.forEach(l => { labelMap[l.name] = l.id; });
-
-console.log('\n📁 By Label:');
-const labelCounts = await Promise.all(
-  labels.map(async label => {
-    if (!labelMap[label]) return { label, count: 0 };
-    const result = await gmail.users.messages.list({
-      userId: USER_ID,
-      q: `label:${labelMap[label]} is:unread`
-    });
-    return { label, count: result.data.resultSizeEstimate };
-  })
-);
-for (const { label, count } of labelCounts) {
-  console.log(`  ${label}: ${count}`);
-}
-</file>
-
 <file path="relabel-event-announcements.mjs">
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, LABEL_EVENTS, LABEL_EVENTS_COMMUNITY, LABEL_NEWSLETTERS_SUBJECT_BASED } from './lib/constants.mjs';
@@ -38228,6 +38252,62 @@ verifyAndRefreshTokens().catch(error => {
 });
 </file>
 
+<file path="lib/constants.mjs">
+/** Gmail user ID (special value 'me' = authenticated user) */
+export const USER_ID = 'me';
+
+/** Gmail system label IDs */
+export const GMAIL_INBOX = 'INBOX';
+
+/** Gmail label names for email categories */
+export const LABEL_SENTRY = 'Sentry Alerts';
+export const LABEL_PRODUCT_UPDATES = 'Product Updates';
+export const LABEL_COMMUNITIES = 'Communities';
+export const LABEL_SERVICES = 'Services & Alerts';
+export const LABEL_KEEP_IMPORTANT = 'Keep Important';
+export const LABEL_EVENTS = 'Events';
+export const LABEL_MONITORING = 'Monitoring';
+export const LABEL_BILLING = 'Billing';
+export const LABEL_MEETUP_EVENTS = 'Meetup Events';
+export const LABEL_COMMUNITY_EVENTS = 'Community Events';
+export const LABEL_CALENDLY_NOTIFICATIONS = 'Calendly Notifications';
+export const LABEL_LINKEDIN_UPDATES = 'LinkedIn Updates';
+export const LABEL_DMARC_REPORTS = 'DMARC Reports';
+export const LABEL_MEETING_NOTES = 'Meeting Notes';
+export const LABEL_CCV = 'CCV';
+export const LABEL_UPDATES = 'Updates';
+export const LABEL_ORG_GOOGLE_WORKSPACE = 'Organization: Google Workspace';
+export const LABEL_PERFORMANCE_TRACKING = 'Performance Tracking';
+export const LABEL_SOCIAL = 'Social';
+export const LABEL_MEETING_TRANSCRIPTS = 'Meeting Transcripts';
+export const LABEL_EVENTS_COMMUNITY = 'Events/Community';
+export const LABEL_EVENTS_INVITATIONS_WORK = 'Events/Invitations/Work';
+export const LABEL_EVENTS_WORKSHOPS = 'Events/Workshops';
+export const LABEL_EVENTS_INVITATIONS_COMMUNITY_SERVICES = 'Events/Invitations/Community Services';
+export const LABEL_EVENTS_MEETUP = 'Events/Meetup';
+export const LABEL_EVENTS_CALENDLY = 'Events/Calendly';
+export const LABEL_EVENTS_INVITATIONS = 'Events/Invitations';
+export const LABEL_EVENTS_INVITATIONS_PROFESSIONAL = 'Events/Invitations/Professional';
+export const LABEL_EVENTS_INVITATIONS_CONFERENCES = 'Events/Invitations/Conferences';
+export const LABEL_EVENTS_COMMUNITY_CREATIVE_ARTS = 'Events/Community/Creative-Arts';
+export const LABEL_EVENTS_COMMUNITY_TECH_PROFESSIONAL = 'Events/Community/Tech-Professional';
+export const LABEL_EVENTS_COMMUNITY_SPIRITUAL_WELLNESS = 'Events/Community/Spiritual-Wellness';
+export const LABEL_EVENTS_COMMUNITY_NETWORKING = 'Events/Community/Networking';
+export const LABEL_EVENTS_COMMUNITY_LEARNING_EDUCATION = 'Events/Community/Learning-Education';
+export const LABEL_EVENTS_COMMUNITY_SOCIAL_RECREATION = 'Events/Community/Social-Recreation';
+export const LABEL_EVENTS_COMMUNITY_FOOD_DINING = 'Events/Community/Food-Dining';
+export const LABEL_NEWSLETTERS = 'Newsletters';
+export const LABEL_NEWSLETTERS_SUBJECT_BASED = 'Newsletters/Subject-Based';
+export const LABEL_NEWSLETTERS_CCV = 'Newsletters/CCV';
+
+export const GMAIL_UNREAD = 'UNREAD';
+export const GMAIL_SENT = 'SENT';
+export const GMAIL_DRAFT = 'DRAFT';
+export const GMAIL_SPAM = 'SPAM';
+export const GMAIL_TRASH = 'TRASH';
+export const GMAIL_IMPORTANT = 'IMPORTANT';
+</file>
+
 <file path="src/auth/server.ts">
 import { OAuth2Client } from 'google-auth-library';
 import { TokenManager } from './tokenManager.js';
@@ -38621,6 +38701,153 @@ export abstract class BaseToolHandler {
         }
     }
 
+}
+</file>
+
+<file path="src/handlers/core/eventManipulationUtils.ts">
+import { calendar_v3 } from 'googleapis';
+import { OAuth2Client } from 'google-auth-library';
+import { CreateEventInput, UpdateEventInput } from '../../tools/registry.js';
+import { createTimeObject } from '../../utils/timezone-utils.js';
+import { ConflictDetectionService } from '../../services/conflict-detection/index.js';
+import { CONFLICT_DETECTION_CONFIG } from '../../services/conflict-detection/config.js';
+
+/**
+ * Copy properties from source to target if they exist in source and are not undefined.
+ * Used to conditionally build event fields without boilerplate if-checks.
+ */
+function conditionallyAddFields<T extends Record<string, any>>(
+  source: T,
+  target: Record<string, any>,
+  fieldNames: (keyof T)[]
+): void {
+  for (const field of fieldNames) {
+    if (field in source && source[field] !== undefined) {
+      target[field] = source[field];
+    }
+  }
+}
+
+export function buildCoreEvent(
+  input: CreateEventInput | UpdateEventInput,
+  timezone: string,
+  existingEvent?: calendar_v3.Schema$Event
+): Pick<calendar_v3.Schema$Event, 'summary' | 'description' | 'start' | 'end' | 'attendees' | 'location'> {
+  const summary = 'summary' in input ? input.summary : (input.summary || existingEvent?.summary);
+  const description = 'description' in input ? input.description : (input.description || existingEvent?.description);
+  const start = ('start' in input && input.start) ? createTimeObject(input.start, timezone) : existingEvent?.start;
+  const end = ('end' in input && input.end) ? createTimeObject(input.end, timezone) : existingEvent?.end;
+  const attendees = 'attendees' in input ? input.attendees : undefined;
+  const location = 'location' in input ? input.location : (input.location || existingEvent?.location);
+
+  return {
+    summary,
+    description,
+    start,
+    end,
+    attendees,
+    location,
+  };
+}
+
+export function buildOptionalEventFields(
+  input: CreateEventInput | UpdateEventInput
+): Pick<calendar_v3.Schema$Event, 'colorId' | 'reminders' | 'recurrence' | 'transparency' | 'visibility' | 'guestsCanInviteOthers' | 'guestsCanModify' | 'guestsCanSeeOtherGuests' | 'anyoneCanAddSelf' | 'conferenceData' | 'extendedProperties' | 'attachments' | 'source'> {
+  const fields: any = {};
+  const optionalFieldNames = [
+    'colorId',
+    'reminders',
+    'recurrence',
+    'transparency',
+    'visibility',
+    'guestsCanInviteOthers',
+    'guestsCanModify',
+    'guestsCanSeeOtherGuests',
+    'anyoneCanAddSelf',
+    'conferenceData',
+    'extendedProperties',
+    'attachments',
+    'source'
+  ] as const;
+
+  conditionallyAddFields(input, fields, optionalFieldNames);
+  return fields;
+}
+
+export function buildEventForConflictCheckCreate(
+  input: CreateEventInput,
+  timezone: string
+): calendar_v3.Schema$Event {
+  return buildCoreEvent(input, timezone) as calendar_v3.Schema$Event;
+}
+
+export function buildEventForConflictCheckUpdate(
+  input: UpdateEventInput,
+  existingEvent: calendar_v3.Schema$Event,
+  timezone: string
+): calendar_v3.Schema$Event {
+  return {
+    ...existingEvent,
+    id: input.eventId,
+    ...buildCoreEvent(input, timezone, existingEvent),
+  } as calendar_v3.Schema$Event;
+}
+
+export function buildEventRequestBodyCreate(
+  input: CreateEventInput,
+  timezone: string
+): calendar_v3.Schema$Event {
+  return {
+    ...buildCoreEvent(input, timezone),
+    ...buildOptionalEventFields(input),
+  } as calendar_v3.Schema$Event;
+}
+
+export interface ConflictCheckOptions {
+  checkDuplicates?: boolean;
+  checkConflicts?: boolean;
+  calendarsToCheck?: string[];
+  duplicateSimilarityThreshold?: number;
+}
+
+export async function performConflictCheck(
+  conflictService: ConflictDetectionService,
+  oauth2Client: OAuth2Client,
+  eventToCheck: calendar_v3.Schema$Event,
+  calendarId: string,
+  options: ConflictCheckOptions = {}
+): Promise<any> {
+  const defaults: ConflictCheckOptions = {
+    checkDuplicates: false,
+    checkConflicts: true,
+    calendarsToCheck: [calendarId],
+    duplicateSimilarityThreshold: CONFLICT_DETECTION_CONFIG.DEFAULT_DUPLICATE_THRESHOLD,
+  };
+
+  const finalOptions = { ...defaults, ...options };
+
+  return conflictService.checkConflicts(
+    oauth2Client,
+    eventToCheck,
+    calendarId,
+    finalOptions
+  );
+}
+
+export function getConferenceAndAttachmentOptions(
+  input: CreateEventInput | UpdateEventInput
+): { conferenceDataVersion?: number; supportsAttachments?: boolean } {
+  const result: { conferenceDataVersion?: number; supportsAttachments?: boolean } = {};
+
+  if ('conferenceData' in input && input.conferenceData) {
+    result.conferenceDataVersion = 1;
+  }
+
+  if ('attachments' in input && input.attachments) {
+    result.supportsAttachments = true;
+  }
+
+  return result;
 }
 </file>
 
@@ -40597,302 +40824,228 @@ describe('email-analyzer types', () => {
 });
 </file>
 
-<file path="src/tests/unit/utils/timezone-utils.test.ts">
-import { describe, it, expect } from 'vitest';
+<file path="label-remaining-unread.mjs">
+import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, LABEL_EVENTS, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+
+const gmail = createGmailClient();
+
+console.log('🏷️  LABELING REMAINING UNREAD EMAILS\n');
+console.log('═'.repeat(80) + '\n');
+
+const labelingRules = [
+  {
+    label: LABEL_EVENTS,
+    queries: [
+      'from:info@email.meetup.com',
+      'from:notifications@email.calendly.com OR from:teamcalendly@send.calendly.com',
+      'from:info@email.meetup.com subject:"Just scheduled"',
+    ]
+  },
+  {
+    label: LABEL_PRODUCT_UPDATES,
+    queries: [
+      'from:googlecloud@google.com OR from:CloudPlatform-noreply@google.com',
+      'from:news@alphasignal.ai',
+      'from:noreply@email.openai.com',
+      'from:lukak@storylane.io',
+      'from:no-reply@email.claude.com'
+    ]
+  },
+  {
+    label: LABEL_COMMUNITIES,
+    queries: [
+      'from:wtm@technovation.org'
+    ]
+  },
+  {
+    label: LABEL_KEEP_IMPORTANT,
+    queries: [
+      'from:capitalcity@a.helpfulvillage.com'
+    ]
+  }
+];
+
+const labelCache = await buildLabelCache(gmail);
+
+for (const rule of labelingRules) {
+  const labelId = labelCache.get(rule.label);
+  if (!labelId) {
+    console.log(`⚠️  Label not found: ${rule.label}\n`);
+    continue;
+  }
+
+  const queryCounts = await Promise.all(rule.queries.map(async (query) => {
+    const searchResponse = await gmail.users.messages.list({
+      userId: USER_ID,
+      q: `is:unread ${query}`,
+      maxResults: 500
+    });
+
+    const messageIds = searchResponse.data.messages || [];
+    if (messageIds.length === 0) return 0;
+
+    console.log(`${rule.label} - ${query}: ${messageIds.length}`);
+
+    const batchSize = 50;
+    for (let i = 0; i < messageIds.length; i += batchSize) {
+      const batch = messageIds.slice(i, i + batchSize);
+      await gmail.users.messages.batchModify({
+        userId: USER_ID,
+        requestBody: {
+          ids: batch.map(m => m.id),
+          addLabelIds: [labelId]
+        }
+      });
+    }
+
+    console.log(`  ✅ Labeled ${messageIds.length}`);
+    return messageIds.length;
+  }));
+
+  const totalLabeled = queryCounts.reduce((sum, n) => sum + n, 0);
+
+  if (totalLabeled > 0) {
+    console.log(`\n${rule.label} total: ${totalLabeled}\n`);
+  }
+}
+
+console.log('═'.repeat(80));
+console.log('COMPLETE\n');
+console.log('Remaining unread are now labeled appropriately.\n');
+console.log('═'.repeat(80) + '\n');
+</file>
+
+<file path="mark-archived-as-read.mjs">
+import { createGmailClient } from './lib/gmail-client.mjs';
 import {
-  isValidIANATimeZone,
-  getSystemTimeZone,
-  validateTimeZone,
-  getTimezoneOffsetMinutes,
-  getTimezoneOffsetString,
-  formatDateInTimeZone,
-  resolveTimeZone,
-  hasTimezoneInDatetime,
-  convertToRFC3339,
-  createTimeObject,
-  applyTimezone,
-} from '../../../utils/timezone-utils.js';
+  USER_ID, GMAIL_UNREAD,
+  LABEL_PRODUCT_UPDATES, LABEL_MONITORING, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING,
+} from './lib/constants.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 
-describe('Timezone Utilities', () => {
-  describe('isValidIANATimeZone', () => {
-    it('should recognize valid UTC timezone', () => {
-      expect(isValidIANATimeZone('UTC')).toBe(true);
-      expect(isValidIANATimeZone('Etc/UTC')).toBe(true);
-    });
+async function markArchivedAsRead() {
+  const gmail = createGmailClient();
 
-    it('should recognize valid named timezones', () => {
-      expect(isValidIANATimeZone('America/Los_Angeles')).toBe(true);
-      expect(isValidIANATimeZone('Europe/London')).toBe(true);
-      expect(isValidIANATimeZone('Asia/Tokyo')).toBe(true);
-    });
+  console.log('📖 MARKING ARCHIVED EMAILS AS READ\n');
+  console.log('═'.repeat(80) + '\n');
 
-    it('should reject invalid timezones', () => {
-      expect(isValidIANATimeZone('Invalid/Timezone')).toBe(false);
-      expect(isValidIANATimeZone('NotATimeZone')).toBe(false);
-      expect(isValidIANATimeZone('')).toBe(false);
-    });
-  });
+  const categoriesToProcess = [
+    LABEL_PRODUCT_UPDATES,
+    LABEL_MONITORING,
+    LABEL_COMMUNITIES,
+    LABEL_SERVICES,
+    LABEL_BILLING,
+  ];
 
-  describe('getSystemTimeZone', () => {
-    it('should return a valid timezone string', () => {
-      const tz = getSystemTimeZone();
-      expect(typeof tz).toBe('string');
-      expect(tz.length).toBeGreaterThan(0);
-      expect(isValidIANATimeZone(tz)).toBe(true);
-    });
+  let totalMarked = 0;
 
-    it('should not throw on retrieval', () => {
-      // This test documents that the function doesn't throw
-      expect(() => getSystemTimeZone()).not.toThrow();
-    });
-  });
+  try {
+    const labelCache = await buildLabelCache(gmail);
 
-  describe('validateTimeZone', () => {
-    it('should not throw for valid timezones', () => {
-      expect(() => validateTimeZone('UTC')).not.toThrow();
-      expect(() => validateTimeZone('America/Los_Angeles')).not.toThrow();
-    });
+    for (const category of categoriesToProcess) {
+      const labelId = labelCache.get(category);
+      if (!labelId) continue;
 
-    it('should throw for invalid timezones', () => {
-      expect(() => validateTimeZone('Invalid/Timezone')).toThrow();
-      expect(() => validateTimeZone('NotValid')).toThrow();
-    });
+      const searchQuery = `label:"${category}" is:unread -label:INBOX`;
+      const searchResponse = await gmail.users.messages.list({
+        userId: USER_ID,
+        q: searchQuery,
+        maxResults: 500
+      });
 
-    it('should include timezone in error message', () => {
-      expect(() => validateTimeZone('BadTZ')).toThrow(/BadTZ/);
-    });
-  });
+      const messageIds = searchResponse.data.messages || [];
+      console.log(`${category}: ${messageIds.length} unread\n`);
 
-  describe('getTimezoneOffsetMinutes', () => {
-    it('should return 0 for UTC', () => {
-      expect(getTimezoneOffsetMinutes('UTC')).toBe(0);
-    });
+      if (messageIds.length === 0) continue;
 
-    it('should return positive offset for east of UTC', () => {
-      const offset = getTimezoneOffsetMinutes('Asia/Tokyo');
-      expect(offset).toBeGreaterThan(0);
-      // Japan is UTC+9, so 9*60 = 540 minutes
-      expect(offset).toBe(540);
-    });
+      const batchSize = 50;
+      for (let i = 0; i < messageIds.length; i += batchSize) {
+        const batch = messageIds.slice(i, i + batchSize).map(m => m.id);
 
-    it('should return negative offset for west of UTC', () => {
-      const offset = getTimezoneOffsetMinutes('America/Los_Angeles');
-      expect(offset).toBeLessThan(0);
-      // Los Angeles is UTC-7 or UTC-8 depending on DST
-      expect(Math.abs(offset)).toBeGreaterThanOrEqual(420); // -7 hours = -420 minutes
-    });
-  });
+        await gmail.users.messages.batchModify({
+          userId: USER_ID,
+          requestBody: {
+            ids: batch,
+            removeLabelIds: [GMAIL_UNREAD]
+          }
+        });
 
-  describe('getTimezoneOffsetString', () => {
-    it('should return Z for UTC', () => {
-      expect(getTimezoneOffsetString('UTC')).toBe('Z');
-    });
+        totalMarked += batch.length;
+        const processed = i + batch.length;
+        console.log(`  ✅ Marked ${processed}/${messageIds.length} as read`);
+      }
 
-    it('should return formatted offset string for non-UTC timezones', () => {
-      const offset = getTimezoneOffsetString('Asia/Tokyo');
-      expect(offset).toMatch(/^[+-]\d{2}:\d{2}$/);
-      expect(offset).toBe('+09:00');
-    });
+      console.log();
+    }
 
-    it('should return negative offset for west of UTC', () => {
-      const offset = getTimezoneOffsetString('America/New_York');
-      expect(offset).toMatch(/^-\d{2}:\d{2}$/);
-    });
+    console.log('═'.repeat(80));
+    console.log('COMPLETE\n');
+    console.log(`📖 Total emails marked as read: ${totalMarked}\n`);
+    console.log('═'.repeat(80) + '\n');
 
-    it('should fall back to Z on error', () => {
-      // This tests the error handling
-      expect(typeof getTimezoneOffsetString('UTC')).toBe('string');
-    });
-  });
+  } catch (error) {
+    console.error('Error:', error.message);
+    process.exit(1);
+  }
+}
 
-  describe('formatDateInTimeZone', () => {
-    it('should return object with rfc3339, humanReadable, and offset', () => {
-      const date = new Date('2024-06-15T10:00:00Z');
-      const result = formatDateInTimeZone(date, 'UTC');
-
-      expect(result).toHaveProperty('rfc3339');
-      expect(result).toHaveProperty('humanReadable');
-      expect(result).toHaveProperty('offset');
-    });
-
-    it('should have Z offset for UTC', () => {
-      const date = new Date('2024-06-15T10:00:00Z');
-      const result = formatDateInTimeZone(date, 'UTC');
-
-      expect(result.offset).toBe('Z');
-      expect(result.rfc3339).toMatch(/Z$/);
-    });
-
-    it('should format RFC3339 with timezone offset', () => {
-      const date = new Date('2024-06-15T10:00:00Z');
-      const result = formatDateInTimeZone(date, 'Asia/Tokyo');
-
-      expect(result.rfc3339).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
-    });
-
-    it('should include human-readable format', () => {
-      const date = new Date('2024-06-15T10:00:00Z');
-      const result = formatDateInTimeZone(date, 'America/Los_Angeles');
-
-      expect(result.humanReadable).toMatch(/\d{4}/); // Should include year
-      expect(result.humanReadable).toMatch(/[A-Z]/); // Should include text
-    });
-  });
-
-  describe('resolveTimeZone', () => {
-    it('should return preferred timezone if valid', () => {
-      const result = resolveTimeZone('America/Los_Angeles', 'UTC');
-      expect(result).toBe('America/Los_Angeles');
-    });
-
-    it('should use calendar default if preferred not valid', () => {
-      const result = resolveTimeZone(undefined, 'Europe/London');
-      expect(result).toBe('Europe/London');
-    });
-
-    it('should fall back to system timezone if both not provided', () => {
-      const result = resolveTimeZone(undefined, undefined);
-      expect(isValidIANATimeZone(result)).toBe(true);
-    });
-
-    it('should fall back to system timezone when all invalid', () => {
-      // This tests the fallback chain
-      const result = resolveTimeZone('Invalid', 'AlsoInvalid');
-      // Should use system timezone which is always valid
-      expect(isValidIANATimeZone(result)).toBe(true);
-    });
-
-    it('should validate timezones before using', () => {
-      const result = resolveTimeZone('Invalid/TZ', 'America/Chicago');
-      expect(result).toBe('America/Chicago');
-    });
-  });
-
-  describe('hasTimezoneInDatetime', () => {
-    it('should detect timezone with Z suffix', () => {
-      expect(hasTimezoneInDatetime('2024-06-15T10:00:00Z')).toBe(true);
-    });
-
-    it('should detect timezone with positive offset', () => {
-      expect(hasTimezoneInDatetime('2024-06-15T10:00:00+05:30')).toBe(true);
-    });
-
-    it('should detect timezone with negative offset', () => {
-      expect(hasTimezoneInDatetime('2024-06-15T10:00:00-07:00')).toBe(true);
-    });
-
-    it('should not detect timezone-naive datetime', () => {
-      expect(hasTimezoneInDatetime('2024-06-15T10:00:00')).toBe(false);
-    });
-
-    it('should not detect date-only strings', () => {
-      expect(hasTimezoneInDatetime('2024-06-15')).toBe(false);
-    });
-  });
-
-  describe('convertToRFC3339', () => {
-    it('should return timezone-aware datetime unchanged', () => {
-      const input = '2024-06-15T10:00:00Z';
-      const result = convertToRFC3339(input, 'UTC');
-      expect(result).toBe(input);
-    });
-
-    it('should return timezone-aware with offset unchanged', () => {
-      const input = '2024-06-15T10:00:00+05:30';
-      const result = convertToRFC3339(input, 'UTC');
-      expect(result).toBe(input);
-    });
-
-    it('should convert timezone-naive datetime with fallback timezone', () => {
-      const input = '2024-06-15T10:00:00';
-      const result = convertToRFC3339(input, 'UTC');
-      // Should convert to RFC3339 format
-      expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
-    });
-
-    it('should append Z on invalid input', () => {
-      const input = '2024-06-15';
-      const result = convertToRFC3339(input, 'UTC');
-      expect(result).toBe('2024-06-15Z');
-    });
-  });
-
-  describe('createTimeObject', () => {
-    it('should use date field for date-only strings', () => {
-      const result = createTimeObject('2024-06-15', 'UTC');
-      expect(result.date).toBe('2024-06-15');
-      expect(result.dateTime).toBeUndefined();
-      expect(result.timeZone).toBeUndefined();
-    });
-
-    it('should use dateTime field for timezone-aware datetime', () => {
-      const result = createTimeObject('2024-06-15T10:00:00Z', 'UTC');
-      expect(result.dateTime).toBe('2024-06-15T10:00:00Z');
-      expect(result.timeZone).toBeUndefined();
-    });
-
-    it('should include timeZone for timezone-naive datetime', () => {
-      const result = createTimeObject('2024-06-15T10:00:00', 'America/Los_Angeles');
-      expect(result.dateTime).toBe('2024-06-15T10:00:00');
-      expect(result.timeZone).toBe('America/Los_Angeles');
-    });
-
-    it('should not include timeZone for datetime with offset', () => {
-      const result = createTimeObject('2024-06-15T10:00:00+05:30', 'UTC');
-      expect(result.dateTime).toBe('2024-06-15T10:00:00+05:30');
-      expect(result.timeZone).toBeUndefined();
-    });
-  });
-
-  describe('applyTimezone', () => {
-    it('should apply timezone to both start and end objects', () => {
-      const start = { dateTime: '2024-06-15T10:00:00' };
-      const end = { dateTime: '2024-06-15T11:00:00' };
-      const result = applyTimezone(start, end, 'America/Los_Angeles');
-
-      expect(result.start.timeZone).toBe('America/Los_Angeles');
-      expect(result.end.timeZone).toBe('America/Los_Angeles');
-      expect(result.start.dateTime).toBe('2024-06-15T10:00:00');
-      expect(result.end.dateTime).toBe('2024-06-15T11:00:00');
-    });
-
-    it('should create start/end objects if undefined', () => {
-      const result = applyTimezone(undefined, undefined, 'UTC');
-
-      expect(result.start).toEqual({ timeZone: 'UTC' });
-      expect(result.end).toEqual({ timeZone: 'UTC' });
-    });
-
-    it('should handle partial start/end objects', () => {
-      const start = { dateTime: '2024-06-15T10:00:00' };
-      const result = applyTimezone(start, undefined, 'Europe/London');
-
-      expect(result.start.timeZone).toBe('Europe/London');
-      expect(result.start.dateTime).toBe('2024-06-15T10:00:00');
-      expect(result.end).toEqual({ timeZone: 'Europe/London' });
-    });
-
-    it('should handle date-only objects', () => {
-      const start = { date: '2024-06-15' };
-      const end = { date: '2024-06-16' };
-      const result = applyTimezone(start, end, 'Asia/Tokyo');
-
-      expect(result.start.timeZone).toBe('Asia/Tokyo');
-      expect(result.start.date).toBe('2024-06-15');
-      expect(result.end.timeZone).toBe('Asia/Tokyo');
-      expect(result.end.date).toBe('2024-06-16');
-    });
-
-    it('should preserve existing timezone properties when overwriting', () => {
-      const start = { dateTime: '2024-06-15T10:00:00', timeZone: 'UTC' };
-      const end = { dateTime: '2024-06-15T11:00:00', timeZone: 'UTC' };
-      const result = applyTimezone(start, end, 'America/New_York');
-
-      expect(result.start.timeZone).toBe('America/New_York');
-      expect(result.end.timeZone).toBe('America/New_York');
-    });
-  });
+markArchivedAsRead().catch(error => {
+  console.error('Error:', error.message);
+  process.exit(1);
 });
+</file>
+
+<file path="quick-status.mjs">
+import { createGmailClient } from './lib/gmail-client.mjs';
+import {
+  USER_ID,
+  LABEL_SENTRY, LABEL_KEEP_IMPORTANT, LABEL_EVENTS, LABEL_MONITORING,
+  LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING,
+} from './lib/constants.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+
+const gmail = createGmailClient();
+
+console.log('📊 QUICK STATUS\n');
+
+const profile = await gmail.users.getProfile({ userId: USER_ID });
+console.log(`Total messages: ${profile.data.messagesTotal}`);
+console.log(`Total threads: ${profile.data.threadsTotal}`);
+
+const unreadResult = await gmail.users.messages.list({
+  userId: USER_ID,
+  q: 'is:unread'
+});
+
+console.log(`Unread (is:unread): ${unreadResult.data.resultSizeEstimate}`);
+
+const inboxResult = await gmail.users.messages.list({
+  userId: USER_ID,
+  q: 'is:unread in:inbox'
+});
+
+console.log(`Unread in inbox: ${inboxResult.data.resultSizeEstimate}`);
+
+const labels = [LABEL_SENTRY, LABEL_KEEP_IMPORTANT, LABEL_EVENTS, LABEL_MONITORING, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING];
+const labelCache = await buildLabelCache(gmail);
+
+console.log('\n📁 By Label:');
+const labelCounts = await Promise.all(
+  labels.map(async label => {
+    const labelId = labelCache.get(label);
+    if (!labelId) return { label, count: 0 };
+    const result = await gmail.users.messages.list({
+      userId: USER_ID,
+      q: `label:${labelId} is:unread`
+    });
+    return { label, count: result.data.resultSizeEstimate };
+  })
+);
+for (const { label, count } of labelCounts) {
+  console.log(`  ${label}: ${count}`);
+}
 </file>
 
 <file path="README.md">
@@ -41429,153 +41582,6 @@ export function processBatchResponses<T extends ExtendedEvent = ExtendedEvent>(
 }
 </file>
 
-<file path="src/handlers/core/eventManipulationUtils.ts">
-import { calendar_v3 } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
-import { CreateEventInput, UpdateEventInput } from '../../tools/registry.js';
-import { createTimeObject } from '../../utils/timezone-utils.js';
-import { ConflictDetectionService } from '../../services/conflict-detection/index.js';
-import { CONFLICT_DETECTION_CONFIG } from '../../services/conflict-detection/config.js';
-
-/**
- * Copy properties from source to target if they exist in source and are not undefined.
- * Used to conditionally build event fields without boilerplate if-checks.
- */
-function conditionallyAddFields<T extends Record<string, any>>(
-  source: T,
-  target: Record<string, any>,
-  fieldNames: (keyof T)[]
-): void {
-  for (const field of fieldNames) {
-    if (field in source && source[field] !== undefined) {
-      target[field] = source[field];
-    }
-  }
-}
-
-export function buildCoreEvent(
-  input: CreateEventInput | UpdateEventInput,
-  timezone: string,
-  existingEvent?: calendar_v3.Schema$Event
-): Pick<calendar_v3.Schema$Event, 'summary' | 'description' | 'start' | 'end' | 'attendees' | 'location'> {
-  const summary = 'summary' in input ? input.summary : (input.summary || existingEvent?.summary);
-  const description = 'description' in input ? input.description : (input.description || existingEvent?.description);
-  const start = ('start' in input && input.start) ? createTimeObject(input.start, timezone) : existingEvent?.start;
-  const end = ('end' in input && input.end) ? createTimeObject(input.end, timezone) : existingEvent?.end;
-  const attendees = 'attendees' in input ? input.attendees : undefined;
-  const location = 'location' in input ? input.location : (input.location || existingEvent?.location);
-
-  return {
-    summary,
-    description,
-    start,
-    end,
-    attendees,
-    location,
-  };
-}
-
-export function buildOptionalEventFields(
-  input: CreateEventInput | UpdateEventInput
-): Pick<calendar_v3.Schema$Event, 'colorId' | 'reminders' | 'recurrence' | 'transparency' | 'visibility' | 'guestsCanInviteOthers' | 'guestsCanModify' | 'guestsCanSeeOtherGuests' | 'anyoneCanAddSelf' | 'conferenceData' | 'extendedProperties' | 'attachments' | 'source'> {
-  const fields: any = {};
-  const optionalFieldNames = [
-    'colorId',
-    'reminders',
-    'recurrence',
-    'transparency',
-    'visibility',
-    'guestsCanInviteOthers',
-    'guestsCanModify',
-    'guestsCanSeeOtherGuests',
-    'anyoneCanAddSelf',
-    'conferenceData',
-    'extendedProperties',
-    'attachments',
-    'source'
-  ] as const;
-
-  conditionallyAddFields(input, fields, optionalFieldNames);
-  return fields;
-}
-
-export function buildEventForConflictCheckCreate(
-  input: CreateEventInput,
-  timezone: string
-): calendar_v3.Schema$Event {
-  return buildCoreEvent(input, timezone) as calendar_v3.Schema$Event;
-}
-
-export function buildEventForConflictCheckUpdate(
-  input: UpdateEventInput,
-  existingEvent: calendar_v3.Schema$Event,
-  timezone: string
-): calendar_v3.Schema$Event {
-  return {
-    ...existingEvent,
-    id: input.eventId,
-    ...buildCoreEvent(input, timezone, existingEvent),
-  } as calendar_v3.Schema$Event;
-}
-
-export function buildEventRequestBodyCreate(
-  input: CreateEventInput,
-  timezone: string
-): calendar_v3.Schema$Event {
-  return {
-    ...buildCoreEvent(input, timezone),
-    ...buildOptionalEventFields(input),
-  } as calendar_v3.Schema$Event;
-}
-
-export interface ConflictCheckOptions {
-  checkDuplicates?: boolean;
-  checkConflicts?: boolean;
-  calendarsToCheck?: string[];
-  duplicateSimilarityThreshold?: number;
-}
-
-export async function performConflictCheck(
-  conflictService: ConflictDetectionService,
-  oauth2Client: OAuth2Client,
-  eventToCheck: calendar_v3.Schema$Event,
-  calendarId: string,
-  options: ConflictCheckOptions = {}
-): Promise<any> {
-  const defaults: ConflictCheckOptions = {
-    checkDuplicates: false,
-    checkConflicts: true,
-    calendarsToCheck: [calendarId],
-    duplicateSimilarityThreshold: CONFLICT_DETECTION_CONFIG.DEFAULT_DUPLICATE_THRESHOLD,
-  };
-
-  const finalOptions = { ...defaults, ...options };
-
-  return conflictService.checkConflicts(
-    oauth2Client,
-    eventToCheck,
-    calendarId,
-    finalOptions
-  );
-}
-
-export function getConferenceAndAttachmentOptions(
-  input: CreateEventInput | UpdateEventInput
-): { conferenceDataVersion?: number; supportsAttachments?: boolean } {
-  const result: { conferenceDataVersion?: number; supportsAttachments?: boolean } = {};
-
-  if ('conferenceData' in input && input.conferenceData) {
-    result.conferenceDataVersion = 1;
-  }
-
-  if ('attachments' in input && input.attachments) {
-    result.supportsAttachments = true;
-  }
-
-  return result;
-}
-</file>
-
 <file path="src/tests/integration/test-data-factory.ts">
 // Test data factory utilities for integration tests
 import { tryGetTextContent } from '../unit/helpers/index.js';
@@ -41873,6 +41879,276 @@ export class TestDataFactory {
     };
   }
 }
+</file>
+
+<file path="src/tests/unit/handlers/ListEventsHandler.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
+import { OAuth2Client } from 'google-auth-library';
+import { google } from 'googleapis';
+import { convertToRFC3339 } from '../../../utils/timezone-utils.js';
+import { getTextContent, makeEvent, makeCalendarMock } from '../helpers/index.js';
+import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
+
+// Mock googleapis globally
+vi.mock('googleapis', () => ({
+  google: {
+    calendar: vi.fn(() => ({
+      events: {
+        list: vi.fn()
+      },
+      calendarList: {
+        get: vi.fn()
+      }
+    }))
+  }
+}));
+
+describe('ListEventsHandler JSON String Handling', () => {
+  const mockOAuth2Client = {
+    getAccessToken: vi.fn().mockResolvedValue({ token: 'mock-token' })
+  } as unknown as OAuth2Client;
+
+  const handler = new ListEventsHandler();
+  let mockCalendar: ReturnType<typeof makeCalendarMock>;
+
+  beforeEach(() => {
+    mockCalendar = makeCalendarMock({
+      list: vi.fn().mockResolvedValue({
+        data: { items: [makeEvent({ id: 'test-event', summary: 'Test Event' })] }
+      }),
+      calendarListGet: vi.fn().mockResolvedValue({ data: { timeZone: 'UTC' } }),
+    });
+    vi.mocked(google.calendar).mockReturnValue(mockCalendar);
+  });
+
+  // Mock fetch for batch requests
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    text: () => Promise.resolve(`--batch_boundary
+Content-Type: application/http
+Content-ID: <item1>
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"items": [{"id": "test-event", "summary": "Test Event", "start": {"dateTime": "2025-06-02T10:00:00Z"}, "end": {"dateTime": "2025-06-02T11:00:00Z"}}]}
+
+--batch_boundary--`)
+  });
+
+  it('should handle single calendar ID as string', async () => {
+    const args = {
+      calendarId: 'primary',
+      timeMin: '2025-06-02T00:00:00Z',
+      timeMax: '2025-06-09T23:59:59Z'
+    };
+
+    const result = await handler.runTool(args, mockOAuth2Client);
+    expect(result.content).toHaveLength(1);
+    expect(getTextContent(result)).toContain('Found');
+  });
+
+  it('should handle multiple calendar IDs as array', async () => {
+    const args = {
+      calendarId: ['primary', 'secondary@gmail.com'],
+      timeMin: '2025-06-02T00:00:00Z',
+      timeMax: '2025-06-09T23:59:59Z'
+    };
+
+    const result = await handler.runTool(args, mockOAuth2Client);
+    expect(result.content).toHaveLength(1);
+    expect(getTextContent(result)).toContain('Found');
+  });
+
+  it('should handle calendar IDs passed as JSON string', async () => {
+    // This simulates the problematic case from the user
+    const args = {
+      calendarId: '["primary", "secondary@gmail.com"]',
+      timeMin: '2025-06-02T00:00:00Z',
+      timeMax: '2025-06-09T23:59:59Z'
+    };
+
+    // This would be parsed by the Zod transform before reaching the handler
+    // For testing, we'll manually simulate what the transform should do
+    let processedArgs = { ...args };
+    if (typeof args.calendarId === 'string' && args.calendarId.startsWith('[')) {
+      processedArgs.calendarId = JSON.parse(args.calendarId);
+    }
+
+    const result = await handler.runTool(processedArgs, mockOAuth2Client);
+    expect(result.content).toHaveLength(1);
+    expect(getTextContent(result)).toContain('Found');
+  });
+});
+
+describe('ListEventsHandler - Timezone Handling', () => {
+  let handler: ListEventsHandler;
+  let mockOAuth2Client: OAuth2Client;
+  let mockCalendar: ReturnType<typeof makeCalendarMock>;
+
+  beforeEach(() => {
+    handler = new ListEventsHandler();
+    mockOAuth2Client = {} as OAuth2Client;
+    mockCalendar = makeCalendarMock();
+    vi.mocked(google.calendar).mockReturnValue(mockCalendar);
+  });
+
+  describe('convertToRFC3339 timezone interpretation', () => {
+    it('should correctly convert timezone-naive datetime to Los Angeles time', () => {
+      // Test the core issue: timezone-naive datetime should be interpreted in the target timezone
+      const datetime = '2025-01-01T10:00:00';
+      const timezone = 'America/Los_Angeles';
+      
+      const result = convertToRFC3339(datetime, timezone);
+      
+      // In January 2025, Los Angeles is UTC-8 (PST)
+      // 10:00 AM PST = 18:00 UTC
+      // The result should be '2025-01-01T18:00:00Z'
+      expect(result).toBe('2025-01-01T18:00:00Z');
+    });
+
+    it('should correctly convert timezone-naive datetime to New York time', () => {
+      const datetime = '2025-01-01T10:00:00';
+      const timezone = 'America/New_York';
+      
+      const result = convertToRFC3339(datetime, timezone);
+      
+      // In January 2025, New York is UTC-5 (EST)
+      // 10:00 AM EST = 15:00 UTC
+      expect(result).toBe('2025-01-01T15:00:00Z');
+    });
+
+    it('should correctly convert timezone-naive datetime to London time', () => {
+      const datetime = '2025-01-01T10:00:00';
+      const timezone = 'Europe/London';
+      
+      const result = convertToRFC3339(datetime, timezone);
+      
+      // In January 2025, London is UTC+0 (GMT)
+      // 10:00 AM GMT = 10:00 UTC
+      expect(result).toBe('2025-01-01T10:00:00Z');
+    });
+
+    it('should handle DST transitions correctly', () => {
+      // Test during DST period
+      const datetime = '2025-07-01T10:00:00';
+      const timezone = 'America/Los_Angeles';
+      
+      const result = convertToRFC3339(datetime, timezone);
+      
+      // In July 2025, Los Angeles is UTC-7 (PDT)
+      // 10:00 AM PDT = 17:00 UTC
+      expect(result).toBe('2025-07-01T17:00:00Z');
+    });
+
+    it('should leave timezone-aware datetime unchanged', () => {
+      const datetime = '2025-01-01T10:00:00-08:00';
+      const timezone = 'America/Los_Angeles';
+      
+      const result = convertToRFC3339(datetime, timezone);
+      
+      // Should remain unchanged since it already has timezone info
+      expect(result).toBe('2025-01-01T10:00:00-08:00');
+    });
+  });
+
+  describe('ListEventsHandler timezone parameter usage', () => {
+    beforeEach(() => {
+      // Mock successful calendar list response
+      mockCalendar.calendarList.get.mockResolvedValue({
+        data: { timeZone: 'UTC' }
+      });
+      
+      // Mock successful events list response
+      mockCalendar.events.list.mockResolvedValue({
+        data: { items: [] }
+      });
+    });
+
+    it('should use timeZone parameter to interpret timezone-naive timeMin/timeMax', async () => {
+      const args = {
+        calendarId: 'primary',
+        timeMin: '2025-01-01T10:00:00',
+        timeMax: '2025-01-01T18:00:00',
+        timeZone: 'America/Los_Angeles'
+      };
+
+      await handler.runTool(args, mockOAuth2Client);
+
+      // Verify that the calendar.events.list was called with correctly converted times
+      expect(mockCalendar.events.list).toHaveBeenCalledWith({
+        calendarId: 'primary',
+        timeMin: '2025-01-01T18:00:00Z', // 10:00 AM PST = 18:00 UTC
+        timeMax: '2025-01-02T02:00:00Z', // 18:00 PM PST = 02:00 UTC next day
+        ...LIST_EVENTS_API_DEFAULTS
+      });
+    });
+
+    it('should preserve timezone-aware timeMin/timeMax regardless of timeZone parameter', async () => {
+      const args = {
+        calendarId: 'primary',
+        timeMin: '2025-01-01T10:00:00-08:00',
+        timeMax: '2025-01-01T18:00:00-08:00',
+        timeZone: 'America/New_York' // Different timezone, should be ignored
+      };
+
+      await handler.runTool(args, mockOAuth2Client);
+
+      // Verify that the original timezone-aware times are preserved
+      expect(mockCalendar.events.list).toHaveBeenCalledWith({
+        calendarId: 'primary',
+        timeMin: '2025-01-01T10:00:00-08:00',
+        timeMax: '2025-01-01T18:00:00-08:00',
+        ...LIST_EVENTS_API_DEFAULTS
+      });
+    });
+
+    it('should fall back to calendar timezone when timeZone parameter not provided', async () => {
+      // Mock calendar with Los Angeles timezone
+      mockCalendar.calendarList.get.mockResolvedValue({
+        data: { timeZone: 'America/Los_Angeles' }
+      });
+
+      const args = {
+        calendarId: 'primary',
+        timeMin: '2025-01-01T10:00:00',
+        timeMax: '2025-01-01T18:00:00'
+        // No timeZone parameter
+      };
+
+      await handler.runTool(args, mockOAuth2Client);
+
+      // Verify that the calendar's timezone is used for conversion
+      expect(mockCalendar.events.list).toHaveBeenCalledWith({
+        calendarId: 'primary',
+        timeMin: '2025-01-01T18:00:00Z', // 10:00 AM PST = 18:00 UTC
+        timeMax: '2025-01-02T02:00:00Z', // 18:00 PM PST = 02:00 UTC next day
+        ...LIST_EVENTS_API_DEFAULTS
+      });
+    });
+
+    it('should handle UTC timezone correctly', async () => {
+      const args = {
+        calendarId: 'primary',
+        timeMin: '2025-01-01T10:00:00',
+        timeMax: '2025-01-01T18:00:00',
+        timeZone: 'UTC'
+      };
+
+      await handler.runTool(args, mockOAuth2Client);
+
+      // Verify that UTC times are handled correctly
+      expect(mockCalendar.events.list).toHaveBeenCalledWith({
+        calendarId: 'primary',
+        timeMin: '2025-01-01T10:00:00Z',
+        timeMax: '2025-01-01T18:00:00Z',
+        ...LIST_EVENTS_API_DEFAULTS
+      });
+    });
+  });
+});
 </file>
 
 <file path="src/tests/unit/handlers/RecurringEventHelpers.test.ts">
@@ -42355,6 +42631,312 @@ describe('RecurringEventHelpers', () => {
       expect(result.end).toEqual({ timeZone: 'UTC' });
     });
   });
+});
+</file>
+
+<file path="src/tests/unit/handlers/SearchEventsHandler.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SearchEventsHandler } from '../../../handlers/core/SearchEventsHandler.js';
+import { OAuth2Client } from 'google-auth-library';
+import { calendar_v3 } from 'googleapis';
+import { getTextContent, makeEvent, makeGaxiosError, makeCalendarMock } from '../helpers/index.js';
+import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
+
+vi.mock('googleapis', () => ({
+  google: {
+    calendar: vi.fn(() => ({
+      events: {
+        list: vi.fn()
+      },
+      calendarList: {
+        get: vi.fn()
+      }
+    }))
+  },
+  calendar_v3: {}
+}));
+
+vi.mock('../../../utils/field-mask-builder.js', () => ({
+  buildListFieldMask: vi.fn((fields) => {
+    if (!fields || fields.length === 0) return undefined;
+    return fields.join(',');
+  })
+}));
+
+vi.mock('../../../utils/timezone-utils.js', () => ({
+  resolveTimeRange: vi.fn((timeMin, timeMax, _timezone) => ({
+    timeMin: timeMin ? (timeMin.includes('Z') || timeMin.includes('+') ? timeMin : `${timeMin}Z`) : undefined,
+    timeMax: timeMax ? (timeMax.includes('Z') || timeMax.includes('+') ? timeMax : `${timeMax}Z`) : undefined,
+  }))
+}));
+
+vi.mock('../../../handlers/utils.js', () => ({
+  formatEventWithDetails: vi.fn((event) => {
+    return `${event.summary || 'No Title'} (${event.start?.dateTime || event.start?.date || 'No Date'})`;
+  })
+}));
+
+const BASE_ARGS = {
+  calendarId: 'primary' as const,
+  query: 'test',
+  timeMin: '2025-01-01T00:00:00',
+  timeMax: '2025-01-31T23:59:59'
+} as const;
+
+describe('SearchEventsHandler', () => {
+  let handler: SearchEventsHandler;
+  let mockOAuth2Client: OAuth2Client;
+  let mockCalendar: ReturnType<typeof makeCalendarMock>;
+
+  beforeEach(() => {
+    handler = new SearchEventsHandler();
+    mockOAuth2Client = new OAuth2Client();
+
+    mockCalendar = makeCalendarMock({ list: vi.fn().mockResolvedValue({ data: { items: [] } }) });
+
+    vi.spyOn(handler as any, 'getCalendar').mockReturnValue(mockCalendar);
+    vi.spyOn(handler as any, 'getCalendarTimezone').mockResolvedValue('America/Los_Angeles');
+  });
+
+  describe('runTool', () => {
+    it('should search and return events successfully', async () => {
+      const mockEvents = [
+        makeEvent({ summary: 'Team Meeting' }),
+        makeEvent({
+          id: 'event2',
+          summary: 'Project Review',
+          start: { dateTime: '2025-01-15T14:00:00Z' },
+          end: { dateTime: '2025-01-15T15:00:00Z' }
+        })
+      ];
+
+      mockCalendar.events.list.mockResolvedValue({ data: { items: mockEvents } });
+
+      const result = await handler.runTool({ ...BASE_ARGS, query: 'meeting' }, mockOAuth2Client);
+
+      expect(result.content).toHaveLength(1);
+      const text = getTextContent(result);
+      expect(text).toContain('Found 2 event(s)');
+      expect(text).toContain('Team Meeting');
+      expect(text).toContain('Project Review');
+    });
+
+    it('should return no events message when search yields no results', async () => {
+      const result = await handler.runTool({ ...BASE_ARGS, query: 'nonexistent' }, mockOAuth2Client);
+
+      expect(result.content).toHaveLength(1);
+      expect(getTextContent(result)).toBe('No events found matching your search criteria.');
+    });
+
+    it('should return no events message when items is undefined', async () => {
+      mockCalendar.events.list.mockResolvedValue({ data: {} });
+
+      const result = await handler.runTool(BASE_ARGS, mockOAuth2Client);
+
+      expect(result.content).toHaveLength(1);
+      expect(getTextContent(result)).toBe('No events found matching your search criteria.');
+    });
+
+    it('should include event index numbers in response', async () => {
+      const mockEvents = [
+        makeEvent({ summary: 'First Event' }),
+        makeEvent({ id: 'event2', summary: 'Second Event', start: { dateTime: '2025-01-15T14:00:00Z' }, end: { dateTime: '2025-01-15T15:00:00Z' } })
+      ];
+
+      mockCalendar.events.list.mockResolvedValue({ data: { items: mockEvents } });
+
+      const result = await handler.runTool({ ...BASE_ARGS, query: 'event' }, mockOAuth2Client);
+      const text = getTextContent(result);
+
+      expect(text).toContain('1. First Event');
+      expect(text).toContain('2. Second Event');
+    });
+  });
+
+  describe('searchEvents - API Parameters', () => {
+    it('should pass correct parameters to calendar.events.list', async () => {
+      await handler.runTool({ ...BASE_ARGS, query: 'meeting', timeZone: 'America/New_York' }, mockOAuth2Client);
+
+      expect(mockCalendar.events.list).toHaveBeenCalledWith(
+        expect.objectContaining({
+          calendarId: 'primary',
+          q: 'meeting',
+          ...LIST_EVENTS_API_DEFAULTS
+        })
+      );
+
+      const callArgs = mockCalendar.events.list.mock.calls[0][0];
+      expect(callArgs.timeMin).toBeDefined();
+      expect(callArgs.timeMax).toBeDefined();
+    });
+
+    it('should use provided timeZone for conversion', async () => {
+      const { resolveTimeRange } = await import('../../../utils/timezone-utils.js');
+
+      await handler.runTool({ ...BASE_ARGS, timeZone: 'Asia/Tokyo' }, mockOAuth2Client);
+
+      expect(vi.mocked(resolveTimeRange)).toHaveBeenCalledWith('2025-01-01T00:00:00', '2025-01-31T23:59:59', 'Asia/Tokyo');
+    });
+
+    it('should fallback to calendar timezone when timeZone not provided', async () => {
+      await handler.runTool(BASE_ARGS, mockOAuth2Client);
+
+      expect(handler['getCalendarTimezone']).toHaveBeenCalledWith(mockOAuth2Client, 'primary');
+    });
+  });
+
+  describe('searchEvents - Field Handling', () => {
+    it('should not include fields parameter when no fields requested', async () => {
+      await handler.runTool(BASE_ARGS, mockOAuth2Client);
+
+      const callArgs = mockCalendar.events.list.mock.calls[0][0];
+      expect(callArgs.fields).toBeUndefined();
+    });
+
+    it('should include fields parameter when fields are requested', async () => {
+      await handler.runTool({ ...BASE_ARGS, fields: ['description', 'attendees'] }, mockOAuth2Client);
+
+      const callArgs = mockCalendar.events.list.mock.calls[0][0];
+      expect(callArgs.fields).toBe('description,attendees');
+    });
+  });
+
+  describe('searchEvents - Extended Properties', () => {
+    it('should include privateExtendedProperty when provided', async () => {
+      await handler.runTool({ ...BASE_ARGS, privateExtendedProperty: ['key1=value1', 'key2=value2'] }, mockOAuth2Client);
+
+      const callArgs = mockCalendar.events.list.mock.calls[0][0];
+      expect(callArgs.privateExtendedProperty).toEqual(['key1=value1', 'key2=value2']);
+    });
+
+    it('should include sharedExtendedProperty when provided', async () => {
+      await handler.runTool({ ...BASE_ARGS, sharedExtendedProperty: ['prop1=val1'] }, mockOAuth2Client);
+
+      const callArgs = mockCalendar.events.list.mock.calls[0][0];
+      expect(callArgs.sharedExtendedProperty).toEqual(['prop1=val1']);
+    });
+
+    it('should not include extended properties when not provided', async () => {
+      await handler.runTool(BASE_ARGS, mockOAuth2Client);
+
+      const callArgs = mockCalendar.events.list.mock.calls[0][0];
+      expect(callArgs.privateExtendedProperty).toBeUndefined();
+      expect(callArgs.sharedExtendedProperty).toBeUndefined();
+    });
+  });
+
+  describe('Error Handling', () => {
+    it.each([
+      [500, 'Internal Server Error'],
+      [404, 'Calendar not found'],
+      [403, 'Insufficient permissions'],
+      [429, 'Rate limit exceeded'],
+      [400, 'Token expired']
+    ])('should throw on HTTP %i error', async (status, message) => {
+      const error = makeGaxiosError(status, 'Error', { error: { message } });
+      mockCalendar.events.list.mockRejectedValue(error);
+
+      await expect(handler.runTool(BASE_ARGS, mockOAuth2Client)).rejects.toThrow();
+    });
+
+    it('should handle non-GaxiosError errors gracefully', async () => {
+      const genericError = new Error('Something went wrong');
+      mockCalendar.events.list.mockRejectedValue(genericError);
+
+      await expect(handler.runTool(BASE_ARGS, mockOAuth2Client)).rejects.toThrow();
+    });
+  });
+
+  describe('Response Formatting', () => {
+    it('should trim whitespace from final response', async () => {
+      mockCalendar.events.list.mockResolvedValue({ data: { items: [makeEvent()] } });
+
+      const result = await handler.runTool(BASE_ARGS, mockOAuth2Client);
+      const text = getTextContent(result);
+
+      expect(text).not.toMatch(/^\s+/);
+      expect(text).not.toMatch(/\s+$/);
+    });
+
+    it('should format single event correctly', async () => {
+      mockCalendar.events.list.mockResolvedValue({ data: { items: [makeEvent({ summary: 'Single Event' })] } });
+
+      const result = await handler.runTool({ ...BASE_ARGS, query: 'single' }, mockOAuth2Client);
+      const text = getTextContent(result);
+
+      expect(text).toContain('Found 1 event(s)');
+      expect(text).toContain('1. Single Event');
+    });
+  });
+
+
+  describe('Query handling', () => {
+    it('should pass query parameter to API', async () => {
+      await handler.runTool({ ...BASE_ARGS, query: 'important project' }, mockOAuth2Client);
+
+      expect(mockCalendar.events.list).toHaveBeenCalledWith(
+        expect.objectContaining({ q: 'important project' })
+      );
+    });
+
+    it('should handle special characters in query', async () => {
+      await handler.runTool({ ...BASE_ARGS, query: '"exact phrase" OR tag:important' }, mockOAuth2Client);
+
+      expect(mockCalendar.events.list).toHaveBeenCalledWith(
+        expect.objectContaining({ q: '"exact phrase" OR tag:important' })
+      );
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('should handle events with minimal properties', async () => {
+      mockCalendar.events.list.mockResolvedValue({ data: { items: [{ id: 'minimal-event' }] } });
+
+      const result = await handler.runTool(BASE_ARGS, mockOAuth2Client);
+
+      expect(getTextContent(result)).toContain('Found 1 event(s)');
+    });
+
+    it('should handle many events', async () => {
+      const mockEvents = Array.from({ length: 50 }, (_, i) => ({
+        id: `event${i}`,
+        summary: `Event ${i}`,
+        start: { dateTime: `2025-01-${String((i % 28) + 1).padStart(2, '0')}T10:00:00Z` },
+        end: { dateTime: `2025-01-${String((i % 28) + 1).padStart(2, '0')}T11:00:00Z` }
+      }));
+
+      mockCalendar.events.list.mockResolvedValue({ data: { items: mockEvents } });
+
+      const result = await handler.runTool(BASE_ARGS, mockOAuth2Client);
+      const text = getTextContent(result);
+
+      expect(text).toContain('Found 50 event(s)');
+      expect(text).toContain('50. Event 49');
+    });
+
+    it('should handle events with all-day dates', async () => {
+      mockCalendar.events.list.mockResolvedValue({
+        data: { items: [{ id: 'allday-event', summary: 'All Day Event', start: { date: '2025-01-15' }, end: { date: '2025-01-16' } }] }
+      });
+
+      const result = await handler.runTool({ ...BASE_ARGS, query: 'allday' }, mockOAuth2Client);
+
+      expect(getTextContent(result)).toContain('All Day Event');
+    });
+
+    it('should handle events with RFC3339 timezone-aware times', async () => {
+      mockCalendar.events.list.mockResolvedValue({
+        data: {
+          items: [makeEvent({ summary: 'TZ Event', start: { dateTime: '2025-01-15T10:00:00-08:00' }, end: { dateTime: '2025-01-15T11:00:00-08:00' } })]
+        }
+      });
+
+      const result = await handler.runTool({ ...BASE_ARGS, query: 'tz' }, mockOAuth2Client);
+
+      expect(getTextContent(result)).toContain('TZ Event');
+    });
+  });
+
 });
 </file>
 
@@ -43875,6 +44457,352 @@ export class ToolRegistry {
 }
 </file>
 
+<file path="src/utils/timezone-utils.ts">
+/**
+ * Timezone utilities for calendar operations.
+ * Provides validation, offset calculation, and timezone-aware datetime formatting.
+ * Consolidates timezone logic from GetCurrentTimeHandler and handlers/utils/datetime.ts
+ */
+
+import { formatRFC3339 } from './date-utils.js';
+
+/**
+ * Shared Intl.DateTimeFormat options for offset calculation.
+ * Used by getTimezoneOffsetMinutes and convertLocalTimeToUTC.
+ */
+const DATETIME_OFFSET_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+};
+
+/**
+ * Check if a timezone string is a valid IANA timezone identifier.
+ * @param timeZone Timezone string to validate (e.g., 'America/Los_Angeles')
+ * @returns true if valid IANA timezone
+ */
+export function isValidIANATimeZone(timeZone: string): boolean {
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get the system's configured timezone.
+ * Falls back to UTC if detection fails.
+ * @returns IANA timezone string (e.g., 'America/Los_Angeles')
+ */
+export function getSystemTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return 'UTC';
+  }
+}
+
+/**
+ * Validate a timezone string, throwing if invalid.
+ * @param timeZone Timezone string to validate
+ * @throws Error if timezone is invalid
+ */
+export function validateTimeZone(timeZone: string): void {
+  if (!isValidIANATimeZone(timeZone)) {
+    throw new Error(
+      `Invalid timezone: ${timeZone}. Use IANA timezone format like 'America/Los_Angeles' or 'UTC'.`
+    );
+  }
+}
+
+/**
+ * Calculate the timezone offset in minutes for a specific timezone.
+ * Positive for timezones east of UTC, negative for west of UTC.
+ * @param timeZone IANA timezone identifier
+ * @returns Offset in minutes (e.g., 330 for Asia/Kolkata, -420 for America/Los_Angeles)
+ */
+export function getTimezoneOffsetMinutes(timeZone: string): number {
+  const date = new Date();
+
+  // Get the target timezone's local time string
+  const targetTimeString = new Intl.DateTimeFormat('sv-SE', {
+    ...DATETIME_OFFSET_FORMAT_OPTIONS,
+    timeZone: timeZone,
+  }).format(date);
+
+  // Get UTC time string
+  const utcTimeString = new Intl.DateTimeFormat('sv-SE', {
+    ...DATETIME_OFFSET_FORMAT_OPTIONS,
+    timeZone: 'UTC',
+  }).format(date);
+
+  // Parse both times and calculate difference
+  const targetTime = new Date(targetTimeString.replace(' ', 'T') + 'Z').getTime();
+  const utcTimeParsed = new Date(utcTimeString.replace(' ', 'T') + 'Z').getTime();
+
+  return (targetTime - utcTimeParsed) / (1000 * 60);
+}
+
+/**
+ * Format a timezone offset as a string.
+ * @param timeZone IANA timezone identifier
+ * @returns Offset string: 'Z' for UTC, '+HH:MM' or '-HH:MM' for other timezones
+ */
+export function getTimezoneOffsetString(timeZone: string): string {
+  try {
+    const offsetMinutes = getTimezoneOffsetMinutes(timeZone);
+
+    if (offsetMinutes === 0) {
+      return 'Z';
+    }
+
+    const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+    const offsetMins = Math.abs(offsetMinutes) % 60;
+    const sign = offsetMinutes >= 0 ? '+' : '-';
+
+    return `${sign}${offsetHours.toString().padStart(2, '0')}:${offsetMins.toString().padStart(2, '0')}`;
+  } catch {
+    return 'Z'; // Fallback to UTC if calculation fails
+  }
+}
+
+/**
+ * Format a date in a specific timezone with both RFC3339 and human-readable formats.
+ * @param date Date to format
+ * @param timeZone IANA timezone identifier
+ * @returns Object with rfc3339, humanReadable, and offset fields
+ */
+export function formatDateInTimeZone(date: Date, timeZone: string): {
+  rfc3339: string;
+  humanReadable: string;
+  offset: string;
+} {
+  const offset = getTimezoneOffsetString(timeZone);
+  // Remove Z suffix from RFC3339 format and add timezone offset
+  const isoString = formatRFC3339(date).slice(0, -1);
+  const rfc3339 = isoString + offset;
+
+  const humanReadable = new Intl.DateTimeFormat('en-US', {
+    timeZone: timeZone,
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZoneName: 'long',
+  }).format(date);
+
+  return { rfc3339, humanReadable, offset };
+}
+
+/**
+ * Resolve a timezone from preferred and calendar defaults.
+ * Follows precedence: preferredTZ > calendarDefaultTZ > systemTimeZone > 'UTC'
+ * @param preferredTZ User-specified timezone (optional)
+ * @param calendarDefaultTZ Calendar's default timezone (optional)
+ * @returns Valid IANA timezone string
+ */
+export function resolveTimeZone(
+  preferredTZ: string | undefined,
+  calendarDefaultTZ: string | undefined
+): string {
+  if (preferredTZ && isValidIANATimeZone(preferredTZ)) {
+    return preferredTZ;
+  }
+
+  if (calendarDefaultTZ && isValidIANATimeZone(calendarDefaultTZ)) {
+    return calendarDefaultTZ;
+  }
+
+  const systemTZ = getSystemTimeZone();
+  if (isValidIANATimeZone(systemTZ)) {
+    return systemTZ;
+  }
+
+  return 'UTC';
+}
+
+/**
+ * Check if a datetime string includes timezone information.
+ * @param datetime ISO 8601 datetime string
+ * @returns true if timezone is included, false if timezone-naive
+ */
+export function hasTimezoneInDatetime(datetime: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(datetime);
+}
+
+/**
+ * Convert a flexible datetime string to RFC3339 format required by Google Calendar API.
+ *
+ * Precedence rules:
+ * 1. If datetime already has timezone info (Z or ±HH:MM), use as-is
+ * 2. If datetime is timezone-naive, interpret it as local time in fallbackTimezone and convert to UTC
+ *
+ * @param datetime ISO 8601 datetime string (with or without timezone)
+ * @param fallbackTimezone Timezone to use if datetime is timezone-naive (IANA format)
+ * @returns RFC3339 formatted datetime string in UTC
+ */
+export function convertToRFC3339(datetime: string, fallbackTimezone: string): string {
+  if (hasTimezoneInDatetime(datetime)) {
+    // Already has timezone, use as-is
+    return datetime;
+  } else {
+    // Timezone-naive, interpret as local time in fallbackTimezone and convert to UTC
+    try {
+      // Parse the datetime components
+      const match = datetime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/);
+      if (!match) {
+        throw new Error('Invalid datetime format');
+      }
+
+      const [, year, month, day, hour, minute, second] = match.map(Number);
+
+      // Find what UTC time corresponds to the desired local time in the target timezone
+      const targetDate = convertLocalTimeToUTC(year, month - 1, day, hour, minute, second, fallbackTimezone);
+
+      return targetDate.toISOString().replace(/\.000Z$/, 'Z');
+    } catch (error) {
+      // Fallback: if timezone conversion fails, append Z for UTC
+      return datetime + 'Z';
+    }
+  }
+}
+
+/**
+ * Convert a local time in a specific timezone to UTC.
+ * @param year Full year
+ * @param month Month (0-11, where 0 is January)
+ * @param day Day of month (1-31)
+ * @param hour Hour (0-23)
+ * @param minute Minute (0-59)
+ * @param second Second (0-59)
+ * @param timezone IANA timezone identifier
+ * @returns Date object in UTC
+ */
+function convertLocalTimeToUTC(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+  second: number,
+  timezone: string
+): Date {
+  // Create a date that we'll use to find the correct UTC time
+  // Start with the assumption that it's in UTC
+  let testDate = new Date(Date.UTC(year, month, day, hour, minute, second));
+
+  // Get what this UTC time looks like in the target timezone
+  const options: Intl.DateTimeFormatOptions = {
+    ...DATETIME_OFFSET_FORMAT_OPTIONS,
+    timeZone: timezone,
+    hour12: false,
+  };
+
+  // Format the test date in the target timezone
+  const formatter = new Intl.DateTimeFormat('sv-SE', options);
+  const formattedInTargetTZ = formatter.format(testDate);
+
+  // Parse the formatted result to see what time it shows
+  const [datePart, timePart] = formattedInTargetTZ.split(' ');
+  const [targetYear, targetMonth, targetDay] = datePart.split('-').map(Number);
+  const [targetHour, targetMinute, targetSecond] = timePart.split(':').map(Number);
+
+  // Calculate the difference between what we want and what we got
+  const wantedTime = new Date(year, month, day, hour, minute, second).getTime();
+  const actualTime = new Date(targetYear, targetMonth - 1, targetDay, targetHour, targetMinute, targetSecond).getTime();
+  const offsetMs = wantedTime - actualTime;
+
+  // Adjust the UTC time by the offset
+  return new Date(testDate.getTime() + offsetMs);
+}
+
+/**
+ * Apply timezone to start and end objects, ensuring both exist and have the timezone set.
+ * Handles timezone-only updates where start/end may be undefined.
+ * @param start Start time object (may be undefined)
+ * @param end End time object (may be undefined)
+ * @param timezone IANA timezone to apply
+ * @returns Object with updated start and end objects
+ */
+export function applyTimezone(
+  start: { dateTime?: string; date?: string; timeZone?: string } | undefined,
+  end: { dateTime?: string; date?: string; timeZone?: string } | undefined,
+  timezone: string
+): {
+  start: { dateTime?: string; date?: string; timeZone: string };
+  end: { dateTime?: string; date?: string; timeZone: string };
+} {
+  const updatedStart = start || {};
+  const updatedEnd = end || {};
+
+  updatedStart.timeZone = timezone;
+  updatedEnd.timeZone = timezone;
+
+  return {
+    start: updatedStart as { dateTime?: string; date?: string; timeZone: string },
+    end: updatedEnd as { dateTime?: string; date?: string; timeZone: string },
+  };
+}
+
+/**
+ * Create a time object for Google Calendar API, handling both timezone-aware and timezone-naive datetime strings.
+ * Also handles all-day events by using 'date' field instead of 'dateTime'.
+ * @param datetime ISO 8601 datetime string (with or without timezone)
+ * @param fallbackTimezone Timezone to use if datetime is timezone-naive (IANA format)
+ * @returns Google Calendar API time object
+ */
+export function createTimeObject(
+  datetime: string,
+  fallbackTimezone: string
+): {
+  dateTime?: string;
+  date?: string;
+  timeZone?: string;
+} {
+  // Check if this is a date-only string (all-day event)
+  // Date-only format: YYYY-MM-DD (no time component)
+  if (!/T/.test(datetime)) {
+    // This is a date-only string, use the 'date' field for all-day event
+    return { date: datetime };
+  }
+
+  // This is a datetime string with time component
+  if (hasTimezoneInDatetime(datetime)) {
+    // Timezone included in datetime - use as-is, no separate timeZone property needed
+    return { dateTime: datetime };
+  } else {
+    // Timezone-naive datetime - use fallback timezone
+    return { dateTime: datetime, timeZone: fallbackTimezone };
+  }
+}
+
+/**
+ * Convert optional timeMin/timeMax strings to RFC3339 using a resolved timezone.
+ * Returns undefined for absent fields without calling convertToRFC3339.
+ * @param timeMin Optional start boundary (ISO 8601 or RFC3339)
+ * @param timeMax Optional end boundary (ISO 8601 or RFC3339)
+ * @param timezone IANA timezone to use for naive datetime strings
+ * @returns Object with RFC3339-formatted timeMin and timeMax
+ */
+export function resolveTimeRange(
+  timeMin: string | undefined,
+  timeMax: string | undefined,
+  timezone: string
+): { timeMin?: string; timeMax?: string } {
+  return {
+    timeMin: timeMin ? convertToRFC3339(timeMin, timezone) : undefined,
+    timeMax: timeMax ? convertToRFC3339(timeMax, timezone) : undefined,
+  };
+}
+</file>
+
 <file path="src/handlers/core/eventFormatting.ts">
 /**
  * Event list formatting utilities for consistent output across handlers
@@ -43941,6 +44869,68 @@ function formatGroupedEventsList(events: ExtendedEvent[]): string {
 
 function groupEventsByCalendar(events: ExtendedEvent[]): Record<string, ExtendedEvent[]> {
   return groupBy(events, (event) => event.calendarId || 'Unknown');
+}
+</file>
+
+<file path="src/handlers/core/SearchEventsHandler.ts">
+import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { OAuth2Client } from "google-auth-library";
+import { SearchEventsInput } from "../../tools/registry.js";
+import { BaseToolHandler } from "./BaseToolHandler.js";
+import { calendar_v3 } from 'googleapis';
+import { resolveTimeRange } from "../../utils/timezone-utils.js";
+import { buildListFieldMask } from "../../utils/field-mask-builder.js";
+import { formatEventsList } from "./eventFormatting.js";
+import { ListEventsOptions } from "./types.js";
+
+export class SearchEventsHandler extends BaseToolHandler {
+    async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult> {
+        const validArgs = args as SearchEventsInput;
+        const events = await this.searchEvents(oauth2Client, validArgs);
+
+        if (events.length === 0) {
+            return this.textResult("No events found matching your search criteria.");
+        }
+
+        const eventsWithCalendarId = events.map(event => ({
+            ...event,
+            calendarId: validArgs.calendarId
+        }));
+
+        const text = formatEventsList(eventsWithCalendarId);
+
+        return this.textResult(text);
+    }
+
+    private async searchEvents(
+        client: OAuth2Client,
+        args: SearchEventsInput
+    ): Promise<calendar_v3.Schema$Event[]> {
+        try {
+            const calendar = this.getCalendar(client);
+
+            const timezone = args.timeZone || await this.getCalendarTimezone(client, args.calendarId);
+            const { timeMin, timeMax } = resolveTimeRange(args.timeMin, args.timeMax, timezone);
+
+            const fieldMask = buildListFieldMask(args.fields);
+
+            const response = await calendar.events.list({
+                calendarId: args.calendarId,
+                q: args.query,
+                timeMin,
+                timeMax,
+                singleEvents: true,
+                orderBy: 'startTime',
+                ...(fieldMask && { fields: fieldMask }),
+                ...(args.privateExtendedProperty && { privateExtendedProperty: args.privateExtendedProperty }),
+                ...(args.sharedExtendedProperty && { sharedExtendedProperty: args.sharedExtendedProperty })
+            });
+            return response.data.items || [];
+        } catch (error) {
+            throw this.handleGoogleApiError(error);
+        }
+    }
+
 }
 </file>
 
@@ -44390,6 +45380,362 @@ export function createEventResponseWithConflicts(
 }
 </file>
 
+<file path="src/services/conflict-detection/ConflictDetectionService.ts">
+import { OAuth2Client } from "google-auth-library";
+import { google, calendar_v3 } from "googleapis";
+import {
+  ConflictCheckResult,
+  ConflictInfo,
+  DuplicateInfo,
+  ConflictDetectionOptions
+} from "./types.js";
+import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
+import { ConflictAnalyzer } from "./ConflictAnalyzer.js";
+import { CONFLICT_DETECTION_CONFIG } from "./config.js";
+import { getEventUrl } from "../../handlers/utils.js";
+import {
+  resolveTimeRange,
+  hasTimezoneInDatetime,
+  resolveTimeZone,
+  isValidIANATimeZone
+} from "../../utils/timezone-utils.js";
+
+/**
+ * Extract datetime and date from event start/end objects.
+ * Returns the dateTime if available, falls back to date for all-day events.
+ * Handles null values from Google Calendar API.
+ */
+function getEventDateTime(event: calendar_v3.Schema$Event): { start?: string; end?: string } {
+  return {
+    start: event.start?.dateTime || event.start?.date || undefined,
+    end: event.end?.dateTime || event.end?.date || undefined,
+  };
+}
+
+/**
+ * Format event times for conflict/overlap info.
+ * Safely extracts both dateTime and date fields from event objects.
+ * Handles null values from Google Calendar API.
+ */
+function formatEventTimesForInfo(event: calendar_v3.Schema$Event): { start?: string; end?: string } {
+  return {
+    start: event.start?.dateTime || event.start?.date || undefined,
+    end: event.end?.dateTime || event.end?.date || undefined,
+  };
+}
+
+/**
+ * Service for detecting event conflicts and duplicates.
+ *
+ * IMPORTANT: This service relies on Google Calendar's list API to find existing events.
+ * Due to eventual consistency in Google Calendar, recently created events may not
+ * immediately appear in list queries. This is a known limitation of the Google Calendar API
+ * and affects duplicate detection for events created in quick succession.
+ *
+ * In real-world usage, this is rarely an issue as there's natural time between event creation.
+ */
+export class ConflictDetectionService {
+  private similarityChecker: EventSimilarityChecker;
+  private conflictAnalyzer: ConflictAnalyzer;
+
+  constructor() {
+    this.similarityChecker = new EventSimilarityChecker();
+    this.conflictAnalyzer = new ConflictAnalyzer();
+  }
+
+  /**
+   * Check for conflicts and duplicates when creating or updating an event
+   */
+  async checkConflicts(
+    oauth2Client: OAuth2Client,
+    event: calendar_v3.Schema$Event,
+    calendarId: string,
+    options: ConflictDetectionOptions = {}
+  ): Promise<ConflictCheckResult> {
+    const {
+      checkDuplicates = true,
+      checkConflicts = true,
+      calendarsToCheck = [calendarId],
+      duplicateSimilarityThreshold = CONFLICT_DETECTION_CONFIG.DEFAULT_DUPLICATE_THRESHOLD,
+      includeDeclinedEvents = false
+    } = options;
+
+    const result: ConflictCheckResult = {
+      hasConflicts: false,
+      conflicts: [],
+      duplicates: []
+    };
+
+    if (!event.start || !event.end) {
+      return result;
+    }
+
+    // Get the time range for checking
+    const { start: timeMin, end: timeMax } = getEventDateTime(event);
+
+    if (!timeMin || !timeMax) {
+      return result;
+    }
+
+    // Extract and validate timezone with proper fallback chain
+    const rawTimezone = event.start?.timeZone || event.end?.timeZone;
+    const timezone = rawTimezone && isValidIANATimeZone(rawTimezone)
+      ? rawTimezone
+      : undefined;
+
+    // The Google Calendar API requires RFC3339 format for timeMin/timeMax
+    // If we have timezone-naive datetimes with a timezone field, convert them to proper RFC3339
+    const needsConversion = timezone && timeMin && !hasTimezoneInDatetime(timeMin);
+
+    let searchTimeMin: string | undefined = timeMin;
+    let searchTimeMax: string | undefined = timeMax;
+
+    if (needsConversion) {
+      const timeRange = resolveTimeRange(timeMin!, timeMax!, timezone!);
+      searchTimeMin = timeRange.timeMin;
+      searchTimeMax = timeRange.timeMax;
+    }
+
+    // Check each calendar
+    for (const checkCalendarId of calendarsToCheck) {
+      try {
+        // Only search if we have valid time bounds
+        if (!searchTimeMin || !searchTimeMax) {
+          continue;
+        }
+
+        // Get events in the search time range, passing timezone for proper interpretation
+        const events = await this.getEventsInTimeRange(
+          oauth2Client,
+          checkCalendarId,
+          searchTimeMin,
+          searchTimeMax,
+          timezone || undefined
+        );
+
+        // Check for duplicates
+        if (checkDuplicates) {
+          const duplicates = this.findDuplicates(
+            event,
+            events,
+            checkCalendarId,
+            duplicateSimilarityThreshold
+          );
+          result.duplicates.push(...duplicates);
+        }
+
+        // Check for conflicts
+        if (checkConflicts) {
+          const conflicts = this.findConflicts(
+            event,
+            events,
+            checkCalendarId,
+            includeDeclinedEvents
+          );
+          result.conflicts.push(...conflicts);
+        }
+      } catch (error) {
+        // If we can't access a calendar, skip it silently
+        // Errors are expected for calendars without access permissions
+      }
+    }
+
+    result.hasConflicts = result.conflicts.length > 0 || result.duplicates.length > 0;
+    return result;
+  }
+
+  /**
+   * Get events in a specific time range from a calendar
+   */
+  private async getEventsInTimeRange(
+    oauth2Client: OAuth2Client,
+    calendarId: string,
+    timeMin: string,
+    timeMax: string,
+    timeZone?: string
+  ): Promise<calendar_v3.Schema$Event[]> {
+    // Fetch from API
+    const calendar = google.calendar({ version: "v3", auth: oauth2Client });
+    
+    // Build list parameters
+    const listParams: any = {
+      calendarId,
+      timeMin,
+      timeMax,
+      singleEvents: true,
+      orderBy: 'startTime',
+      maxResults: 250
+    };
+    
+    // The Google Calendar API accepts both:
+    // 1. Timezone-aware datetimes (with Z or offset)
+    // 2. Timezone-naive datetimes with a timeZone parameter
+    // We pass the timeZone parameter when available for consistency
+    if (timeZone) {
+      listParams.timeZone = timeZone;
+    }
+    
+    
+    // Use exact time range without extension to avoid false positives
+    const response = await calendar.events.list(listParams);
+
+    const events = response?.data?.items || [];
+    
+    return events;
+  }
+
+  /**
+   * Find duplicate events based on similarity
+   */
+  private findDuplicates(
+    newEvent: calendar_v3.Schema$Event,
+    existingEvents: calendar_v3.Schema$Event[],
+    calendarId: string,
+    threshold: number
+  ): DuplicateInfo[] {
+    const duplicates: DuplicateInfo[] = [];
+
+
+    for (const existingEvent of existingEvents) {
+      // Skip if it's the same event (for updates)
+      if (existingEvent.id === newEvent.id) continue;
+      
+      // Skip cancelled events
+      if (existingEvent.status === 'cancelled') continue;
+
+      const similarity = this.similarityChecker.checkSimilarity(newEvent, existingEvent);
+      
+      
+      if (similarity >= threshold) {
+        duplicates.push({
+          event: {
+            id: existingEvent.id!,
+            title: existingEvent.summary || 'Untitled Event',
+            url: getEventUrl(existingEvent, calendarId) || undefined,
+            similarity: Math.round(similarity * 100) / 100
+          },
+          fullEvent: existingEvent,
+          calendarId: calendarId,
+          suggestion: similarity >= CONFLICT_DETECTION_CONFIG.DUPLICATE_THRESHOLDS.BLOCKING
+            ? 'This appears to be a duplicate. Consider updating the existing event instead.'
+            : 'This event is very similar to an existing one. Is this intentional?'
+        });
+      }
+    }
+
+
+    return duplicates;
+  }
+
+  /**
+   * Find conflicting events based on time overlap
+   */
+  private findConflicts(
+    newEvent: calendar_v3.Schema$Event,
+    existingEvents: calendar_v3.Schema$Event[],
+    calendarId: string,
+    includeDeclinedEvents: boolean
+  ): ConflictInfo[] {
+    const conflicts: ConflictInfo[] = [];
+    const overlappingEvents = this.conflictAnalyzer.findOverlappingEvents(existingEvents, newEvent);
+
+    for (const conflictingEvent of overlappingEvents) {
+      // Skip declined events if configured
+      if (!includeDeclinedEvents && this.isEventDeclined(conflictingEvent)) {
+        continue;
+      }
+
+      const overlap = this.conflictAnalyzer.analyzeOverlap(newEvent, conflictingEvent);
+
+      if (overlap.hasOverlap) {
+        const { start, end } = formatEventTimesForInfo(conflictingEvent);
+        conflicts.push({
+          type: 'overlap',
+          calendar: calendarId,
+          event: {
+            id: conflictingEvent.id!,
+            title: conflictingEvent.summary || 'Untitled Event',
+            url: getEventUrl(conflictingEvent, calendarId) || undefined,
+            start,
+            end
+          },
+          fullEvent: conflictingEvent,
+          overlap: {
+            duration: overlap.duration!,
+            percentage: overlap.percentage!,
+            startTime: overlap.startTime!,
+            endTime: overlap.endTime!
+          }
+        });
+      }
+    }
+
+    return conflicts;
+  }
+
+  /**
+   * Check if the current user has declined an event
+   */
+  private isEventDeclined(_event: calendar_v3.Schema$Event): boolean {
+    // For now, we'll skip this check since we don't have easy access to the user's email
+    // This could be enhanced later by passing the user email through the service
+    return false;
+  }
+
+  /**
+   * Check for conflicts using free/busy data (alternative method)
+   */
+  async checkConflictsWithFreeBusy(
+    oauth2Client: OAuth2Client,
+    eventToCheck: calendar_v3.Schema$Event,
+    calendarsToCheck: string[]
+  ): Promise<ConflictInfo[]> {
+    const conflicts: ConflictInfo[] = [];
+
+    if (!eventToCheck.start || !eventToCheck.end) return conflicts;
+
+    const { start: timeMin, end: timeMax } = getEventDateTime(eventToCheck);
+
+    if (!timeMin || !timeMax) return conflicts;
+
+    const calendar = google.calendar({ version: "v3", auth: oauth2Client });
+    
+    try {
+      const freeBusyResponse = await calendar.freebusy.query({
+        requestBody: {
+          timeMin,
+          timeMax,
+          items: calendarsToCheck.map(id => ({ id }))
+        }
+      });
+
+      for (const [calendarId, calendarInfo] of Object.entries(freeBusyResponse.data.calendars || {})) {
+        if (calendarInfo.busy && calendarInfo.busy.length > 0) {
+          for (const busySlot of calendarInfo.busy) {
+            if (this.conflictAnalyzer.checkBusyConflict(eventToCheck, busySlot)) {
+              conflicts.push({
+                type: 'overlap',
+                calendar: calendarId,
+                event: {
+                  id: 'busy-time',
+                  title: 'Busy (details unavailable)',
+                  start: busySlot.start || undefined,
+                  end: busySlot.end || undefined
+                }
+              });
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check free/busy:', error);
+    }
+
+    return conflicts;
+  }
+}
+</file>
+
 <file path="src/tests/integration/conflict-detection-integration.test.ts">
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -44647,582 +45993,6 @@ describe('Conflict Detection Integration (MCP Protocol)', () => {
       expect(eventId2).toBeTruthy();
     });
   });
-});
-</file>
-
-<file path="src/tests/unit/handlers/ListEventsHandler.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
-import { OAuth2Client } from 'google-auth-library';
-import { google } from 'googleapis';
-import { convertToRFC3339 } from '../../../utils/timezone-utils.js';
-import { getTextContent, makeEvent, makeCalendarMock } from '../helpers/index.js';
-import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
-
-// Mock googleapis globally
-vi.mock('googleapis', () => ({
-  google: {
-    calendar: vi.fn(() => ({
-      events: {
-        list: vi.fn()
-      },
-      calendarList: {
-        get: vi.fn()
-      }
-    }))
-  }
-}));
-
-describe('ListEventsHandler JSON String Handling', () => {
-  const mockOAuth2Client = {
-    getAccessToken: vi.fn().mockResolvedValue({ token: 'mock-token' })
-  } as unknown as OAuth2Client;
-
-  const handler = new ListEventsHandler();
-  let mockCalendar: ReturnType<typeof makeCalendarMock>;
-
-  beforeEach(() => {
-    mockCalendar = makeCalendarMock({
-      list: vi.fn().mockResolvedValue({
-        data: { items: [makeEvent({ id: 'test-event', summary: 'Test Event' })] }
-      }),
-      calendarListGet: vi.fn().mockResolvedValue({ data: { timeZone: 'UTC' } }),
-    });
-    vi.mocked(google.calendar).mockReturnValue(mockCalendar);
-  });
-
-  // Mock fetch for batch requests
-  global.fetch = vi.fn().mockResolvedValue({
-    ok: true,
-    status: 200,
-    text: () => Promise.resolve(`--batch_boundary
-Content-Type: application/http
-Content-ID: <item1>
-
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-{"items": [{"id": "test-event", "summary": "Test Event", "start": {"dateTime": "2025-06-02T10:00:00Z"}, "end": {"dateTime": "2025-06-02T11:00:00Z"}}]}
-
---batch_boundary--`)
-  });
-
-  it('should handle single calendar ID as string', async () => {
-    const args = {
-      calendarId: 'primary',
-      timeMin: '2025-06-02T00:00:00Z',
-      timeMax: '2025-06-09T23:59:59Z'
-    };
-
-    const result = await handler.runTool(args, mockOAuth2Client);
-    expect(result.content).toHaveLength(1);
-    expect(getTextContent(result)).toContain('Found');
-  });
-
-  it('should handle multiple calendar IDs as array', async () => {
-    const args = {
-      calendarId: ['primary', 'secondary@gmail.com'],
-      timeMin: '2025-06-02T00:00:00Z',
-      timeMax: '2025-06-09T23:59:59Z'
-    };
-
-    const result = await handler.runTool(args, mockOAuth2Client);
-    expect(result.content).toHaveLength(1);
-    expect(getTextContent(result)).toContain('Found');
-  });
-
-  it('should handle calendar IDs passed as JSON string', async () => {
-    // This simulates the problematic case from the user
-    const args = {
-      calendarId: '["primary", "secondary@gmail.com"]',
-      timeMin: '2025-06-02T00:00:00Z',
-      timeMax: '2025-06-09T23:59:59Z'
-    };
-
-    // This would be parsed by the Zod transform before reaching the handler
-    // For testing, we'll manually simulate what the transform should do
-    let processedArgs = { ...args };
-    if (typeof args.calendarId === 'string' && args.calendarId.startsWith('[')) {
-      processedArgs.calendarId = JSON.parse(args.calendarId);
-    }
-
-    const result = await handler.runTool(processedArgs, mockOAuth2Client);
-    expect(result.content).toHaveLength(1);
-    expect(getTextContent(result)).toContain('Found');
-  });
-});
-
-describe('ListEventsHandler - Timezone Handling', () => {
-  let handler: ListEventsHandler;
-  let mockOAuth2Client: OAuth2Client;
-  let mockCalendar: ReturnType<typeof makeCalendarMock>;
-
-  beforeEach(() => {
-    handler = new ListEventsHandler();
-    mockOAuth2Client = {} as OAuth2Client;
-    mockCalendar = makeCalendarMock();
-    vi.mocked(google.calendar).mockReturnValue(mockCalendar);
-  });
-
-  describe('convertToRFC3339 timezone interpretation', () => {
-    it('should correctly convert timezone-naive datetime to Los Angeles time', () => {
-      // Test the core issue: timezone-naive datetime should be interpreted in the target timezone
-      const datetime = '2025-01-01T10:00:00';
-      const timezone = 'America/Los_Angeles';
-      
-      const result = convertToRFC3339(datetime, timezone);
-      
-      // In January 2025, Los Angeles is UTC-8 (PST)
-      // 10:00 AM PST = 18:00 UTC
-      // The result should be '2025-01-01T18:00:00Z'
-      expect(result).toBe('2025-01-01T18:00:00Z');
-    });
-
-    it('should correctly convert timezone-naive datetime to New York time', () => {
-      const datetime = '2025-01-01T10:00:00';
-      const timezone = 'America/New_York';
-      
-      const result = convertToRFC3339(datetime, timezone);
-      
-      // In January 2025, New York is UTC-5 (EST)
-      // 10:00 AM EST = 15:00 UTC
-      expect(result).toBe('2025-01-01T15:00:00Z');
-    });
-
-    it('should correctly convert timezone-naive datetime to London time', () => {
-      const datetime = '2025-01-01T10:00:00';
-      const timezone = 'Europe/London';
-      
-      const result = convertToRFC3339(datetime, timezone);
-      
-      // In January 2025, London is UTC+0 (GMT)
-      // 10:00 AM GMT = 10:00 UTC
-      expect(result).toBe('2025-01-01T10:00:00Z');
-    });
-
-    it('should handle DST transitions correctly', () => {
-      // Test during DST period
-      const datetime = '2025-07-01T10:00:00';
-      const timezone = 'America/Los_Angeles';
-      
-      const result = convertToRFC3339(datetime, timezone);
-      
-      // In July 2025, Los Angeles is UTC-7 (PDT)
-      // 10:00 AM PDT = 17:00 UTC
-      expect(result).toBe('2025-07-01T17:00:00Z');
-    });
-
-    it('should leave timezone-aware datetime unchanged', () => {
-      const datetime = '2025-01-01T10:00:00-08:00';
-      const timezone = 'America/Los_Angeles';
-      
-      const result = convertToRFC3339(datetime, timezone);
-      
-      // Should remain unchanged since it already has timezone info
-      expect(result).toBe('2025-01-01T10:00:00-08:00');
-    });
-  });
-
-  describe('ListEventsHandler timezone parameter usage', () => {
-    beforeEach(() => {
-      // Mock successful calendar list response
-      mockCalendar.calendarList.get.mockResolvedValue({
-        data: { timeZone: 'UTC' }
-      });
-      
-      // Mock successful events list response
-      mockCalendar.events.list.mockResolvedValue({
-        data: { items: [] }
-      });
-    });
-
-    it('should use timeZone parameter to interpret timezone-naive timeMin/timeMax', async () => {
-      const args = {
-        calendarId: 'primary',
-        timeMin: '2025-01-01T10:00:00',
-        timeMax: '2025-01-01T18:00:00',
-        timeZone: 'America/Los_Angeles'
-      };
-
-      await handler.runTool(args, mockOAuth2Client);
-
-      // Verify that the calendar.events.list was called with correctly converted times
-      expect(mockCalendar.events.list).toHaveBeenCalledWith({
-        calendarId: 'primary',
-        timeMin: '2025-01-01T18:00:00Z', // 10:00 AM PST = 18:00 UTC
-        timeMax: '2025-01-02T02:00:00Z', // 18:00 PM PST = 02:00 UTC next day
-        ...LIST_EVENTS_API_DEFAULTS
-      });
-    });
-
-    it('should preserve timezone-aware timeMin/timeMax regardless of timeZone parameter', async () => {
-      const args = {
-        calendarId: 'primary',
-        timeMin: '2025-01-01T10:00:00-08:00',
-        timeMax: '2025-01-01T18:00:00-08:00',
-        timeZone: 'America/New_York' // Different timezone, should be ignored
-      };
-
-      await handler.runTool(args, mockOAuth2Client);
-
-      // Verify that the original timezone-aware times are preserved
-      expect(mockCalendar.events.list).toHaveBeenCalledWith({
-        calendarId: 'primary',
-        timeMin: '2025-01-01T10:00:00-08:00',
-        timeMax: '2025-01-01T18:00:00-08:00',
-        ...LIST_EVENTS_API_DEFAULTS
-      });
-    });
-
-    it('should fall back to calendar timezone when timeZone parameter not provided', async () => {
-      // Mock calendar with Los Angeles timezone
-      mockCalendar.calendarList.get.mockResolvedValue({
-        data: { timeZone: 'America/Los_Angeles' }
-      });
-
-      const args = {
-        calendarId: 'primary',
-        timeMin: '2025-01-01T10:00:00',
-        timeMax: '2025-01-01T18:00:00'
-        // No timeZone parameter
-      };
-
-      await handler.runTool(args, mockOAuth2Client);
-
-      // Verify that the calendar's timezone is used for conversion
-      expect(mockCalendar.events.list).toHaveBeenCalledWith({
-        calendarId: 'primary',
-        timeMin: '2025-01-01T18:00:00Z', // 10:00 AM PST = 18:00 UTC
-        timeMax: '2025-01-02T02:00:00Z', // 18:00 PM PST = 02:00 UTC next day
-        ...LIST_EVENTS_API_DEFAULTS
-      });
-    });
-
-    it('should handle UTC timezone correctly', async () => {
-      const args = {
-        calendarId: 'primary',
-        timeMin: '2025-01-01T10:00:00',
-        timeMax: '2025-01-01T18:00:00',
-        timeZone: 'UTC'
-      };
-
-      await handler.runTool(args, mockOAuth2Client);
-
-      // Verify that UTC times are handled correctly
-      expect(mockCalendar.events.list).toHaveBeenCalledWith({
-        calendarId: 'primary',
-        timeMin: '2025-01-01T10:00:00Z',
-        timeMax: '2025-01-01T18:00:00Z',
-        ...LIST_EVENTS_API_DEFAULTS
-      });
-    });
-  });
-});
-</file>
-
-<file path="src/tests/unit/handlers/SearchEventsHandler.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SearchEventsHandler } from '../../../handlers/core/SearchEventsHandler.js';
-import { OAuth2Client } from 'google-auth-library';
-import { calendar_v3 } from 'googleapis';
-import { getTextContent, makeEvent, makeGaxiosError, makeCalendarMock } from '../helpers/index.js';
-import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
-
-vi.mock('googleapis', () => ({
-  google: {
-    calendar: vi.fn(() => ({
-      events: {
-        list: vi.fn()
-      },
-      calendarList: {
-        get: vi.fn()
-      }
-    }))
-  },
-  calendar_v3: {}
-}));
-
-vi.mock('../../../utils/field-mask-builder.js', () => ({
-  buildListFieldMask: vi.fn((fields) => {
-    if (!fields || fields.length === 0) return undefined;
-    return fields.join(',');
-  })
-}));
-
-vi.mock('../../../utils/timezone-utils.js', () => ({
-  resolveTimeRange: vi.fn((timeMin, timeMax, _timezone) => ({
-    timeMin: timeMin ? (timeMin.includes('Z') || timeMin.includes('+') ? timeMin : `${timeMin}Z`) : undefined,
-    timeMax: timeMax ? (timeMax.includes('Z') || timeMax.includes('+') ? timeMax : `${timeMax}Z`) : undefined,
-  }))
-}));
-
-vi.mock('../../../handlers/utils.js', () => ({
-  formatEventWithDetails: vi.fn((event) => {
-    return `${event.summary || 'No Title'} (${event.start?.dateTime || event.start?.date || 'No Date'})`;
-  })
-}));
-
-const BASE_ARGS = {
-  calendarId: 'primary' as const,
-  query: 'test',
-  timeMin: '2025-01-01T00:00:00',
-  timeMax: '2025-01-31T23:59:59'
-} as const;
-
-describe('SearchEventsHandler', () => {
-  let handler: SearchEventsHandler;
-  let mockOAuth2Client: OAuth2Client;
-  let mockCalendar: ReturnType<typeof makeCalendarMock>;
-
-  beforeEach(() => {
-    handler = new SearchEventsHandler();
-    mockOAuth2Client = new OAuth2Client();
-
-    mockCalendar = makeCalendarMock({ list: vi.fn().mockResolvedValue({ data: { items: [] } }) });
-
-    vi.spyOn(handler as any, 'getCalendar').mockReturnValue(mockCalendar);
-    vi.spyOn(handler as any, 'getCalendarTimezone').mockResolvedValue('America/Los_Angeles');
-  });
-
-  describe('runTool', () => {
-    it('should search and return events successfully', async () => {
-      const mockEvents = [
-        makeEvent({ summary: 'Team Meeting' }),
-        makeEvent({
-          id: 'event2',
-          summary: 'Project Review',
-          start: { dateTime: '2025-01-15T14:00:00Z' },
-          end: { dateTime: '2025-01-15T15:00:00Z' }
-        })
-      ];
-
-      mockCalendar.events.list.mockResolvedValue({ data: { items: mockEvents } });
-
-      const result = await handler.runTool({ ...BASE_ARGS, query: 'meeting' }, mockOAuth2Client);
-
-      expect(result.content).toHaveLength(1);
-      const text = getTextContent(result);
-      expect(text).toContain('Found 2 event(s)');
-      expect(text).toContain('Team Meeting');
-      expect(text).toContain('Project Review');
-    });
-
-    it('should return no events message when search yields no results', async () => {
-      const result = await handler.runTool({ ...BASE_ARGS, query: 'nonexistent' }, mockOAuth2Client);
-
-      expect(result.content).toHaveLength(1);
-      expect(getTextContent(result)).toBe('No events found matching your search criteria.');
-    });
-
-    it('should return no events message when items is undefined', async () => {
-      mockCalendar.events.list.mockResolvedValue({ data: {} });
-
-      const result = await handler.runTool(BASE_ARGS, mockOAuth2Client);
-
-      expect(result.content).toHaveLength(1);
-      expect(getTextContent(result)).toBe('No events found matching your search criteria.');
-    });
-
-    it('should include event index numbers in response', async () => {
-      const mockEvents = [
-        makeEvent({ summary: 'First Event' }),
-        makeEvent({ id: 'event2', summary: 'Second Event', start: { dateTime: '2025-01-15T14:00:00Z' }, end: { dateTime: '2025-01-15T15:00:00Z' } })
-      ];
-
-      mockCalendar.events.list.mockResolvedValue({ data: { items: mockEvents } });
-
-      const result = await handler.runTool({ ...BASE_ARGS, query: 'event' }, mockOAuth2Client);
-      const text = getTextContent(result);
-
-      expect(text).toContain('1. First Event');
-      expect(text).toContain('2. Second Event');
-    });
-  });
-
-  describe('searchEvents - API Parameters', () => {
-    it('should pass correct parameters to calendar.events.list', async () => {
-      await handler.runTool({ ...BASE_ARGS, query: 'meeting', timeZone: 'America/New_York' }, mockOAuth2Client);
-
-      expect(mockCalendar.events.list).toHaveBeenCalledWith(
-        expect.objectContaining({
-          calendarId: 'primary',
-          q: 'meeting',
-          ...LIST_EVENTS_API_DEFAULTS
-        })
-      );
-
-      const callArgs = mockCalendar.events.list.mock.calls[0][0];
-      expect(callArgs.timeMin).toBeDefined();
-      expect(callArgs.timeMax).toBeDefined();
-    });
-
-    it('should use provided timeZone for conversion', async () => {
-      const { resolveTimeRange } = await import('../../../utils/timezone-utils.js');
-
-      await handler.runTool({ ...BASE_ARGS, timeZone: 'Asia/Tokyo' }, mockOAuth2Client);
-
-      expect(vi.mocked(resolveTimeRange)).toHaveBeenCalledWith('2025-01-01T00:00:00', '2025-01-31T23:59:59', 'Asia/Tokyo');
-    });
-
-    it('should fallback to calendar timezone when timeZone not provided', async () => {
-      await handler.runTool(BASE_ARGS, mockOAuth2Client);
-
-      expect(handler['getCalendarTimezone']).toHaveBeenCalledWith(mockOAuth2Client, 'primary');
-    });
-  });
-
-  describe('searchEvents - Field Handling', () => {
-    it('should not include fields parameter when no fields requested', async () => {
-      await handler.runTool(BASE_ARGS, mockOAuth2Client);
-
-      const callArgs = mockCalendar.events.list.mock.calls[0][0];
-      expect(callArgs.fields).toBeUndefined();
-    });
-
-    it('should include fields parameter when fields are requested', async () => {
-      await handler.runTool({ ...BASE_ARGS, fields: ['description', 'attendees'] }, mockOAuth2Client);
-
-      const callArgs = mockCalendar.events.list.mock.calls[0][0];
-      expect(callArgs.fields).toBe('description,attendees');
-    });
-  });
-
-  describe('searchEvents - Extended Properties', () => {
-    it('should include privateExtendedProperty when provided', async () => {
-      await handler.runTool({ ...BASE_ARGS, privateExtendedProperty: ['key1=value1', 'key2=value2'] }, mockOAuth2Client);
-
-      const callArgs = mockCalendar.events.list.mock.calls[0][0];
-      expect(callArgs.privateExtendedProperty).toEqual(['key1=value1', 'key2=value2']);
-    });
-
-    it('should include sharedExtendedProperty when provided', async () => {
-      await handler.runTool({ ...BASE_ARGS, sharedExtendedProperty: ['prop1=val1'] }, mockOAuth2Client);
-
-      const callArgs = mockCalendar.events.list.mock.calls[0][0];
-      expect(callArgs.sharedExtendedProperty).toEqual(['prop1=val1']);
-    });
-
-    it('should not include extended properties when not provided', async () => {
-      await handler.runTool(BASE_ARGS, mockOAuth2Client);
-
-      const callArgs = mockCalendar.events.list.mock.calls[0][0];
-      expect(callArgs.privateExtendedProperty).toBeUndefined();
-      expect(callArgs.sharedExtendedProperty).toBeUndefined();
-    });
-  });
-
-  describe('Error Handling', () => {
-    it.each([
-      [500, 'Internal Server Error'],
-      [404, 'Calendar not found'],
-      [403, 'Insufficient permissions'],
-      [429, 'Rate limit exceeded'],
-      [400, 'Token expired']
-    ])('should throw on HTTP %i error', async (status, message) => {
-      const error = makeGaxiosError(status, 'Error', { error: { message } });
-      mockCalendar.events.list.mockRejectedValue(error);
-
-      await expect(handler.runTool(BASE_ARGS, mockOAuth2Client)).rejects.toThrow();
-    });
-
-    it('should handle non-GaxiosError errors gracefully', async () => {
-      const genericError = new Error('Something went wrong');
-      mockCalendar.events.list.mockRejectedValue(genericError);
-
-      await expect(handler.runTool(BASE_ARGS, mockOAuth2Client)).rejects.toThrow();
-    });
-  });
-
-  describe('Response Formatting', () => {
-    it('should trim whitespace from final response', async () => {
-      mockCalendar.events.list.mockResolvedValue({ data: { items: [makeEvent()] } });
-
-      const result = await handler.runTool(BASE_ARGS, mockOAuth2Client);
-      const text = getTextContent(result);
-
-      expect(text).not.toMatch(/^\s+/);
-      expect(text).not.toMatch(/\s+$/);
-    });
-
-    it('should format single event correctly', async () => {
-      mockCalendar.events.list.mockResolvedValue({ data: { items: [makeEvent({ summary: 'Single Event' })] } });
-
-      const result = await handler.runTool({ ...BASE_ARGS, query: 'single' }, mockOAuth2Client);
-      const text = getTextContent(result);
-
-      expect(text).toContain('Found 1 event(s)');
-      expect(text).toContain('1. Single Event');
-    });
-  });
-
-
-  describe('Query handling', () => {
-    it('should pass query parameter to API', async () => {
-      await handler.runTool({ ...BASE_ARGS, query: 'important project' }, mockOAuth2Client);
-
-      expect(mockCalendar.events.list).toHaveBeenCalledWith(
-        expect.objectContaining({ q: 'important project' })
-      );
-    });
-
-    it('should handle special characters in query', async () => {
-      await handler.runTool({ ...BASE_ARGS, query: '"exact phrase" OR tag:important' }, mockOAuth2Client);
-
-      expect(mockCalendar.events.list).toHaveBeenCalledWith(
-        expect.objectContaining({ q: '"exact phrase" OR tag:important' })
-      );
-    });
-  });
-
-  describe('Edge cases', () => {
-    it('should handle events with minimal properties', async () => {
-      mockCalendar.events.list.mockResolvedValue({ data: { items: [{ id: 'minimal-event' }] } });
-
-      const result = await handler.runTool(BASE_ARGS, mockOAuth2Client);
-
-      expect(getTextContent(result)).toContain('Found 1 event(s)');
-    });
-
-    it('should handle many events', async () => {
-      const mockEvents = Array.from({ length: 50 }, (_, i) => ({
-        id: `event${i}`,
-        summary: `Event ${i}`,
-        start: { dateTime: `2025-01-${String((i % 28) + 1).padStart(2, '0')}T10:00:00Z` },
-        end: { dateTime: `2025-01-${String((i % 28) + 1).padStart(2, '0')}T11:00:00Z` }
-      }));
-
-      mockCalendar.events.list.mockResolvedValue({ data: { items: mockEvents } });
-
-      const result = await handler.runTool(BASE_ARGS, mockOAuth2Client);
-      const text = getTextContent(result);
-
-      expect(text).toContain('Found 50 event(s)');
-      expect(text).toContain('50. Event 49');
-    });
-
-    it('should handle events with all-day dates', async () => {
-      mockCalendar.events.list.mockResolvedValue({
-        data: { items: [{ id: 'allday-event', summary: 'All Day Event', start: { date: '2025-01-15' }, end: { date: '2025-01-16' } }] }
-      });
-
-      const result = await handler.runTool({ ...BASE_ARGS, query: 'allday' }, mockOAuth2Client);
-
-      expect(getTextContent(result)).toContain('All Day Event');
-    });
-
-    it('should handle events with RFC3339 timezone-aware times', async () => {
-      mockCalendar.events.list.mockResolvedValue({
-        data: {
-          items: [makeEvent({ summary: 'TZ Event', start: { dateTime: '2025-01-15T10:00:00-08:00' }, end: { dateTime: '2025-01-15T11:00:00-08:00' } })]
-        }
-      });
-
-      const result = await handler.runTool({ ...BASE_ARGS, query: 'tz' }, mockOAuth2Client);
-
-      expect(getTextContent(result)).toContain('TZ Event');
-    });
-  });
-
 });
 </file>
 
@@ -45808,352 +46578,6 @@ describe('date-utils', () => {
 });
 </file>
 
-<file path="src/utils/timezone-utils.ts">
-/**
- * Timezone utilities for calendar operations.
- * Provides validation, offset calculation, and timezone-aware datetime formatting.
- * Consolidates timezone logic from GetCurrentTimeHandler and handlers/utils/datetime.ts
- */
-
-import { formatRFC3339 } from './date-utils.js';
-
-/**
- * Shared Intl.DateTimeFormat options for offset calculation.
- * Used by getTimezoneOffsetMinutes and convertLocalTimeToUTC.
- */
-const DATETIME_OFFSET_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-};
-
-/**
- * Check if a timezone string is a valid IANA timezone identifier.
- * @param timeZone Timezone string to validate (e.g., 'America/Los_Angeles')
- * @returns true if valid IANA timezone
- */
-export function isValidIANATimeZone(timeZone: string): boolean {
-  try {
-    Intl.DateTimeFormat(undefined, { timeZone });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Get the system's configured timezone.
- * Falls back to UTC if detection fails.
- * @returns IANA timezone string (e.g., 'America/Los_Angeles')
- */
-export function getSystemTimeZone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone;
-  } catch {
-    return 'UTC';
-  }
-}
-
-/**
- * Validate a timezone string, throwing if invalid.
- * @param timeZone Timezone string to validate
- * @throws Error if timezone is invalid
- */
-export function validateTimeZone(timeZone: string): void {
-  if (!isValidIANATimeZone(timeZone)) {
-    throw new Error(
-      `Invalid timezone: ${timeZone}. Use IANA timezone format like 'America/Los_Angeles' or 'UTC'.`
-    );
-  }
-}
-
-/**
- * Calculate the timezone offset in minutes for a specific timezone.
- * Positive for timezones east of UTC, negative for west of UTC.
- * @param timeZone IANA timezone identifier
- * @returns Offset in minutes (e.g., 330 for Asia/Kolkata, -420 for America/Los_Angeles)
- */
-export function getTimezoneOffsetMinutes(timeZone: string): number {
-  const date = new Date();
-
-  // Get the target timezone's local time string
-  const targetTimeString = new Intl.DateTimeFormat('sv-SE', {
-    ...DATETIME_OFFSET_FORMAT_OPTIONS,
-    timeZone: timeZone,
-  }).format(date);
-
-  // Get UTC time string
-  const utcTimeString = new Intl.DateTimeFormat('sv-SE', {
-    ...DATETIME_OFFSET_FORMAT_OPTIONS,
-    timeZone: 'UTC',
-  }).format(date);
-
-  // Parse both times and calculate difference
-  const targetTime = new Date(targetTimeString.replace(' ', 'T') + 'Z').getTime();
-  const utcTimeParsed = new Date(utcTimeString.replace(' ', 'T') + 'Z').getTime();
-
-  return (targetTime - utcTimeParsed) / (1000 * 60);
-}
-
-/**
- * Format a timezone offset as a string.
- * @param timeZone IANA timezone identifier
- * @returns Offset string: 'Z' for UTC, '+HH:MM' or '-HH:MM' for other timezones
- */
-export function getTimezoneOffsetString(timeZone: string): string {
-  try {
-    const offsetMinutes = getTimezoneOffsetMinutes(timeZone);
-
-    if (offsetMinutes === 0) {
-      return 'Z';
-    }
-
-    const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
-    const offsetMins = Math.abs(offsetMinutes) % 60;
-    const sign = offsetMinutes >= 0 ? '+' : '-';
-
-    return `${sign}${offsetHours.toString().padStart(2, '0')}:${offsetMins.toString().padStart(2, '0')}`;
-  } catch {
-    return 'Z'; // Fallback to UTC if calculation fails
-  }
-}
-
-/**
- * Format a date in a specific timezone with both RFC3339 and human-readable formats.
- * @param date Date to format
- * @param timeZone IANA timezone identifier
- * @returns Object with rfc3339, humanReadable, and offset fields
- */
-export function formatDateInTimeZone(date: Date, timeZone: string): {
-  rfc3339: string;
-  humanReadable: string;
-  offset: string;
-} {
-  const offset = getTimezoneOffsetString(timeZone);
-  // Remove Z suffix from RFC3339 format and add timezone offset
-  const isoString = formatRFC3339(date).slice(0, -1);
-  const rfc3339 = isoString + offset;
-
-  const humanReadable = new Intl.DateTimeFormat('en-US', {
-    timeZone: timeZone,
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    timeZoneName: 'long',
-  }).format(date);
-
-  return { rfc3339, humanReadable, offset };
-}
-
-/**
- * Resolve a timezone from preferred and calendar defaults.
- * Follows precedence: preferredTZ > calendarDefaultTZ > systemTimeZone > 'UTC'
- * @param preferredTZ User-specified timezone (optional)
- * @param calendarDefaultTZ Calendar's default timezone (optional)
- * @returns Valid IANA timezone string
- */
-export function resolveTimeZone(
-  preferredTZ: string | undefined,
-  calendarDefaultTZ: string | undefined
-): string {
-  if (preferredTZ && isValidIANATimeZone(preferredTZ)) {
-    return preferredTZ;
-  }
-
-  if (calendarDefaultTZ && isValidIANATimeZone(calendarDefaultTZ)) {
-    return calendarDefaultTZ;
-  }
-
-  const systemTZ = getSystemTimeZone();
-  if (isValidIANATimeZone(systemTZ)) {
-    return systemTZ;
-  }
-
-  return 'UTC';
-}
-
-/**
- * Check if a datetime string includes timezone information.
- * @param datetime ISO 8601 datetime string
- * @returns true if timezone is included, false if timezone-naive
- */
-export function hasTimezoneInDatetime(datetime: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(datetime);
-}
-
-/**
- * Convert a flexible datetime string to RFC3339 format required by Google Calendar API.
- *
- * Precedence rules:
- * 1. If datetime already has timezone info (Z or ±HH:MM), use as-is
- * 2. If datetime is timezone-naive, interpret it as local time in fallbackTimezone and convert to UTC
- *
- * @param datetime ISO 8601 datetime string (with or without timezone)
- * @param fallbackTimezone Timezone to use if datetime is timezone-naive (IANA format)
- * @returns RFC3339 formatted datetime string in UTC
- */
-export function convertToRFC3339(datetime: string, fallbackTimezone: string): string {
-  if (hasTimezoneInDatetime(datetime)) {
-    // Already has timezone, use as-is
-    return datetime;
-  } else {
-    // Timezone-naive, interpret as local time in fallbackTimezone and convert to UTC
-    try {
-      // Parse the datetime components
-      const match = datetime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/);
-      if (!match) {
-        throw new Error('Invalid datetime format');
-      }
-
-      const [, year, month, day, hour, minute, second] = match.map(Number);
-
-      // Find what UTC time corresponds to the desired local time in the target timezone
-      const targetDate = convertLocalTimeToUTC(year, month - 1, day, hour, minute, second, fallbackTimezone);
-
-      return targetDate.toISOString().replace(/\.000Z$/, 'Z');
-    } catch (error) {
-      // Fallback: if timezone conversion fails, append Z for UTC
-      return datetime + 'Z';
-    }
-  }
-}
-
-/**
- * Convert a local time in a specific timezone to UTC.
- * @param year Full year
- * @param month Month (0-11, where 0 is January)
- * @param day Day of month (1-31)
- * @param hour Hour (0-23)
- * @param minute Minute (0-59)
- * @param second Second (0-59)
- * @param timezone IANA timezone identifier
- * @returns Date object in UTC
- */
-function convertLocalTimeToUTC(
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute: number,
-  second: number,
-  timezone: string
-): Date {
-  // Create a date that we'll use to find the correct UTC time
-  // Start with the assumption that it's in UTC
-  let testDate = new Date(Date.UTC(year, month, day, hour, minute, second));
-
-  // Get what this UTC time looks like in the target timezone
-  const options: Intl.DateTimeFormatOptions = {
-    ...DATETIME_OFFSET_FORMAT_OPTIONS,
-    timeZone: timezone,
-    hour12: false,
-  };
-
-  // Format the test date in the target timezone
-  const formatter = new Intl.DateTimeFormat('sv-SE', options);
-  const formattedInTargetTZ = formatter.format(testDate);
-
-  // Parse the formatted result to see what time it shows
-  const [datePart, timePart] = formattedInTargetTZ.split(' ');
-  const [targetYear, targetMonth, targetDay] = datePart.split('-').map(Number);
-  const [targetHour, targetMinute, targetSecond] = timePart.split(':').map(Number);
-
-  // Calculate the difference between what we want and what we got
-  const wantedTime = new Date(year, month, day, hour, minute, second).getTime();
-  const actualTime = new Date(targetYear, targetMonth - 1, targetDay, targetHour, targetMinute, targetSecond).getTime();
-  const offsetMs = wantedTime - actualTime;
-
-  // Adjust the UTC time by the offset
-  return new Date(testDate.getTime() + offsetMs);
-}
-
-/**
- * Apply timezone to start and end objects, ensuring both exist and have the timezone set.
- * Handles timezone-only updates where start/end may be undefined.
- * @param start Start time object (may be undefined)
- * @param end End time object (may be undefined)
- * @param timezone IANA timezone to apply
- * @returns Object with updated start and end objects
- */
-export function applyTimezone(
-  start: { dateTime?: string; date?: string; timeZone?: string } | undefined,
-  end: { dateTime?: string; date?: string; timeZone?: string } | undefined,
-  timezone: string
-): {
-  start: { dateTime?: string; date?: string; timeZone: string };
-  end: { dateTime?: string; date?: string; timeZone: string };
-} {
-  const updatedStart = start || {};
-  const updatedEnd = end || {};
-
-  updatedStart.timeZone = timezone;
-  updatedEnd.timeZone = timezone;
-
-  return {
-    start: updatedStart as { dateTime?: string; date?: string; timeZone: string },
-    end: updatedEnd as { dateTime?: string; date?: string; timeZone: string },
-  };
-}
-
-/**
- * Create a time object for Google Calendar API, handling both timezone-aware and timezone-naive datetime strings.
- * Also handles all-day events by using 'date' field instead of 'dateTime'.
- * @param datetime ISO 8601 datetime string (with or without timezone)
- * @param fallbackTimezone Timezone to use if datetime is timezone-naive (IANA format)
- * @returns Google Calendar API time object
- */
-export function createTimeObject(
-  datetime: string,
-  fallbackTimezone: string
-): {
-  dateTime?: string;
-  date?: string;
-  timeZone?: string;
-} {
-  // Check if this is a date-only string (all-day event)
-  // Date-only format: YYYY-MM-DD (no time component)
-  if (!/T/.test(datetime)) {
-    // This is a date-only string, use the 'date' field for all-day event
-    return { date: datetime };
-  }
-
-  // This is a datetime string with time component
-  if (hasTimezoneInDatetime(datetime)) {
-    // Timezone included in datetime - use as-is, no separate timeZone property needed
-    return { dateTime: datetime };
-  } else {
-    // Timezone-naive datetime - use fallback timezone
-    return { dateTime: datetime, timeZone: fallbackTimezone };
-  }
-}
-
-/**
- * Convert optional timeMin/timeMax strings to RFC3339 using a resolved timezone.
- * Returns undefined for absent fields without calling convertToRFC3339.
- * @param timeMin Optional start boundary (ISO 8601 or RFC3339)
- * @param timeMax Optional end boundary (ISO 8601 or RFC3339)
- * @param timezone IANA timezone to use for naive datetime strings
- * @returns Object with RFC3339-formatted timeMin and timeMax
- */
-export function resolveTimeRange(
-  timeMin: string | undefined,
-  timeMax: string | undefined,
-  timezone: string
-): { timeMin?: string; timeMax?: string } {
-  return {
-    timeMin: timeMin ? convertToRFC3339(timeMin, timezone) : undefined,
-    timeMax: timeMax ? convertToRFC3339(timeMax, timezone) : undefined,
-  };
-}
-</file>
-
 <file path="CLAUDE.md">
 # Google Calendar & Gmail MCP - Project Guidelines
 
@@ -46235,421 +46659,167 @@ Core pattern: Label → conditional archive (keep future events, important items
 - Dynamic label resolution (L6) — `labelCache.get('Label/Name')` instead of hardcoded IDs (see `docs/LABEL-RESOLUTION-GUIDE.md`)
 </file>
 
-<file path="src/handlers/core/SearchEventsHandler.ts">
+<file path="src/handlers/core/ListEventsHandler.ts">
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OAuth2Client } from "google-auth-library";
-import { SearchEventsInput } from "../../tools/registry.js";
 import { BaseToolHandler } from "./BaseToolHandler.js";
-import { calendar_v3 } from 'googleapis';
+import { BatchRequestHandler } from "./BatchRequestHandler.js";
 import { resolveTimeRange } from "../../utils/timezone-utils.js";
 import { buildListFieldMask } from "../../utils/field-mask-builder.js";
+import { processBatchResponses } from "./batchUtils.js";
 import { formatEventsList } from "./eventFormatting.js";
-import { ListEventsOptions } from "./types.js";
+import { ListEventsOptions, ExtendedEvent } from "./types.js";
 
-export class SearchEventsHandler extends BaseToolHandler {
-    async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult> {
-        const validArgs = args as SearchEventsInput;
-        const events = await this.searchEvents(oauth2Client, validArgs);
+interface ListEventsArgs {
+  calendarId: string | string[];
+  timeMin?: string;
+  timeMax?: string;
+  timeZone?: string;
+  fields?: string[];
+  privateExtendedProperty?: string[];
+  sharedExtendedProperty?: string[];
+}
 
-        if (events.length === 0) {
-            return this.textResult("No events found matching your search criteria.");
+export class ListEventsHandler extends BaseToolHandler {
+    async runTool(args: ListEventsArgs, oauth2Client: OAuth2Client): Promise<CallToolResult> {
+        const calendarIds = Array.isArray(args.calendarId)
+            ? args.calendarId
+            : [args.calendarId];
+
+        const allEvents = await this.fetchEvents(oauth2Client, calendarIds, {
+            timeMin: args.timeMin,
+            timeMax: args.timeMax,
+            timeZone: args.timeZone,
+            fields: args.fields,
+            privateExtendedProperty: args.privateExtendedProperty,
+            sharedExtendedProperty: args.sharedExtendedProperty
+        });
+
+        if (allEvents.length === 0) {
+            return this.textResult(`No events found in ${calendarIds.length} calendar(s).`);
         }
 
-        const eventsWithCalendarId = events.map(event => ({
-            ...event,
-            calendarId: validArgs.calendarId
-        }));
-
-        const text = formatEventsList(eventsWithCalendarId);
+        const text = formatEventsList(allEvents, {
+            groupByCalendar: calendarIds.length > 1
+        });
 
         return this.textResult(text);
     }
 
-    private async searchEvents(
+    private async fetchEvents(
         client: OAuth2Client,
-        args: SearchEventsInput
-    ): Promise<calendar_v3.Schema$Event[]> {
+        calendarIds: string[],
+        options: ListEventsOptions
+    ): Promise<ExtendedEvent[]> {
+        if (calendarIds.length === 1) {
+            return this.fetchSingleCalendarEvents(client, calendarIds[0], options);
+        }
+
+        return this.fetchMultipleCalendarEvents(client, calendarIds, options);
+    }
+
+    private async fetchSingleCalendarEvents(
+        client: OAuth2Client,
+        calendarId: string,
+        options: ListEventsOptions
+    ): Promise<ExtendedEvent[]> {
         try {
             const calendar = this.getCalendar(client);
 
-            const timezone = args.timeZone || await this.getCalendarTimezone(client, args.calendarId);
-            const { timeMin, timeMax } = resolveTimeRange(args.timeMin, args.timeMax, timezone);
+            let { timeMin, timeMax } = { timeMin: options.timeMin, timeMax: options.timeMax };
+            if (timeMin || timeMax) {
+                const timezone = options.timeZone || await this.getCalendarTimezone(client, calendarId);
+                const resolved = resolveTimeRange(timeMin, timeMax, timezone);
+                timeMin = resolved.timeMin;
+                timeMax = resolved.timeMax;
+            }
 
-            const fieldMask = buildListFieldMask(args.fields);
+            const fieldMask = buildListFieldMask(options.fields);
 
             const response = await calendar.events.list({
-                calendarId: args.calendarId,
-                q: args.query,
+                calendarId,
                 timeMin,
                 timeMax,
                 singleEvents: true,
                 orderBy: 'startTime',
                 ...(fieldMask && { fields: fieldMask }),
-                ...(args.privateExtendedProperty && { privateExtendedProperty: args.privateExtendedProperty }),
-                ...(args.sharedExtendedProperty && { sharedExtendedProperty: args.sharedExtendedProperty })
+                ...(options.privateExtendedProperty && { privateExtendedProperty: options.privateExtendedProperty }),
+                ...(options.sharedExtendedProperty && { sharedExtendedProperty: options.sharedExtendedProperty })
             });
-            return response.data.items || [];
+
+            return (response.data.items || []).map(event => ({
+                ...event,
+                calendarId
+            }));
         } catch (error) {
             throw this.handleGoogleApiError(error);
         }
     }
 
-}
-</file>
+    private async fetchMultipleCalendarEvents(
+        client: OAuth2Client,
+        calendarIds: string[],
+        options: ListEventsOptions
+    ): Promise<ExtendedEvent[]> {
+        const batchHandler = new BatchRequestHandler(client);
+        const fieldMask = buildListFieldMask(options.fields);
 
-<file path="src/services/conflict-detection/ConflictDetectionService.ts">
-import { OAuth2Client } from "google-auth-library";
-import { google, calendar_v3 } from "googleapis";
-import {
-  ConflictCheckResult,
-  ConflictInfo,
-  DuplicateInfo,
-  ConflictDetectionOptions
-} from "./types.js";
-import { EventSimilarityChecker } from "./EventSimilarityChecker.js";
-import { ConflictAnalyzer } from "./ConflictAnalyzer.js";
-import { CONFLICT_DETECTION_CONFIG } from "./config.js";
-import { getEventUrl } from "../../handlers/utils.js";
-import {
-  resolveTimeRange,
-  hasTimezoneInDatetime,
-  resolveTimeZone,
-  isValidIANATimeZone
-} from "../../utils/timezone-utils.js";
-
-/**
- * Extract datetime and date from event start/end objects.
- * Returns the dateTime if available, falls back to date for all-day events.
- * Handles null values from Google Calendar API.
- */
-function getEventDateTime(event: calendar_v3.Schema$Event): { start?: string; end?: string } {
-  return {
-    start: event.start?.dateTime || event.start?.date || undefined,
-    end: event.end?.dateTime || event.end?.date || undefined,
-  };
-}
-
-/**
- * Format event times for conflict/overlap info.
- * Safely extracts both dateTime and date fields from event objects.
- * Handles null values from Google Calendar API.
- */
-function formatEventTimesForInfo(event: calendar_v3.Schema$Event): { start?: string; end?: string } {
-  return {
-    start: event.start?.dateTime || event.start?.date || undefined,
-    end: event.end?.dateTime || event.end?.date || undefined,
-  };
-}
-
-/**
- * Service for detecting event conflicts and duplicates.
- *
- * IMPORTANT: This service relies on Google Calendar's list API to find existing events.
- * Due to eventual consistency in Google Calendar, recently created events may not
- * immediately appear in list queries. This is a known limitation of the Google Calendar API
- * and affects duplicate detection for events created in quick succession.
- *
- * In real-world usage, this is rarely an issue as there's natural time between event creation.
- */
-export class ConflictDetectionService {
-  private similarityChecker: EventSimilarityChecker;
-  private conflictAnalyzer: ConflictAnalyzer;
-
-  constructor() {
-    this.similarityChecker = new EventSimilarityChecker();
-    this.conflictAnalyzer = new ConflictAnalyzer();
-  }
-
-  /**
-   * Check for conflicts and duplicates when creating or updating an event
-   */
-  async checkConflicts(
-    oauth2Client: OAuth2Client,
-    event: calendar_v3.Schema$Event,
-    calendarId: string,
-    options: ConflictDetectionOptions = {}
-  ): Promise<ConflictCheckResult> {
-    const {
-      checkDuplicates = true,
-      checkConflicts = true,
-      calendarsToCheck = [calendarId],
-      duplicateSimilarityThreshold = CONFLICT_DETECTION_CONFIG.DEFAULT_DUPLICATE_THRESHOLD,
-      includeDeclinedEvents = false
-    } = options;
-
-    const result: ConflictCheckResult = {
-      hasConflicts: false,
-      conflicts: [],
-      duplicates: []
-    };
-
-    if (!event.start || !event.end) {
-      return result;
-    }
-
-    // Get the time range for checking
-    const { start: timeMin, end: timeMax } = getEventDateTime(event);
-
-    if (!timeMin || !timeMax) {
-      return result;
-    }
-
-    // Extract and validate timezone with proper fallback chain
-    const rawTimezone = event.start?.timeZone || event.end?.timeZone;
-    const timezone = rawTimezone && isValidIANATimeZone(rawTimezone)
-      ? rawTimezone
-      : undefined;
-
-    // The Google Calendar API requires RFC3339 format for timeMin/timeMax
-    // If we have timezone-naive datetimes with a timezone field, convert them to proper RFC3339
-    const needsConversion = timezone && timeMin && !hasTimezoneInDatetime(timeMin);
-
-    let searchTimeMin: string | undefined = timeMin;
-    let searchTimeMax: string | undefined = timeMax;
-
-    if (needsConversion) {
-      const timeRange = resolveTimeRange(timeMin!, timeMax!, timezone!);
-      searchTimeMin = timeRange.timeMin;
-      searchTimeMax = timeRange.timeMax;
-    }
-
-    // Check each calendar
-    for (const checkCalendarId of calendarsToCheck) {
-      try {
-        // Only search if we have valid time bounds
-        if (!searchTimeMin || !searchTimeMax) {
-          continue;
-        }
-
-        // Get events in the search time range, passing timezone for proper interpretation
-        const events = await this.getEventsInTimeRange(
-          oauth2Client,
-          checkCalendarId,
-          searchTimeMin,
-          searchTimeMax,
-          timezone || undefined
+        // Batch timezone fetches to avoid N+1 API calls
+        const timezones = await Promise.all(
+            calendarIds.map(id =>
+                options.timeZone ? Promise.resolve(options.timeZone) : this.getCalendarTimezone(client, id)
+            )
         );
 
-        // Check for duplicates
-        if (checkDuplicates) {
-          const duplicates = this.findDuplicates(
-            event,
-            events,
-            checkCalendarId,
-            duplicateSimilarityThreshold
-          );
-          result.duplicates.push(...duplicates);
+        const requests = calendarIds.map((calendarId, i) => ({
+            method: "GET" as const,
+            path: this.buildEventsPath(calendarId, timezones[i], options, fieldMask)
+        }));
+
+        const responses = await batchHandler.executeBatch(requests);
+        const result = processBatchResponses(responses, calendarIds, { includeErrors: true });
+
+        if (result.errors.length > 0) {
+            process.stderr.write(`Some calendars had errors: ${result.errors.map(e => `${e.calendarId}: ${e.error}`).join(', ')}\n`);
         }
 
-        // Check for conflicts
-        if (checkConflicts) {
-          const conflicts = this.findConflicts(
-            event,
-            events,
-            checkCalendarId,
-            includeDeclinedEvents
-          );
-          result.conflicts.push(...conflicts);
-        }
-      } catch (error) {
-        // If we can't access a calendar, skip it silently
-        // Errors are expected for calendars without access permissions
-      }
+        return result.events;
     }
 
-    result.hasConflicts = result.conflicts.length > 0 || result.duplicates.length > 0;
-    return result;
-  }
-
-  /**
-   * Get events in a specific time range from a calendar
-   */
-  private async getEventsInTimeRange(
-    oauth2Client: OAuth2Client,
-    calendarId: string,
-    timeMin: string,
-    timeMax: string,
-    timeZone?: string
-  ): Promise<calendar_v3.Schema$Event[]> {
-    // Fetch from API
-    const calendar = google.calendar({ version: "v3", auth: oauth2Client });
-    
-    // Build list parameters
-    const listParams: any = {
-      calendarId,
-      timeMin,
-      timeMax,
-      singleEvents: true,
-      orderBy: 'startTime',
-      maxResults: 250
-    };
-    
-    // The Google Calendar API accepts both:
-    // 1. Timezone-aware datetimes (with Z or offset)
-    // 2. Timezone-naive datetimes with a timeZone parameter
-    // We pass the timeZone parameter when available for consistency
-    if (timeZone) {
-      listParams.timeZone = timeZone;
-    }
-    
-    
-    // Use exact time range without extension to avoid false positives
-    const response = await calendar.events.list(listParams);
-
-    const events = response?.data?.items || [];
-    
-    return events;
-  }
-
-  /**
-   * Find duplicate events based on similarity
-   */
-  private findDuplicates(
-    newEvent: calendar_v3.Schema$Event,
-    existingEvents: calendar_v3.Schema$Event[],
-    calendarId: string,
-    threshold: number
-  ): DuplicateInfo[] {
-    const duplicates: DuplicateInfo[] = [];
-
-
-    for (const existingEvent of existingEvents) {
-      // Skip if it's the same event (for updates)
-      if (existingEvent.id === newEvent.id) continue;
-      
-      // Skip cancelled events
-      if (existingEvent.status === 'cancelled') continue;
-
-      const similarity = this.similarityChecker.checkSimilarity(newEvent, existingEvent);
-      
-      
-      if (similarity >= threshold) {
-        duplicates.push({
-          event: {
-            id: existingEvent.id!,
-            title: existingEvent.summary || 'Untitled Event',
-            url: getEventUrl(existingEvent, calendarId) || undefined,
-            similarity: Math.round(similarity * 100) / 100
-          },
-          fullEvent: existingEvent,
-          calendarId: calendarId,
-          suggestion: similarity >= CONFLICT_DETECTION_CONFIG.DUPLICATE_THRESHOLDS.BLOCKING
-            ? 'This appears to be a duplicate. Consider updating the existing event instead.'
-            : 'This event is very similar to an existing one. Is this intentional?'
+    private buildEventsPath(
+        calendarId: string,
+        timezone: string,
+        options: ListEventsOptions,
+        fieldMask: string | null
+    ): string {
+        const params = new URLSearchParams({
+            singleEvents: "true",
+            orderBy: "startTime",
         });
-      }
-    }
 
-
-    return duplicates;
-  }
-
-  /**
-   * Find conflicting events based on time overlap
-   */
-  private findConflicts(
-    newEvent: calendar_v3.Schema$Event,
-    existingEvents: calendar_v3.Schema$Event[],
-    calendarId: string,
-    includeDeclinedEvents: boolean
-  ): ConflictInfo[] {
-    const conflicts: ConflictInfo[] = [];
-    const overlappingEvents = this.conflictAnalyzer.findOverlappingEvents(existingEvents, newEvent);
-
-    for (const conflictingEvent of overlappingEvents) {
-      // Skip declined events if configured
-      if (!includeDeclinedEvents && this.isEventDeclined(conflictingEvent)) {
-        continue;
-      }
-
-      const overlap = this.conflictAnalyzer.analyzeOverlap(newEvent, conflictingEvent);
-
-      if (overlap.hasOverlap) {
-        const { start, end } = formatEventTimesForInfo(conflictingEvent);
-        conflicts.push({
-          type: 'overlap',
-          calendar: calendarId,
-          event: {
-            id: conflictingEvent.id!,
-            title: conflictingEvent.summary || 'Untitled Event',
-            url: getEventUrl(conflictingEvent, calendarId) || undefined,
-            start,
-            end
-          },
-          fullEvent: conflictingEvent,
-          overlap: {
-            duration: overlap.duration!,
-            percentage: overlap.percentage!,
-            startTime: overlap.startTime!,
-            endTime: overlap.endTime!
-          }
-        });
-      }
-    }
-
-    return conflicts;
-  }
-
-  /**
-   * Check if the current user has declined an event
-   */
-  private isEventDeclined(_event: calendar_v3.Schema$Event): boolean {
-    // For now, we'll skip this check since we don't have easy access to the user's email
-    // This could be enhanced later by passing the user email through the service
-    return false;
-  }
-
-  /**
-   * Check for conflicts using free/busy data (alternative method)
-   */
-  async checkConflictsWithFreeBusy(
-    oauth2Client: OAuth2Client,
-    eventToCheck: calendar_v3.Schema$Event,
-    calendarsToCheck: string[]
-  ): Promise<ConflictInfo[]> {
-    const conflicts: ConflictInfo[] = [];
-
-    if (!eventToCheck.start || !eventToCheck.end) return conflicts;
-
-    const { start: timeMin, end: timeMax } = getEventDateTime(eventToCheck);
-
-    if (!timeMin || !timeMax) return conflicts;
-
-    const calendar = google.calendar({ version: "v3", auth: oauth2Client });
-    
-    try {
-      const freeBusyResponse = await calendar.freebusy.query({
-        requestBody: {
-          timeMin,
-          timeMax,
-          items: calendarsToCheck.map(id => ({ id }))
+        if (options.timeMin || options.timeMax) {
+            const { timeMin, timeMax } = resolveTimeRange(options.timeMin, options.timeMax, timezone);
+            if (timeMin) params.set('timeMin', timeMin);
+            if (timeMax) params.set('timeMax', timeMax);
         }
-      });
 
-      for (const [calendarId, calendarInfo] of Object.entries(freeBusyResponse.data.calendars || {})) {
-        if (calendarInfo.busy && calendarInfo.busy.length > 0) {
-          for (const busySlot of calendarInfo.busy) {
-            if (this.conflictAnalyzer.checkBusyConflict(eventToCheck, busySlot)) {
-              conflicts.push({
-                type: 'overlap',
-                calendar: calendarId,
-                event: {
-                  id: 'busy-time',
-                  title: 'Busy (details unavailable)',
-                  start: busySlot.start || undefined,
-                  end: busySlot.end || undefined
-                }
-              });
+        if (fieldMask) params.set('fields', fieldMask);
+
+        if (options.privateExtendedProperty) {
+            for (const kv of options.privateExtendedProperty) {
+                params.append('privateExtendedProperty', kv);
             }
-          }
         }
-      }
-    } catch (error) {
-      console.error('Failed to check free/busy:', error);
+
+        if (options.sharedExtendedProperty) {
+            for (const kv of options.sharedExtendedProperty) {
+                params.append('sharedExtendedProperty', kv);
+            }
+        }
+
+        return `/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params.toString()}`;
     }
 
-    return conflicts;
-  }
 }
 </file>
 
@@ -46868,170 +47038,6 @@ export async function processBatchItemsChunked<T, TItem = string>(
     "typescript": "^5.3.3",
     "vitest": "^3.1.1"
   }
-}
-</file>
-
-<file path="src/handlers/core/ListEventsHandler.ts">
-import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { OAuth2Client } from "google-auth-library";
-import { BaseToolHandler } from "./BaseToolHandler.js";
-import { BatchRequestHandler } from "./BatchRequestHandler.js";
-import { resolveTimeRange } from "../../utils/timezone-utils.js";
-import { buildListFieldMask } from "../../utils/field-mask-builder.js";
-import { processBatchResponses } from "./batchUtils.js";
-import { formatEventsList } from "./eventFormatting.js";
-import { ListEventsOptions, ExtendedEvent } from "./types.js";
-
-interface ListEventsArgs {
-  calendarId: string | string[];
-  timeMin?: string;
-  timeMax?: string;
-  timeZone?: string;
-  fields?: string[];
-  privateExtendedProperty?: string[];
-  sharedExtendedProperty?: string[];
-}
-
-export class ListEventsHandler extends BaseToolHandler {
-    async runTool(args: ListEventsArgs, oauth2Client: OAuth2Client): Promise<CallToolResult> {
-        const calendarIds = Array.isArray(args.calendarId)
-            ? args.calendarId
-            : [args.calendarId];
-
-        const allEvents = await this.fetchEvents(oauth2Client, calendarIds, {
-            timeMin: args.timeMin,
-            timeMax: args.timeMax,
-            timeZone: args.timeZone,
-            fields: args.fields,
-            privateExtendedProperty: args.privateExtendedProperty,
-            sharedExtendedProperty: args.sharedExtendedProperty
-        });
-
-        if (allEvents.length === 0) {
-            return this.textResult(`No events found in ${calendarIds.length} calendar(s).`);
-        }
-
-        const text = formatEventsList(allEvents, {
-            groupByCalendar: calendarIds.length > 1
-        });
-
-        return this.textResult(text);
-    }
-
-    private async fetchEvents(
-        client: OAuth2Client,
-        calendarIds: string[],
-        options: ListEventsOptions
-    ): Promise<ExtendedEvent[]> {
-        if (calendarIds.length === 1) {
-            return this.fetchSingleCalendarEvents(client, calendarIds[0], options);
-        }
-
-        return this.fetchMultipleCalendarEvents(client, calendarIds, options);
-    }
-
-    private async fetchSingleCalendarEvents(
-        client: OAuth2Client,
-        calendarId: string,
-        options: ListEventsOptions
-    ): Promise<ExtendedEvent[]> {
-        try {
-            const calendar = this.getCalendar(client);
-
-            let { timeMin, timeMax } = { timeMin: options.timeMin, timeMax: options.timeMax };
-            if (timeMin || timeMax) {
-                const timezone = options.timeZone || await this.getCalendarTimezone(client, calendarId);
-                const resolved = resolveTimeRange(timeMin, timeMax, timezone);
-                timeMin = resolved.timeMin;
-                timeMax = resolved.timeMax;
-            }
-
-            const fieldMask = buildListFieldMask(options.fields);
-
-            const response = await calendar.events.list({
-                calendarId,
-                timeMin,
-                timeMax,
-                singleEvents: true,
-                orderBy: 'startTime',
-                ...(fieldMask && { fields: fieldMask }),
-                ...(options.privateExtendedProperty && { privateExtendedProperty: options.privateExtendedProperty }),
-                ...(options.sharedExtendedProperty && { sharedExtendedProperty: options.sharedExtendedProperty })
-            });
-
-            return (response.data.items || []).map(event => ({
-                ...event,
-                calendarId
-            }));
-        } catch (error) {
-            throw this.handleGoogleApiError(error);
-        }
-    }
-
-    private async fetchMultipleCalendarEvents(
-        client: OAuth2Client,
-        calendarIds: string[],
-        options: ListEventsOptions
-    ): Promise<ExtendedEvent[]> {
-        const batchHandler = new BatchRequestHandler(client);
-        const fieldMask = buildListFieldMask(options.fields);
-
-        // Batch timezone fetches to avoid N+1 API calls
-        const timezones = await Promise.all(
-            calendarIds.map(id =>
-                options.timeZone ? Promise.resolve(options.timeZone) : this.getCalendarTimezone(client, id)
-            )
-        );
-
-        const requests = calendarIds.map((calendarId, i) => ({
-            method: "GET" as const,
-            path: this.buildEventsPath(calendarId, timezones[i], options, fieldMask)
-        }));
-
-        const responses = await batchHandler.executeBatch(requests);
-        const result = processBatchResponses(responses, calendarIds, { includeErrors: true });
-
-        if (result.errors.length > 0) {
-            process.stderr.write(`Some calendars had errors: ${result.errors.map(e => `${e.calendarId}: ${e.error}`).join(', ')}\n`);
-        }
-
-        return result.events;
-    }
-
-    private buildEventsPath(
-        calendarId: string,
-        timezone: string,
-        options: ListEventsOptions,
-        fieldMask: string | null
-    ): string {
-        const params = new URLSearchParams({
-            singleEvents: "true",
-            orderBy: "startTime",
-        });
-
-        if (options.timeMin || options.timeMax) {
-            const { timeMin, timeMax } = resolveTimeRange(options.timeMin, options.timeMax, timezone);
-            if (timeMin) params.set('timeMin', timeMin);
-            if (timeMax) params.set('timeMax', timeMax);
-        }
-
-        if (fieldMask) params.set('fields', fieldMask);
-
-        if (options.privateExtendedProperty) {
-            for (const kv of options.privateExtendedProperty) {
-                params.append('privateExtendedProperty', kv);
-            }
-        }
-
-        if (options.sharedExtendedProperty) {
-            for (const kv of options.sharedExtendedProperty) {
-                params.append('sharedExtendedProperty', kv);
-            }
-        }
-
-        return `/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params.toString()}`;
-    }
-
 }
 </file>
 
@@ -49457,6 +49463,26 @@ export const STANDARD_ATTACHMENTS = [
 ] as const satisfies readonly calendar_v3.Schema$EventAttachment[];
 </file>
 
+<file path="src/tests/unit/helpers/index.ts">
+export { getTextContent, tryGetTextContent, assertTextContentContains, expectValidToolResponse, expectJsonResponse } from './content.js';
+export { makeEvent, makeEventWithCalendarId, makeEvents, makeGaxiosError, makeCalendarMock, createFullEventArgs, ATTACHMENT_IDS, STANDARD_ATTACHMENTS } from './factories.js';
+export { createBuilder } from './testBuilder.js';
+export {
+  SYSTEM_FIELDS,
+  createTestEventWithDateTime,
+  createTestEventWithTZOffset,
+  createCompleteTestEvent,
+  createUpdateEventArgs,
+  createUpdateEventArgsWithTimes,
+  createUpdateEventArgsWithAttendees,
+  createComplexUpdateEventArgs,
+  createCreateEventArgs,
+  createConflictEventArgs,
+  createEventWithExtendedProperties
+} from './event-test-data.js';
+export { setupListEventsHandler, createGoogleCalendarMocks } from './handler-setup.js';
+</file>
+
 <file path="docs/repomix/repo-compressed.xml">
 This file is a merged representation of a subset of the codebase, containing files not matching ignore patterns, combined into a single document by Repomix.
 The content has been processed where comments have been removed, empty lines have been removed, line numbers have been added, content has been compressed (code blocks are separated by ⋮---- delimiter).
@@ -49506,6 +49532,8 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
+.claude/
+  ralph-loop.local.md
 lib/
   constants.mjs
   date-based-filter.mjs
@@ -49753,6 +49781,19 @@ vitest.config.ts
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path=".claude/ralph-loop.local.md">
+---
+active: true
+iteration: 1
+session_id: 
+max_iterations: 10
+completion_promise: "RALPH_COMPLETE"
+started_at: "2026-03-26T10:21:30Z"
+---
+
+run /simplify on docs/repomix/repo-compressed.xml contents, accept all changes, run /otel-session-summary, address issues, run npm run repomix, repeat until clean
+</file>
 
 <file path="lib/gmail-client.mjs">
 /**
@@ -50273,6 +50314,11 @@ import { CONFLICT_DETECTION_CONFIG } from '../../../services/conflict-detection/
 import { getTextContent } from '../helpers/index.js';
 </file>
 
+<file path="src/tests/unit/handlers/datetime-utils.test.ts">
+import { describe, it, expect } from 'vitest';
+import { hasTimezoneInDatetime, convertToRFC3339, createTimeObject } from '../../../utils/timezone-utils.js';
+</file>
+
 <file path="src/tests/unit/handlers/GetCurrentTimeHandler.test.ts">
 import { describe, it, expect, vi } from 'vitest';
 import { GetCurrentTimeHandler } from '../../../handlers/core/GetCurrentTimeHandler.js';
@@ -50598,16 +50644,6 @@ import { defineConfig } from 'vitest/config'
 import { loadEnv } from 'vite'
 ⋮----
 // Increase timeout for AI API calls
-</file>
-
-<file path="lib/constants.mjs">
-/** Gmail user ID (special value 'me' = authenticated user) */
-⋮----
-/** System label IDs */
-⋮----
-/** Gmail label names for email categories */
-⋮----
-/** System label IDs */
 </file>
 
 <file path="lib/date-based-filter.mjs">
@@ -51334,11 +51370,6 @@ function parseBatchResponse(
 ): BatchResponse[]
 </file>
 
-<file path="src/tests/unit/handlers/datetime-utils.test.ts">
-import { describe, it, expect } from 'vitest';
-import { hasTimezoneInDatetime, convertToRFC3339, createTimeObject } from '../../../utils/timezone-utils.js';
-</file>
-
 <file path="src/tests/unit/helpers/testBuilder.ts">
 export interface Builder<T> {
   build(overrides?: Partial<T>): T;
@@ -51382,6 +51413,23 @@ import {
   LabelCreationResultSchema,
   PatternApplicationStatsSchema
 } from '../../../schemas/gmail-label-utils-types';
+</file>
+
+<file path="src/tests/unit/utils/timezone-utils.test.ts">
+import { describe, it, expect } from 'vitest';
+import {
+  isValidIANATimeZone,
+  getSystemTimeZone,
+  validateTimeZone,
+  getTimezoneOffsetMinutes,
+  getTimezoneOffsetString,
+  formatDateInTimeZone,
+  resolveTimeZone,
+  hasTimezoneInDatetime,
+  convertToRFC3339,
+  createTimeObject,
+  applyTimezone,
+} from '../../../utils/timezone-utils.js';
 </file>
 
 <file path="src/transports/http.ts">
@@ -51686,10 +51734,6 @@ async function labelGoogleWorkspace()
 async function labelRemainingCommunity()
 </file>
 
-<file path="label-remaining-unread.mjs">
-// Define labeling rules by sender/content pattern
-</file>
-
 <file path="label-sentry-team.mjs">
 async function labelSentryTeam()
 </file>
@@ -51714,10 +51758,6 @@ async function listUnreadEmails()
 async function markAllLabeledAsRead()
 ⋮----
 // Excluding Sentry Alerts and Keep Important
-</file>
-
-<file path="mark-archived-as-read.mjs">
-async function markArchivedAsRead()
 </file>
 
 <file path="mark-past-events-read.mjs">
@@ -51760,10 +51800,6 @@ async function organizeNewsletters()
 async function protectImportantItems()
 ⋮----
 // Note: NOT removing INBOX label - this keeps them visible
-</file>
-
-<file path="quick-status.mjs">
-
 </file>
 
 <file path="relabel-event-announcements.mjs">
@@ -51810,6 +51846,14 @@ async function verifyAndRefreshTokens()
 // Validate and refresh if needed
 </file>
 
+<file path="lib/constants.mjs">
+/** Gmail user ID (special value 'me' = authenticated user) */
+⋮----
+/** Gmail system label IDs */
+⋮----
+/** Gmail label names for email categories */
+</file>
+
 <file path="src/auth/server.ts">
 import { OAuth2Client } from 'google-auth-library';
 import { TokenManager } from './tokenManager.js';
@@ -51850,6 +51894,57 @@ protected textResult(text: string): CallToolResult
 protected async withTimeout<T>(promise: Promise<T>, timeoutMs: number = 30000): Promise<T>
 protected async getCalendarDetails(client: OAuth2Client, calendarId: string): Promise<calendar_v3.Schema$CalendarListEntry>
 protected async getCalendarTimezone(client: OAuth2Client, calendarId: string): Promise<string>
+</file>
+
+<file path="src/handlers/core/eventManipulationUtils.ts">
+import { calendar_v3 } from 'googleapis';
+import { OAuth2Client } from 'google-auth-library';
+import { CreateEventInput, UpdateEventInput } from '../../tools/registry.js';
+import { createTimeObject } from '../../utils/timezone-utils.js';
+import { ConflictDetectionService } from '../../services/conflict-detection/index.js';
+import { CONFLICT_DETECTION_CONFIG } from '../../services/conflict-detection/config.js';
+function conditionallyAddFields<T extends Record<string, any>>(
+  source: T,
+  target: Record<string, any>,
+  fieldNames: (keyof T)[]
+): void
+export function buildCoreEvent(
+  input: CreateEventInput | UpdateEventInput,
+  timezone: string,
+  existingEvent?: calendar_v3.Schema$Event
+): Pick<calendar_v3.Schema$Event, 'summary' | 'description' | 'start' | 'end' | 'attendees' | 'location'>
+export function buildOptionalEventFields(
+  input: CreateEventInput | UpdateEventInput
+): Pick<calendar_v3.Schema$Event, 'colorId' | 'reminders' | 'recurrence' | 'transparency' | 'visibility' | 'guestsCanInviteOthers' | 'guestsCanModify' | 'guestsCanSeeOtherGuests' | 'anyoneCanAddSelf' | 'conferenceData' | 'extendedProperties' | 'attachments' | 'source'>
+export function buildEventForConflictCheckCreate(
+  input: CreateEventInput,
+  timezone: string
+): calendar_v3.Schema$Event
+export function buildEventForConflictCheckUpdate(
+  input: UpdateEventInput,
+  existingEvent: calendar_v3.Schema$Event,
+  timezone: string
+): calendar_v3.Schema$Event
+export function buildEventRequestBodyCreate(
+  input: CreateEventInput,
+  timezone: string
+): calendar_v3.Schema$Event
+export interface ConflictCheckOptions {
+  checkDuplicates?: boolean;
+  checkConflicts?: boolean;
+  calendarsToCheck?: string[];
+  duplicateSimilarityThreshold?: number;
+}
+export async function performConflictCheck(
+  conflictService: ConflictDetectionService,
+  oauth2Client: OAuth2Client,
+  eventToCheck: calendar_v3.Schema$Event,
+  calendarId: string,
+  options: ConflictCheckOptions = {}
+): Promise<any>
+export function getConferenceAndAttachmentOptions(
+  input: CreateEventInput | UpdateEventInput
+):
 </file>
 
 <file path="src/handlers/core/FreeBusyEventHandler.ts">
@@ -52067,21 +52162,16 @@ import {
 } from '../helpers/test-configs';
 </file>
 
-<file path="src/tests/unit/utils/timezone-utils.test.ts">
-import { describe, it, expect } from 'vitest';
-import {
-  isValidIANATimeZone,
-  getSystemTimeZone,
-  validateTimeZone,
-  getTimezoneOffsetMinutes,
-  getTimezoneOffsetString,
-  formatDateInTimeZone,
-  resolveTimeZone,
-  hasTimezoneInDatetime,
-  convertToRFC3339,
-  createTimeObject,
-  applyTimezone,
-} from '../../../utils/timezone-utils.js';
+<file path="label-remaining-unread.mjs">
+
+</file>
+
+<file path="mark-archived-as-read.mjs">
+async function markArchivedAsRead()
+</file>
+
+<file path="quick-status.mjs">
+
 </file>
 
 <file path="scripts/repomix/repomix-compressed.config.json">
@@ -52134,57 +52224,6 @@ export function processBatchResponses<T extends ExtendedEvent = ExtendedEvent>(
   calendarIds: string[],
   options: ProcessBatchResponsesOptions = {}
 ): BatchResponseResult<T>
-</file>
-
-<file path="src/handlers/core/eventManipulationUtils.ts">
-import { calendar_v3 } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
-import { CreateEventInput, UpdateEventInput } from '../../tools/registry.js';
-import { createTimeObject } from '../../utils/timezone-utils.js';
-import { ConflictDetectionService } from '../../services/conflict-detection/index.js';
-import { CONFLICT_DETECTION_CONFIG } from '../../services/conflict-detection/config.js';
-function conditionallyAddFields<T extends Record<string, any>>(
-  source: T,
-  target: Record<string, any>,
-  fieldNames: (keyof T)[]
-): void
-export function buildCoreEvent(
-  input: CreateEventInput | UpdateEventInput,
-  timezone: string,
-  existingEvent?: calendar_v3.Schema$Event
-): Pick<calendar_v3.Schema$Event, 'summary' | 'description' | 'start' | 'end' | 'attendees' | 'location'>
-export function buildOptionalEventFields(
-  input: CreateEventInput | UpdateEventInput
-): Pick<calendar_v3.Schema$Event, 'colorId' | 'reminders' | 'recurrence' | 'transparency' | 'visibility' | 'guestsCanInviteOthers' | 'guestsCanModify' | 'guestsCanSeeOtherGuests' | 'anyoneCanAddSelf' | 'conferenceData' | 'extendedProperties' | 'attachments' | 'source'>
-export function buildEventForConflictCheckCreate(
-  input: CreateEventInput,
-  timezone: string
-): calendar_v3.Schema$Event
-export function buildEventForConflictCheckUpdate(
-  input: UpdateEventInput,
-  existingEvent: calendar_v3.Schema$Event,
-  timezone: string
-): calendar_v3.Schema$Event
-export function buildEventRequestBodyCreate(
-  input: CreateEventInput,
-  timezone: string
-): calendar_v3.Schema$Event
-export interface ConflictCheckOptions {
-  checkDuplicates?: boolean;
-  checkConflicts?: boolean;
-  calendarsToCheck?: string[];
-  duplicateSimilarityThreshold?: number;
-}
-export async function performConflictCheck(
-  conflictService: ConflictDetectionService,
-  oauth2Client: OAuth2Client,
-  eventToCheck: calendar_v3.Schema$Event,
-  calendarId: string,
-  options: ConflictCheckOptions = {}
-): Promise<any>
-export function getConferenceAndAttachmentOptions(
-  input: CreateEventInput | UpdateEventInput
-):
 </file>
 
 <file path="src/tests/integration/test-data-factory.ts">
@@ -52250,6 +52289,16 @@ static extractAllEventIds(response: any): string[]
 static getInvalidTestData()
 </file>
 
+<file path="src/tests/unit/handlers/ListEventsHandler.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
+import { OAuth2Client } from 'google-auth-library';
+import { google } from 'googleapis';
+import { convertToRFC3339 } from '../../../utils/timezone-utils.js';
+import { getTextContent, makeEvent, makeCalendarMock } from '../helpers/index.js';
+import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
+</file>
+
 <file path="src/tests/unit/handlers/RecurringEventHelpers.test.ts">
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { calendar_v3 } from 'googleapis';
@@ -52267,6 +52316,15 @@ import {
 function resolveWith(overrides: Partial<calendar_v3.Schema$Event>)
 ⋮----
 function expectSystemFieldsRemoved(result: calendar_v3.Schema$Event): void
+</file>
+
+<file path="src/tests/unit/handlers/SearchEventsHandler.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SearchEventsHandler } from '../../../handlers/core/SearchEventsHandler.js';
+import { OAuth2Client } from 'google-auth-library';
+import { calendar_v3 } from 'googleapis';
+import { getTextContent, makeEvent, makeGaxiosError, makeCalendarMock } from '../helpers/index.js';
+import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
 </file>
 
 <file path="src/tests/unit/handlers/utils-conflict-format.test.ts">
@@ -52379,6 +52437,46 @@ static async registerAll(
 )
 </file>
 
+<file path="src/utils/timezone-utils.ts">
+import { formatRFC3339 } from './date-utils.js';
+⋮----
+export function isValidIANATimeZone(timeZone: string): boolean
+export function getSystemTimeZone(): string
+export function validateTimeZone(timeZone: string): void
+export function getTimezoneOffsetMinutes(timeZone: string): number
+export function getTimezoneOffsetString(timeZone: string): string
+export function formatDateInTimeZone(date: Date, timeZone: string):
+export function resolveTimeZone(
+  preferredTZ: string | undefined,
+  calendarDefaultTZ: string | undefined
+): string
+export function hasTimezoneInDatetime(datetime: string): boolean
+export function convertToRFC3339(datetime: string, fallbackTimezone: string): string
+function convertLocalTimeToUTC(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+  second: number,
+  timezone: string
+): Date
+export function applyTimezone(
+  start: { dateTime?: string; date?: string; timeZone?: string } | undefined,
+  end: { dateTime?: string; date?: string; timeZone?: string } | undefined,
+  timezone: string
+):
+export function createTimeObject(
+  datetime: string,
+  fallbackTimezone: string
+):
+export function resolveTimeRange(
+  timeMin: string | undefined,
+  timeMax: string | undefined,
+  timezone: string
+):
+</file>
+
 <file path="src/handlers/core/eventFormatting.ts">
 import { formatEventWithDetails } from '../utils.js';
 import { groupBy } from 'lodash-es';
@@ -52395,6 +52493,25 @@ export function formatEventsList(
 function formatSimpleEventsList(events: ExtendedEvent[]): string
 function formatGroupedEventsList(events: ExtendedEvent[]): string
 function groupEventsByCalendar(events: ExtendedEvent[]): Record<string, ExtendedEvent[]>
+</file>
+
+<file path="src/handlers/core/SearchEventsHandler.ts">
+import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { OAuth2Client } from "google-auth-library";
+import { SearchEventsInput } from "../../tools/registry.js";
+import { BaseToolHandler } from "./BaseToolHandler.js";
+import { calendar_v3 } from 'googleapis';
+import { resolveTimeRange } from "../../utils/timezone-utils.js";
+import { buildListFieldMask } from "../../utils/field-mask-builder.js";
+import { formatEventsList } from "./eventFormatting.js";
+import { ListEventsOptions } from "./types.js";
+export class SearchEventsHandler extends BaseToolHandler
+⋮----
+async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult>
+private async searchEvents(
+        client: OAuth2Client,
+        args: SearchEventsInput
+): Promise<calendar_v3.Schema$Event[]>
 </file>
 
 <file path="src/handlers/core/UpdateEventHandler.ts">
@@ -52487,133 +52604,6 @@ export function createEventResponseWithConflicts(
 ): string
 </file>
 
-<file path="src/tests/integration/conflict-detection-integration.test.ts">
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { initializeOAuth2Client } from '../../auth/client.js';
-import { TokenManager } from '../../auth/tokenManager.js';
-import { TestDataFactory } from './test-data-factory.js';
-import { getTextContent } from '../unit/helpers/content.js';
-import {
-  createAndVerifyEvent,
-  updateAndVerifyEvent,
-  createNonOverlappingEventPair,
-  createOverlappingEventPair
-} from './integration-test-helpers.js';
-</file>
-
-<file path="src/tests/unit/handlers/ListEventsHandler.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
-import { OAuth2Client } from 'google-auth-library';
-import { google } from 'googleapis';
-import { convertToRFC3339 } from '../../../utils/timezone-utils.js';
-import { getTextContent, makeEvent, makeCalendarMock } from '../helpers/index.js';
-import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
-</file>
-
-<file path="src/tests/unit/handlers/SearchEventsHandler.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SearchEventsHandler } from '../../../handlers/core/SearchEventsHandler.js';
-import { OAuth2Client } from 'google-auth-library';
-import { calendar_v3 } from 'googleapis';
-import { getTextContent, makeEvent, makeGaxiosError, makeCalendarMock } from '../helpers/index.js';
-import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
-</file>
-
-<file path="src/tests/unit/utils/date-utils.test.ts">
-import { describe, it, expect } from 'vitest';
-import {
-  TIME_DURATIONS,
-  addDays,
-  addMilliseconds,
-  durationMs,
-  formatBasicDateTime,
-  formatTZNaiveDateTime,
-  formatRFC3339,
-  getFutureDate,
-  getPastDate,
-  isFutureDate,
-  isPastDate,
-  oneDayBefore,
-  getOneDayBeforeFormatted,
-  RRULE_PATTERNS,
-  stripUntilAndCount,
-  buildUntilClause,
-  isRRuleString,
-  extractAndPreserveNonRRuleRecurrence,
-  DATETIME_FORMATS,
-  DATETIME_ERRORS,
-  isValidISODateTime,
-  isValidISODate,
-  isTimeZoneAware,
-  isTimeZoneNaive,
-  isAllDayEvent,
-  parseDateTimeString,
-  parseBasicDateTime,
-} from '../../../utils/date-utils.js';
-</file>
-
-<file path="src/utils/timezone-utils.ts">
-import { formatRFC3339 } from './date-utils.js';
-⋮----
-export function isValidIANATimeZone(timeZone: string): boolean
-export function getSystemTimeZone(): string
-export function validateTimeZone(timeZone: string): void
-export function getTimezoneOffsetMinutes(timeZone: string): number
-export function getTimezoneOffsetString(timeZone: string): string
-export function formatDateInTimeZone(date: Date, timeZone: string):
-export function resolveTimeZone(
-  preferredTZ: string | undefined,
-  calendarDefaultTZ: string | undefined
-): string
-export function hasTimezoneInDatetime(datetime: string): boolean
-export function convertToRFC3339(datetime: string, fallbackTimezone: string): string
-function convertLocalTimeToUTC(
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute: number,
-  second: number,
-  timezone: string
-): Date
-export function applyTimezone(
-  start: { dateTime?: string; date?: string; timeZone?: string } | undefined,
-  end: { dateTime?: string; date?: string; timeZone?: string } | undefined,
-  timezone: string
-):
-export function createTimeObject(
-  datetime: string,
-  fallbackTimezone: string
-):
-export function resolveTimeRange(
-  timeMin: string | undefined,
-  timeMax: string | undefined,
-  timezone: string
-):
-</file>
-
-<file path="src/handlers/core/SearchEventsHandler.ts">
-import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { OAuth2Client } from "google-auth-library";
-import { SearchEventsInput } from "../../tools/registry.js";
-import { BaseToolHandler } from "./BaseToolHandler.js";
-import { calendar_v3 } from 'googleapis';
-import { resolveTimeRange } from "../../utils/timezone-utils.js";
-import { buildListFieldMask } from "../../utils/field-mask-builder.js";
-import { formatEventsList } from "./eventFormatting.js";
-import { ListEventsOptions } from "./types.js";
-export class SearchEventsHandler extends BaseToolHandler
-⋮----
-async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult>
-private async searchEvents(
-        client: OAuth2Client,
-        args: SearchEventsInput
-): Promise<calendar_v3.Schema$Event[]>
-</file>
-
 <file path="src/services/conflict-detection/ConflictDetectionService.ts">
 import { OAuth2Client } from "google-auth-library";
 import { google, calendar_v3 } from "googleapis";
@@ -52669,6 +52659,100 @@ async checkConflictsWithFreeBusy(
     eventToCheck: calendar_v3.Schema$Event,
     calendarsToCheck: string[]
 ): Promise<ConflictInfo[]>
+</file>
+
+<file path="src/tests/integration/conflict-detection-integration.test.ts">
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { initializeOAuth2Client } from '../../auth/client.js';
+import { TokenManager } from '../../auth/tokenManager.js';
+import { TestDataFactory } from './test-data-factory.js';
+import { getTextContent } from '../unit/helpers/content.js';
+import {
+  createAndVerifyEvent,
+  updateAndVerifyEvent,
+  createNonOverlappingEventPair,
+  createOverlappingEventPair
+} from './integration-test-helpers.js';
+</file>
+
+<file path="src/tests/unit/utils/date-utils.test.ts">
+import { describe, it, expect } from 'vitest';
+import {
+  TIME_DURATIONS,
+  addDays,
+  addMilliseconds,
+  durationMs,
+  formatBasicDateTime,
+  formatTZNaiveDateTime,
+  formatRFC3339,
+  getFutureDate,
+  getPastDate,
+  isFutureDate,
+  isPastDate,
+  oneDayBefore,
+  getOneDayBeforeFormatted,
+  RRULE_PATTERNS,
+  stripUntilAndCount,
+  buildUntilClause,
+  isRRuleString,
+  extractAndPreserveNonRRuleRecurrence,
+  DATETIME_FORMATS,
+  DATETIME_ERRORS,
+  isValidISODateTime,
+  isValidISODate,
+  isTimeZoneAware,
+  isTimeZoneNaive,
+  isAllDayEvent,
+  parseDateTimeString,
+  parseBasicDateTime,
+} from '../../../utils/date-utils.js';
+</file>
+
+<file path="src/handlers/core/ListEventsHandler.ts">
+import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { OAuth2Client } from "google-auth-library";
+import { BaseToolHandler } from "./BaseToolHandler.js";
+import { BatchRequestHandler } from "./BatchRequestHandler.js";
+import { resolveTimeRange } from "../../utils/timezone-utils.js";
+import { buildListFieldMask } from "../../utils/field-mask-builder.js";
+import { processBatchResponses } from "./batchUtils.js";
+import { formatEventsList } from "./eventFormatting.js";
+import { ListEventsOptions, ExtendedEvent } from "./types.js";
+interface ListEventsArgs {
+  calendarId: string | string[];
+  timeMin?: string;
+  timeMax?: string;
+  timeZone?: string;
+  fields?: string[];
+  privateExtendedProperty?: string[];
+  sharedExtendedProperty?: string[];
+}
+export class ListEventsHandler extends BaseToolHandler
+⋮----
+async runTool(args: ListEventsArgs, oauth2Client: OAuth2Client): Promise<CallToolResult>
+private async fetchEvents(
+        client: OAuth2Client,
+        calendarIds: string[],
+        options: ListEventsOptions
+): Promise<ExtendedEvent[]>
+private async fetchSingleCalendarEvents(
+        client: OAuth2Client,
+        calendarId: string,
+        options: ListEventsOptions
+): Promise<ExtendedEvent[]>
+private async fetchMultipleCalendarEvents(
+        client: OAuth2Client,
+        calendarIds: string[],
+        options: ListEventsOptions
+): Promise<ExtendedEvent[]>
+private buildEventsPath(
+        calendarId: string,
+        timezone: string,
+        options: ListEventsOptions,
+        fieldMask: string | null
+): string
 </file>
 
 <file path="src/utils/batchProcessor.ts">
@@ -52775,51 +52859,6 @@ export async function processBatchItemsChunked<T, TItem = string>(
     "vitest": "^3.1.1"
   }
 }
-</file>
-
-<file path="src/handlers/core/ListEventsHandler.ts">
-import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { OAuth2Client } from "google-auth-library";
-import { BaseToolHandler } from "./BaseToolHandler.js";
-import { BatchRequestHandler } from "./BatchRequestHandler.js";
-import { resolveTimeRange } from "../../utils/timezone-utils.js";
-import { buildListFieldMask } from "../../utils/field-mask-builder.js";
-import { processBatchResponses } from "./batchUtils.js";
-import { formatEventsList } from "./eventFormatting.js";
-import { ListEventsOptions, ExtendedEvent } from "./types.js";
-interface ListEventsArgs {
-  calendarId: string | string[];
-  timeMin?: string;
-  timeMax?: string;
-  timeZone?: string;
-  fields?: string[];
-  privateExtendedProperty?: string[];
-  sharedExtendedProperty?: string[];
-}
-export class ListEventsHandler extends BaseToolHandler
-⋮----
-async runTool(args: ListEventsArgs, oauth2Client: OAuth2Client): Promise<CallToolResult>
-private async fetchEvents(
-        client: OAuth2Client,
-        calendarIds: string[],
-        options: ListEventsOptions
-): Promise<ExtendedEvent[]>
-private async fetchSingleCalendarEvents(
-        client: OAuth2Client,
-        calendarId: string,
-        options: ListEventsOptions
-): Promise<ExtendedEvent[]>
-private async fetchMultipleCalendarEvents(
-        client: OAuth2Client,
-        calendarIds: string[],
-        options: ListEventsOptions
-): Promise<ExtendedEvent[]>
-private buildEventsPath(
-        calendarId: string,
-        timezone: string,
-        options: ListEventsOptions,
-        fieldMask: string | null
-): string
 </file>
 
 <file path="src/handlers/core/RecurringEventHelpers.ts">
@@ -53149,14 +53188,14 @@ export function createFullEventArgs(
 ├── label-google-dev-forums.mjs (568 tokens)
 ├── label-google-workspace.mjs (1,299 tokens)
 ├── label-remaining-community.mjs (1,778 tokens)
-├── label-remaining-unread.mjs (903 tokens)
+├── label-remaining-unread.mjs (884 tokens)
 ├── label-sentry-team.mjs (1,298 tokens)
 ├── LICENSE (271 tokens)
 ├── list-labels.mjs (238 tokens)
 ├── list-remaining-unread.mjs (650 tokens)
 ├── list-unread-emails.mjs (1,486 tokens)
 ├── mark-all-labeled-read.mjs (670 tokens)
-├── mark-archived-as-read.mjs (772 tokens)
+├── mark-archived-as-read.mjs (714 tokens)
 ├── mark-past-events-read.mjs (942 tokens)
 ├── mark-product-updates-read-v2.mjs (740 tokens)
 ├── mark-product-updates-read.mjs (536 tokens)
@@ -53168,7 +53207,7 @@ export function createFullEventArgs(
 ├── organize-newsletters.mjs (1,485 tokens)
 ├── package.json (1,054 tokens)
 ├── protect-important-inbox.mjs (1,264 tokens)
-├── quick-status.mjs (528 tokens)
+├── quick-status.mjs (523 tokens)
 ├── relabel-event-announcements.mjs (776 tokens)
 ├── revert-google-workspace-labels.mjs (818 tokens)
 ├── search-events.ts (655 tokens)
@@ -53186,8 +53225,10 @@ export function createFullEventArgs(
 ├── verify-refactor.mjs (432 tokens)
 ├── verify-tokens.mjs (868 tokens)
 ├── vitest.config.ts (216 tokens)
-├── lib/ (8,362 tokens)
-│   ├── constants.mjs (805 tokens)
+├── .claude/ (118 tokens)
+│   └── ralph-loop.local.md (118 tokens)
+├── lib/ (8,356 tokens)
+│   ├── constants.mjs (799 tokens)
 │   ├── date-based-filter.mjs (2,420 tokens)
 │   ├── email-analyzer.mjs (1,318 tokens)
 │   ├── email-utils.mjs (448 tokens)
@@ -53334,26 +53375,6 @@ export function createFullEventArgs(
         ├── event-id-validator.ts (681 tokens)
         ├── field-mask-builder.ts (981 tokens)
         └── timezone-utils.ts (2,134 tokens)
-</file>
-
-<file path="src/tests/unit/helpers/index.ts">
-export { getTextContent, tryGetTextContent, assertTextContentContains, expectValidToolResponse, expectJsonResponse } from './content.js';
-export { makeEvent, makeEventWithCalendarId, makeEvents, makeGaxiosError, makeCalendarMock, createFullEventArgs, ATTACHMENT_IDS, STANDARD_ATTACHMENTS } from './factories.js';
-export { createBuilder } from './testBuilder.js';
-export {
-  SYSTEM_FIELDS,
-  createTestEventWithDateTime,
-  createTestEventWithTZOffset,
-  createCompleteTestEvent,
-  createUpdateEventArgs,
-  createUpdateEventArgsWithTimes,
-  createUpdateEventArgsWithAttendees,
-  createComplexUpdateEventArgs,
-  createCreateEventArgs,
-  createConflictEventArgs,
-  createEventWithExtendedProperties
-} from './event-test-data.js';
-export { setupListEventsHandler, createGoogleCalendarMocks } from './handler-setup.js';
 </file>
 
 <file path="docs/BACKLOG.md">

@@ -46,6 +46,8 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
+.claude/
+  ralph-loop.local.md
 lib/
   constants.mjs
   date-based-filter.mjs
@@ -293,6 +295,19 @@ vitest.config.ts
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path=".claude/ralph-loop.local.md">
+---
+active: true
+iteration: 1
+session_id: 
+max_iterations: 10
+completion_promise: "RALPH_COMPLETE"
+started_at: "2026-03-26T10:21:30Z"
+---
+
+run /simplify on docs/repomix/repo-compressed.xml contents, accept all changes, run /otel-session-summary, address issues, run npm run repomix, repeat until clean
+</file>
 
 <file path="lib/gmail-client.mjs">
 /**
@@ -813,6 +828,11 @@ import { CONFLICT_DETECTION_CONFIG } from '../../../services/conflict-detection/
 import { getTextContent } from '../helpers/index.js';
 </file>
 
+<file path="src/tests/unit/handlers/datetime-utils.test.ts">
+import { describe, it, expect } from 'vitest';
+import { hasTimezoneInDatetime, convertToRFC3339, createTimeObject } from '../../../utils/timezone-utils.js';
+</file>
+
 <file path="src/tests/unit/handlers/GetCurrentTimeHandler.test.ts">
 import { describe, it, expect, vi } from 'vitest';
 import { GetCurrentTimeHandler } from '../../../handlers/core/GetCurrentTimeHandler.js';
@@ -1138,16 +1158,6 @@ import { defineConfig } from 'vitest/config'
 import { loadEnv } from 'vite'
 ⋮----
 // Increase timeout for AI API calls
-</file>
-
-<file path="lib/constants.mjs">
-/** Gmail user ID (special value 'me' = authenticated user) */
-⋮----
-/** System label IDs */
-⋮----
-/** Gmail label names for email categories */
-⋮----
-/** System label IDs */
 </file>
 
 <file path="lib/date-based-filter.mjs">
@@ -1874,11 +1884,6 @@ function parseBatchResponse(
 ): BatchResponse[]
 </file>
 
-<file path="src/tests/unit/handlers/datetime-utils.test.ts">
-import { describe, it, expect } from 'vitest';
-import { hasTimezoneInDatetime, convertToRFC3339, createTimeObject } from '../../../utils/timezone-utils.js';
-</file>
-
 <file path="src/tests/unit/helpers/testBuilder.ts">
 export interface Builder<T> {
   build(overrides?: Partial<T>): T;
@@ -1922,6 +1927,23 @@ import {
   LabelCreationResultSchema,
   PatternApplicationStatsSchema
 } from '../../../schemas/gmail-label-utils-types';
+</file>
+
+<file path="src/tests/unit/utils/timezone-utils.test.ts">
+import { describe, it, expect } from 'vitest';
+import {
+  isValidIANATimeZone,
+  getSystemTimeZone,
+  validateTimeZone,
+  getTimezoneOffsetMinutes,
+  getTimezoneOffsetString,
+  formatDateInTimeZone,
+  resolveTimeZone,
+  hasTimezoneInDatetime,
+  convertToRFC3339,
+  createTimeObject,
+  applyTimezone,
+} from '../../../utils/timezone-utils.js';
 </file>
 
 <file path="src/transports/http.ts">
@@ -2226,10 +2248,6 @@ async function labelGoogleWorkspace()
 async function labelRemainingCommunity()
 </file>
 
-<file path="label-remaining-unread.mjs">
-// Define labeling rules by sender/content pattern
-</file>
-
 <file path="label-sentry-team.mjs">
 async function labelSentryTeam()
 </file>
@@ -2254,10 +2272,6 @@ async function listUnreadEmails()
 async function markAllLabeledAsRead()
 ⋮----
 // Excluding Sentry Alerts and Keep Important
-</file>
-
-<file path="mark-archived-as-read.mjs">
-async function markArchivedAsRead()
 </file>
 
 <file path="mark-past-events-read.mjs">
@@ -2300,10 +2314,6 @@ async function organizeNewsletters()
 async function protectImportantItems()
 ⋮----
 // Note: NOT removing INBOX label - this keeps them visible
-</file>
-
-<file path="quick-status.mjs">
-
 </file>
 
 <file path="relabel-event-announcements.mjs">
@@ -2350,6 +2360,14 @@ async function verifyAndRefreshTokens()
 // Validate and refresh if needed
 </file>
 
+<file path="lib/constants.mjs">
+/** Gmail user ID (special value 'me' = authenticated user) */
+⋮----
+/** Gmail system label IDs */
+⋮----
+/** Gmail label names for email categories */
+</file>
+
 <file path="src/auth/server.ts">
 import { OAuth2Client } from 'google-auth-library';
 import { TokenManager } from './tokenManager.js';
@@ -2390,6 +2408,57 @@ protected textResult(text: string): CallToolResult
 protected async withTimeout<T>(promise: Promise<T>, timeoutMs: number = 30000): Promise<T>
 protected async getCalendarDetails(client: OAuth2Client, calendarId: string): Promise<calendar_v3.Schema$CalendarListEntry>
 protected async getCalendarTimezone(client: OAuth2Client, calendarId: string): Promise<string>
+</file>
+
+<file path="src/handlers/core/eventManipulationUtils.ts">
+import { calendar_v3 } from 'googleapis';
+import { OAuth2Client } from 'google-auth-library';
+import { CreateEventInput, UpdateEventInput } from '../../tools/registry.js';
+import { createTimeObject } from '../../utils/timezone-utils.js';
+import { ConflictDetectionService } from '../../services/conflict-detection/index.js';
+import { CONFLICT_DETECTION_CONFIG } from '../../services/conflict-detection/config.js';
+function conditionallyAddFields<T extends Record<string, any>>(
+  source: T,
+  target: Record<string, any>,
+  fieldNames: (keyof T)[]
+): void
+export function buildCoreEvent(
+  input: CreateEventInput | UpdateEventInput,
+  timezone: string,
+  existingEvent?: calendar_v3.Schema$Event
+): Pick<calendar_v3.Schema$Event, 'summary' | 'description' | 'start' | 'end' | 'attendees' | 'location'>
+export function buildOptionalEventFields(
+  input: CreateEventInput | UpdateEventInput
+): Pick<calendar_v3.Schema$Event, 'colorId' | 'reminders' | 'recurrence' | 'transparency' | 'visibility' | 'guestsCanInviteOthers' | 'guestsCanModify' | 'guestsCanSeeOtherGuests' | 'anyoneCanAddSelf' | 'conferenceData' | 'extendedProperties' | 'attachments' | 'source'>
+export function buildEventForConflictCheckCreate(
+  input: CreateEventInput,
+  timezone: string
+): calendar_v3.Schema$Event
+export function buildEventForConflictCheckUpdate(
+  input: UpdateEventInput,
+  existingEvent: calendar_v3.Schema$Event,
+  timezone: string
+): calendar_v3.Schema$Event
+export function buildEventRequestBodyCreate(
+  input: CreateEventInput,
+  timezone: string
+): calendar_v3.Schema$Event
+export interface ConflictCheckOptions {
+  checkDuplicates?: boolean;
+  checkConflicts?: boolean;
+  calendarsToCheck?: string[];
+  duplicateSimilarityThreshold?: number;
+}
+export async function performConflictCheck(
+  conflictService: ConflictDetectionService,
+  oauth2Client: OAuth2Client,
+  eventToCheck: calendar_v3.Schema$Event,
+  calendarId: string,
+  options: ConflictCheckOptions = {}
+): Promise<any>
+export function getConferenceAndAttachmentOptions(
+  input: CreateEventInput | UpdateEventInput
+):
 </file>
 
 <file path="src/handlers/core/FreeBusyEventHandler.ts">
@@ -2607,21 +2676,16 @@ import {
 } from '../helpers/test-configs';
 </file>
 
-<file path="src/tests/unit/utils/timezone-utils.test.ts">
-import { describe, it, expect } from 'vitest';
-import {
-  isValidIANATimeZone,
-  getSystemTimeZone,
-  validateTimeZone,
-  getTimezoneOffsetMinutes,
-  getTimezoneOffsetString,
-  formatDateInTimeZone,
-  resolveTimeZone,
-  hasTimezoneInDatetime,
-  convertToRFC3339,
-  createTimeObject,
-  applyTimezone,
-} from '../../../utils/timezone-utils.js';
+<file path="label-remaining-unread.mjs">
+
+</file>
+
+<file path="mark-archived-as-read.mjs">
+async function markArchivedAsRead()
+</file>
+
+<file path="quick-status.mjs">
+
 </file>
 
 <file path="scripts/repomix/repomix-compressed.config.json">
@@ -2674,57 +2738,6 @@ export function processBatchResponses<T extends ExtendedEvent = ExtendedEvent>(
   calendarIds: string[],
   options: ProcessBatchResponsesOptions = {}
 ): BatchResponseResult<T>
-</file>
-
-<file path="src/handlers/core/eventManipulationUtils.ts">
-import { calendar_v3 } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
-import { CreateEventInput, UpdateEventInput } from '../../tools/registry.js';
-import { createTimeObject } from '../../utils/timezone-utils.js';
-import { ConflictDetectionService } from '../../services/conflict-detection/index.js';
-import { CONFLICT_DETECTION_CONFIG } from '../../services/conflict-detection/config.js';
-function conditionallyAddFields<T extends Record<string, any>>(
-  source: T,
-  target: Record<string, any>,
-  fieldNames: (keyof T)[]
-): void
-export function buildCoreEvent(
-  input: CreateEventInput | UpdateEventInput,
-  timezone: string,
-  existingEvent?: calendar_v3.Schema$Event
-): Pick<calendar_v3.Schema$Event, 'summary' | 'description' | 'start' | 'end' | 'attendees' | 'location'>
-export function buildOptionalEventFields(
-  input: CreateEventInput | UpdateEventInput
-): Pick<calendar_v3.Schema$Event, 'colorId' | 'reminders' | 'recurrence' | 'transparency' | 'visibility' | 'guestsCanInviteOthers' | 'guestsCanModify' | 'guestsCanSeeOtherGuests' | 'anyoneCanAddSelf' | 'conferenceData' | 'extendedProperties' | 'attachments' | 'source'>
-export function buildEventForConflictCheckCreate(
-  input: CreateEventInput,
-  timezone: string
-): calendar_v3.Schema$Event
-export function buildEventForConflictCheckUpdate(
-  input: UpdateEventInput,
-  existingEvent: calendar_v3.Schema$Event,
-  timezone: string
-): calendar_v3.Schema$Event
-export function buildEventRequestBodyCreate(
-  input: CreateEventInput,
-  timezone: string
-): calendar_v3.Schema$Event
-export interface ConflictCheckOptions {
-  checkDuplicates?: boolean;
-  checkConflicts?: boolean;
-  calendarsToCheck?: string[];
-  duplicateSimilarityThreshold?: number;
-}
-export async function performConflictCheck(
-  conflictService: ConflictDetectionService,
-  oauth2Client: OAuth2Client,
-  eventToCheck: calendar_v3.Schema$Event,
-  calendarId: string,
-  options: ConflictCheckOptions = {}
-): Promise<any>
-export function getConferenceAndAttachmentOptions(
-  input: CreateEventInput | UpdateEventInput
-):
 </file>
 
 <file path="src/tests/integration/test-data-factory.ts">
@@ -2790,6 +2803,16 @@ static extractAllEventIds(response: any): string[]
 static getInvalidTestData()
 </file>
 
+<file path="src/tests/unit/handlers/ListEventsHandler.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
+import { OAuth2Client } from 'google-auth-library';
+import { google } from 'googleapis';
+import { convertToRFC3339 } from '../../../utils/timezone-utils.js';
+import { getTextContent, makeEvent, makeCalendarMock } from '../helpers/index.js';
+import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
+</file>
+
 <file path="src/tests/unit/handlers/RecurringEventHelpers.test.ts">
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { calendar_v3 } from 'googleapis';
@@ -2807,6 +2830,15 @@ import {
 function resolveWith(overrides: Partial<calendar_v3.Schema$Event>)
 ⋮----
 function expectSystemFieldsRemoved(result: calendar_v3.Schema$Event): void
+</file>
+
+<file path="src/tests/unit/handlers/SearchEventsHandler.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SearchEventsHandler } from '../../../handlers/core/SearchEventsHandler.js';
+import { OAuth2Client } from 'google-auth-library';
+import { calendar_v3 } from 'googleapis';
+import { getTextContent, makeEvent, makeGaxiosError, makeCalendarMock } from '../helpers/index.js';
+import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
 </file>
 
 <file path="src/tests/unit/handlers/utils-conflict-format.test.ts">
@@ -2919,6 +2951,46 @@ static async registerAll(
 )
 </file>
 
+<file path="src/utils/timezone-utils.ts">
+import { formatRFC3339 } from './date-utils.js';
+⋮----
+export function isValidIANATimeZone(timeZone: string): boolean
+export function getSystemTimeZone(): string
+export function validateTimeZone(timeZone: string): void
+export function getTimezoneOffsetMinutes(timeZone: string): number
+export function getTimezoneOffsetString(timeZone: string): string
+export function formatDateInTimeZone(date: Date, timeZone: string):
+export function resolveTimeZone(
+  preferredTZ: string | undefined,
+  calendarDefaultTZ: string | undefined
+): string
+export function hasTimezoneInDatetime(datetime: string): boolean
+export function convertToRFC3339(datetime: string, fallbackTimezone: string): string
+function convertLocalTimeToUTC(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+  second: number,
+  timezone: string
+): Date
+export function applyTimezone(
+  start: { dateTime?: string; date?: string; timeZone?: string } | undefined,
+  end: { dateTime?: string; date?: string; timeZone?: string } | undefined,
+  timezone: string
+):
+export function createTimeObject(
+  datetime: string,
+  fallbackTimezone: string
+):
+export function resolveTimeRange(
+  timeMin: string | undefined,
+  timeMax: string | undefined,
+  timezone: string
+):
+</file>
+
 <file path="src/handlers/core/eventFormatting.ts">
 import { formatEventWithDetails } from '../utils.js';
 import { groupBy } from 'lodash-es';
@@ -2935,6 +3007,25 @@ export function formatEventsList(
 function formatSimpleEventsList(events: ExtendedEvent[]): string
 function formatGroupedEventsList(events: ExtendedEvent[]): string
 function groupEventsByCalendar(events: ExtendedEvent[]): Record<string, ExtendedEvent[]>
+</file>
+
+<file path="src/handlers/core/SearchEventsHandler.ts">
+import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { OAuth2Client } from "google-auth-library";
+import { SearchEventsInput } from "../../tools/registry.js";
+import { BaseToolHandler } from "./BaseToolHandler.js";
+import { calendar_v3 } from 'googleapis';
+import { resolveTimeRange } from "../../utils/timezone-utils.js";
+import { buildListFieldMask } from "../../utils/field-mask-builder.js";
+import { formatEventsList } from "./eventFormatting.js";
+import { ListEventsOptions } from "./types.js";
+export class SearchEventsHandler extends BaseToolHandler
+⋮----
+async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult>
+private async searchEvents(
+        client: OAuth2Client,
+        args: SearchEventsInput
+): Promise<calendar_v3.Schema$Event[]>
 </file>
 
 <file path="src/handlers/core/UpdateEventHandler.ts">
@@ -3027,133 +3118,6 @@ export function createEventResponseWithConflicts(
 ): string
 </file>
 
-<file path="src/tests/integration/conflict-detection-integration.test.ts">
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { initializeOAuth2Client } from '../../auth/client.js';
-import { TokenManager } from '../../auth/tokenManager.js';
-import { TestDataFactory } from './test-data-factory.js';
-import { getTextContent } from '../unit/helpers/content.js';
-import {
-  createAndVerifyEvent,
-  updateAndVerifyEvent,
-  createNonOverlappingEventPair,
-  createOverlappingEventPair
-} from './integration-test-helpers.js';
-</file>
-
-<file path="src/tests/unit/handlers/ListEventsHandler.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
-import { OAuth2Client } from 'google-auth-library';
-import { google } from 'googleapis';
-import { convertToRFC3339 } from '../../../utils/timezone-utils.js';
-import { getTextContent, makeEvent, makeCalendarMock } from '../helpers/index.js';
-import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
-</file>
-
-<file path="src/tests/unit/handlers/SearchEventsHandler.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SearchEventsHandler } from '../../../handlers/core/SearchEventsHandler.js';
-import { OAuth2Client } from 'google-auth-library';
-import { calendar_v3 } from 'googleapis';
-import { getTextContent, makeEvent, makeGaxiosError, makeCalendarMock } from '../helpers/index.js';
-import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
-</file>
-
-<file path="src/tests/unit/utils/date-utils.test.ts">
-import { describe, it, expect } from 'vitest';
-import {
-  TIME_DURATIONS,
-  addDays,
-  addMilliseconds,
-  durationMs,
-  formatBasicDateTime,
-  formatTZNaiveDateTime,
-  formatRFC3339,
-  getFutureDate,
-  getPastDate,
-  isFutureDate,
-  isPastDate,
-  oneDayBefore,
-  getOneDayBeforeFormatted,
-  RRULE_PATTERNS,
-  stripUntilAndCount,
-  buildUntilClause,
-  isRRuleString,
-  extractAndPreserveNonRRuleRecurrence,
-  DATETIME_FORMATS,
-  DATETIME_ERRORS,
-  isValidISODateTime,
-  isValidISODate,
-  isTimeZoneAware,
-  isTimeZoneNaive,
-  isAllDayEvent,
-  parseDateTimeString,
-  parseBasicDateTime,
-} from '../../../utils/date-utils.js';
-</file>
-
-<file path="src/utils/timezone-utils.ts">
-import { formatRFC3339 } from './date-utils.js';
-⋮----
-export function isValidIANATimeZone(timeZone: string): boolean
-export function getSystemTimeZone(): string
-export function validateTimeZone(timeZone: string): void
-export function getTimezoneOffsetMinutes(timeZone: string): number
-export function getTimezoneOffsetString(timeZone: string): string
-export function formatDateInTimeZone(date: Date, timeZone: string):
-export function resolveTimeZone(
-  preferredTZ: string | undefined,
-  calendarDefaultTZ: string | undefined
-): string
-export function hasTimezoneInDatetime(datetime: string): boolean
-export function convertToRFC3339(datetime: string, fallbackTimezone: string): string
-function convertLocalTimeToUTC(
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute: number,
-  second: number,
-  timezone: string
-): Date
-export function applyTimezone(
-  start: { dateTime?: string; date?: string; timeZone?: string } | undefined,
-  end: { dateTime?: string; date?: string; timeZone?: string } | undefined,
-  timezone: string
-):
-export function createTimeObject(
-  datetime: string,
-  fallbackTimezone: string
-):
-export function resolveTimeRange(
-  timeMin: string | undefined,
-  timeMax: string | undefined,
-  timezone: string
-):
-</file>
-
-<file path="src/handlers/core/SearchEventsHandler.ts">
-import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { OAuth2Client } from "google-auth-library";
-import { SearchEventsInput } from "../../tools/registry.js";
-import { BaseToolHandler } from "./BaseToolHandler.js";
-import { calendar_v3 } from 'googleapis';
-import { resolveTimeRange } from "../../utils/timezone-utils.js";
-import { buildListFieldMask } from "../../utils/field-mask-builder.js";
-import { formatEventsList } from "./eventFormatting.js";
-import { ListEventsOptions } from "./types.js";
-export class SearchEventsHandler extends BaseToolHandler
-⋮----
-async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult>
-private async searchEvents(
-        client: OAuth2Client,
-        args: SearchEventsInput
-): Promise<calendar_v3.Schema$Event[]>
-</file>
-
 <file path="src/services/conflict-detection/ConflictDetectionService.ts">
 import { OAuth2Client } from "google-auth-library";
 import { google, calendar_v3 } from "googleapis";
@@ -3209,6 +3173,100 @@ async checkConflictsWithFreeBusy(
     eventToCheck: calendar_v3.Schema$Event,
     calendarsToCheck: string[]
 ): Promise<ConflictInfo[]>
+</file>
+
+<file path="src/tests/integration/conflict-detection-integration.test.ts">
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { initializeOAuth2Client } from '../../auth/client.js';
+import { TokenManager } from '../../auth/tokenManager.js';
+import { TestDataFactory } from './test-data-factory.js';
+import { getTextContent } from '../unit/helpers/content.js';
+import {
+  createAndVerifyEvent,
+  updateAndVerifyEvent,
+  createNonOverlappingEventPair,
+  createOverlappingEventPair
+} from './integration-test-helpers.js';
+</file>
+
+<file path="src/tests/unit/utils/date-utils.test.ts">
+import { describe, it, expect } from 'vitest';
+import {
+  TIME_DURATIONS,
+  addDays,
+  addMilliseconds,
+  durationMs,
+  formatBasicDateTime,
+  formatTZNaiveDateTime,
+  formatRFC3339,
+  getFutureDate,
+  getPastDate,
+  isFutureDate,
+  isPastDate,
+  oneDayBefore,
+  getOneDayBeforeFormatted,
+  RRULE_PATTERNS,
+  stripUntilAndCount,
+  buildUntilClause,
+  isRRuleString,
+  extractAndPreserveNonRRuleRecurrence,
+  DATETIME_FORMATS,
+  DATETIME_ERRORS,
+  isValidISODateTime,
+  isValidISODate,
+  isTimeZoneAware,
+  isTimeZoneNaive,
+  isAllDayEvent,
+  parseDateTimeString,
+  parseBasicDateTime,
+} from '../../../utils/date-utils.js';
+</file>
+
+<file path="src/handlers/core/ListEventsHandler.ts">
+import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { OAuth2Client } from "google-auth-library";
+import { BaseToolHandler } from "./BaseToolHandler.js";
+import { BatchRequestHandler } from "./BatchRequestHandler.js";
+import { resolveTimeRange } from "../../utils/timezone-utils.js";
+import { buildListFieldMask } from "../../utils/field-mask-builder.js";
+import { processBatchResponses } from "./batchUtils.js";
+import { formatEventsList } from "./eventFormatting.js";
+import { ListEventsOptions, ExtendedEvent } from "./types.js";
+interface ListEventsArgs {
+  calendarId: string | string[];
+  timeMin?: string;
+  timeMax?: string;
+  timeZone?: string;
+  fields?: string[];
+  privateExtendedProperty?: string[];
+  sharedExtendedProperty?: string[];
+}
+export class ListEventsHandler extends BaseToolHandler
+⋮----
+async runTool(args: ListEventsArgs, oauth2Client: OAuth2Client): Promise<CallToolResult>
+private async fetchEvents(
+        client: OAuth2Client,
+        calendarIds: string[],
+        options: ListEventsOptions
+): Promise<ExtendedEvent[]>
+private async fetchSingleCalendarEvents(
+        client: OAuth2Client,
+        calendarId: string,
+        options: ListEventsOptions
+): Promise<ExtendedEvent[]>
+private async fetchMultipleCalendarEvents(
+        client: OAuth2Client,
+        calendarIds: string[],
+        options: ListEventsOptions
+): Promise<ExtendedEvent[]>
+private buildEventsPath(
+        calendarId: string,
+        timezone: string,
+        options: ListEventsOptions,
+        fieldMask: string | null
+): string
 </file>
 
 <file path="src/utils/batchProcessor.ts">
@@ -3315,51 +3373,6 @@ export async function processBatchItemsChunked<T, TItem = string>(
     "vitest": "^3.1.1"
   }
 }
-</file>
-
-<file path="src/handlers/core/ListEventsHandler.ts">
-import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { OAuth2Client } from "google-auth-library";
-import { BaseToolHandler } from "./BaseToolHandler.js";
-import { BatchRequestHandler } from "./BatchRequestHandler.js";
-import { resolveTimeRange } from "../../utils/timezone-utils.js";
-import { buildListFieldMask } from "../../utils/field-mask-builder.js";
-import { processBatchResponses } from "./batchUtils.js";
-import { formatEventsList } from "./eventFormatting.js";
-import { ListEventsOptions, ExtendedEvent } from "./types.js";
-interface ListEventsArgs {
-  calendarId: string | string[];
-  timeMin?: string;
-  timeMax?: string;
-  timeZone?: string;
-  fields?: string[];
-  privateExtendedProperty?: string[];
-  sharedExtendedProperty?: string[];
-}
-export class ListEventsHandler extends BaseToolHandler
-⋮----
-async runTool(args: ListEventsArgs, oauth2Client: OAuth2Client): Promise<CallToolResult>
-private async fetchEvents(
-        client: OAuth2Client,
-        calendarIds: string[],
-        options: ListEventsOptions
-): Promise<ExtendedEvent[]>
-private async fetchSingleCalendarEvents(
-        client: OAuth2Client,
-        calendarId: string,
-        options: ListEventsOptions
-): Promise<ExtendedEvent[]>
-private async fetchMultipleCalendarEvents(
-        client: OAuth2Client,
-        calendarIds: string[],
-        options: ListEventsOptions
-): Promise<ExtendedEvent[]>
-private buildEventsPath(
-        calendarId: string,
-        timezone: string,
-        options: ListEventsOptions,
-        fieldMask: string | null
-): string
 </file>
 
 <file path="src/handlers/core/RecurringEventHelpers.ts">

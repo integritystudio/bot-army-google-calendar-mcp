@@ -1,6 +1,85 @@
 # Project Backlog
 
-**Last Updated:** 2026-03-24
+**Last Updated:** 2026-03-26
+
+## Tests: Fix Missed EVENT_ID_PREFIX in duplicate-event-display.test.ts
+
+**Status:** ✅ Done
+**Complexity:** Trivial
+**Impact:** Low (drift risk parity — same fix applied to line 70 but missed on line 138)
+**Discovery Date:** 2026-03-26
+
+**Issue:**
+`duplicate-event-display.test.ts:138` still uses a hardcoded literal:
+
+```typescript
+expect(formatted).toContain('Event ID: morning-standup');
+```
+
+Line 70 in the same file was already updated to use `EVENT_ID_PREFIX` from `src/handlers/utils.ts`, but line 138 in the second test was missed.
+
+**Fix:**
+```typescript
+expect(formatted).toContain(`${EVENT_ID_PREFIX}morning-standup`);
+```
+
+**Files Affected:**
+- `src/tests/unit/handlers/duplicate-event-display.test.ts` — line 138
+
+---
+
+
+## Tests: Extract Remaining Format-Prefix Strings from Production Source
+
+**Status:** ✅ Done
+**Complexity:** Low
+**Impact:** Medium (prevents silent drift between production output and test assertions)
+**Discovery Date:** 2026-03-26
+
+**Context:**
+During the 2026-03-26 session we extracted several production-owned strings into constants and had tests import them directly from source (`EVENT_ID_PREFIX`, `TIME_START_PREFIX`, `TIME_END_PREFIX`, `DUPLICATE_DETECTED_HEADER`, `CONFLICT_DETECTED_HEADER`, `DUPLICATE_SUGGESTIONS`). The following format-prefix strings in the two test files still use raw string literals that reference production output.
+
+**Remaining raw strings by file:**
+
+`duplicate-event-display.test.ts`:
+| Line | Literal | Production source |
+|---|---|---|
+| 68, 167 | `'Existing event details:'` | `formatConflictWarnings` — `warnings += \`\n\nExisting event details:\`` |
+| 80 | `'Guests: '` (inside full string) | `formatAttendees` — `return \`\nGuests: ${formatted}\`` |
+| 83 | `'View: '` (inside URL string) | `formatEventWithDetails` — `\`\nView: ${eventUrl}\`` |
+| 166 | `'View existing event: '` (inside URL string) | `formatConflictWarnings` — `\`\n  View existing event: ${dup.event.url}\`` |
+
+`utils-conflict-format.test.ts`:
+| Line | Literal | Production source |
+|---|---|---|
+| 45 | `'Calendar: primary'` | `formatConflictWarnings` — `\`\n\nCalendar: ${calendar}\`` |
+| 46, 101 | `'Conflicting Event'` | `formatConflictWarnings` — `\`\n\n━━━ Conflicting Event ━━━\`` |
+| 47, 104, 105 | `'Overlap: '` (inside full string) | `formatConflictWarnings` — `\`\n⚠️  Overlap: ${...}\`` |
+| 48 | `'Conflicting event details:'` | `formatConflictWarnings` — `warnings += \`\n\nConflicting event details:\`` |
+
+**Proposed constants to add to `src/handlers/utils.ts`:**
+```typescript
+export const EXISTING_EVENT_DETAILS_LABEL = 'Existing event details:';
+export const CONFLICTING_EVENT_DETAILS_LABEL = 'Conflicting event details:';
+export const CONFLICTING_EVENT_HEADER = '━━━ Conflicting Event ━━━';
+export const VIEW_URL_PREFIX = 'View: ';
+export const VIEW_EXISTING_EVENT_PREFIX = 'View existing event: ';
+export const GUESTS_PREFIX = 'Guests: ';
+export const CALENDAR_PREFIX = 'Calendar: ';
+export const OVERLAP_PREFIX = '⚠️  Overlap: ';
+```
+
+**Notes:**
+- `'Event: '`, `'Description: '`, `'Location: '` prefixes appear in assertions but are test-data-specific substrings (e.g., `'Event: Weekly Team Standup'`) — replacing only the prefix would reduce readability with no drift benefit; leave as-is
+- `'Calendar: primary'` and `'Calendar: work@company.com'` — only the prefix needs the constant; the calendar ID value is fixture data
+
+**Files Affected:**
+- `src/handlers/utils.ts` — add exported constants, replace inline strings
+- `src/tests/unit/handlers/duplicate-event-display.test.ts` — update assertions
+- `src/tests/unit/handlers/utils-conflict-format.test.ts` — update assertions
+
+---
+
 
 ## Dependencies: Replace Custom Array Utilities with lodash-es
 
@@ -225,7 +304,7 @@ export function extractEmailAddress(from) {
 
 ## Scripts: Fragile Filter-Exists Detection in gmail-filter-utils.mjs
 
-**Status:** 🔲 TODO
+**Status:** ✅ Done
 **Complexity:** Low
 **Impact:** Medium (silent breakage if Google API error message changes)
 **Discovery Date:** 2026-03-26

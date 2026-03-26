@@ -1,6 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID, LABEL_EVENTS, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
+import { LABEL_EVENTS, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 
 const gmail = createGmailClient();
 
@@ -50,31 +51,9 @@ for (const rule of labelingRules) {
   }
 
   const queryCounts = await Promise.all(rule.queries.map(async (query) => {
-    const searchResponse = await gmail.users.messages.list({
-      userId: USER_ID,
-      q: `is:unread ${query}`,
-      maxResults: 500
-    });
-
-    const messageIds = searchResponse.data.messages || [];
-    if (messageIds.length === 0) return 0;
-
-    console.log(`${rule.label} - ${query}: ${messageIds.length}`);
-
-    const batchSize = 50;
-    for (let i = 0; i < messageIds.length; i += batchSize) {
-      const batch = messageIds.slice(i, i + batchSize);
-      await gmail.users.messages.batchModify({
-        userId: USER_ID,
-        requestBody: {
-          ids: batch.map(m => m.id),
-          addLabelIds: [labelId]
-        }
-      });
-    }
-
-    console.log(`  ✅ Labeled ${messageIds.length}`);
-    return messageIds.length;
+    const count = await searchAndModify(gmail, `is:unread ${query}`, { addLabelIds: [labelId] });
+    if (count > 0) console.log(`${rule.label} - ${query}: ${count} labeled`);
+    return count;
   }));
 
   const totalLabeled = queryCounts.reduce((sum, n) => sum + n, 0);

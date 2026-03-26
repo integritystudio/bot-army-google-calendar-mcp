@@ -1,6 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, GMAIL_INBOX, LABEL_PRODUCT_UPDATES } from './lib/constants.mjs';
 import { getHeader } from './lib/email-utils.mjs';
+import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
 
 async function labelGoogleCloudFeb() {
   const gmail = createGmailClient();
@@ -64,14 +65,7 @@ async function labelGoogleCloudFeb() {
           console.log(`Date: ${date}\n`);
         }
 
-        await gmail.users.messages.batchModify({
-          userId: USER_ID,
-          requestBody: {
-            ids: altIds.map(m => m.id),
-            addLabelIds: [productLabel.id],
-            removeLabelIds: [GMAIL_INBOX]
-          }
-        });
+        await batchModifyMessages(gmail, altIds, { addLabelIds: [productLabel.id], removeLabelIds: [GMAIL_INBOX] });
 
         console.log(`✅ Labeled and archived ${altIds.length} email(s)\n`);
       } else {
@@ -100,14 +94,7 @@ async function labelGoogleCloudFeb() {
       console.log(`Date: ${date}\n`);
     }
 
-    await gmail.users.messages.batchModify({
-      userId: USER_ID,
-      requestBody: {
-        ids: messageIds.map(m => m.id),
-        addLabelIds: [productLabel.id],
-        removeLabelIds: [GMAIL_INBOX]
-      }
-    });
+    await batchModifyMessages(gmail, messageIds, { addLabelIds: [productLabel.id], removeLabelIds: [GMAIL_INBOX] });
 
     console.log('═'.repeat(80));
     console.log('COMPLETE\n');

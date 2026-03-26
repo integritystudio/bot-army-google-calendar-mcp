@@ -1,6 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, GMAIL_INBOX, GMAIL_UNREAD } from './lib/constants.mjs';
 import { getHeader } from './lib/email-utils.mjs';
+import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
 
 const gmail = createGmailClient();
 
@@ -63,19 +64,8 @@ for (const query of searchQueries) {
   }
 
   if (oldIds.length > 0) {
-    const batchSize = 50;
-    for (let i = 0; i < oldIds.length; i += batchSize) {
-      const batch = oldIds.slice(i, i + batchSize);
-      await gmail.users.messages.batchModify({
-        userId: USER_ID,
-        requestBody: {
-          ids: batch,
-          removeLabelIds: [GMAIL_UNREAD, GMAIL_INBOX]
-        }
-      });
-      totalArchived += batch.length;
-    }
-
+    await batchModifyMessages(gmail, oldIds, { removeLabelIds: [GMAIL_UNREAD, GMAIL_INBOX] });
+    totalArchived += oldIds.length;
     console.log(`✅ Archived and marked ${oldIds.length} as read\n`);
   }
 }

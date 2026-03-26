@@ -1,6 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, LABEL_CCV, LABEL_NEWSLETTERS_CCV } from './lib/constants.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
 
 async function organizeCCVEmails() {
   const gmail = createGmailClient();
@@ -62,13 +63,9 @@ async function organizeCCVEmails() {
       const count = messageIds.length;
 
       if (count > 0) {
-        await gmail.users.messages.batchModify({
-          userId: USER_ID,
-          requestBody: {
-            ids: messageIds,
-            addLabelIds: [ccvOrgLabelId],
-            removeLabelIds: [newsletterLabelId],
-          },
+        await batchModifyMessages(gmail, messageIds, {
+          addLabelIds: [ccvOrgLabelId],
+          removeLabelIds: [newsletterLabelId],
         });
 
         console.log(`  ✅ Moved ${count} emails matching: "${query.substring(0, 50)}..."`);

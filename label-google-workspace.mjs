@@ -1,5 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, LABEL_UPDATES, LABEL_ORG_GOOGLE_WORKSPACE } from './lib/constants.mjs';
+import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
 
 async function labelGoogleWorkspace() {
   const gmail = createGmailClient();
@@ -84,21 +85,7 @@ async function labelGoogleWorkspace() {
 
     if (messageIds.length > 0) {
       console.log('STEP 3: Applying labels\n');
-      const batchSize = 50;
-      for (let i = 0; i < messageIds.length; i += batchSize) {
-        const batch = messageIds.slice(i, i + batchSize);
-
-        await gmail.users.messages.batchModify({
-          userId: USER_ID,
-          requestBody: {
-            ids: batch.map(m => m.id),
-            addLabelIds: [updatesLabelId, orgLabelId]
-          }
-        });
-
-        const processed = i + batch.length;
-        console.log(`  ✅ Labeled ${processed}/${messageIds.length}`);
-      }
+      await batchModifyMessages(gmail, messageIds, { addLabelIds: [updatesLabelId, orgLabelId] });
     }
 
     console.log('\n' + '═'.repeat(80));

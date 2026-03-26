@@ -2,6 +2,7 @@ import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, LABEL_EVENTS_COMMUNITY, LABEL_EVENTS_COMMUNITY_CREATIVE_ARTS, LABEL_EVENTS_COMMUNITY_TECH_PROFESSIONAL, LABEL_EVENTS_COMMUNITY_SPIRITUAL_WELLNESS, LABEL_EVENTS_COMMUNITY_NETWORKING, LABEL_EVENTS_COMMUNITY_LEARNING_EDUCATION, LABEL_EVENTS_COMMUNITY_SOCIAL_RECREATION, LABEL_EVENTS_COMMUNITY_FOOD_DINING } from './lib/constants.mjs';
 import { getHeader } from './lib/email-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
 
 async function labelFinalCommunity() {
   const gmail = createGmailClient();
@@ -82,14 +83,7 @@ async function labelFinalCommunity() {
 
   for (const [labelId, messageIds] of Object.entries(matches)) {
     try {
-      await gmail.users.messages.batchModify({
-        userId: USER_ID,
-        requestBody: {
-          ids: messageIds,
-          addLabelIds: [labelId]
-        }
-      });
-
+      await batchModifyMessages(gmail, messageIds, { addLabelIds: [labelId] });
       console.log(`✅ ${subLabelMap[labelId]}: ${messageIds.length} emails`);
     } catch (error) {
       console.log(`⚠️  ${subLabelMap[labelId]}: ${error.message}`);

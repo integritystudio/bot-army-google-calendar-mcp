@@ -1,6 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID, LABEL_EVENTS_MEETUP, LABEL_EVENTS_CALENDLY, LABEL_EVENTS_COMMUNITY, LABEL_EVENTS_WORKSHOPS, LABEL_EVENTS_INVITATIONS } from './lib/constants.mjs';
+import { LABEL_EVENTS_MEETUP, LABEL_EVENTS_CALENDLY, LABEL_EVENTS_COMMUNITY, LABEL_EVENTS_WORKSHOPS, LABEL_EVENTS_INVITATIONS } from './lib/constants.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 
 async function organizeEventsSubLabels() {
   const gmail = createGmailClient();
@@ -51,29 +52,9 @@ async function organizeEventsSubLabels() {
 
   for (const category of eventCategories) {
     try {
-      const searchResult = await gmail.users.messages.list({
-        userId: USER_ID,
-        q: category.query,
-        maxResults: 100,
-      });
-
-      if (!searchResult.data.messages) {
-        console.log(`  ℹ️  No emails found for: ${category.label}`);
-        continue;
-      }
-
-      const messageIds = searchResult.data.messages.map(m => m.id);
-      const count = messageIds.length;
-
-      await gmail.users.messages.batchModify({
-        userId: USER_ID,
-        requestBody: {
-          ids: messageIds,
-          addLabelIds: [category.labelId],
-        },
-      });
-
-      console.log(`  ✅ ${category.label}: ${count} emails`);
+      const count = await searchAndModify(gmail, category.query, { addLabelIds: [category.labelId] }, 100);
+      if (count === 0) console.log(`  ℹ️  No emails found for: ${category.label}`);
+      else console.log(`  ✅ ${category.label}: ${count} emails`);
       totalLabeled += count;
     } catch (error) {
       console.log(`  ⚠️  Error with ${category.label}: ${error.message}`);

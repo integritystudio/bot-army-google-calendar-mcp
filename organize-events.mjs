@@ -1,6 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID, LABEL_EVENTS } from './lib/constants.mjs';
+import { LABEL_EVENTS } from './lib/constants.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 
 async function organizeEvents() {
   const gmail = createGmailClient();
@@ -45,29 +46,9 @@ async function organizeEvents() {
     processedQueries.add(query);
 
     try {
-      const searchResult = await gmail.users.messages.list({
-        userId: USER_ID,
-        q: query,
-        maxResults: 100,
-      });
-
-      if (!searchResult.data.messages) continue;
-
-      const messageIds = searchResult.data.messages.map(m => m.id);
-      const count = messageIds.length;
-
-      if (count > 0) {
-        await gmail.users.messages.batchModify({
-          userId: USER_ID,
-          requestBody: {
-            ids: messageIds,
-            addLabelIds: [eventsLabelId],
-          },
-        });
-
-        console.log(`  ✅ Applied to ${count} emails matching: "${query}"`);
-        totalLabeled += count;
-      }
+      const count = await searchAndModify(gmail, query, { addLabelIds: [eventsLabelId] }, 100);
+      if (count > 0) console.log(`  ✅ Applied to ${count} emails matching: "${query}"`);
+      totalLabeled += count;
     } catch (error) {
       console.log(`  ⚠️  Error processing "${query}": ${error.message}`);
     }

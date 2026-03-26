@@ -1,6 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, GMAIL_INBOX, LABEL_EVENTS } from './lib/constants.mjs';
 import { getHeader } from './lib/email-utils.mjs';
+import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
 
 async function organizeInternationalHouse() {
   const gmail = createGmailClient();
@@ -95,37 +96,12 @@ async function organizeInternationalHouse() {
 
     if (futureEvents.length > 0) {
       console.log('Labeling future events with "Events"...\n');
-      const batchSize = 50;
-      for (let i = 0; i < futureEvents.length; i += batchSize) {
-        const batch = futureEvents.slice(i, i + batchSize);
-        await gmail.users.messages.batchModify({
-          userId: USER_ID,
-          requestBody: {
-            ids: batch.map(e => e.id),
-            addLabelIds: [eventsLabelId]
-          }
-        });
-        const processed = i + batch.length;
-        console.log(`  ✅ Labeled ${processed}/${futureEvents.length}`);
-      }
+      await batchModifyMessages(gmail, futureEvents.map(e => e.id), { addLabelIds: [eventsLabelId] });
     }
 
     if (pastEvents.length > 0) {
       console.log('\nArchiving past events...\n');
-      const batchSize = 50;
-      for (let i = 0; i < pastEvents.length; i += batchSize) {
-        const batch = pastEvents.slice(i, i + batchSize);
-        await gmail.users.messages.batchModify({
-          userId: USER_ID,
-          requestBody: {
-            ids: batch.map(e => e.id),
-            addLabelIds: [eventsLabelId],
-            removeLabelIds: [GMAIL_INBOX]
-          }
-        });
-        const processed = i + batch.length;
-        console.log(`  ✅ Archived ${processed}/${pastEvents.length}`);
-      }
+      await batchModifyMessages(gmail, pastEvents.map(e => e.id), { addLabelIds: [eventsLabelId], removeLabelIds: [GMAIL_INBOX] });
     }
 
     console.log('\n' + '═'.repeat(80));

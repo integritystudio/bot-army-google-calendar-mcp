@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
 import { OAuth2Client } from 'google-auth-library';
 import { makeEvent, getTextContent, createCreateEventArgs, makeCalendarMock, createConflictEventArgs, createFullEventArgs, STANDARD_ATTACHMENTS } from '../helpers/index.js';
+import type { ConflictCheckResult } from '../../../services/conflict-detection/types.js';
 
 // Mock the googleapis module
 vi.mock('googleapis', () => ({
@@ -14,6 +15,19 @@ vi.mock('googleapis', () => ({
   },
   calendar_v3: {}
 }));
+
+// Mock conflict detection so tests don't exercise real API calls
+vi.mock('../../../handlers/core/eventManipulationUtils.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../handlers/core/eventManipulationUtils.js')>();
+  return {
+    ...actual,
+    performConflictCheck: vi.fn().mockResolvedValue({
+      hasConflicts: false,
+      conflicts: [],
+      duplicates: []
+    } satisfies ConflictCheckResult)
+  };
+});
 
 // Mock the event ID validator
 vi.mock('../../../utils/event-id-validator.js', () => ({

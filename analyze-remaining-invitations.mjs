@@ -1,5 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { extractEmailAddress } from './lib/email-utils.mjs';
+import { USER_ID, LABEL_EVENTS_INVITATIONS_PROFESSIONAL, LABEL_EVENTS_INVITATIONS_CONFERENCES, LABEL_EVENTS_INVITATIONS_COMMUNITY_SERVICES } from './lib/constants.mjs';
+import { extractEmailAddress, getHeader } from './lib/email-utils.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 
 async function analyzeRemainingInvitations() {
   const gmail = createGmailClient();
@@ -7,18 +9,19 @@ async function analyzeRemainingInvitations() {
   console.log('📊 ANALYZING REMAINING INVITATIONS CATEGORIES\n');
   console.log('═'.repeat(80) + '\n');
 
+  const labelCache = await buildLabelCache(gmail);
   const categories = [
-    { name: 'Professional', labelId: 'Label_15' },
-    { name: 'Conferences', labelId: 'Label_17' },
-    { name: 'Community Services', labelId: 'Label_18' },
-  ];
+    { name: 'Professional', labelId: labelCache.get(LABEL_EVENTS_INVITATIONS_PROFESSIONAL) },
+    { name: 'Conferences', labelId: labelCache.get(LABEL_EVENTS_INVITATIONS_CONFERENCES) },
+    { name: 'Community Services', labelId: labelCache.get(LABEL_EVENTS_INVITATIONS_COMMUNITY_SERVICES) },
+  ].filter(c => c.labelId);
 
   for (const category of categories) {
     try {
       console.log(`📋 ${category.name.toUpperCase()}\n`);
 
       const messagesResult = await gmail.users.messages.list({
-        userId: 'me',
+        userId: USER_ID,
         labelIds: [category.labelId],
         maxResults: 100,
       });
@@ -32,28 +35,27 @@ async function analyzeRemainingInvitations() {
       const count = messagesResult.data.messages.length;
       console.log(`  Total: ${count} emails\n`);
 
-      // Fetch message details
-      const messages = [];
-      for (const msgHeader of messagesResult.data.messages.slice(0, 30)) {
-        try {
-          const msg = await gmail.users.messages.get({
-            userId: 'me',
+      const fullMsgs = await Promise.all(
+        messagesResult.data.messages.slice(0, 30).map(msgHeader =>
+          gmail.users.messages.get({
+            userId: USER_ID,
             id: msgHeader.id,
             format: 'metadata',
             metadataHeaders: ['Subject', 'From'],
-          });
+          }).catch(() => null)
+        )
+      );
 
+      const messages = fullMsgs
+        .filter(Boolean)
+        .map(msg => {
           const headers = msg.data.payload.headers || [];
-          const subject = headers.find(h => h.name === 'Subject')?.value || '(no subject)';
-          const from = headers.find(h => h.name === 'From')?.value || '(unknown)';
+          return {
+            subject: getHeader(headers, 'Subject', '(no subject)'),
+            from: getHeader(headers, 'From', '(unknown)'),
+          };
+        });
 
-          messages.push({ subject, from });
-        } catch (error) {
-          // Skip
-        }
-      }
-
-      // Show samples
       console.log('  Sample subjects:\n');
       const samples = [...new Set(messages.map(m => m.subject))].slice(0, 5);
       for (const subject of samples) {

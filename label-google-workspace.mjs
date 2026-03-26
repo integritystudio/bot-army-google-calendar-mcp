@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, LABEL_UPDATES, LABEL_ORG_GOOGLE_WORKSPACE } from './lib/constants.mjs';
 
 async function labelGoogleWorkspace() {
   const gmail = createGmailClient();
@@ -7,20 +8,18 @@ async function labelGoogleWorkspace() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get or create labels
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
+    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
 
-    // Get or create "Updates" label
     let updatesLabelId;
-    const updatesLabel = labelsResponse.data.labels.find(l => l.name === 'Updates');
+    const updatesLabel = labelsResponse.data.labels.find(l => l.name === LABEL_UPDATES);
     if (updatesLabel) {
       updatesLabelId = updatesLabel.id;
       console.log('✅ Using existing label: Updates\n');
     } else {
       const createUpdatesResponse = await gmail.users.labels.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
-          name: 'Updates',
+          name: LABEL_UPDATES,
           labelListVisibility: 'labelShow',
           messageListVisibility: 'show'
         }
@@ -29,17 +28,16 @@ async function labelGoogleWorkspace() {
       console.log('✅ Created label: Updates\n');
     }
 
-    // Get or create "Organization: Google Workspace" label
     let orgLabelId;
-    const orgLabel = labelsResponse.data.labels.find(l => l.name === 'Organization: Google Workspace');
+    const orgLabel = labelsResponse.data.labels.find(l => l.name === LABEL_ORG_GOOGLE_WORKSPACE);
     if (orgLabel) {
       orgLabelId = orgLabel.id;
       console.log('✅ Using existing label: Organization: Google Workspace\n');
     } else {
       const createOrgResponse = await gmail.users.labels.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
-          name: 'Organization: Google Workspace',
+          name: LABEL_ORG_GOOGLE_WORKSPACE,
           labelListVisibility: 'labelShow',
           messageListVisibility: 'show'
         }
@@ -48,11 +46,10 @@ async function labelGoogleWorkspace() {
       console.log('✅ Created label: Organization: Google Workspace\n');
     }
 
-    // Create filter for future emails
     console.log('STEP 1: Creating filter for future Google Workspace emails\n');
     try {
       await gmail.users.settings.filters.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           criteria: {
             query: 'from:workspace-noreply@google.com'
@@ -74,11 +71,10 @@ async function labelGoogleWorkspace() {
       }
     }
 
-    // Find and label existing emails
     console.log('STEP 2: Finding existing Google Workspace emails\n');
 
     const searchResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: 'from:workspace-noreply@google.com',
       maxResults: 100
     });
@@ -90,17 +86,17 @@ async function labelGoogleWorkspace() {
       console.log('STEP 3: Applying labels\n');
       const batchSize = 50;
       for (let i = 0; i < messageIds.length; i += batchSize) {
-        const batch = messageIds.slice(i, Math.min(i + batchSize, messageIds.length));
+        const batch = messageIds.slice(i, i + batchSize);
 
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
             addLabelIds: [updatesLabelId, orgLabelId]
           }
         });
 
-        const processed = Math.min(i + batchSize, messageIds.length);
+        const processed = i + batch.length;
         console.log(`  ✅ Labeled ${processed}/${messageIds.length}`);
       }
     }

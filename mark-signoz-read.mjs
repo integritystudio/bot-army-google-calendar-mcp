@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_UNREAD } from './lib/constants.mjs';
 
 async function markSignozRead() {
   const gmail = createGmailClient();
@@ -7,10 +8,9 @@ async function markSignozRead() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Search for all SigNoz emails (both read and unread)
     const searchQuery = 'from:(alertmanager@signoz.cloud OR vishal@mail.signoz.io)';
     const searchResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: searchQuery,
       maxResults: 500
     });
@@ -23,21 +23,20 @@ async function markSignozRead() {
       return;
     }
 
-    // Mark all as read in batches
     const batchSize = 50;
 
     for (let i = 0; i < messageIds.length; i += batchSize) {
       const batch = messageIds.slice(i, i + batchSize).map(m => m.id);
 
       await gmail.users.messages.batchModify({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
-          ids: batch.map(m => m.id),
-          removeLabelIds: ['UNREAD']
+          ids: batch,
+          removeLabelIds: [GMAIL_UNREAD]
         }
       });
 
-      const processed = Math.min(i + batchSize, messageIds.length);
+      const processed = i + batch.length;
       console.log(`  ✅ Marked ${processed}/${messageIds.length} as read`);
     }
 

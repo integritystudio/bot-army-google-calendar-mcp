@@ -1,6 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID } from './lib/constants.mjs';
-
+import { USER_ID, GMAIL_INBOX, LABEL_EVENTS_MEETUP } from './lib/constants.mjs';
 
 async function createEventsMeetupSkipFilter() {
   const gmail = createGmailClient();
@@ -15,11 +14,11 @@ async function createEventsMeetupSkipFilter() {
       userId: USER_ID,
       requestBody: {
         criteria: {
-          query: 'label:"Events/Meetup"',
+          query: `label:"${LABEL_EVENTS_MEETUP}"`,
         },
         action: {
           skip: true,
-          removeLabelIds: ['INBOX'],
+          removeLabelIds: [GMAIL_INBOX],
         },
       },
     });

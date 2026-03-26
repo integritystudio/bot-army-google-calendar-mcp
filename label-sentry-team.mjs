@@ -1,4 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_INBOX, LABEL_PRODUCT_UPDATES } from './lib/constants.mjs';
+import { getHeader } from './lib/email-utils.mjs';
 
 async function labelSentryTeam() {
   const gmail = createGmailClient();
@@ -7,9 +9,8 @@ async function labelSentryTeam() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get Product Updates label
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
-    const productLabel = labelsResponse.data.labels.find(l => l.name === 'Product Updates');
+    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
+    const productLabel = labelsResponse.data.labels.find(l => l.name === LABEL_PRODUCT_UPDATES);
 
     if (!productLabel) {
       console.log('❌ Product Updates label not found\n');
@@ -18,10 +19,9 @@ async function labelSentryTeam() {
 
     console.log('✅ Found label: Product Updates\n');
 
-    // Find The Sentry Team policy update email
     const searchQuery = 'from:noreply@sentry.io subject:Subprocessors';
     const searchResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: searchQuery,
       maxResults: 10
     });
@@ -33,10 +33,9 @@ async function labelSentryTeam() {
       console.log('⚠️  No matching emails found with "Subprocessors" query\n');
       console.log('Trying alternative search...\n');
 
-      // Try broader search for Sentry policy updates
       const altSearchQuery = 'from:noreply@sentry.io subject:(Update OR policy OR notice)';
       const altResponse = await gmail.users.messages.list({
-        userId: 'me',
+        userId: USER_ID,
         q: altSearchQuery,
         maxResults: 10
       });
@@ -49,30 +48,32 @@ async function labelSentryTeam() {
         return;
       }
 
-      // Show the emails found
-      for (const msg of altIds) {
-        const fullMsg = await gmail.users.messages.get({
-          userId: 'me',
-          id: msg.id,
-          format: 'metadata',
-          metadataHeaders: ['Subject', 'Date']
-        });
+      const altFullMsgs = await Promise.all(
+        altIds.map(msg =>
+          gmail.users.messages.get({
+            userId: USER_ID,
+            id: msg.id,
+            format: 'metadata',
+            metadataHeaders: ['Subject', 'Date']
+          })
+        )
+      );
 
+      for (const fullMsg of altFullMsgs) {
         const headers = fullMsg.data.payload?.headers || [];
-        const subject = headers.find(h => h.name === 'Subject')?.value || '';
-        const date = headers.find(h => h.name === 'Date')?.value || '';
+        const subject = getHeader(headers, 'Subject');
+        const date = getHeader(headers, 'Date');
 
         console.log(`Subject: ${subject}`);
         console.log(`Date: ${date}\n`);
       }
 
-      // Label the emails
       await gmail.users.messages.batchModify({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           ids: altIds.map(m => m.id),
           addLabelIds: [productLabel.id],
-          removeLabelIds: ['INBOX']
+          removeLabelIds: [GMAIL_INBOX]
         }
       });
 
@@ -80,30 +81,32 @@ async function labelSentryTeam() {
       return;
     }
 
-    // Show the emails found
-    for (const msg of messageIds) {
-      const fullMsg = await gmail.users.messages.get({
-        userId: 'me',
-        id: msg.id,
-        format: 'metadata',
-        metadataHeaders: ['Subject', 'Date']
-      });
+    const fullMsgs = await Promise.all(
+      messageIds.map(msg =>
+        gmail.users.messages.get({
+          userId: USER_ID,
+          id: msg.id,
+          format: 'metadata',
+          metadataHeaders: ['Subject', 'Date']
+        })
+      )
+    );
 
+    for (const fullMsg of fullMsgs) {
       const headers = fullMsg.data.payload?.headers || [];
-      const subject = headers.find(h => h.name === 'Subject')?.value || '';
-      const date = headers.find(h => h.name === 'Date')?.value || '';
+      const subject = getHeader(headers, 'Subject');
+      const date = getHeader(headers, 'Date');
 
       console.log(`Subject: ${subject}`);
       console.log(`Date: ${date}\n`);
     }
 
-    // Label the found email(s)
     await gmail.users.messages.batchModify({
-      userId: 'me',
+      userId: USER_ID,
       requestBody: {
         ids: messageIds.map(m => m.id),
         addLabelIds: [productLabel.id],
-        removeLabelIds: ['INBOX']
+        removeLabelIds: [GMAIL_INBOX]
       }
     });
 

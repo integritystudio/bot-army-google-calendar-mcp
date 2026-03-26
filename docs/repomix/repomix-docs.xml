@@ -73,7 +73,6 @@ docs/
   SCHEMA-ORG-MCP-TOOLS.md
   SCHEMA-ORG-QUICK-REFERENCE.md
   SCHEMA-ORG-QUICK-START.md
-  SIMPLE_RRULE_INTEGRATION.md
   testing.md
 CLAUDE.md
 README.md
@@ -6055,127 +6054,6 @@ This section contains the contents of the repository's files.
 477: **Date**: 2026-03-24
 478: **Status**: Ready to implement
 479: **Questions?**: See IMPLEMENTATION-GUIDE.md for detailed answers
-</file>
-
-<file path="docs/SIMPLE_RRULE_INTEGRATION.md">
-  1: # Simple RRule Integration
-  2: 
-  3: ## Overview
-  4: `simple-rrule` (v1.8.1) has been installed to provide TypeScript-first RRULE parsing, validation, and expansion capabilities.
-  5: 
-  6: ## Installation Changes
-  7: - **Package**: `simple-rrule@^1.8.1` added to `dependencies`
-  8: - **Zod upgrade**: Upgraded from `^3.22.4` to `^4.x` (simple-rrule requires zod@>=4)
-  9: - **Installation**: Used `--legacy-peer-deps` due to openai's optional zod@^3.x peer dependency
- 10: 
- 11: ## What simple-rrule Provides
- 12: 
- 13: ### Core Functions
- 14: ```typescript
- 15: // Parse RRULE strings
- 16: parseRecurrenceFromString(rruleString) -> IRrule | undefined
- 17: 
- 18: // Serialize to RRULE
- 19: getRRuleString(rule) -> string
- 20: 
- 21: // Expand rules to actual dates
- 22: expandRRuleFromString(rruleString, startDate, endDate) -> IExpandResult
- 23: expandRRule(rule, startDate, endDate) -> IExpandResult
- 24: 
- 25: // Date utilities
- 26: toRRuleDateString(date) -> string    // Format for RRULE UNTIL clauses
- 27: fromRruleDateStringToDate(str) -> Date
- 28: ```
- 29: 
- 30: ### IRrule Object Structure
- 31: ```typescript
- 32: {
- 33:   dtStart: string;           // ISO 8601 datetime
- 34:   dtEnd: string;             // ISO 8601 datetime
- 35:   frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY' | ...;
- 36:   interval: number;          // e.g., every 2 weeks
- 37:   count?: number;            // Limit occurrences
- 38:   until?: string;            // UNTIL date (ISO format)
- 39:   byDay: string;             // 'MO,WE,FR', etc.
- 40:   byMonth: number;           // Month number
- 41:   byMonthDay: number;        // Day of month
- 42:   bySetPos: number;          // Position in set
- 43:   wkst: 'SU' | 'MO' | ...;   // Week start day
- 44: }
- 45: ```
- 46: 
- 47: ## Migration Path
- 48: 
- 49: ### Current Setup (Keeps Existing Code)
- 50: Our custom `RRULE_PATTERNS` regex-based approach is kept for now:
- 51: - `stripUntilAndCount()` - removes UNTIL/COUNT clauses
- 52: - `buildUntilClause()` - constructs UNTIL clauses
- 53: - `isRRuleString()` - detects RRULE vs EXDATE/RDATE
- 54: 
- 55: **Why**: These are simple string operations that don't require full parsing. The regex approach is fast and doesn't need the overhead of parsing.
- 56: 
- 57: ### New Adapter (simple-rrule-adapter.ts)
- 58: For future enhancements, use the adapter module:
- 59: ```typescript
- 60: import {
- 61:   parseRRule,           // Parse RRULE string
- 62:   serializeRRule,       // Convert back to string
- 63:   expandRRuleToDateRange,  // Get all occurrences
- 64:   setRRuleUntil,        // Update UNTIL
- 65:   clearRRuleConstraints  // Remove COUNT/UNTIL
- 66: } from './simple-rrule-adapter.js';
- 67: ```
- 68: 
- 69: ### Use Cases for Replacement
- 70: 
- 71: **When to use simple-rrule**:
- 72: - Validating complex RRULE strings
- 73: - Expanding rules to find all occurrences
- 74: - Modifying rule objects and serializing
- 75: - Handling edge cases (leap years, DST, month boundaries)
- 76: 
- 77: **When to keep regex**:
- 78: - Simple string manipulations (strip/build clauses)
- 79: - Performance-critical paths (parsing on every update)
- 80: - Pattern matching against EXDATE/RDATE
- 81: 
- 82: ## Example Usage
- 83: 
- 84: ```typescript
- 85: import { expandRRuleToDateRange } from './utils/simple-rrule-adapter.js';
- 86: 
- 87: // Get all daily occurrences in a date range
- 88: const rrule = 'RRULE:FREQ=DAILY;COUNT=7;DTSTART=20260324T100000Z';
- 89: const dates = expandRRuleToDateRange(
- 90:   rrule,
- 91:   new Date('2026-03-24'),
- 92:   new Date('2026-04-01')
- 93: );
- 94: 
- 95: console.log(dates);
- 96: // [2026-03-24, 2026-03-25, 2026-03-26, ...]
- 97: ```
- 98: 
- 99: ## Testing
-100: The installation was verified with:
-101: ```javascript
-102: parseRecurrenceFromString('RRULE:FREQ=DAILY;COUNT=3')
-103: // Successfully parses and returns IRrule object
-104: 
-105: expandRRuleFromString(rruleString, start, end)
-106: // Successfully expands to 3 dates
-107: ```
-108: 
-109: ## Known Limitations
-110: - `simple-rrule` does not support TZ (timezone) in RRULE
-111: - Our custom UNTIL date formatting (basic ISO: `YYYYMMDDTHHMMSSZ`) is preserved for Google Calendar compatibility
-112: - The library works with ISO 8601 dates; careful conversion needed for all-day events
-113: 
-114: ## Next Steps
-115: 1. **Gradual migration**: Use adapter for RecurringEventHelpers validation
-116: 2. **Validation layer**: Wrap parseRRule to validate calendar compatibility
-117: 3. **Testing**: Add unit tests for edge cases with simple-rrule
-118: 4. **Documentation**: Update RecurringEventHelpers docs with examples
 </file>
 
 <file path="docs/testing.md">

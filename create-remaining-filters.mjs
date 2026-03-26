@@ -17,7 +17,6 @@ async function createRemainingFilters() {
     (existingLabelsRes.data.labels || []).map(l => [l.name, l.id])
   );
 
-  // Define filter configurations
   const filterConfigs = [
     {
       labelName: LABEL_PRODUCT_UPDATES,
@@ -65,7 +64,6 @@ async function createRemainingFilters() {
   for (const categoryConfig of filterConfigs) {
     console.log(`\n📌 ${categoryConfig.labelName.toUpperCase()}\n`);
 
-    // Get or create label
     let labelId = existingLabelMap.get(categoryConfig.labelName);
 
     if (labelId) {
@@ -84,7 +82,6 @@ async function createRemainingFilters() {
       console.log(`✅ Created label: ${categoryConfig.labelName}\n`);
     }
 
-    // Create filters for each sub-category
     for (const filter of categoryConfig.filters) {
       try {
         await gmail.users.settings.filters.create({
@@ -112,7 +109,6 @@ async function createRemainingFilters() {
     }
   }
 
-  // Apply filters to existing emails
   console.log('\n' + '═'.repeat(80));
   console.log('\n📊 APPLYING TO EXISTING EMAILS\n');
 
@@ -123,7 +119,6 @@ async function createRemainingFilters() {
 
     if (!labelId) continue;
 
-    // Build combined query for all filters in this category
     const queries = categoryConfig.filters.map(f => `(${f.query})`).join(' OR ');
 
     const searchResponse = await gmail.users.messages.list({
@@ -139,7 +134,7 @@ async function createRemainingFilters() {
 
       const batchSize = 50;
       for (let i = 0; i < messageIds.length; i += batchSize) {
-        const batch = messageIds.slice(i, Math.min(i + batchSize, messageIds.length));
+        const batch = messageIds.slice(i, i + batchSize);
 
         await gmail.users.messages.batchModify({
           userId: USER_ID,

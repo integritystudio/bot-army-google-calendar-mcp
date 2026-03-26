@@ -1,5 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID } from './lib/constants.mjs';
+import { USER_ID, LABEL_NEWSLETTERS } from './lib/constants.mjs';
 import { buildLabelCache, createLabels } from './lib/gmail-label-utils.mjs';
 
 async function createNewsletterLabel() {
@@ -14,13 +14,12 @@ async function createNewsletterLabel() {
     existingLabelsRes.data.labels.map(l => [l.name, l])
   );
 
-  const labelName = 'Newsletters';
+  const labelName = LABEL_NEWSLETTERS;
   const labelIds = {};
 
   try {
     await createLabels(gmail, [labelName], labelIds, existingLabelMap);
 
-    // Get full label details for display
     const labelId = labelIds[labelName];
     const labelsRes = await gmail.users.labels.get({
       userId: USER_ID,

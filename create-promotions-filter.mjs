@@ -13,7 +13,6 @@ async function createPromotionsFilter() {
 
     console.log(`📌 Using Promotions label: ${promotionsLabelId}\n`);
 
-    // Create filter for promotional emails
     const criteria = {
       subject: 'sale OR discount OR promo OR promotional OR offer OR deal OR save OR limited time OR free shipping OR coupon OR special offer',
       from: 'marketing@ OR promotions@ OR deals@ OR noreply+promo@ OR newsletter@',

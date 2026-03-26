@@ -23,7 +23,7 @@ for (const file of files) {
   console.log(`${file}:`);
   console.log(`  ✅ USER_ID constant: ${hasUserID ? 'yes' : 'NO'}`);
   console.log(`  ✅ userId: USER_ID refs: ${userIdCount}`);
-  console.log(`  ✅ userId: 'me' refs: ${meCount}`);
+  console.log(`  ⚠️  userId: 'me' remaining: ${meCount}`);
   console.log(`  ✅ createGmailClient imported: ${hasCreateGmail ? 'yes' : 'NO'}`);
   console.log();
 }

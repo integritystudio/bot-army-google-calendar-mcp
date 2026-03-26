@@ -1,7 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_INBOX, LABEL_EVENTS } from './lib/constants.mjs';
 
-
-import { USER_ID } from './lib/constants.mjs';
 async function createEventbriteFilter() {
   const gmail = createGmailClient();
 
@@ -9,10 +8,9 @@ async function createEventbriteFilter() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get or create Events label
     let eventsLabelId;
     const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
-    const existingLabel = labelsResponse.data.labels.find(l => l.name === 'Events');
+    const existingLabel = labelsResponse.data.labels.find(l => l.name === LABEL_EVENTS);
 
     if (existingLabel) {
       eventsLabelId = existingLabel.id;
@@ -21,7 +19,7 @@ async function createEventbriteFilter() {
       const createLabelResponse = await gmail.users.labels.create({
         userId: USER_ID,
         requestBody: {
-          name: 'Events',
+          name: LABEL_EVENTS,
           labelListVisibility: 'labelShow',
           messageListVisibility: 'show'
         }
@@ -30,7 +28,6 @@ async function createEventbriteFilter() {
       console.log('✅ Created label: Events\n');
     }
 
-    // Create filter for future emails
     await gmail.users.settings.filters.create({
       userId: USER_ID,
       requestBody: {
@@ -39,13 +36,12 @@ async function createEventbriteFilter() {
         },
         action: {
           addLabelIds: [eventsLabelId],
-          removeLabelIds: ['INBOX']
+          removeLabelIds: [GMAIL_INBOX]
         }
       }
     });
     console.log('✅ Filter created for future Eventbrite emails\n');
 
-    // Apply to existing unread Eventbrite emails
     const searchResponse = await gmail.users.messages.list({
       userId: USER_ID,
       q: 'is:unread from:noreply@reminder.eventbrite.com'
@@ -55,21 +51,20 @@ async function createEventbriteFilter() {
     console.log(`📊 Found ${messageIds.length} existing unread Eventbrite emails\n`);
 
     if (messageIds.length > 0) {
-      // Apply label and archive in batches
       const batchSize = 50;
       for (let i = 0; i < messageIds.length; i += batchSize) {
-        const batch = messageIds.slice(i, Math.min(i + batchSize, messageIds.length));
+        const batch = messageIds.slice(i, i + batchSize);
 
         await gmail.users.messages.batchModify({
           userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
             addLabelIds: [eventsLabelId],
-            removeLabelIds: ['INBOX']
+            removeLabelIds: [GMAIL_INBOX]
           }
         });
 
-        const processed = Math.min(i + batchSize, messageIds.length);
+        const processed = i + batch.length;
         console.log(`✅ Applied to ${processed}/${messageIds.length}`);
       }
     }

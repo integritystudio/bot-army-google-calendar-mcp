@@ -1,7 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_INBOX, LABEL_MONITORING } from './lib/constants.mjs';
 
-
-import { USER_ID } from './lib/constants.mjs';
 async function createSignozFilter() {
   const gmail = createGmailClient();
 
@@ -9,10 +8,9 @@ async function createSignozFilter() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get or create SigNoz label
     let signozLabelId;
     const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
-    const existingLabel = labelsResponse.data.labels.find(l => l.name === 'Monitoring');
+    const existingLabel = labelsResponse.data.labels.find(l => l.name === LABEL_MONITORING);
 
     if (existingLabel) {
       signozLabelId = existingLabel.id;
@@ -21,7 +19,7 @@ async function createSignozFilter() {
       const createLabelResponse = await gmail.users.labels.create({
         userId: USER_ID,
         requestBody: {
-          name: 'Monitoring',
+          name: LABEL_MONITORING,
           labelListVisibility: 'labelShow',
           messageListVisibility: 'show'
         }
@@ -30,7 +28,6 @@ async function createSignozFilter() {
       console.log('✅ Created label: Monitoring\n');
     }
 
-    // Create filter for future emails
     await gmail.users.settings.filters.create({
       userId: USER_ID,
       requestBody: {
@@ -39,13 +36,12 @@ async function createSignozFilter() {
         },
         action: {
           addLabelIds: [signozLabelId],
-          removeLabelIds: ['INBOX']
+          removeLabelIds: [GMAIL_INBOX]
         }
       }
     });
     console.log('✅ Filter created for future SigNoz alerts\n');
 
-    // Apply to existing emails
     const searchResponse = await gmail.users.messages.list({
       userId: USER_ID,
       q: 'from:alertmanager@signoz.cloud'
@@ -58,18 +54,18 @@ async function createSignozFilter() {
       console.log('Archiving existing SigNoz emails...\n');
       const batchSize = 50;
       for (let i = 0; i < messageIds.length; i += batchSize) {
-        const batch = messageIds.slice(i, Math.min(i + batchSize, messageIds.length));
+        const batch = messageIds.slice(i, i + batchSize);
 
         await gmail.users.messages.batchModify({
           userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
             addLabelIds: [signozLabelId],
-            removeLabelIds: ['INBOX']
+            removeLabelIds: [GMAIL_INBOX]
           }
         });
 
-        const processed = Math.min(i + batchSize, messageIds.length);
+        const processed = i + batch.length;
         console.log(`  ✅ Processed ${processed}/${messageIds.length}`);
       }
     }

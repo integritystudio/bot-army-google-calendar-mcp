@@ -11,7 +11,6 @@ async function createNewsletterTypeSubLabels() {
   // Pre-fetch existing labels to avoid N+1 queries
   const existingLabelMap = await buildLabelCache(gmail);
 
-  // Step 1: Create both sub-labels
   console.log('1️⃣  CREATING LABELS\n');
 
   const labelNames = ['Newsletters/Company', 'Newsletters/News Aggregates'];
@@ -19,7 +18,6 @@ async function createNewsletterTypeSubLabels() {
 
   await createLabels(gmail, labelNames, labelIds, existingLabelMap);
 
-  // Step 2: Apply labels to existing emails
   console.log('═'.repeat(80));
   console.log('\n2️⃣  APPLYING LABELS TO EXISTING EMAILS\n');
 
@@ -53,7 +51,6 @@ async function createNewsletterTypeSubLabels() {
 
   console.log(`\n  📊 News aggregate newsletters labeled: ${aggregateLabeled}\n`);
 
-  // Step 3: Create filters
   console.log('═'.repeat(80));
   console.log('\n3️⃣  CREATING AUTO-LABEL FILTERS\n');
 

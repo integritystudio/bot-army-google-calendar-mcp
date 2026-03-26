@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_INBOX, LABEL_DMARC_REPORTS } from './lib/constants.mjs';
 
 async function archiveDmarcEmails() {
   const gmail = createGmailClient();
@@ -7,18 +8,16 @@ async function archiveDmarcEmails() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get DMARC Reports label
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
-    const dmarcLabel = labelsResponse.data.labels.find(l => l.name === 'DMARC Reports');
+    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
+    const dmarcLabel = labelsResponse.data.labels.find(l => l.name === LABEL_DMARC_REPORTS);
 
     if (!dmarcLabel) {
       console.log('❌ DMARC Reports label not found\n');
       process.exit(1);
     }
 
-    // Find existing DMARC emails
     const searchResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: 'subject:DMARC',
       maxResults: 100
     });
@@ -30,18 +29,18 @@ async function archiveDmarcEmails() {
       console.log('Archiving DMARC emails...\n');
       const batchSize = 50;
       for (let i = 0; i < messageIds.length; i += batchSize) {
-        const batch = messageIds.slice(i, Math.min(i + batchSize, messageIds.length));
+        const batch = messageIds.slice(i, i + batchSize);
 
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
             addLabelIds: [dmarcLabel.id],
-            removeLabelIds: ['INBOX']
+            removeLabelIds: [GMAIL_INBOX]
           }
         });
 
-        const processed = Math.min(i + batchSize, messageIds.length);
+        const processed = i + batch.length;
         console.log(`  ✅ Processed ${processed}/${messageIds.length}`);
       }
     }

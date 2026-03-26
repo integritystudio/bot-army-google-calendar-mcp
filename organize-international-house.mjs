@@ -1,4 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_INBOX, LABEL_EVENTS } from './lib/constants.mjs';
+import { getHeader } from './lib/email-utils.mjs';
 
 async function organizeInternationalHouse() {
   const gmail = createGmailClient();
@@ -7,19 +9,18 @@ async function organizeInternationalHouse() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get or create Events label
     let eventsLabelId;
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
-    const existingLabel = labelsResponse.data.labels.find(l => l.name === 'Events');
+    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
+    const existingLabel = labelsResponse.data.labels.find(l => l.name === LABEL_EVENTS);
 
     if (existingLabel) {
       eventsLabelId = existingLabel.id;
       console.log('✅ Using existing label: Events\n');
     } else {
       const createLabelResponse = await gmail.users.labels.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
-          name: 'Events',
+          name: LABEL_EVENTS,
           labelListVisibility: 'labelShow',
           messageListVisibility: 'show'
         }
@@ -28,9 +29,8 @@ async function organizeInternationalHouse() {
       console.log('✅ Created label: Events\n');
     }
 
-    // Find International House emails
     const searchResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: 'from:"International House"',
       maxResults: 100
     });
@@ -46,95 +46,84 @@ async function organizeInternationalHouse() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    let futureEvents = [];
-    let pastEvents = [];
-
-    // Fetch full content to parse event dates
     console.log('Analyzing event dates...\n');
-    for (const msg of messageIds) {
-      try {
-        const fullMsg = await gmail.users.messages.get({
-          userId: 'me',
-          id: msg.id,
-          format: 'full'
-        });
 
-        const headers = fullMsg.data.payload?.headers || [];
-        const subject = headers.find(h => h.name === 'Subject')?.value || '';
-        const dateStr = headers.find(h => h.name === 'Date')?.value || '';
+    const MONTH_INDEX = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+    const DATE_PATTERN = /(?:@\s+)?(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s+([A-Za-z]+)\s+(\d{1,2})/i;
 
-        // Try to extract event date from email content
-        const body = fullMsg.data.payload?.parts?.[0]?.body?.data
-          ? Buffer.from(fullMsg.data.payload.parts[0].body.data, 'base64').toString('utf-8')
-          : '';
+    const fullMsgs = await Promise.all(
+      messageIds.map(msg =>
+        gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'full' })
+          .catch(error => {
+            console.log(`⚠️  Error processing email: ${error.message}`);
+            return null;
+          })
+      )
+    );
 
-        // Look for date patterns like "@ Fri, Mar 22" or "Feb 26" or similar
-        const datePattern = /(?:@\s+)?(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s+([A-Za-z]+)\s+(\d{1,2})/i;
-        const match = body.match(datePattern) || subject.match(datePattern);
+    const futureEvents = [];
+    const pastEvents = [];
 
-        let eventDate = null;
-        if (match) {
-          const monthStr = match[1];
-          const dayStr = parseInt(match[2]);
+    for (const fullMsg of fullMsgs.filter(Boolean)) {
+      const headers = fullMsg.data.payload?.headers || [];
+      const subject = getHeader(headers, 'Subject');
 
-          // Parse month
-          const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
-          const monthIndex = months[monthStr.toLowerCase().substring(0, 3)];
+      const body = fullMsg.data.payload?.parts?.[0]?.body?.data
+        ? Buffer.from(fullMsg.data.payload.parts[0].body.data, 'base64').toString('utf-8')
+        : '';
 
-          if (monthIndex !== undefined) {
-            eventDate = new Date(today.getFullYear(), monthIndex, dayStr);
-          }
+      const match = body.match(DATE_PATTERN) || subject.match(DATE_PATTERN);
+
+      let eventDate = null;
+      if (match) {
+        const monthIndex = MONTH_INDEX[match[1].toLowerCase().substring(0, 3)];
+        if (monthIndex !== undefined) {
+          eventDate = new Date(today.getFullYear(), monthIndex, parseInt(match[2]));
         }
+      }
 
-        if (eventDate && eventDate >= today) {
-          futureEvents.push({ id: msg.id, subject, eventDate });
-        } else if (eventDate && eventDate < today) {
-          pastEvents.push({ id: msg.id, subject, eventDate });
-        } else {
-          // If we can't parse date, assume it's recent/relevant - keep it
-          futureEvents.push({ id: msg.id, subject, eventDate: null });
-        }
-      } catch (error) {
-        console.log(`⚠️  Error processing email: ${error.message}`);
+      const entry = { id: fullMsg.data.id, subject, eventDate };
+      if (eventDate && eventDate < today) {
+        pastEvents.push(entry);
+      } else {
+        futureEvents.push(entry);
       }
     }
 
     console.log(`Future events: ${futureEvents.length}`);
     console.log(`Past events: ${pastEvents.length}\n`);
 
-    // Label future events
     if (futureEvents.length > 0) {
       console.log('Labeling future events with "Events"...\n');
       const batchSize = 50;
       for (let i = 0; i < futureEvents.length; i += batchSize) {
-        const batch = futureEvents.slice(i, Math.min(i + batchSize, futureEvents.length));
+        const batch = futureEvents.slice(i, i + batchSize);
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch.map(e => e.id),
             addLabelIds: [eventsLabelId]
           }
         });
-        const processed = Math.min(i + batchSize, futureEvents.length);
+        const processed = i + batch.length;
         console.log(`  ✅ Labeled ${processed}/${futureEvents.length}`);
       }
     }
 
-    // Archive past events
     if (pastEvents.length > 0) {
       console.log('\nArchiving past events...\n');
       const batchSize = 50;
       for (let i = 0; i < pastEvents.length; i += batchSize) {
-        const batch = pastEvents.slice(i, Math.min(i + batchSize, pastEvents.length));
+        const batch = pastEvents.slice(i, i + batchSize);
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch.map(e => e.id),
             addLabelIds: [eventsLabelId],
-            removeLabelIds: ['INBOX']
+            removeLabelIds: [GMAIL_INBOX]
           }
         });
-        const processed = Math.min(i + batchSize, pastEvents.length);
+        const processed = i + batch.length;
         console.log(`  ✅ Archived ${processed}/${pastEvents.length}`);
       }
     }

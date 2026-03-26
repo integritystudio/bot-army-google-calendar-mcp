@@ -1,5 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_UNREAD, LABEL_EVENTS } from './lib/constants.mjs';
 import { extractEventDate, isPastEvent } from './lib/date-based-filter.mjs';
+import { getHeader } from './lib/email-utils.mjs';
 
 async function markPastEventsRead() {
   const gmail = createGmailClient();
@@ -8,10 +10,9 @@ async function markPastEventsRead() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Find all unread emails with Events label
-    const searchQuery = 'label:Events is:unread';
+    const searchQuery = `label:${LABEL_EVENTS} is:unread`;
     const searchResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: searchQuery,
       maxResults: 500
     });
@@ -24,36 +25,31 @@ async function markPastEventsRead() {
       return;
     }
 
-    // Get full message details for date extraction
-    const pastIds = [];
+    const fullMsgs = await Promise.all(
+      messageIds.map(msg =>
+        gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'full' })
+      )
+    );
 
-    for (const msg of messageIds) {
-      const fullMsg = await gmail.users.messages.get({
-        userId: 'me',
-        id: msg.id,
-        format: 'full'
-      });
+    const pastIds = fullMsgs
+      .filter(fullMsg => {
+        const headers = fullMsg.data.payload?.headers || [];
+        const subject = getHeader(headers, 'Subject');
 
-      const headers = fullMsg.data.payload?.headers || [];
-      const subject = headers.find(h => h.name === 'Subject')?.value || '';
-
-      // Extract full body
-      let body = '';
-      if (fullMsg.data.payload?.body?.data) {
-        body = Buffer.from(fullMsg.data.payload.body.data, 'base64').toString('utf-8');
-      } else if (fullMsg.data.payload?.parts) {
-        const textPart = fullMsg.data.payload.parts.find(p => p.mimeType === 'text/plain');
-        if (textPart?.body?.data) {
-          body = Buffer.from(textPart.body.data, 'base64').toString('utf-8');
+        let body = '';
+        if (fullMsg.data.payload?.body?.data) {
+          body = Buffer.from(fullMsg.data.payload.body.data, 'base64').toString('utf-8');
+        } else if (fullMsg.data.payload?.parts) {
+          const textPart = fullMsg.data.payload.parts.find(p => p.mimeType === 'text/plain');
+          if (textPart?.body?.data) {
+            body = Buffer.from(textPart.body.data, 'base64').toString('utf-8');
+          }
         }
-      }
 
-      const eventDate = extractEventDate(subject + '\n' + body);
-
-      if (eventDate && isPastEvent(eventDate)) {
-        pastIds.push(msg.id);
-      }
-    }
+        const eventDate = extractEventDate(subject + '\n' + body);
+        return eventDate && isPastEvent(eventDate);
+      })
+      .map(fullMsg => fullMsg.data.id);
 
     console.log(`Identified ${pastIds.length} past events\n`);
 
@@ -62,21 +58,20 @@ async function markPastEventsRead() {
       return;
     }
 
-    // Mark past events as read in batches
     const batchSize = 50;
 
     for (let i = 0; i < pastIds.length; i += batchSize) {
       const batch = pastIds.slice(i, i + batchSize);
 
       await gmail.users.messages.batchModify({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           ids: batch,
-          removeLabelIds: ['UNREAD']
+          removeLabelIds: [GMAIL_UNREAD]
         }
       });
 
-      const processed = Math.min(i + batchSize, pastIds.length);
+      const processed = i + batch.length;
       console.log(`  ✅ Marked ${processed}/${pastIds.length} as read`);
     }
 

@@ -1,4 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, LABEL_CCV, LABEL_NEWSLETTERS_CCV } from './lib/constants.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 
 async function organizeCCVEmails() {
   const gmail = createGmailClient();
@@ -6,42 +8,34 @@ async function organizeCCVEmails() {
   console.log('📂 ORGANIZING CCV EMAILS\n');
   console.log('═'.repeat(80) + '\n');
 
-  // Step 1: Create CCV organization label
   console.log('1️⃣  CREATING LABEL: CCV (Organization)\n');
 
-  let ccvOrgLabelId;
+  const labelCache = await buildLabelCache(gmail);
+  let ccvOrgLabelId = labelCache.get(LABEL_CCV);
 
-  try {
-    const response = await gmail.users.labels.create({
-      userId: 'me',
-      requestBody: {
-        name: 'CCV',
-        labelListVisibility: 'labelShow',
-        messageListVisibility: 'show',
-      },
-    });
-
-    console.log('✅ Label created successfully!');
-    console.log(`   Name: ${response.data.name}`);
-    console.log(`   ID: ${response.data.id}\n`);
-    ccvOrgLabelId = response.data.id;
-
-  } catch (error) {
-    if (error.message.includes('exists') || error.message.includes('conflicts')) {
-      console.log('⚠️  Label already exists: CCV\n');
-      const labels = await gmail.users.labels.list({ userId: 'me' });
-      const existing = labels.data.labels.find(l => l.name === 'CCV');
-      if (existing) {
-        console.log(`   ID: ${existing.id}\n`);
-        ccvOrgLabelId = existing.id;
-      }
-    } else {
+  if (ccvOrgLabelId) {
+    console.log('✅ Using existing label: CCV\n');
+    console.log(`   ID: ${ccvOrgLabelId}\n`);
+  } else {
+    try {
+      const response = await gmail.users.labels.create({
+        userId: USER_ID,
+        requestBody: {
+          name: LABEL_CCV,
+          labelListVisibility: 'labelShow',
+          messageListVisibility: 'show',
+        },
+      });
+      console.log('✅ Label created successfully!');
+      console.log(`   Name: ${response.data.name}`);
+      console.log(`   ID: ${response.data.id}\n`);
+      ccvOrgLabelId = response.data.id;
+    } catch (error) {
       console.error('❌ Error creating label:', error.message);
       process.exit(1);
     }
   }
 
-  // Step 2: Move meeting coordination emails from Newsletters to CCV
   console.log('═'.repeat(80));
   console.log('\n2️⃣  MOVING MEETING COORDINATION FROM NEWSLETTERS TO CCV\n');
 
@@ -51,13 +45,13 @@ async function organizeCCVEmails() {
     'subject:"CCV" AND (subject:meeting OR subject:program OR subject:poll)',
   ];
 
-  const newsletterLabelId = 'Label_11'; // Newsletters/CCV
+  const newsletterLabelId = labelCache.get(LABEL_NEWSLETTERS_CCV);
   let meetingEmailsMoved = 0;
 
   for (const query of meetingPatterns) {
     try {
       const searchResult = await gmail.users.messages.list({
-        userId: 'me',
+        userId: USER_ID,
         q: query,
         maxResults: 100,
       });
@@ -69,7 +63,7 @@ async function organizeCCVEmails() {
 
       if (count > 0) {
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: messageIds,
             addLabelIds: [ccvOrgLabelId],
@@ -89,7 +83,6 @@ async function organizeCCVEmails() {
 
   console.log(`  📊 Total moved: ${meetingEmailsMoved} emails\n`);
 
-  // Step 3: Create filters for organizational emails
   console.log('═'.repeat(80));
   console.log('\n3️⃣  CREATING AUTO-LABEL FILTERS\n');
 
@@ -109,7 +102,7 @@ async function organizeCCVEmails() {
   for (const filter of filters) {
     try {
       const response = await gmail.users.settings.filters.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           criteria: filter.criteria,
           action: {

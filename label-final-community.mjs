@@ -1,4 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, LABEL_EVENTS_COMMUNITY, LABEL_EVENTS_COMMUNITY_CREATIVE_ARTS, LABEL_EVENTS_COMMUNITY_TECH_PROFESSIONAL, LABEL_EVENTS_COMMUNITY_SPIRITUAL_WELLNESS, LABEL_EVENTS_COMMUNITY_NETWORKING, LABEL_EVENTS_COMMUNITY_LEARNING_EDUCATION, LABEL_EVENTS_COMMUNITY_SOCIAL_RECREATION, LABEL_EVENTS_COMMUNITY_FOOD_DINING } from './lib/constants.mjs';
+import { getHeader } from './lib/email-utils.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 
 async function labelFinalCommunity() {
   const gmail = createGmailClient();
@@ -6,46 +9,37 @@ async function labelFinalCommunity() {
   console.log('📂 LABELING FINAL COMMUNITY EMAILS\n');
   console.log('═'.repeat(80) + '\n');
 
-  // Manual assignments based on remaining emails
+  const labelCache = await buildLabelCache(gmail);
+  const communityLabelId = labelCache.get(LABEL_EVENTS_COMMUNITY);
+  const subLabelMap = {
+    [labelCache.get(LABEL_EVENTS_COMMUNITY_CREATIVE_ARTS)]: 'Creative-Arts',
+    [labelCache.get(LABEL_EVENTS_COMMUNITY_TECH_PROFESSIONAL)]: 'Tech-Professional',
+    [labelCache.get(LABEL_EVENTS_COMMUNITY_SPIRITUAL_WELLNESS)]: 'Spiritual-Wellness',
+    [labelCache.get(LABEL_EVENTS_COMMUNITY_NETWORKING)]: 'Networking',
+    [labelCache.get(LABEL_EVENTS_COMMUNITY_LEARNING_EDUCATION)]: 'Learning-Education',
+    [labelCache.get(LABEL_EVENTS_COMMUNITY_SOCIAL_RECREATION)]: 'Social-Recreation',
+    [labelCache.get(LABEL_EVENTS_COMMUNITY_FOOD_DINING)]: 'Food-Dining',
+  };
+
   const emailAssignments = [
-    {
-      subject: 'Observability at the edge',
-      labelId: 'Label_32' // Tech-Professional
-    },
-    {
-      subject: 'Sacred Vessel: Nutrition for Intuition',
-      labelId: 'Label_33' // Spiritual-Wellness
-    },
-    {
-      subject: 'Love & Relationship Tarot',
-      labelId: 'Label_33' // Spiritual-Wellness
-    },
-    {
-      subject: 'Observability for LLM Apps',
-      labelId: 'Label_32' // Tech-Professional
-    },
-    {
-      subject: 'Strategies for Validating World Models',
-      labelId: 'Label_35' // Learning-Education
-    },
-    {
-      subject: 'Intuitive Numerology',
-      labelId: 'Label_33' // Spiritual-Wellness
-    }
+    { subject: 'Observability at the edge', labelId: labelCache.get(LABEL_EVENTS_COMMUNITY_TECH_PROFESSIONAL) },
+    { subject: 'Sacred Vessel: Nutrition for Intuition', labelId: labelCache.get(LABEL_EVENTS_COMMUNITY_SPIRITUAL_WELLNESS) },
+    { subject: 'Love & Relationship Tarot', labelId: labelCache.get(LABEL_EVENTS_COMMUNITY_SPIRITUAL_WELLNESS) },
+    { subject: 'Observability for LLM Apps', labelId: labelCache.get(LABEL_EVENTS_COMMUNITY_TECH_PROFESSIONAL) },
+    { subject: 'Strategies for Validating World Models', labelId: labelCache.get(LABEL_EVENTS_COMMUNITY_LEARNING_EDUCATION) },
+    { subject: 'Intuitive Numerology', labelId: labelCache.get(LABEL_EVENTS_COMMUNITY_SPIRITUAL_WELLNESS) },
   ];
 
-  // Get all Community emails
   const allMessages = await gmail.users.messages.list({
-    userId: 'me',
-    labelIds: ['Label_4'],
+    userId: USER_ID,
+    labelIds: [communityLabelId],
     maxResults: 500
   });
 
-  // Get emails already labeled
-  const subLabelIds = ['Label_31', 'Label_32', 'Label_33', 'Label_34', 'Label_35', 'Label_36', 'Label_37'];
+  const subLabelIds = Object.keys(subLabelMap).filter(Boolean);
   const labeledMessages = await Promise.all(
     subLabelIds.map(id =>
-      gmail.users.messages.list({ userId: 'me', labelIds: [id], maxResults: 500 })
+      gmail.users.messages.list({ userId: USER_ID, labelIds: [id], maxResults: 500 })
     )
   );
 
@@ -57,56 +51,48 @@ async function labelFinalCommunity() {
   const unlabeled = allMessages.data.messages?.filter(m => !labeledIds.has(m.id)) || [];
   console.log(`Processing ${unlabeled.length} remaining emails\n`);
 
-  // Match and label
+  const fullMsgs = await Promise.all(
+    unlabeled.map(msgHeader =>
+      gmail.users.messages.get({
+        userId: USER_ID,
+        id: msgHeader.id,
+        format: 'metadata',
+        metadataHeaders: ['Subject']
+      })
+    )
+  );
+
   const matches = {};
   let matchedCount = 0;
 
-  for (const msgHeader of unlabeled) {
-    const msg = await gmail.users.messages.get({
-      userId: 'me',
-      id: msgHeader.id,
-      format: 'metadata',
-      metadataHeaders: ['Subject']
-    });
-
-    const subject = msg.data.payload.headers.find(h => h.name === 'Subject')?.value || '';
+  for (const msg of fullMsgs) {
+    const subject = getHeader(msg.data.payload.headers, 'Subject');
 
     for (const assignment of emailAssignments) {
       if (subject.includes(assignment.subject)) {
         if (!matches[assignment.labelId]) {
           matches[assignment.labelId] = [];
         }
-        matches[assignment.labelId].push(msgHeader.id);
+        matches[assignment.labelId].push(msg.data.id);
         matchedCount++;
         break;
       }
     }
   }
 
-  const labelNames = {
-    'Label_31': 'Creative-Arts',
-    'Label_32': 'Tech-Professional',
-    'Label_33': 'Spiritual-Wellness',
-    'Label_34': 'Networking',
-    'Label_35': 'Learning-Education',
-    'Label_36': 'Social-Recreation',
-    'Label_37': 'Food-Dining'
-  };
-
-  // Apply labels
   for (const [labelId, messageIds] of Object.entries(matches)) {
     try {
       await gmail.users.messages.batchModify({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           ids: messageIds,
           addLabelIds: [labelId]
         }
       });
 
-      console.log(`✅ ${labelNames[labelId]}: ${messageIds.length} emails`);
+      console.log(`✅ ${subLabelMap[labelId]}: ${messageIds.length} emails`);
     } catch (error) {
-      console.log(`⚠️  ${labelNames[labelId]}: ${error.message}`);
+      console.log(`⚠️  ${subLabelMap[labelId]}: ${error.message}`);
     }
   }
 

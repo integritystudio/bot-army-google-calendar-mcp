@@ -1,0 +1,17 @@
+{
+  "output": {
+    "filePath": "docs/repomix/repo-mjs-root.xml",
+    "style": "xml",
+    "removeComments": true,
+    "removeEmptyLines": true,
+    "showLineNumbers": true,
+    "topFilesLength": 10,
+    "copyToClipboard": false
+  },
+  "include": [
+    "*.mjs"
+  ],
+  "security": {
+    "enableSecurityCheck": true
+  }
+}

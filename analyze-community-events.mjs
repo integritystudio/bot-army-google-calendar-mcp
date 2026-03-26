@@ -1,5 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, LABEL_EVENTS_COMMUNITY } from './lib/constants.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { getHeader } from './lib/email-utils.mjs';
 
 async function analyzeCommunityEvents() {
   const gmail = createGmailClient();
@@ -9,13 +11,13 @@ async function analyzeCommunityEvents() {
 
   try {
     const labelCache = await buildLabelCache(gmail);
-    const labelId = labelCache.get('Events/Community');
+    const labelId = labelCache.get(LABEL_EVENTS_COMMUNITY);
     if (!labelId) {
       console.error('❌ Events/Community label not found');
       process.exit(1);
     }
     const messagesResult = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       labelIds: [labelId],
       maxResults: 100,
     });
@@ -28,28 +30,27 @@ async function analyzeCommunityEvents() {
     console.log(`📧 Found ${messagesResult.data.messages.length} Community Event Emails\n`);
     console.log('═'.repeat(80) + '\n');
 
-    // Fetch full message details
-    const messages = [];
-    for (const msgHeader of messagesResult.data.messages) {
-      try {
-        const msg = await gmail.users.messages.get({
-          userId: 'me',
+    const fullMsgs = await Promise.all(
+      messagesResult.data.messages.map(msgHeader =>
+        gmail.users.messages.get({
+          userId: USER_ID,
           id: msgHeader.id,
           format: 'metadata',
           metadataHeaders: ['Subject', 'From', 'Date'],
-        });
+        }).catch(() => null)
+      )
+    );
 
+    const messages = fullMsgs
+      .filter(Boolean)
+      .map(msg => {
         const headers = msg.data.payload.headers || [];
-        const subject = headers.find(h => h.name === 'Subject')?.value || '(no subject)';
-        const from = headers.find(h => h.name === 'From')?.value || '(unknown)';
+        return {
+          subject: getHeader(headers, 'Subject', '(no subject)'),
+          from: getHeader(headers, 'From', '(unknown)'),
+        };
+      });
 
-        messages.push({ subject, from });
-      } catch (error) {
-        // Skip
-      }
-    }
-
-    // Categorize by community event type
     const eventTypes = {
       'Spiritual/Wellness': [],
       'Creative/Arts': [],
@@ -85,7 +86,6 @@ async function analyzeCommunityEvents() {
       }
     }
 
-    // Display results
     console.log('📋 COMMUNITY EVENT CATEGORIES\n');
 
     const sortedTypes = Object.entries(eventTypes)

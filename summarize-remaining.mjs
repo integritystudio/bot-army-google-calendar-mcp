@@ -1,5 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { extractDisplayName } from './lib/email-utils.mjs';
+import { USER_ID } from './lib/constants.mjs';
+import { extractDisplayName, getHeader } from './lib/email-utils.mjs';
 
 const MAX_RESULTS = 20;
 const INTERNAL_PREVIEW_COUNT = 2;
@@ -11,11 +12,9 @@ const HEADER_FROM = 'From';
 try {
   const gmail = createGmailClient();
 
-  const getHeader = (headers, name) => headers.find(h => h.name === name)?.value;
-
   async function printQueryResults(query, label, previewCount) {
     const resp = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: `${query.q} is:unread`,
       maxResults: MAX_RESULTS
     });
@@ -28,7 +27,7 @@ try {
     const previews = await Promise.all(
       messages.slice(0, previewCount).map(m =>
         gmail.users.messages.get({
-          userId: 'me',
+          userId: USER_ID,
           id: m.id,
           format: 'metadata',
           metadataHeaders: [HEADER_SUBJECT, HEADER_FROM]

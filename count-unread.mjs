@@ -1,8 +1,9 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID } from './lib/constants.mjs';
 
 const gmail = createGmailClient();
 const result = await gmail.users.messages.list({
-  userId: 'me',
+  userId: USER_ID,
   q: 'is:unread'
 });
 

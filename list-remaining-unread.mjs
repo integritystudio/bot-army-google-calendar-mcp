@@ -1,4 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID } from './lib/constants.mjs';
+import { getHeader } from './lib/email-utils.mjs';
 
 async function listRemaining() {
   const gmail = createGmailClient();
@@ -7,9 +9,8 @@ async function listRemaining() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Search for unread emails still in inbox
     const response = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: 'is:unread is:inbox',
       maxResults: 100
     });
@@ -23,11 +24,10 @@ async function listRemaining() {
       return;
     }
 
-    // Fetch details for each message
     const messages = await Promise.all(
       messageIds.map(async (msg) => {
         const fullMsg = await gmail.users.messages.get({
-          userId: 'me',
+          userId: USER_ID,
           id: msg.id,
           format: 'metadata',
           metadataHeaders: ['Subject', 'From', 'Date']
@@ -36,15 +36,14 @@ async function listRemaining() {
         const headers = fullMsg.data.payload?.headers || [];
         return {
           id: msg.id,
-          subject: headers.find((h) => h.name === 'Subject')?.value || '(No subject)',
-          from: headers.find((h) => h.name === 'From')?.value || '(Unknown)',
-          date: headers.find((h) => h.name === 'Date')?.value || '',
+          subject: getHeader(headers, 'Subject', '(No subject)'),
+          from: getHeader(headers, 'From', '(Unknown)'),
+          date: getHeader(headers, 'Date'),
           snippet: fullMsg.data.snippet || ''
         };
       })
     );
 
-    // Display emails
     messages.forEach((email, idx) => {
       console.log(`${idx + 1}. 👤 ${email.from.substring(0, 50)}`);
       console.log(`   📌 ${email.subject.substring(0, 65)}`);

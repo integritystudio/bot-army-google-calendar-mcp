@@ -1,5 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { extractDisplayName } from './lib/email-utils.mjs';
+import { extractDisplayName, getHeader } from './lib/email-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 import { categorizeEmail, printSection, ANALYZER_CONFIG } from './lib/email-analyzer.mjs';
 
@@ -28,19 +28,18 @@ async function analyzeUnreadEmails() {
       messageIds.map(async (msg) => {
         try {
           const fullMsg = await gmail.users.messages.get({
-            userId: "me",
+            userId: USER_ID,
             id: msg.id,
             format: "metadata",
             metadataHeaders: headers
           });
 
           const headerList = fullMsg.data.payload?.headers || [];
-          const getHeader = (name) => headerList.find((h) => h.name === name)?.value || '';
 
           return {
             id: msg.id,
-            subject: getHeader('Subject') || "(No subject)",
-            from: extractDisplayName(getHeader('From')) || "(Unknown sender)",
+            subject: getHeader(headerList, 'Subject') || "(No subject)",
+            from: extractDisplayName(getHeader(headerList, 'From')) || "(Unknown sender)",
             snippet: fullMsg.data.snippet || ""
           };
         } catch (error) {

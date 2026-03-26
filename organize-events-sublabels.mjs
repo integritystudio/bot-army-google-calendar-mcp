@@ -1,12 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-
-const SUB_LABELS = {
-  'Events/Meetup': 'Label_2',
-  'Events/Calendly': 'Label_3',
-  'Events/Community': 'Label_4',
-  'Events/Workshops': 'Label_5',
-  'Events/Invitations': 'Label_6',
-};
+import { USER_ID, LABEL_EVENTS_MEETUP, LABEL_EVENTS_CALENDLY, LABEL_EVENTS_COMMUNITY, LABEL_EVENTS_WORKSHOPS, LABEL_EVENTS_INVITATIONS } from './lib/constants.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 
 async function organizeEventsSubLabels() {
   const gmail = createGmailClient();
@@ -14,43 +8,51 @@ async function organizeEventsSubLabels() {
   console.log('📂 ORGANIZING EVENTS BY SUB-LABEL\n');
   console.log('═'.repeat(80));
 
-  // Step 1: Apply sub-labels to existing emails
   console.log('\n1️⃣  APPLYING SUB-LABELS TO EXISTING EMAILS\n');
+
+  const labelCache = await buildLabelCache(gmail);
+  const subLabels = {
+    [LABEL_EVENTS_MEETUP]: labelCache.get(LABEL_EVENTS_MEETUP),
+    [LABEL_EVENTS_CALENDLY]: labelCache.get(LABEL_EVENTS_CALENDLY),
+    [LABEL_EVENTS_COMMUNITY]: labelCache.get(LABEL_EVENTS_COMMUNITY),
+    [LABEL_EVENTS_WORKSHOPS]: labelCache.get(LABEL_EVENTS_WORKSHOPS),
+    [LABEL_EVENTS_INVITATIONS]: labelCache.get(LABEL_EVENTS_INVITATIONS),
+  };
 
   const eventCategories = [
     {
-      label: 'Events/Meetup',
-      labelId: SUB_LABELS['Events/Meetup'],
+      label: LABEL_EVENTS_MEETUP,
+      labelId: subLabels[LABEL_EVENTS_MEETUP],
       query: 'from:info@email.meetup.com',
     },
     {
-      label: 'Events/Calendly',
-      labelId: SUB_LABELS['Events/Calendly'],
+      label: LABEL_EVENTS_CALENDLY,
+      labelId: subLabels[LABEL_EVENTS_CALENDLY],
       query: 'from:teamcalendly@send.calendly.com OR from:support@calendly.zendesk.com',
     },
     {
-      label: 'Events/Community',
-      labelId: SUB_LABELS['Events/Community'],
+      label: LABEL_EVENTS_COMMUNITY,
+      labelId: subLabels[LABEL_EVENTS_COMMUNITY],
       query: 'subject:"📅 Just scheduled"',
     },
     {
-      label: 'Events/Workshops',
-      labelId: SUB_LABELS['Events/Workshops'],
+      label: LABEL_EVENTS_WORKSHOPS,
+      labelId: subLabels[LABEL_EVENTS_WORKSHOPS],
       query: 'subject:workshop OR subject:conference OR subject:summit OR subject:webinar',
     },
     {
-      label: 'Events/Invitations',
-      labelId: SUB_LABELS['Events/Invitations'],
+      label: LABEL_EVENTS_INVITATIONS,
+      labelId: subLabels[LABEL_EVENTS_INVITATIONS],
       query: 'subject:invitation OR subject:invite OR subject:rsvp',
     },
-  ];
+  ].filter(c => c.labelId);
 
   let totalLabeled = 0;
 
   for (const category of eventCategories) {
     try {
       const searchResult = await gmail.users.messages.list({
-        userId: 'me',
+        userId: USER_ID,
         q: category.query,
         maxResults: 100,
       });
@@ -64,7 +66,7 @@ async function organizeEventsSubLabels() {
       const count = messageIds.length;
 
       await gmail.users.messages.batchModify({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           ids: messageIds,
           addLabelIds: [category.labelId],
@@ -80,7 +82,6 @@ async function organizeEventsSubLabels() {
 
   console.log(`\n  📊 Total labeled: ${totalLabeled} emails\n`);
 
-  // Step 2: Create filters for future emails
   console.log('═'.repeat(80));
   console.log('\n2️⃣  CREATING AUTO-LABEL FILTERS\n');
 
@@ -88,36 +89,36 @@ async function organizeEventsSubLabels() {
     {
       name: 'Meetup Events',
       criteria: { from: 'info@email.meetup.com' },
-      labelId: SUB_LABELS['Events/Meetup'],
+      labelId: subLabels[LABEL_EVENTS_MEETUP],
     },
     {
       name: 'Calendly Events',
       criteria: { from: 'teamcalendly@send.calendly.com' },
-      labelId: SUB_LABELS['Events/Calendly'],
+      labelId: subLabels[LABEL_EVENTS_CALENDLY],
     },
     {
       name: 'Community Event Announcements',
       criteria: { subject: '📅 Just scheduled' },
-      labelId: SUB_LABELS['Events/Community'],
+      labelId: subLabels[LABEL_EVENTS_COMMUNITY],
     },
     {
       name: 'Workshop & Conference Events',
       criteria: { subject: 'workshop OR conference OR summit OR webinar' },
-      labelId: SUB_LABELS['Events/Workshops'],
+      labelId: subLabels[LABEL_EVENTS_WORKSHOPS],
     },
     {
       name: 'Event Invitations',
       criteria: { subject: 'invitation OR invite OR rsvp' },
-      labelId: SUB_LABELS['Events/Invitations'],
+      labelId: subLabels[LABEL_EVENTS_INVITATIONS],
     },
-  ];
+  ].filter(f => f.labelId);
 
   let filtersCreated = 0;
 
   for (const filter of filters) {
     try {
       const response = await gmail.users.settings.filters.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           criteria: filter.criteria,
           action: {

@@ -16,7 +16,6 @@ async function applyFiltersToUnread() {
   console.log('📧 APPLYING FILTERS TO EXISTING UNREAD EMAILS\n');
   console.log('═'.repeat(80) + '\n');
 
-  // Get all labels first
   const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
   const labelMap = {};
   (labelsResponse.data.labels || []).forEach(label => {
@@ -60,7 +59,6 @@ async function applyFiltersToUnread() {
     }
 
     try {
-      // Search for matching unread emails
       const searchResponse = await gmail.users.messages.list({
         userId: USER_ID,
         q: config.query,
@@ -75,10 +73,9 @@ async function applyFiltersToUnread() {
         continue;
       }
 
-      // Apply label and archive in batches
       const batchSize = 50;
       for (let i = 0; i < messageIds.length; i += batchSize) {
-        const batch = messageIds.slice(i, Math.min(i + batchSize, messageIds.length));
+        const batch = messageIds.slice(i, i + batchSize);
 
         await gmail.users.messages.batchModify({
           userId: USER_ID,
@@ -89,7 +86,7 @@ async function applyFiltersToUnread() {
           }
         });
 
-        const processed = Math.min(i + batchSize, messageIds.length);
+        const processed = i + batch.length;
         console.log(`  ✅ Processed ${processed}/${messageIds.length}`);
       }
 

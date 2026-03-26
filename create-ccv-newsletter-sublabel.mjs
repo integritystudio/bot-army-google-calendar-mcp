@@ -11,7 +11,6 @@ async function createCCVNewsletterSubLabel() {
   // Pre-fetch existing labels to avoid N+1 queries
   const existingLabelMap = await buildLabelCache(gmail);
 
-  // Step 1: Create sub-label
   console.log('1️⃣  CREATING LABEL: Newsletters/CCV\n');
 
   const labelIds = {};
@@ -19,7 +18,6 @@ async function createCCVNewsletterSubLabel() {
 
   const subLabelId = labelIds['Newsletters/CCV'];
 
-  // Step 2: Apply label to existing CCV newsletter emails
   console.log('═'.repeat(80));
   console.log('\n2️⃣  APPLYING LABEL TO EXISTING EMAILS\n');
 
@@ -32,7 +30,6 @@ async function createCCVNewsletterSubLabel() {
 
   console.log(`\n  📊 Total labeled: ${totalLabeled} emails\n`);
 
-  // Step 3: Create filter for future CCV newsletter emails
   console.log('═'.repeat(80));
   console.log('\n3️⃣  CREATING AUTO-LABEL FILTER\n');
 

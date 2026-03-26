@@ -1,4 +1,8 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import {
+  USER_ID, GMAIL_UNREAD,
+  LABEL_PRODUCT_UPDATES, LABEL_MONITORING, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING,
+} from './lib/constants.mjs';
 
 async function markArchivedAsRead() {
   const gmail = createGmailClient();
@@ -7,18 +11,17 @@ async function markArchivedAsRead() {
   console.log('═'.repeat(80) + '\n');
 
   const categoriesToProcess = [
-    'Product Updates',
-    'Monitoring',
-    'Communities',
-    'Services & Alerts',
-    'Billing'
+    LABEL_PRODUCT_UPDATES,
+    LABEL_MONITORING,
+    LABEL_COMMUNITIES,
+    LABEL_SERVICES,
+    LABEL_BILLING,
   ];
 
   let totalMarked = 0;
 
   try {
-    // Get all labels
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
+    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
     const labels = labelsResponse.data.labels || [];
     if (labels.length === 0) {
       console.log('No labels found\n');
@@ -31,10 +34,9 @@ async function markArchivedAsRead() {
       const labelId = labelMap[category];
       if (!labelId) continue;
 
-      // Find unread emails with this label (not in INBOX - archived)
       const searchQuery = `label:"${category}" is:unread -label:INBOX`;
       const searchResponse = await gmail.users.messages.list({
-        userId: 'me',
+        userId: USER_ID,
         q: searchQuery,
         maxResults: 500
       });
@@ -44,21 +46,20 @@ async function markArchivedAsRead() {
 
       if (messageIds.length === 0) continue;
 
-      // Mark as read in batches
       const batchSize = 50;
       for (let i = 0; i < messageIds.length; i += batchSize) {
         const batch = messageIds.slice(i, i + batchSize).map(m => m.id);
 
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch,
-            removeLabelIds: ['UNREAD']
+            removeLabelIds: [GMAIL_UNREAD]
           }
         });
 
         totalMarked += batch.length;
-        const processed = Math.min(i + batchSize, messageIds.length);
+        const processed = i + batch.length;
         console.log(`  ✅ Marked ${processed}/${messageIds.length} as read`);
       }
 

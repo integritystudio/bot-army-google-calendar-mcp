@@ -1,4 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID } from './lib/constants.mjs';
+import { getHeader } from './lib/email-utils.mjs';
 
 async function searchHackathon() {
   const gmail = createGmailClient();
@@ -7,9 +9,8 @@ async function searchHackathon() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Search for hackathon in all Events labels
     const searchResult = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: 'label:Events hackathon',
       maxResults: 100,
     });
@@ -31,36 +32,33 @@ async function searchHackathon() {
     console.log(`✅ Found ${count} email(s) mentioning "hackathon"\n`);
     console.log('═'.repeat(80) + '\n');
 
-    // Fetch full details for each email
-    const emails = [];
-    for (const msgHeader of searchResult.data.messages) {
-      try {
-        const msg = await gmail.users.messages.get({
-          userId: 'me',
+    const fullMsgs = await Promise.all(
+      searchResult.data.messages.map(msgHeader =>
+        gmail.users.messages.get({
+          userId: USER_ID,
           id: msgHeader.id,
           format: 'metadata',
           metadataHeaders: ['Subject', 'From', 'Date', 'To'],
-        });
+        }).catch(error => {
+          console.log(`Error fetching message: ${error.message}`);
+          return null;
+        })
+      )
+    );
 
+    const emails = fullMsgs
+      .filter(Boolean)
+      .map(msg => {
         const headers = msg.data.payload.headers || [];
-        const subject = headers.find(h => h.name === 'Subject')?.value || '(no subject)';
-        const from = headers.find(h => h.name === 'From')?.value || '(unknown)';
-        const date = headers.find(h => h.name === 'Date')?.value || '(no date)';
-        const to = headers.find(h => h.name === 'To')?.value || '(unknown)';
+        return {
+          id: msg.data.id,
+          subject: getHeader(headers, 'Subject', '(no subject)'),
+          from: getHeader(headers, 'From', '(unknown)'),
+          date: getHeader(headers, 'Date', '(no date)'),
+          to: getHeader(headers, 'To', '(unknown)'),
+        };
+      });
 
-        emails.push({
-          id: msgHeader.id,
-          subject,
-          from,
-          date,
-          to,
-        });
-      } catch (error) {
-        console.log(`Error fetching message: ${error.message}`);
-      }
-    }
-
-    // Display results
     console.log('📧 HACKATHON EMAILS\n');
 
     for (const email of emails) {

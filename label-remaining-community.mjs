@@ -1,4 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, LABEL_EVENTS_COMMUNITY, LABEL_EVENTS_COMMUNITY_CREATIVE_ARTS, LABEL_EVENTS_COMMUNITY_TECH_PROFESSIONAL, LABEL_EVENTS_COMMUNITY_SPIRITUAL_WELLNESS, LABEL_EVENTS_COMMUNITY_NETWORKING, LABEL_EVENTS_COMMUNITY_LEARNING_EDUCATION, LABEL_EVENTS_COMMUNITY_SOCIAL_RECREATION, LABEL_EVENTS_COMMUNITY_FOOD_DINING } from './lib/constants.mjs';
+import { getHeader } from './lib/email-utils.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 
 async function labelRemainingCommunity() {
   const gmail = createGmailClient();
@@ -6,18 +9,27 @@ async function labelRemainingCommunity() {
   console.log('📂 LABELING REMAINING COMMUNITY EMAILS\n');
   console.log('═'.repeat(80) + '\n');
 
-  // Get all Community emails
+  const labelCache = await buildLabelCache(gmail);
+  const communityLabelId = labelCache.get(LABEL_EVENTS_COMMUNITY);
+
   const allMessages = await gmail.users.messages.list({
-    userId: 'me',
-    labelIds: ['Label_4'],
+    userId: USER_ID,
+    labelIds: [communityLabelId],
     maxResults: 500
   });
 
-  // Get emails already labeled
-  const subLabelIds = ['Label_31', 'Label_32', 'Label_33', 'Label_34', 'Label_35', 'Label_36', 'Label_37'];
+  const subLabelIds = [
+    LABEL_EVENTS_COMMUNITY_CREATIVE_ARTS,
+    LABEL_EVENTS_COMMUNITY_TECH_PROFESSIONAL,
+    LABEL_EVENTS_COMMUNITY_SPIRITUAL_WELLNESS,
+    LABEL_EVENTS_COMMUNITY_NETWORKING,
+    LABEL_EVENTS_COMMUNITY_LEARNING_EDUCATION,
+    LABEL_EVENTS_COMMUNITY_SOCIAL_RECREATION,
+    LABEL_EVENTS_COMMUNITY_FOOD_DINING,
+  ].map(name => labelCache.get(name)).filter(Boolean);
   const labeledMessages = await Promise.all(
     subLabelIds.map(id =>
-      gmail.users.messages.list({ userId: 'me', labelIds: [id], maxResults: 500 })
+      gmail.users.messages.list({ userId: USER_ID, labelIds: [id], maxResults: 500 })
     )
   );
 
@@ -29,72 +41,71 @@ async function labelRemainingCommunity() {
   const unlabeled = allMessages.data.messages?.filter(m => !labeledIds.has(m.id)) || [];
   console.log(`Unlabeled emails to process: ${unlabeled.length}\n`);
 
-  // Categorization patterns - more comprehensive
   const categoryPatterns = {
-    'Label_31': { // Creative-Arts
+    [labelCache.get(LABEL_EVENTS_COMMUNITY_CREATIVE_ARTS)]: {
+      name: 'Creative-Arts',
       patterns: [/art|drawing|creative|sketch|music|design|performance|painting/i]
     },
-    'Label_32': { // Tech-Professional
+    [labelCache.get(LABEL_EVENTS_COMMUNITY_TECH_PROFESSIONAL)]: {
+      name: 'Tech-Professional',
       patterns: [/tech|coding|development|robotics|ai|computer|data|engineering|elasticsearch|infra|platform|search|governance|rule/i]
     },
-    'Label_33': { // Spiritual-Wellness
+    [labelCache.get(LABEL_EVENTS_COMMUNITY_SPIRITUAL_WELLNESS)]: {
+      name: 'Spiritual-Wellness',
       patterns: [/astrology|psychic|meditation|healing|yoga|zen|conscious|spiritual|energy|chakra|reiki|enlightenment|manifestation|angel|astrological|embodied|nervous system|stress/i]
     },
-    'Label_34': { // Networking
+    [labelCache.get(LABEL_EVENTS_COMMUNITY_NETWORKING)]: {
+      name: 'Networking',
       patterns: [/networking|community|group|meetup|connect|gathering|forum|mastermind|entrepreneur/i]
     },
-    'Label_35': { // Learning-Education
+    [labelCache.get(LABEL_EVENTS_COMMUNITY_LEARNING_EDUCATION)]: {
+      name: 'Learning-Education',
       patterns: [/workshop|class|course|training|learn|skill|development|masterclass/i]
     },
-    'Label_36': { // Social-Recreation
+    [labelCache.get(LABEL_EVENTS_COMMUNITY_SOCIAL_RECREATION)]: {
+      name: 'Social-Recreation',
       patterns: [/game|night|party|gathering|social|fun|recreation|laugh|wine|trivia|taboo|closet/i]
     },
-    'Label_37': { // Food-Dining
+    [labelCache.get(LABEL_EVENTS_COMMUNITY_FOOD_DINING)]: {
+      name: 'Food-Dining',
       patterns: [/lunch|dinner|food|restaurant|cafe|coffee|eat|brunch|feast/i]
-    }
+    },
   };
 
   let labeledCount = 0;
 
-  // Fetch and categorize each unlabeled email
-  const emailsToLabel = [];
-
-  for (const msgHeader of unlabeled) {
-    try {
-      const msg = await gmail.users.messages.get({
-        userId: 'me',
+  const fullMsgs = await Promise.all(
+    unlabeled.map(msgHeader =>
+      gmail.users.messages.get({
+        userId: USER_ID,
         id: msgHeader.id,
         format: 'metadata',
         metadataHeaders: ['Subject']
-      });
+      }).catch(() => null)
+    )
+  );
 
-      const subject = msg.data.payload.headers.find(h => h.name === 'Subject')?.value || '';
+  const emailsToLabel = [];
 
-      // Find matching category
-      let matchedLabelId = null;
-      for (const [labelId, config] of Object.entries(categoryPatterns)) {
-        for (const pattern of config.patterns) {
-          if (pattern.test(subject)) {
-            matchedLabelId = labelId;
-            break;
-          }
+  for (const msg of fullMsgs.filter(Boolean)) {
+    const subject = getHeader(msg.data.payload.headers, 'Subject');
+
+    let matchedLabelId = null;
+    for (const [labelId, config] of Object.entries(categoryPatterns)) {
+      for (const pattern of config.patterns) {
+        if (pattern.test(subject)) {
+          matchedLabelId = labelId;
+          break;
         }
-        if (matchedLabelId) break;
       }
+      if (matchedLabelId) break;
+    }
 
-      if (matchedLabelId) {
-        emailsToLabel.push({
-          id: msgHeader.id,
-          labelId: matchedLabelId,
-          subject
-        });
-      }
-    } catch (error) {
-      // Skip
+    if (matchedLabelId) {
+      emailsToLabel.push({ id: msg.data.id, labelId: matchedLabelId, subject });
     }
   }
 
-  // Group by label and batch apply
   const labelGroups = {};
   for (const email of emailsToLabel) {
     if (!labelGroups[email.labelId]) {
@@ -103,30 +114,21 @@ async function labelRemainingCommunity() {
     labelGroups[email.labelId].push(email.id);
   }
 
-  const labelNames = {
-    'Label_31': 'Creative-Arts',
-    'Label_32': 'Tech-Professional',
-    'Label_33': 'Spiritual-Wellness',
-    'Label_34': 'Networking',
-    'Label_35': 'Learning-Education',
-    'Label_36': 'Social-Recreation',
-    'Label_37': 'Food-Dining'
-  };
-
   for (const [labelId, messageIds] of Object.entries(labelGroups)) {
+    const displayName = categoryPatterns[labelId]?.name ?? labelId;
     try {
       await gmail.users.messages.batchModify({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           ids: messageIds,
           addLabelIds: [labelId]
         }
       });
 
-      console.log(`✅ ${labelNames[labelId]}: ${messageIds.length} emails`);
+      console.log(`✅ ${displayName}: ${messageIds.length} emails`);
       labeledCount += messageIds.length;
     } catch (error) {
-      console.log(`⚠️  ${labelNames[labelId]}: ${error.message}`);
+      console.log(`⚠️  ${displayName}: ${error.message}`);
     }
   }
 

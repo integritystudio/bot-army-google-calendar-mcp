@@ -11,7 +11,6 @@ async function createSubjectNewslettersSubLabel() {
   // Pre-fetch existing labels to avoid N+1 queries
   const existingLabelMap = await buildLabelCache(gmail);
 
-  // Step 1: Create sub-label
   console.log('1️⃣  CREATING LABEL: Newsletters/Subject-Based\n');
 
   const labelIds = {};
@@ -19,7 +18,6 @@ async function createSubjectNewslettersSubLabel() {
 
   const subLabelId = labelIds['Newsletters/Subject-Based'];
 
-  // Step 2: Apply label to existing subject-based newsletter emails
   console.log('═'.repeat(80));
   console.log('\n2️⃣  APPLYING LABEL TO EXISTING EMAILS\n');
 
@@ -32,7 +30,6 @@ async function createSubjectNewslettersSubLabel() {
 
   console.log(`\n  📊 Total labeled: ${totalLabeled} emails\n`);
 
-  // Step 3: Create filter for future subject-based newsletters
   console.log('═'.repeat(80));
   console.log('\n3️⃣  CREATING AUTO-LABEL FILTER\n');
 

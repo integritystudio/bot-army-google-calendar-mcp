@@ -1,5 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { extractEmailAddress } from './lib/email-utils.mjs';
+import { USER_ID, LABEL_EVENTS_CALENDLY, LABEL_EVENTS_COMMUNITY, LABEL_EVENTS_WORKSHOPS, LABEL_EVENTS_INVITATIONS } from './lib/constants.mjs';
+import { extractEmailAddress, getHeader } from './lib/email-utils.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 
 async function analyzeEventsDetailed() {
   const gmail = createGmailClient();
@@ -7,19 +9,20 @@ async function analyzeEventsDetailed() {
   console.log('📊 DETAILED EVENT CATEGORIES ANALYSIS\n');
   console.log('═'.repeat(80) + '\n');
 
+  const labelCache = await buildLabelCache(gmail);
   const categories = [
-    { name: 'Events/Calendly', labelId: 'Label_3' },
-    { name: 'Events/Community', labelId: 'Label_4' },
-    { name: 'Events/Workshops', labelId: 'Label_5' },
-    { name: 'Events/Invitations', labelId: 'Label_6' },
-  ];
+    { name: 'Events/Calendly', labelId: labelCache.get(LABEL_EVENTS_CALENDLY) },
+    { name: 'Events/Community', labelId: labelCache.get(LABEL_EVENTS_COMMUNITY) },
+    { name: 'Events/Workshops', labelId: labelCache.get(LABEL_EVENTS_WORKSHOPS) },
+    { name: 'Events/Invitations', labelId: labelCache.get(LABEL_EVENTS_INVITATIONS) },
+  ].filter(c => c.labelId);
 
   for (const category of categories) {
     try {
       console.log(`📋 ${category.name.toUpperCase()}\n`);
 
       const messagesResult = await gmail.users.messages.list({
-        userId: 'me',
+        userId: USER_ID,
         labelIds: [category.labelId],
         maxResults: 100,
       });
@@ -33,29 +36,28 @@ async function analyzeEventsDetailed() {
       const count = messagesResult.data.messages.length;
       console.log(`  Total emails: ${count}\n`);
 
-      // Fetch full message details
-      const messages = [];
-      for (const msgHeader of messagesResult.data.messages.slice(0, 30)) {
-        try {
-          const msg = await gmail.users.messages.get({
-            userId: 'me',
+      const fullMsgs = await Promise.all(
+        messagesResult.data.messages.slice(0, 30).map(msgHeader =>
+          gmail.users.messages.get({
+            userId: USER_ID,
             id: msgHeader.id,
             format: 'metadata',
             metadataHeaders: ['Subject', 'From', 'Date'],
-          });
+          }).catch(() => null)
+        )
+      );
 
+      const messages = fullMsgs
+        .filter(Boolean)
+        .map(msg => {
           const headers = msg.data.payload.headers || [];
-          const subject = headers.find(h => h.name === 'Subject')?.value || '(no subject)';
-          const from = headers.find(h => h.name === 'From')?.value || '(unknown)';
-          const date = headers.find(h => h.name === 'Date')?.value || '(no date)';
+          return {
+            subject: getHeader(headers, 'Subject', '(no subject)'),
+            from: getHeader(headers, 'From', '(unknown)'),
+            date: getHeader(headers, 'Date', '(no date)'),
+          };
+        });
 
-          messages.push({ subject, from, date });
-        } catch (error) {
-          // Skip if can't fetch
-        }
-      }
-
-      // Categorize by type
       const eventTypes = {
         'Meeting Reminders': [],
         'Registration Confirmations': [],
@@ -91,7 +93,6 @@ async function analyzeEventsDetailed() {
         }
       }
 
-      // Display breakdown
       console.log('  Types:\n');
       const sortedTypes = Object.entries(eventTypes)
         .filter(([_, items]) => items.length > 0)
@@ -102,7 +103,6 @@ async function analyzeEventsDetailed() {
         console.log(`    ${type}: ${items.length} (${percentage}%)`);
       }
 
-      // Sample emails
       console.log('\n  Sample subjects:\n');
       const samples = [...new Set(messages.map(m => m.subject))].slice(0, 5);
       for (const subject of samples) {
@@ -112,7 +112,6 @@ async function analyzeEventsDetailed() {
         console.log(`    • ${truncated}`);
       }
 
-      // Sender analysis
       console.log('\n  Primary senders:\n');
       const senders = {};
       for (const msg of messages) {

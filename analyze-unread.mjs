@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID } from './lib/constants.mjs';
 
 async function analyzeUnread() {
   const gmail = createGmailClient();
@@ -7,15 +8,13 @@ async function analyzeUnread() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get all labels
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
+    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
     const labels = labelsResponse.data.labels || [];
     const labelMap = {};
     labels.forEach(l => { labelMap[l.id] = l.name; });
 
-    // Get all unread
     const allUnreadResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: 'is:unread',
       maxResults: 500
     });
@@ -23,25 +22,29 @@ async function analyzeUnread() {
     const allUnread = allUnreadResponse.data.messages || [];
     console.log(`Total unread: ${allUnread.length}\n`);
 
-    // Categorize by labels
+    const chunkSize = 50;
+    const fullMsgs = [];
+    for (let i = 0; i < allUnread.length; i += chunkSize) {
+      const chunk = await Promise.all(
+        allUnread.slice(i, i + chunkSize).map(msg =>
+          gmail.users.messages.get({ userId: USER_ID, id: msg.id })
+        )
+      );
+      fullMsgs.push(...chunk);
+    }
+
     const categories = {};
 
-    for (const msg of allUnread) {
-      const fullMsg = await gmail.users.messages.get({
-        userId: 'me',
-        id: msg.id
-      });
-
-      const labels = (fullMsg.data.labelIds || []).map(id => labelMap[id]).filter(Boolean);
-      const labelStr = labels.length > 0 ? labels.join(', ') : 'No labels';
+    for (const fullMsg of fullMsgs) {
+      const msgLabels = (fullMsg.data.labelIds || []).map(id => labelMap[id]).filter(Boolean);
+      const labelStr = msgLabels.length > 0 ? msgLabels.join(', ') : 'No labels';
 
       if (!categories[labelStr]) {
         categories[labelStr] = [];
       }
-      categories[labelStr].push(msg.id);
+      categories[labelStr].push(fullMsg.data.id);
     }
 
-    // Show breakdown
     Object.entries(categories)
       .sort((a, b) => b[1].length - a[1].length)
       .forEach(([labels, ids]) => {

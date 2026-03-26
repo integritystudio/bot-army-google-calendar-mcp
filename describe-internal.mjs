@@ -1,5 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID } from './lib/constants.mjs';
+import { getHeader } from './lib/email-utils.mjs';
 
 const MAX_RESULTS = 50;
 const PREVIEW_COUNT = 10;
@@ -10,8 +11,6 @@ const HEADER_DATE = 'Date';
 
 try {
   const gmail = createGmailClient();
-
-  const getHeader = (headers, name) => headers.find(h => h.name === name)?.value;
 
   console.log('📋 INTERNAL DISCUSSIONS - DETAILED BREAKDOWN\n');
   console.log('═'.repeat(80) + '\n');

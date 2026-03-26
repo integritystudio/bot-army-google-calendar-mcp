@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 
 async function updateBillingFilter() {
   const gmail = createGmailClient();
@@ -7,10 +8,9 @@ async function updateBillingFilter() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get labels
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
-    const billingLabel = labelsResponse.data.labels.find(l => l.name === 'Billing');
-    const keepImportantLabel = labelsResponse.data.labels.find(l => l.name === 'Keep Important');
+    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
+    const billingLabel = labelsResponse.data.labels.find(l => l.name === LABEL_BILLING);
+    const keepImportantLabel = labelsResponse.data.labels.find(l => l.name === LABEL_KEEP_IMPORTANT);
 
     if (!billingLabel) {
       console.log('❌ Billing label not found. Run create-billing-filter.mjs first.\n');
@@ -27,13 +27,12 @@ async function updateBillingFilter() {
 
     console.log('STEP 1: Creating urgent billing alert filter\n');
 
-    // Filter for billing emails WITH urgent keywords - keep in inbox
     const urgentKeywords = '(late fee OR overdue OR "missed payment")';
     const billingKeywords = '(invoice OR billing OR payment OR charge OR receipt OR statement)';
 
     try {
       await gmail.users.settings.filters.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           criteria: {
             query: `subject:${billingKeywords} subject:${urgentKeywords}`
@@ -56,10 +55,9 @@ async function updateBillingFilter() {
 
     console.log('STEP 2: Applying to existing urgent billing emails\n');
 
-    // Find existing billing emails with urgent keywords
     const urgentQuery = `subject:${billingKeywords} subject:${urgentKeywords}`;
     const urgentResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: urgentQuery,
       maxResults: 100
     });
@@ -68,9 +66,9 @@ async function updateBillingFilter() {
     if (urgentIds.length > 0) {
       const batchSize = 50;
       for (let i = 0; i < urgentIds.length; i += batchSize) {
-        const batch = urgentIds.slice(i, Math.min(i + batchSize, urgentIds.length));
+        const batch = urgentIds.slice(i, i + batchSize);
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
             addLabelIds: [billingLabelId, keepImportantLabelId]

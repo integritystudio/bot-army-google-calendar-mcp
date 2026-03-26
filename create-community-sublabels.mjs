@@ -1,9 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-
-
-import { USER_ID } from './lib/constants.mjs';
+import { USER_ID, LABEL_EVENTS_COMMUNITY } from './lib/constants.mjs';
 import { createLabels, applyPatterns } from './lib/gmail-label-utils.mjs';
-
 
 async function createCommunitySubLabels() {
   const gmail = createGmailClient();
@@ -16,7 +13,6 @@ async function createCommunitySubLabels() {
     existingLabelsRes.data.labels.map(l => [l.name, l.id])
   );
 
-  // Step 1: Create sub-labels
   console.log('1️⃣  CREATING SUB-LABELS\n');
 
   const subLabels = [
@@ -35,12 +31,11 @@ async function createCommunitySubLabels() {
 
   console.log();
 
-  // Step 2: Apply sub-labels to existing emails
   console.log('═'.repeat(80));
   console.log('\n2️⃣  APPLYING SUB-LABELS TO EXISTING EMAILS\n');
 
   // Resolve parent label ID at runtime instead of hardcoding
-  const communityParentId = existingLabelMap.get('Events/Community');
+  const communityParentId = existingLabelMap.get(LABEL_EVENTS_COMMUNITY);
   if (!communityParentId) {
     console.error('❌ Error: Could not find "Events/Community" label. Create it first.');
     process.exit(1);
@@ -81,7 +76,6 @@ async function createCommunitySubLabels() {
 
   console.log(`\n  📊 Total labeled: ${totalLabeled} emails\n`);
 
-  // Step 3: Create filters
   console.log('═'.repeat(80));
   console.log('\n3️⃣  CREATING AUTO-LABEL FILTERS\n');
 

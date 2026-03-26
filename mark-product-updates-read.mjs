@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_UNREAD, LABEL_PRODUCT_UPDATES } from './lib/constants.mjs';
 
 async function markProductUpdatesRead() {
   const gmail = createGmailClient();
@@ -7,20 +8,9 @@ async function markProductUpdatesRead() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get Product Updates label
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
-    const productLabel = (labelsResponse.data.labels || []).find(l => l.name === 'Product Updates');
-
-    if (!productLabel) {
-      console.log('Product Updates label not found\n');
-      return;
-    }
-
-    // Find all emails with Product Updates label
-    const searchQuery = `label:"${productLabel.name}"`;
     const searchResponse = await gmail.users.messages.list({
-      userId: 'me',
-      q: searchQuery,
+      userId: USER_ID,
+      q: `label:"${LABEL_PRODUCT_UPDATES}"`,
       maxResults: 500
     });
 
@@ -32,21 +22,20 @@ async function markProductUpdatesRead() {
       return;
     }
 
-    // Mark all as read in batches
     const batchSize = 50;
 
     for (let i = 0; i < messageIds.length; i += batchSize) {
       const batch = messageIds.slice(i, i + batchSize).map(m => m.id);
 
       await gmail.users.messages.batchModify({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           ids: batch,
-          removeLabelIds: ['UNREAD']
+          removeLabelIds: [GMAIL_UNREAD]
         }
       });
 
-      const processed = Math.min(i + batchSize, messageIds.length);
+      const processed = i + batch.length;
       console.log(`  ✅ Marked ${processed}/${messageIds.length} as read`);
     }
 

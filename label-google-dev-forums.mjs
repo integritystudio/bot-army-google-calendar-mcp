@@ -1,22 +1,21 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_UNREAD, LABEL_COMMUNITIES } from './lib/constants.mjs';
 
 const gmail = createGmailClient();
 
 console.log('🏷️  LABELING GOOGLE DEVELOPER FORUMS\n');
 console.log('═'.repeat(80) + '\n');
 
-// Get Communities label ID
-const labelsResp = await gmail.users.labels.list({ userId: 'me' });
-const communitiesLabel = labelsResp.data.labels.find(l => l.name === 'Communities');
+const labelsResp = await gmail.users.labels.list({ userId: USER_ID });
+const communitiesLabel = labelsResp.data.labels.find(l => l.name === LABEL_COMMUNITIES);
 
 if (!communitiesLabel) {
   console.log('Communities label not found\n');
   process.exit(1);
 }
 
-// Find all Google Developer forum emails
 const searchResp = await gmail.users.messages.list({
-  userId: 'me',
+  userId: USER_ID,
   q: 'from:"no-reply@discuss.google.dev" OR from:"no-reply@discuss.google.com"',
   maxResults: 500
 });
@@ -29,24 +28,23 @@ if (messageIds.length === 0) {
   process.exit(0);
 }
 
-// Label and mark as read in batches
 const batchSize = 50;
 let processedCount = 0;
 
 for (let i = 0; i < messageIds.length; i += batchSize) {
-  const batch = messageIds.slice(i, Math.min(i + batchSize, messageIds.length));
+  const batch = messageIds.slice(i, i + batchSize);
 
   await gmail.users.messages.batchModify({
-    userId: 'me',
+    userId: USER_ID,
     requestBody: {
       ids: batch.map(m => m.id),
       addLabelIds: [communitiesLabel.id],
-      removeLabelIds: ['UNREAD']
+      removeLabelIds: [GMAIL_UNREAD]
     }
   });
 
   processedCount += batch.length;
-  const processed = Math.min(i + batchSize, messageIds.length);
+  const processed = i + batch.length;
   console.log(`  ✅ Processed ${processed}/${messageIds.length}`);
 }
 

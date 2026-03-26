@@ -13,12 +13,10 @@ async function verifyAndRefreshTokens() {
   try {
     console.log('🔍 Verifying OAuth tokens...\n');
 
-    // Initialize OAuth client
     const oauth2Client = await initializeOAuth2Client();
     const tokenManager = new TokenManager(oauth2Client);
     const tokenPath = tokenManager.getTokenPath();
 
-    // Check if token file exists
     console.log(`📁 Token file: ${tokenPath}`);
     try {
       await fs.access(tokenPath);
@@ -28,7 +26,6 @@ async function verifyAndRefreshTokens() {
       process.exit(1);
     }
 
-    // Display token info
     const tokenContent = await fs.readFile(tokenPath, 'utf-8');
     const tokens = JSON.parse(tokenContent);
 
@@ -55,7 +52,6 @@ async function verifyAndRefreshTokens() {
     if (isValid) {
       console.log('✓ Tokens are valid\n');
 
-      // Check expiry time
       const credentials = oauth2Client.credentials;
       if (credentials.expiry_date) {
         const expiresIn = Math.floor((credentials.expiry_date - Date.now()) / 1000);

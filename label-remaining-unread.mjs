@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, LABEL_EVENTS, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 
 const gmail = createGmailClient();
 
@@ -8,7 +9,7 @@ console.log('═'.repeat(80) + '\n');
 // Define labeling rules by sender/content pattern
 const labelingRules = [
   {
-    label: 'Events',
+    label: LABEL_EVENTS,
     queries: [
       'from:info@email.meetup.com',
       'from:notifications@email.calendly.com OR from:teamcalendly@send.calendly.com',
@@ -16,7 +17,7 @@ const labelingRules = [
     ]
   },
   {
-    label: 'Product Updates',
+    label: LABEL_PRODUCT_UPDATES,
     queries: [
       'from:googlecloud@google.com OR from:CloudPlatform-noreply@google.com',
       'from:news@alphasignal.ai',
@@ -26,63 +27,58 @@ const labelingRules = [
     ]
   },
   {
-    label: 'Communities',
+    label: LABEL_COMMUNITIES,
     queries: [
       'from:wtm@technovation.org'
     ]
   },
   {
-    label: 'Keep Important',
+    label: LABEL_KEEP_IMPORTANT,
     queries: [
       'from:capitalcity@a.helpfulvillage.com'
     ]
   }
 ];
 
-// Get labels first
-const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
+const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
 const labelMap = {};
 labelsResponse.data.labels.forEach(l => { labelMap[l.name] = l.id; });
 
-// Process each rule
 for (const rule of labelingRules) {
   if (!labelMap[rule.label]) {
     console.log(`⚠️  Label not found: ${rule.label}\n`);
     continue;
   }
 
-  let totalLabeled = 0;
-
-  for (const query of rule.queries) {
+  const queryCounts = await Promise.all(rule.queries.map(async (query) => {
     const searchResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: `is:unread ${query}`,
       maxResults: 500
     });
 
     const messageIds = searchResponse.data.messages || [];
-    if (messageIds.length === 0) continue;
+    if (messageIds.length === 0) return 0;
 
     console.log(`${rule.label} - ${query}: ${messageIds.length}`);
 
-    // Apply label in batches
     const batchSize = 50;
     for (let i = 0; i < messageIds.length; i += batchSize) {
-      const batch = messageIds.slice(i, Math.min(i + batchSize, messageIds.length));
-
+      const batch = messageIds.slice(i, i + batchSize);
       await gmail.users.messages.batchModify({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           ids: batch.map(m => m.id),
           addLabelIds: [labelMap[rule.label]]
         }
       });
-
-      totalLabeled += batch.length;
     }
 
     console.log(`  ✅ Labeled ${messageIds.length}`);
-  }
+    return messageIds.length;
+  }));
+
+  const totalLabeled = queryCounts.reduce((sum, n) => sum + n, 0);
 
   if (totalLabeled > 0) {
     console.log(`\n${rule.label} total: ${totalLabeled}\n`);

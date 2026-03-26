@@ -1,11 +1,12 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID } from './lib/constants.mjs';
 
 async function checkUnreadEmails() {
   try {
     const gmail = createGmailClient();
 
     const response = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: 'is:unread',
       maxResults: 1
     });

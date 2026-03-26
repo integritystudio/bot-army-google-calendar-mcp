@@ -1,7 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_INBOX, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 
-
-import { USER_ID } from './lib/constants.mjs';
 async function createBillingFilter() {
   const gmail = createGmailClient();
 
@@ -9,12 +8,10 @@ async function createBillingFilter() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get or create labels
     let billingLabelId, keepImportantLabelId;
     const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
 
-    // Find or create Billing label
-    const billingLabel = labelsResponse.data.labels.find(l => l.name === 'Billing');
+    const billingLabel = labelsResponse.data.labels.find(l => l.name === LABEL_BILLING);
     if (billingLabel) {
       billingLabelId = billingLabel.id;
       console.log('✅ Using existing label: Billing\n');
@@ -22,7 +19,7 @@ async function createBillingFilter() {
       const createBillingResponse = await gmail.users.labels.create({
         userId: USER_ID,
         requestBody: {
-          name: 'Billing',
+          name: LABEL_BILLING,
           labelListVisibility: 'labelShow',
           messageListVisibility: 'show'
         }
@@ -31,8 +28,7 @@ async function createBillingFilter() {
       console.log('✅ Created label: Billing\n');
     }
 
-    // Find Keep Important label
-    const keepImportantLabel = labelsResponse.data.labels.find(l => l.name === 'Keep Important');
+    const keepImportantLabel = labelsResponse.data.labels.find(l => l.name === LABEL_KEEP_IMPORTANT);
     if (keepImportantLabel) {
       keepImportantLabelId = keepImportantLabel.id;
       console.log('✅ Found label: Keep Important\n');
@@ -45,7 +41,6 @@ async function createBillingFilter() {
 
     console.log('STEP 1: Creating filters\n');
 
-    // Filter 1: Billing emails WITH rate limit - keep in inbox (label both Billing & Keep Important)
     try {
       const labelIds = keepImportantLabelId
         ? [billingLabelId, keepImportantLabelId]
@@ -69,7 +64,6 @@ async function createBillingFilter() {
       console.log(`⚠️  Filter 1 error: ${error.message}\n`);
     }
 
-    // Filter 2: Billing emails WITHOUT rate limit - archive
     try {
       await gmail.users.settings.filters.create({
         userId: USER_ID,
@@ -79,7 +73,7 @@ async function createBillingFilter() {
           },
           action: {
             addLabelIds: [billingLabelId],
-            removeLabelIds: ['INBOX']
+            removeLabelIds: [GMAIL_INBOX]
           }
         }
       });
@@ -92,7 +86,6 @@ async function createBillingFilter() {
 
     console.log('STEP 2: Applying to existing emails\n');
 
-    // Apply to existing billing emails WITH rate limit
     const rateLimitQuery = `subject:${billingKeywords} subject:"rate limit"`;
     const rateLimitResponse = await gmail.users.messages.list({
       userId: USER_ID,
@@ -108,7 +101,7 @@ async function createBillingFilter() {
 
       const batchSize = 50;
       for (let i = 0; i < rateLimitIds.length; i += batchSize) {
-        const batch = rateLimitIds.slice(i, Math.min(i + batchSize, rateLimitIds.length));
+        const batch = rateLimitIds.slice(i, i + batchSize);
         await gmail.users.messages.batchModify({
           userId: USER_ID,
           requestBody: {
@@ -120,7 +113,6 @@ async function createBillingFilter() {
       console.log(`  ✅ Applied to ${rateLimitIds.length} rate limit emails (kept in inbox)`);
     }
 
-    // Apply to existing billing emails WITHOUT rate limit
     const regularBillingQuery = `subject:${billingKeywords} -"rate limit"`;
     const regularBillingResponse = await gmail.users.messages.list({
       userId: USER_ID,
@@ -132,13 +124,13 @@ async function createBillingFilter() {
     if (regularBillingIds.length > 0) {
       const batchSize = 50;
       for (let i = 0; i < regularBillingIds.length; i += batchSize) {
-        const batch = regularBillingIds.slice(i, Math.min(i + batchSize, regularBillingIds.length));
+        const batch = regularBillingIds.slice(i, i + batchSize);
         await gmail.users.messages.batchModify({
           userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
             addLabelIds: [billingLabelId],
-            removeLabelIds: ['INBOX']
+            removeLabelIds: [GMAIL_INBOX]
           }
         });
       }

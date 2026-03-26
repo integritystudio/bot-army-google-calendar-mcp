@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_INBOX } from './lib/constants.mjs';
 
 async function archiveSignozAndDmarc() {
   const gmail = createGmailClient();
@@ -9,12 +10,11 @@ async function archiveSignozAndDmarc() {
   let totalArchived = 0;
 
   try {
-    // Archive SigNoz emails
     console.log('STEP 1: Archiving SigNoz alerts\n');
 
     const signozQuery = 'from:(alertmanager@signoz.cloud OR vishal@mail.signoz.io)';
     const signozResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: signozQuery,
       maxResults: 200
     });
@@ -28,14 +28,14 @@ async function archiveSignozAndDmarc() {
         const batch = signozIds.slice(i, i + batchSize);
 
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
-            removeLabelIds: ['INBOX']
+            removeLabelIds: [GMAIL_INBOX]
           }
         });
 
-        const processed = Math.min(i + batchSize, signozIds.length);
+        const processed = i + batch.length;
         console.log(`  ✅ Archived ${processed}/${signozIds.length}`);
       }
 
@@ -43,12 +43,11 @@ async function archiveSignozAndDmarc() {
       console.log();
     }
 
-    // Archive DMARC reports
     console.log('STEP 2: Archiving DMARC reports\n');
 
     const dmarcQuery = 'subject:DMARC';
     const dmarcResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: dmarcQuery,
       maxResults: 200
     });
@@ -62,14 +61,14 @@ async function archiveSignozAndDmarc() {
         const batch = dmarcIds.slice(i, i + batchSize);
 
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
-            removeLabelIds: ['INBOX']
+            removeLabelIds: [GMAIL_INBOX]
           }
         });
 
-        const processed = Math.min(i + batchSize, dmarcIds.length);
+        const processed = i + batch.length;
         console.log(`  ✅ Archived ${processed}/${dmarcIds.length}`);
       }
 

@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_UNREAD, LABEL_EVENTS, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING, LABEL_MONITORING } from './lib/constants.mjs';
 
 async function markAllLabeledAsRead() {
   const gmail = createGmailClient();
@@ -6,23 +7,16 @@ async function markAllLabeledAsRead() {
   console.log('📖 MARKING ALL LABELED CATEGORIES AS READ\n');
   console.log('═'.repeat(80) + '\n');
 
-  // Labels to mark as read (excluding Sentry Alerts and Keep Important)
-  const labels = {
-    'Events': 'Label_1',
-    'Product Updates': 'Label_41',
-    'Communities': 'Label_51',
-    'Services & Alerts': 'Label_52',
-    'Billing': 'Label_47',
-    'Monitoring': 'Label_48'
-  };
+  // Excluding Sentry Alerts and Keep Important
+  const labelNames = [LABEL_EVENTS, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING, LABEL_MONITORING];
 
   let totalMarked = 0;
 
-  for (const [name, id] of Object.entries(labels)) {
+  for (const name of labelNames) {
     try {
       const searchResponse = await gmail.users.messages.list({
-        userId: 'me',
-        q: `label:${id} is:unread`,
+        userId: USER_ID,
+        q: `label:"${name}" is:unread`,
         maxResults: 500
       });
 
@@ -35,21 +29,20 @@ async function markAllLabeledAsRead() {
 
       console.log(`${name}: ${labeledUnread.length} unread`);
 
-      // Mark as read in batches
       const batchSize = 50;
       for (let i = 0; i < labeledUnread.length; i += batchSize) {
         const batch = labeledUnread.slice(i, i + batchSize).map(m => m.id);
 
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch,
-            removeLabelIds: ['UNREAD']
+            removeLabelIds: [GMAIL_UNREAD]
           }
         });
 
         totalMarked += batch.length;
-        const processed = Math.min(i + batchSize, labeledUnread.length);
+        const processed = i + batch.length;
         console.log(`  ✅ Marked ${processed}/${labeledUnread.length} as read`);
       }
 

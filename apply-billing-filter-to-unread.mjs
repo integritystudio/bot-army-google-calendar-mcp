@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_INBOX, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 
 async function applyBillingFilterToUnread() {
   const gmail = createGmailClient();
@@ -7,10 +8,9 @@ async function applyBillingFilterToUnread() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get labels
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
-    const billingLabel = labelsResponse.data.labels.find(l => l.name === 'Billing');
-    const keepImportantLabel = labelsResponse.data.labels.find(l => l.name === 'Keep Important');
+    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
+    const billingLabel = labelsResponse.data.labels.find(l => l.name === LABEL_BILLING);
+    const keepImportantLabel = labelsResponse.data.labels.find(l => l.name === LABEL_KEEP_IMPORTANT);
 
     if (!billingLabel || !keepImportantLabel) {
       console.log('❌ Required labels not found\n');
@@ -25,10 +25,9 @@ async function applyBillingFilterToUnread() {
 
     console.log('STEP 1: Finding unread urgent billing emails\n');
 
-    // Find urgent billing emails
     const urgentQuery = `is:unread subject:${billingKeywords} subject:${urgentKeywords}`;
     const urgentResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: urgentQuery,
       maxResults: 100
     });
@@ -40,25 +39,24 @@ async function applyBillingFilterToUnread() {
       console.log('Applying labels: Billing + Keep Important (staying in inbox)...\n');
       const batchSize = 50;
       for (let i = 0; i < urgentIds.length; i += batchSize) {
-        const batch = urgentIds.slice(i, Math.min(i + batchSize, urgentIds.length));
+        const batch = urgentIds.slice(i, i + batchSize);
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
             addLabelIds: [billingLabelId, keepImportantLabelId]
           }
         });
-        const processed = Math.min(i + batchSize, urgentIds.length);
+        const processed = i + batch.length;
         console.log(`  ✅ Processed ${processed}/${urgentIds.length}`);
       }
     }
 
     console.log('\nSTEP 2: Finding unread regular billing emails (non-urgent)\n');
 
-    // Find regular billing emails (excluding urgent)
     const regularQuery = `is:unread subject:${billingKeywords} -"late fee" -overdue -"missed payment"`;
     const regularResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: regularQuery,
       maxResults: 100
     });
@@ -70,16 +68,16 @@ async function applyBillingFilterToUnread() {
       console.log('Applying labels: Billing (archiving)...\n');
       const batchSize = 50;
       for (let i = 0; i < regularIds.length; i += batchSize) {
-        const batch = regularIds.slice(i, Math.min(i + batchSize, regularIds.length));
+        const batch = regularIds.slice(i, i + batchSize);
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
             addLabelIds: [billingLabelId],
-            removeLabelIds: ['INBOX']
+            removeLabelIds: [GMAIL_INBOX]
           }
         });
-        const processed = Math.min(i + batchSize, regularIds.length);
+        const processed = i + batch.length;
         console.log(`  ✅ Processed ${processed}/${regularIds.length}`);
       }
     }

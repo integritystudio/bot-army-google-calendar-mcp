@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_UNREAD } from './lib/constants.mjs';
 
 async function markProductUpdatesRead() {
   const gmail = createGmailClient();
@@ -7,7 +8,6 @@ async function markProductUpdatesRead() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Product update vendors
     const queries = [
       'from:workspace-noreply@google.com',
       'from:GoogleCloudStartups@google.com',
@@ -26,7 +26,7 @@ async function markProductUpdatesRead() {
 
     const searchQuery = queries.map(q => `(${q})`).join(' OR ');
     const searchResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: searchQuery,
       maxResults: 500
     });
@@ -39,21 +39,20 @@ async function markProductUpdatesRead() {
       return;
     }
 
-    // Mark all as read in batches
     const batchSize = 50;
 
     for (let i = 0; i < messageIds.length; i += batchSize) {
       const batch = messageIds.slice(i, i + batchSize).map(m => m.id);
 
       await gmail.users.messages.batchModify({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           ids: batch,
-          removeLabelIds: ['UNREAD']
+          removeLabelIds: [GMAIL_UNREAD]
         }
       });
 
-      const processed = Math.min(i + batchSize, messageIds.length);
+      const processed = i + batch.length;
       console.log(`  ✅ Marked ${processed}/${messageIds.length} as read`);
     }
 

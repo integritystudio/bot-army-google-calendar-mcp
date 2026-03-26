@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID } from './lib/constants.mjs';
 
 async function deleteSentryFilter() {
   const gmail = createGmailClient();
@@ -7,11 +8,9 @@ async function deleteSentryFilter() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get all filters
-    const filtersResponse = await gmail.users.settings.filters.list({ userId: 'me' });
+    const filtersResponse = await gmail.users.settings.filters.list({ userId: USER_ID });
     const filters = filtersResponse.data.filter || [];
 
-    // Find Sentry filter
     const sentryFilter = filters.find(f =>
       f.criteria?.query?.includes('from:noreply@md.getsentry.com')
     );
@@ -22,9 +21,8 @@ async function deleteSentryFilter() {
       return;
     }
 
-    // Delete the filter
     await gmail.users.settings.filters.delete({
-      userId: 'me',
+      userId: USER_ID,
       id: sentryFilter.id
     });
 

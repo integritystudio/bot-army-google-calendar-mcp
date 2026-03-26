@@ -1,7 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_INBOX, LABEL_SENTRY, LABEL_MEETUP_EVENTS, LABEL_COMMUNITY_EVENTS, LABEL_PRODUCT_UPDATES, LABEL_CALENDLY_NOTIFICATIONS, LABEL_LINKEDIN_UPDATES, LABEL_DMARC_REPORTS } from './lib/constants.mjs';
 
-
-import { USER_ID } from './lib/constants.mjs';
 async function createFilters() {
   const gmail = createGmailClient();
 
@@ -17,40 +16,39 @@ async function createFilters() {
     (existingLabelsRes.data.labels || []).map(l => [l.name, l.id])
   );
 
-  // Define labels to create and filters
   const configs = [
     {
-      name: 'Sentry Alerts',
+      name: LABEL_SENTRY,
       query: 'from:noreply@md.getsentry.com',
       description: 'Sentry error/alert notifications'
     },
     {
-      name: 'Meetup Events',
+      name: LABEL_MEETUP_EVENTS,
       query: 'from:info@email.meetup.com',
       description: 'Meetup group invitations and event updates'
     },
     {
-      name: 'Community Events',
+      name: LABEL_COMMUNITY_EVENTS,
       query: 'from:("ATX - Awkwardly Zen" OR "Austin Cafe Drawing Group" OR "Austin Robotics & AI")',
       description: 'Local community event invitations'
     },
     {
-      name: 'Product Updates',
+      name: LABEL_PRODUCT_UPDATES,
       query: 'from:(noreply@email.openai.com OR no-reply@email.claude.com OR googlecloud@google.com OR "AlphaSignal" OR lukak@storylane.io)',
       description: 'AI/SaaS product announcements and updates'
     },
     {
-      name: 'Calendly Notifications',
+      name: LABEL_CALENDLY_NOTIFICATIONS,
       query: 'from:teamcalendly@send.calendly.com',
       description: 'Calendly team setup and scheduling guides'
     },
     {
-      name: 'LinkedIn Updates',
+      name: LABEL_LINKEDIN_UPDATES,
       query: 'from:updates-noreply@linkedin.com',
       description: 'LinkedIn job notifications and updates'
     },
     {
-      name: 'DMARC Reports',
+      name: LABEL_DMARC_REPORTS,
       query: 'subject:DMARC',
       description: 'Automated DMARC aggregate reports'
     }
@@ -62,12 +60,10 @@ async function createFilters() {
     errors: []
   };
 
-  // Create labels
   console.log('STEP 1: Creating labels...\n');
   const labelMap = {};
 
   for (const config of configs) {
-    // Check if label already exists in pre-fetched map
     if (existingLabelMap.has(config.name)) {
       labelMap[config.name] = existingLabelMap.get(config.name);
       console.log(`  ℹ️  Label already exists: ${config.name}`);
@@ -94,7 +90,6 @@ async function createFilters() {
 
   console.log('\nSTEP 2: Creating filters...\n');
 
-  // Create filters
   for (const config of configs) {
     const labelId = labelMap[config.name];
     if (!labelId) {
@@ -112,7 +107,7 @@ async function createFilters() {
           },
           action: {
             addLabelIds: [labelId],
-            removeLabelIds: ['INBOX']
+            removeLabelIds: [GMAIL_INBOX]
           }
         }
       });
@@ -126,7 +121,6 @@ async function createFilters() {
     }
   }
 
-  // Summary
   console.log('═'.repeat(80));
   console.log('SUMMARY\n');
   console.log(`✅ Filters created: ${results.created.length}`);

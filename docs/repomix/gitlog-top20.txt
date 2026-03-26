@@ -1,3 +1,10 @@
+182f27e 2026-03-25 chore(deps): remove simple-rrule dependency and integration docs
+  docs/repomix/repo-compressed.xml
+  docs/repomix/repomix-git-ranked.xml
+  docs/repomix/repomix.xml
+  docs/repomix/token-tree.txt
+  package-lock.json
+
 e24c9ed 2026-03-25 chore(docs): regenerate repomix snapshots after recent refactors
   docs/repomix/repo-compressed.xml
   docs/repomix/repomix-docs.xml

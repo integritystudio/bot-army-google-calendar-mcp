@@ -1,7 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_INBOX, LABEL_MEETING_NOTES } from './lib/constants.mjs';
 
-
-import { USER_ID } from './lib/constants.mjs';
 async function createMeetNotesFilter() {
   const gmail = createGmailClient();
 
@@ -9,10 +8,9 @@ async function createMeetNotesFilter() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get or create Meeting Notes label
     let notesLabelId;
     const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
-    const existingLabel = labelsResponse.data.labels.find(l => l.name === 'Meeting Notes');
+    const existingLabel = labelsResponse.data.labels.find(l => l.name === LABEL_MEETING_NOTES);
 
     if (existingLabel) {
       notesLabelId = existingLabel.id;
@@ -21,7 +19,7 @@ async function createMeetNotesFilter() {
       const createLabelResponse = await gmail.users.labels.create({
         userId: USER_ID,
         requestBody: {
-          name: 'Meeting Notes',
+          name: LABEL_MEETING_NOTES,
           labelListVisibility: 'labelShow',
           messageListVisibility: 'show'
         }
@@ -30,7 +28,6 @@ async function createMeetNotesFilter() {
       console.log('✅ Created label: Meeting Notes\n');
     }
 
-    // Create filter for future emails
     await gmail.users.settings.filters.create({
       userId: USER_ID,
       requestBody: {
@@ -39,13 +36,12 @@ async function createMeetNotesFilter() {
         },
         action: {
           addLabelIds: [notesLabelId],
-          removeLabelIds: ['INBOX']
+          removeLabelIds: [GMAIL_INBOX]
         }
       }
     });
     console.log('✅ Filter created for future Google Meet notes\n');
 
-    // Apply to existing unread emails
     const searchResponse = await gmail.users.messages.list({
       userId: USER_ID,
       q: 'is:unread from:meetings-noreply@google.com subject:Notes'
@@ -57,18 +53,18 @@ async function createMeetNotesFilter() {
     if (messageIds.length > 0) {
       const batchSize = 50;
       for (let i = 0; i < messageIds.length; i += batchSize) {
-        const batch = messageIds.slice(i, Math.min(i + batchSize, messageIds.length));
+        const batch = messageIds.slice(i, i + batchSize);
 
         await gmail.users.messages.batchModify({
           userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
             addLabelIds: [notesLabelId],
-            removeLabelIds: ['INBOX']
+            removeLabelIds: [GMAIL_INBOX]
           }
         });
 
-        const processed = Math.min(i + batchSize, messageIds.length);
+        const processed = i + batch.length;
         console.log(`✅ Applied to ${processed}/${messageIds.length}`);
       }
     }

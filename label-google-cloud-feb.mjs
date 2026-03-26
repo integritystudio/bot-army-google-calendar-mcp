@@ -1,4 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_INBOX, LABEL_PRODUCT_UPDATES } from './lib/constants.mjs';
+import { getHeader } from './lib/email-utils.mjs';
 
 async function labelGoogleCloudFeb() {
   const gmail = createGmailClient();
@@ -7,9 +9,8 @@ async function labelGoogleCloudFeb() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get Product Updates label
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
-    const productLabel = labelsResponse.data.labels.find(l => l.name === 'Product Updates');
+    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
+    const productLabel = labelsResponse.data.labels.find(l => l.name === LABEL_PRODUCT_UPDATES);
 
     if (!productLabel) {
       console.log('❌ Product Updates label not found\n');
@@ -18,10 +19,9 @@ async function labelGoogleCloudFeb() {
 
     console.log('✅ Found label: Product Updates\n');
 
-    // Find the Google Cloud Feb update email
     const searchQuery = 'from:CloudPlatform-noreply@google.com subject:"OpenTelemetry"';
     const searchResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: searchQuery,
       maxResults: 10
     });
@@ -33,10 +33,9 @@ async function labelGoogleCloudFeb() {
       console.log('⚠️  No matching emails found\n');
       console.log('Trying alternative search...\n');
 
-      // Try broader search
       const altSearchQuery = 'from:CloudPlatform-noreply@google.com subject:"OTLP ingestion"';
       const altResponse = await gmail.users.messages.list({
-        userId: 'me',
+        userId: USER_ID,
         q: altSearchQuery,
         maxResults: 10
       });
@@ -45,29 +44,32 @@ async function labelGoogleCloudFeb() {
       if (altIds.length > 0) {
         console.log(`Found ${altIds.length} email(s) with alternative search\n`);
 
-        for (const msg of altIds) {
-          const fullMsg = await gmail.users.messages.get({
-            userId: 'me',
-            id: msg.id,
-            format: 'metadata',
-            metadataHeaders: ['Subject', 'Date']
-          });
+        const altFullMsgs = await Promise.all(
+          altIds.map(msg =>
+            gmail.users.messages.get({
+              userId: USER_ID,
+              id: msg.id,
+              format: 'metadata',
+              metadataHeaders: ['Subject', 'Date']
+            })
+          )
+        );
 
+        for (const fullMsg of altFullMsgs) {
           const headers = fullMsg.data.payload?.headers || [];
-          const subject = headers.find(h => h.name === 'Subject')?.value || '';
-          const date = headers.find(h => h.name === 'Date')?.value || '';
+          const subject = getHeader(headers, 'Subject');
+          const date = getHeader(headers, 'Date');
 
           console.log(`Subject: ${subject}`);
           console.log(`Date: ${date}\n`);
         }
 
-        // Label the emails
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: altIds.map(m => m.id),
             addLabelIds: [productLabel.id],
-            removeLabelIds: ['INBOX']
+            removeLabelIds: [GMAIL_INBOX]
           }
         });
 
@@ -78,29 +80,32 @@ async function labelGoogleCloudFeb() {
       return;
     }
 
-    // Label the found email(s)
-    for (const msg of messageIds) {
-      const fullMsg = await gmail.users.messages.get({
-        userId: 'me',
-        id: msg.id,
-        format: 'metadata',
-        metadataHeaders: ['Subject', 'Date']
-      });
+    const fullMsgs = await Promise.all(
+      messageIds.map(msg =>
+        gmail.users.messages.get({
+          userId: USER_ID,
+          id: msg.id,
+          format: 'metadata',
+          metadataHeaders: ['Subject', 'Date']
+        })
+      )
+    );
 
+    for (const fullMsg of fullMsgs) {
       const headers = fullMsg.data.payload?.headers || [];
-      const subject = headers.find(h => h.name === 'Subject')?.value || '';
-      const date = headers.find(h => h.name === 'Date')?.value || '';
+      const subject = getHeader(headers, 'Subject');
+      const date = getHeader(headers, 'Date');
 
       console.log(`Subject: ${subject}`);
       console.log(`Date: ${date}\n`);
     }
 
     await gmail.users.messages.batchModify({
-      userId: 'me',
+      userId: USER_ID,
       requestBody: {
         ids: messageIds.map(m => m.id),
         addLabelIds: [productLabel.id],
-        removeLabelIds: ['INBOX']
+        removeLabelIds: [GMAIL_INBOX]
       }
     });
 

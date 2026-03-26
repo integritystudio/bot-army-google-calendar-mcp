@@ -1,4 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, LABEL_UPDATES, LABEL_ORG_GOOGLE_WORKSPACE } from './lib/constants.mjs';
 
 async function revertGoogleWorkspaceLabels() {
   const gmail = createGmailClient();
@@ -7,17 +8,15 @@ async function revertGoogleWorkspaceLabels() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get labels
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
-    const updatesLabel = labelsResponse.data.labels.find(l => l.name === 'Updates');
-    const orgLabel = labelsResponse.data.labels.find(l => l.name === 'Organization: Google Workspace');
+    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
+    const updatesLabel = labelsResponse.data.labels.find(l => l.name === LABEL_UPDATES);
+    const orgLabel = labelsResponse.data.labels.find(l => l.name === LABEL_ORG_GOOGLE_WORKSPACE);
 
     if (!updatesLabel && !orgLabel) {
       console.log('No labels to remove\n');
       return;
     }
 
-    // Find Google Workspace emails with these labels
     console.log('STEP 1: Finding labeled Google Workspace emails\n');
 
     const labelIds = [];
@@ -26,7 +25,7 @@ async function revertGoogleWorkspaceLabels() {
 
     const searchQuery = labelIds.join(' OR ');
     const searchResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: searchQuery,
       maxResults: 100
     });
@@ -43,17 +42,17 @@ async function revertGoogleWorkspaceLabels() {
 
       const batchSize = 50;
       for (let i = 0; i < messageIds.length; i += batchSize) {
-        const batch = messageIds.slice(i, Math.min(i + batchSize, messageIds.length));
+        const batch = messageIds.slice(i, i + batchSize);
 
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch.map(m => m.id),
             removeLabelIds: removeLabelIds
           }
         });
 
-        const processed = Math.min(i + batchSize, messageIds.length);
+        const processed = i + batch.length;
         console.log(`  ✅ Removed from ${processed}/${messageIds.length}`);
       }
     }

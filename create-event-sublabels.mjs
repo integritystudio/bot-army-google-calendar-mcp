@@ -1,9 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-
-
 import { USER_ID } from './lib/constants.mjs';
 import { createLabels, applyPatterns } from './lib/gmail-label-utils.mjs';
-
 
 async function createEventSubLabels() {
   const gmail = createGmailClient();

@@ -1,5 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID } from './lib/constants.mjs';
+import { USER_ID, LABEL_EVENTS_WORKSHOPS, LABEL_EVENTS_INVITATIONS_COMMUNITY_SERVICES } from './lib/constants.mjs';
 import { createLabels, applyPatterns, buildLabelCache } from './lib/gmail-label-utils.mjs';
 
 async function createAllSubLabels() {
@@ -47,7 +47,7 @@ async function createAllSubLabels() {
   console.log('═'.repeat(80));
   console.log('\n3️⃣  APPLYING WORKSHOP SUB-LABELS\n');
 
-  const workshopParentId = labelCache.get('Events/Workshops');
+  const workshopParentId = labelCache.get(LABEL_EVENTS_WORKSHOPS);
   if (!workshopParentId) {
     console.error('❌ Events/Workshops parent label not found');
     process.exit(1);
@@ -84,7 +84,7 @@ async function createAllSubLabels() {
   console.log('═'.repeat(80));
   console.log('\n4️⃣  APPLYING COMMUNITY SERVICES SUB-LABELS\n');
 
-  const communityParentId = labelCache.get('Events/Invitations/Community Services');
+  const communityParentId = labelCache.get(LABEL_EVENTS_INVITATIONS_COMMUNITY_SERVICES);
   if (!communityParentId) {
     console.error('❌ Events/Invitations/Community Services parent label not found');
     process.exit(1);

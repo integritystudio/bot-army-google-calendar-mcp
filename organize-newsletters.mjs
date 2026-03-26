@@ -1,14 +1,19 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-
-const NEWSLETTER_LABEL_ID = 'Label_3733692735004912601';
+import { USER_ID, LABEL_NEWSLETTERS } from './lib/constants.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 
 async function organizeNewsletters() {
   const gmail = createGmailClient();
 
   console.log('📧 ORGANIZING NEWSLETTERS\n');
+  const labelCache = await buildLabelCache(gmail);
+  const newsletterLabelId = labelCache.get(LABEL_NEWSLETTERS);
+  if (!newsletterLabelId) {
+    console.error('Newsletters label not found');
+    process.exit(1);
+  }
   console.log('═'.repeat(80));
 
-  // Step 1: Find and label existing newsletters
   console.log('\n1️⃣  APPLYING LABEL TO EXISTING NEWSLETTERS\n');
 
   const newsletterPatterns = [
@@ -30,7 +35,7 @@ async function organizeNewsletters() {
   for (const query of newsletterPatterns) {
     try {
       const searchResult = await gmail.users.messages.list({
-        userId: 'me',
+        userId: USER_ID,
         q: query,
         maxResults: 100,
       });
@@ -42,10 +47,10 @@ async function organizeNewsletters() {
 
       if (count > 0) {
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: messageIds,
-            addLabelIds: [NEWSLETTER_LABEL_ID],
+            addLabelIds: [newsletterLabelId],
           },
         });
 
@@ -59,7 +64,6 @@ async function organizeNewsletters() {
 
   console.log(`\n  📊 Total labeled: ${totalLabeled} emails\n`);
 
-  // Step 2: Create filter for future newsletters
   console.log('═'.repeat(80));
   console.log('\n2️⃣  CREATING AUTO-LABEL FILTER FOR FUTURE NEWSLETTERS\n');
 
@@ -67,32 +71,32 @@ async function organizeNewsletters() {
     {
       name: 'AlphaSignal News',
       criteria: { from: 'news@alphasignal.ai' },
-      action: { addLabelIds: [NEWSLETTER_LABEL_ID], archive: false }
+      action: { addLabelIds: [newsletterLabelId], archive: false }
     },
     {
       name: 'OpenAI Newsletter',
       criteria: { from: 'noreply@email.openai.com' },
-      action: { addLabelIds: [NEWSLETTER_LABEL_ID], archive: false }
+      action: { addLabelIds: [newsletterLabelId], archive: false }
     },
     {
       name: 'Adapty Updates',
       criteria: { from: 'hello@adapty.io' },
-      action: { addLabelIds: [NEWSLETTER_LABEL_ID], archive: false }
+      action: { addLabelIds: [newsletterLabelId], archive: false }
     },
     {
       name: 'Meetup Notifications',
       criteria: { from: 'info@email.meetup.com' },
-      action: { addLabelIds: [NEWSLETTER_LABEL_ID], archive: false }
+      action: { addLabelIds: [newsletterLabelId], archive: false }
     },
     {
       name: 'Google Cloud Updates',
       criteria: { from: 'googlecloud@google.com' },
-      action: { addLabelIds: [NEWSLETTER_LABEL_ID], archive: false }
+      action: { addLabelIds: [newsletterLabelId], archive: false }
     },
     {
       name: 'Promotional Emails',
       criteria: { query: 'label:Promotions' },
-      action: { addLabelIds: [NEWSLETTER_LABEL_ID], archive: false }
+      action: { addLabelIds: [newsletterLabelId], archive: false }
     },
   ];
 
@@ -101,7 +105,7 @@ async function organizeNewsletters() {
   for (const filterConfig of filters) {
     try {
       const response = await gmail.users.settings.filters.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           criteria: filterConfig.criteria,
           action: {

@@ -11,7 +11,6 @@ async function createSocialNewslettersSubLabel() {
   // Pre-fetch existing labels to avoid N+1 queries
   const existingLabelMap = await buildLabelCache(gmail);
 
-  // Step 1: Create sub-label
   console.log('1️⃣  CREATING LABEL: Newsletters/Social\n');
 
   const labelIds = {};
@@ -19,7 +18,6 @@ async function createSocialNewslettersSubLabel() {
 
   const subLabelId = labelIds['Newsletters/Social'];
 
-  // Step 2: Apply label to existing social newsletter emails (excluding events)
   console.log('═'.repeat(80));
   console.log('\n2️⃣  APPLYING LABEL TO EXISTING EMAILS\n');
 
@@ -35,7 +33,6 @@ async function createSocialNewslettersSubLabel() {
 
   console.log(`\n  📊 Total labeled: ${totalLabeled} emails\n`);
 
-  // Step 3: Create filter for future social newsletters
   console.log('═'.repeat(80));
   console.log('\n3️⃣  CREATING AUTO-LABEL FILTERS\n');
 

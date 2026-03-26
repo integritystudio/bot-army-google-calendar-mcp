@@ -1,18 +1,18 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_INBOX, GMAIL_UNREAD } from './lib/constants.mjs';
+import { getHeader } from './lib/email-utils.mjs';
 
 const gmail = createGmailClient();
 
 console.log('📅 ARCHIVING OLD MEETING RESPONSES\n');
 console.log('═'.repeat(80) + '\n');
 
-// Calculate date one week ago
 const today = new Date();
 const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 const dateStr = oneWeekAgo.toISOString().split('T')[0];
 
 console.log(`Archiving responses before ${dateStr}\n`);
 
-// Search for meeting acceptances/declines older than a week
 const searchQueries = [
   'subject:Accepted subject:Integrity',
   'subject:Declined subject:Integrity',
@@ -25,7 +25,7 @@ let totalArchived = 0;
 
 for (const query of searchQueries) {
   const searchResp = await gmail.users.messages.list({
-    userId: 'me',
+    userId: USER_ID,
     q: query,
     maxResults: 100
   });
@@ -36,25 +36,27 @@ for (const query of searchQueries) {
   console.log(`Query: ${query}`);
   console.log(`Found ${messages.length} emails\n`);
 
+  const fullMsgs = await Promise.all(
+    messages.map(msg =>
+      gmail.users.messages.get({
+        userId: USER_ID,
+        id: msg.id,
+        format: 'metadata',
+        metadataHeaders: ['Date', 'Subject']
+      })
+    )
+  );
+
   const oldIds = [];
 
-  for (const msg of messages) {
-    const fullMsg = await gmail.users.messages.get({
-      userId: 'me',
-      id: msg.id,
-      format: 'metadata',
-      metadataHeaders: ['Date', 'Subject']
-    });
-
+  for (const fullMsg of fullMsgs) {
     const headers = fullMsg.data.payload?.headers || [];
-    const dateStr = headers.find(h => h.name === 'Date')?.value || '';
-    const subject = headers.find(h => h.name === 'Subject')?.value || '';
-
-    // Parse email date
-    const emailDate = new Date(dateStr);
+    const msgDateStr = getHeader(headers, 'Date');
+    const subject = getHeader(headers, 'Subject');
+    const emailDate = new Date(msgDateStr);
 
     if (emailDate < oneWeekAgo) {
-      oldIds.push(msg.id);
+      oldIds.push(fullMsg.data.id);
       console.log(`  ✓ ${subject.substring(0, 50)}`);
       console.log(`    Date: ${emailDate.toLocaleDateString()}\n`);
     }
@@ -63,16 +65,14 @@ for (const query of searchQueries) {
   if (oldIds.length > 0) {
     const batchSize = 50;
     for (let i = 0; i < oldIds.length; i += batchSize) {
-      const batch = oldIds.slice(i, Math.min(i + batchSize, oldIds.length));
-
+      const batch = oldIds.slice(i, i + batchSize);
       await gmail.users.messages.batchModify({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           ids: batch,
-          removeLabelIds: ['UNREAD', 'INBOX']
+          removeLabelIds: [GMAIL_UNREAD, GMAIL_INBOX]
         }
       });
-
       totalArchived += batch.length;
     }
 

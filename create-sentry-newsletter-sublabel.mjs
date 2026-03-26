@@ -1,5 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID } from './lib/constants.mjs';
+import { USER_ID, LABEL_PERFORMANCE_TRACKING } from './lib/constants.mjs';
 import { buildLabelCache, createLabels } from './lib/gmail-label-utils.mjs';
 
 async function createSentryNewsletterSubLabel() {
@@ -11,7 +11,6 @@ async function createSentryNewsletterSubLabel() {
   // Pre-fetch existing labels to avoid N+1 queries
   const existingLabelMap = await buildLabelCache(gmail);
 
-  // Step 1: Create Newsletters/Sentry sub-label
   console.log('1️⃣  CREATING LABEL: Newsletters/Sentry\n');
 
   const labelIds = {};
@@ -19,12 +18,11 @@ async function createSentryNewsletterSubLabel() {
 
   const sentryNewsletterLabelId = labelIds['Newsletters/Sentry'];
 
-  // Step 2: Find and move Sentry digests back to Newsletters
   console.log('═'.repeat(80));
   console.log('\n2️⃣  MOVING SENTRY DIGESTS BACK TO NEWSLETTERS\n');
 
   const sentryDigestQuery = 'from:noreply@md.getsentry.com subject:"Weekly Report"';
-  const performanceTrackingLabelId = 'Label_12';
+  const performanceTrackingLabelId = existingLabelMap.get(LABEL_PERFORMANCE_TRACKING);
 
   let digestsRelabeled = 0;
 
@@ -61,7 +59,6 @@ async function createSentryNewsletterSubLabel() {
 
   console.log(`  📊 Total relabeled: ${digestsRelabeled} emails\n`);
 
-  // Step 3: Create filter for future Sentry digests
   console.log('═'.repeat(80));
   console.log('\n3️⃣  CREATING AUTO-LABEL FILTER FOR SENTRY DIGESTS\n');
 

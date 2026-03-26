@@ -1,9 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-
-
-import { USER_ID } from './lib/constants.mjs';
+import { USER_ID, LABEL_EVENTS_INVITATIONS_WORK } from './lib/constants.mjs';
 import { createLabels, applyPatterns } from './lib/gmail-label-utils.mjs';
-
 
 async function createWorkMeetingSubLabels() {
   const gmail = createGmailClient();
@@ -16,7 +13,6 @@ async function createWorkMeetingSubLabels() {
     existingLabelsRes.data.labels.map(l => [l.name, l.id])
   );
 
-  // Step 1: Create sub-labels
   console.log('1️⃣  CREATING SUB-LABELS\n');
 
   const subLabels = [
@@ -30,12 +26,11 @@ async function createWorkMeetingSubLabels() {
 
   await createLabels(gmail, subLabels, labelIds, existingLabelMap);
 
-  // Step 2: Apply sub-labels to existing emails
   console.log('═'.repeat(80));
   console.log('\n2️⃣  APPLYING SUB-LABELS TO EXISTING EMAILS\n');
 
   // Resolve parent label ID at runtime instead of hardcoding
-  const workParentId = existingLabelMap.get('Events/Invitations/Work');
+  const workParentId = existingLabelMap.get(LABEL_EVENTS_INVITATIONS_WORK);
   if (!workParentId) {
     console.error('❌ Error: Could not find "Events/Invitations/Work" label. Create it first.');
     process.exit(1);
@@ -64,7 +59,6 @@ async function createWorkMeetingSubLabels() {
 
   console.log(`\n  📊 Total labeled: ${totalLabeled} emails\n`);
 
-  // Step 3: Create filters
   console.log('═'.repeat(80));
   console.log('\n3️⃣  CREATING AUTO-LABEL FILTERS\n');
 

@@ -1,5 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { extractDisplayName } from './lib/email-utils.mjs';
+import { extractDisplayName, getHeader } from './lib/email-utils.mjs';
 import {
   USER_ID,
   LABEL_SENTRY,
@@ -19,7 +19,6 @@ async function listUnreadEmails() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get all unread messages
     const searchResponse = await gmail.users.messages.list({
       userId: USER_ID,
       q: 'is:unread',
@@ -34,39 +33,33 @@ async function listUnreadEmails() {
       return;
     }
 
-    // Get all labels first
     const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
     const labels = labelsResponse.data.labels || [];
     const labelMap = {};
     labels.forEach(l => { labelMap[l.id] = l.name; });
 
-    // Get details for each message
-    const emails = [];
-    for (const msg of messageIds) {
-      const fullMsg = await gmail.users.messages.get({
-        userId: USER_ID,
-        id: msg.id,
-        format: 'metadata',
-        metadataHeaders: ['Subject', 'From', 'Date']
-      });
+    const fullMsgs = await Promise.all(
+      messageIds.map(msg =>
+        gmail.users.messages.get({
+          userId: USER_ID,
+          id: msg.id,
+          format: 'metadata',
+          metadataHeaders: ['Subject', 'From', 'Date']
+        })
+      )
+    );
 
+    const emails = fullMsgs.map(fullMsg => {
       const headers = fullMsg.data.payload?.headers || [];
-      const subject = headers.find(h => h.name === 'Subject')?.value || '(no subject)';
-      const from = headers.find(h => h.name === 'From')?.value || '(unknown)';
-      const date = headers.find(h => h.name === 'Date')?.value || '';
+      return {
+        id: fullMsg.data.id,
+        subject: getHeader(headers, 'Subject', '(no subject)'),
+        from: getHeader(headers, 'From', '(unknown)'),
+        date: getHeader(headers, 'Date'),
+        labels: (fullMsg.data.labelIds || []).map(id => labelMap[id]).filter(Boolean)
+      };
+    });
 
-      const msgLabels = (fullMsg.data.labelIds || []).map(id => labelMap[id]).filter(Boolean);
-
-      emails.push({
-        id: msg.id,
-        subject,
-        from,
-        date,
-        labels: msgLabels
-      });
-    }
-
-    // Categorize emails
     const categories = {
       [LABEL_SENTRY]: [],
       [LABEL_KEEP_IMPORTANT]: [],
@@ -82,7 +75,6 @@ async function listUnreadEmails() {
     emails.forEach(email => {
       let categorized = false;
 
-      // Check labels first
       if (email.labels.includes(LABEL_KEEP_IMPORTANT)) {
         categories[LABEL_KEEP_IMPORTANT].push(email);
         categorized = true;
@@ -132,7 +124,6 @@ async function listUnreadEmails() {
       }
     });
 
-    // Summary
     console.log('\n' + '═'.repeat(80));
     console.log('\nSUMMARY\n');
     Object.entries(categories).forEach(([category, items]) => {

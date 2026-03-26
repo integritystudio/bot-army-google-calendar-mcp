@@ -1,4 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, LABEL_NEWSLETTERS_SUBJECT_BASED } from './lib/constants.mjs';
+import { getHeader } from './lib/email-utils.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 
 async function analyzeSubjectNewsletters() {
   const gmail = createGmailClient();
@@ -7,10 +10,14 @@ async function analyzeSubjectNewsletters() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get all messages with the Subject-Based newsletter label
-    const labelId = 'Label_7';
+    const labelCache = await buildLabelCache(gmail);
+    const labelId = labelCache.get(LABEL_NEWSLETTERS_SUBJECT_BASED);
+    if (!labelId) {
+      console.log('Newsletters/Subject-Based label not found');
+      return;
+    }
     const messagesResult = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       labelIds: [labelId],
       maxResults: 100,
     });
@@ -23,28 +30,30 @@ async function analyzeSubjectNewsletters() {
     console.log(`📧 Found ${messagesResult.data.messages.length} Subject-Based newsletter emails\n`);
     console.log('═'.repeat(80) + '\n');
 
-    // Fetch full message details to get subjects
-    const messages = [];
-    for (const msgHeader of messagesResult.data.messages.slice(0, 50)) {
-      try {
-        const msg = await gmail.users.messages.get({
-          userId: 'me',
+    const fullMsgs = await Promise.all(
+      messagesResult.data.messages.slice(0, 50).map(msgHeader =>
+        gmail.users.messages.get({
+          userId: USER_ID,
           id: msgHeader.id,
           format: 'metadata',
           metadataHeaders: ['Subject', 'From'],
-        });
+        }).catch(error => {
+          console.log(`Error fetching message: ${error.message}`);
+          return null;
+        })
+      )
+    );
 
+    const messages = fullMsgs
+      .filter(Boolean)
+      .map(msg => {
         const headers = msg.data.payload.headers || [];
-        const subject = headers.find(h => h.name === 'Subject')?.value || '(no subject)';
-        const from = headers.find(h => h.name === 'From')?.value || '(unknown)';
+        return {
+          subject: getHeader(headers, 'Subject', '(no subject)'),
+          from: getHeader(headers, 'From', '(unknown)'),
+        };
+      });
 
-        messages.push({ subject, from });
-      } catch (error) {
-        console.log(`Error fetching message: ${error.message}`);
-      }
-    }
-
-    // Categorize by subject patterns
     const categories = {
       'Weekly Reports/Digests': [],
       'Monthly Reports/Digests': [],
@@ -86,7 +95,6 @@ async function analyzeSubjectNewsletters() {
       }
     }
 
-    // Display results
     console.log('📋 SUBJECT CATEGORIES\n');
 
     const sortedCategories = Object.entries(categories)
@@ -97,7 +105,6 @@ async function analyzeSubjectNewsletters() {
       console.log(`${category.toUpperCase()}`);
       console.log(`Count: ${subjects.length}\n`);
 
-      // Show unique subject patterns
       const uniqueSubjects = [...new Set(subjects)].slice(0, 5);
       for (const subject of uniqueSubjects) {
         const truncated = subject.length > 75
@@ -112,7 +119,6 @@ async function analyzeSubjectNewsletters() {
       console.log();
     }
 
-    // Summary
     console.log('═'.repeat(80) + '\n');
     console.log('📊 SUMMARY\n');
     const totalCategorized = messages.length;

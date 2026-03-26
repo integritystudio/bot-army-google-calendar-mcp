@@ -1,4 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, LABEL_EVENTS_INVITATIONS_WORK } from './lib/constants.mjs';
+import { getHeader } from './lib/email-utils.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 
 async function analyzeWorkInvitations() {
   const gmail = createGmailClient();
@@ -7,10 +10,14 @@ async function analyzeWorkInvitations() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get all work invitation emails
-    const labelId = 'Label_16'; // Events/Invitations/Work
+    const labelCache = await buildLabelCache(gmail);
+    const labelId = labelCache.get(LABEL_EVENTS_INVITATIONS_WORK);
+    if (!labelId) {
+      console.log('Events/Invitations/Work label not found');
+      return;
+    }
     const messagesResult = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       labelIds: [labelId],
       maxResults: 100,
     });
@@ -23,29 +30,28 @@ async function analyzeWorkInvitations() {
     console.log(`📧 Found ${messagesResult.data.messages.length} Work Meeting Invitations\n`);
     console.log('═'.repeat(80) + '\n');
 
-    // Fetch full message details
-    const messages = [];
-    for (const msgHeader of messagesResult.data.messages) {
-      try {
-        const msg = await gmail.users.messages.get({
-          userId: 'me',
+    const fullMsgs = await Promise.all(
+      messagesResult.data.messages.map(msgHeader =>
+        gmail.users.messages.get({
+          userId: USER_ID,
           id: msgHeader.id,
           format: 'metadata',
           metadataHeaders: ['Subject', 'From', 'Date'],
-        });
+        }).catch(() => null)
+      )
+    );
 
+    const messages = fullMsgs
+      .filter(Boolean)
+      .map(msg => {
         const headers = msg.data.payload.headers || [];
-        const subject = headers.find(h => h.name === 'Subject')?.value || '(no subject)';
-        const from = headers.find(h => h.name === 'From')?.value || '(unknown)';
-        const date = headers.find(h => h.name === 'Date')?.value || '(no date)';
+        return {
+          subject: getHeader(headers, 'Subject', '(no subject)'),
+          from: getHeader(headers, 'From', '(unknown)'),
+          date: getHeader(headers, 'Date', '(no date)'),
+        };
+      });
 
-        messages.push({ subject, from, date });
-      } catch (error) {
-        // Skip if can't fetch
-      }
-    }
-
-    // Categorize by meeting type
     const meetingTypes = {
       'One-on-One Meetings': [],
       'Team Meetings': [],
@@ -83,7 +89,6 @@ async function analyzeWorkInvitations() {
       }
     }
 
-    // Display results
     console.log('📋 WORK MEETING TYPES\n');
 
     const sortedTypes = Object.entries(meetingTypes)
@@ -95,7 +100,6 @@ async function analyzeWorkInvitations() {
       console.log(`${type.toUpperCase()}`);
       console.log(`Count: ${emails.length} (${percentage}%)\n`);
 
-      // Show sample subjects
       const samples = [...new Set(emails.map(m => m.subject))].slice(0, 4);
       for (const subject of samples) {
         const truncated = subject.length > 70

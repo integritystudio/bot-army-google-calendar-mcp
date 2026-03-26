@@ -1,4 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, LABEL_EVENTS, LABEL_EVENTS_COMMUNITY, LABEL_NEWSLETTERS_SUBJECT_BASED } from './lib/constants.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 
 async function relabelEventAnnouncements() {
   const gmail = createGmailClient();
@@ -7,22 +9,22 @@ async function relabelEventAnnouncements() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Search for event announcements that are currently labeled as newsletters
     const eventAnnouncements = [
       'subject:"just scheduled" OR subject:"monthly astrology" OR subject:"avatar"',
       'subject:"monthly" AND (subject:event OR subject:astrology OR subject:avatar OR subject:waitlist)',
     ];
 
-    const eventLabelId = 'Label_1'; // Events parent label
-    const communitySubLabelId = 'Label_4'; // Events/Community
-    const subjectBasedLabelId = 'Label_7'; // Newsletters/Subject-Based
+    const labelCache = await buildLabelCache(gmail);
+    const eventLabelId = labelCache.get(LABEL_EVENTS);
+    const communitySubLabelId = labelCache.get(LABEL_EVENTS_COMMUNITY);
+    const subjectBasedLabelId = labelCache.get(LABEL_NEWSLETTERS_SUBJECT_BASED);
 
     let totalProcessed = 0;
 
     for (const query of eventAnnouncements) {
       try {
         const searchResult = await gmail.users.messages.list({
-          userId: 'me',
+          userId: USER_ID,
           q: query,
           maxResults: 100,
         });
@@ -33,9 +35,8 @@ async function relabelEventAnnouncements() {
         const count = messageIds.length;
 
         if (count > 0) {
-          // Add Events labels
           await gmail.users.messages.batchModify({
-            userId: 'me',
+            userId: USER_ID,
             requestBody: {
               ids: messageIds,
               addLabelIds: [eventLabelId, communitySubLabelId],

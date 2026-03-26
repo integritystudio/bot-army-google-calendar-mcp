@@ -1,7 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, LABEL_PERFORMANCE_TRACKING, LABEL_NEWSLETTERS_SUBJECT_BASED } from './lib/constants.mjs';
 
-
-import { USER_ID } from './lib/constants.mjs';
 async function createPerformanceTrackingLabel() {
   const gmail = createGmailClient();
 
@@ -17,7 +16,6 @@ async function createPerformanceTrackingLabel() {
     existingLabelsRes.data.labels.map(l => [l.name, l.id])
   );
 
-  // Step 1: Create Performance Tracking label
   console.log('1️⃣  CREATING LABEL: Performance Tracking\n');
 
   let perfLabelId;
@@ -26,7 +24,7 @@ async function createPerformanceTrackingLabel() {
     const response = await gmail.users.labels.create({
       userId: USER_ID,
       requestBody: {
-        name: 'Performance Tracking',
+        name: LABEL_PERFORMANCE_TRACKING,
         labelListVisibility: 'labelShow',
         messageListVisibility: 'show',
       },
@@ -40,7 +38,7 @@ async function createPerformanceTrackingLabel() {
   } catch (error) {
     if (error.message.includes('exists') || error.message.includes('conflicts')) {
       console.log('⚠️  Label already exists: Performance Tracking\n');
-      const existingId = existingLabelMap.get('Performance Tracking');
+      const existingId = existingLabelMap.get(LABEL_PERFORMANCE_TRACKING);
       if (existingId) {
         console.log(`   ID: ${existingId}\n`);
         perfLabelId = existingId;
@@ -51,7 +49,6 @@ async function createPerformanceTrackingLabel() {
     }
   }
 
-  // Step 2: Find and relabel Sentry emails
   console.log('═'.repeat(80));
   console.log('\n2️⃣  MOVING SENTRY UPDATES FROM NEWSLETTER TO PERFORMANCE TRACKING\n');
 
@@ -60,7 +57,7 @@ async function createPerformanceTrackingLabel() {
     'subject:Sentry OR subject:"TCAD-SCRAPER-BACKEND"',
   ];
 
-  const newsletterLabelId = 'Label_7'; // Newsletters/Subject-Based
+  const newsletterLabelId = existingLabelMap.get(LABEL_NEWSLETTERS_SUBJECT_BASED);
   let totalRelabeled = 0;
 
   for (const query of sentryPatterns) {
@@ -98,7 +95,6 @@ async function createPerformanceTrackingLabel() {
 
   console.log(`  📊 Total relabeled: ${totalRelabeled} emails\n`);
 
-  // Step 3: Create filter for future Sentry emails
   console.log('═'.repeat(80));
   console.log('\n3️⃣  CREATING AUTO-LABEL FILTER FOR SENTRY\n');
 

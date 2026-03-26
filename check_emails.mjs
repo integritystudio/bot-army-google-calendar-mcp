@@ -1,12 +1,13 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID } from './lib/constants.mjs';
+import { getHeader } from './lib/email-utils.mjs';
 
 async function checkUnreadEmails() {
   try {
     const gmail = createGmailClient();
 
-    // Fetch all unread messages with details
     const response = await gmail.users.messages.list({
-      userId: "me",
+      userId: USER_ID,
       q: "is:unread",
       maxResults: 100
     });
@@ -14,12 +15,11 @@ async function checkUnreadEmails() {
     const messageIds = response.data.messages || [];
     console.log(`Found ${messageIds.length} unread messages\n`);
 
-    // Fetch details for each message
     const messages = await Promise.all(
       messageIds.map(async (msg) => {
         try {
           const fullMsg = await gmail.users.messages.get({
-            userId: "me",
+            userId: USER_ID,
             id: msg.id,
             format: "metadata",
             metadataHeaders: ["Subject", "From", "Date"]
@@ -28,10 +28,10 @@ async function checkUnreadEmails() {
           const headers = fullMsg.data.payload?.headers || [];
           return {
             id: msg.id,
-            subject: headers.find((h) => h.name === "Subject")?.value || "(No subject)",
-            from: headers.find((h) => h.name === "From")?.value || "(Unknown sender)",
-            date: headers.find((h) => h.name === "Date")?.value || "",
-            snippet: fullMsg.data.snippet || ""
+            subject: getHeader(headers, 'Subject', '(No subject)'),
+            from: getHeader(headers, 'From', '(Unknown sender)'),
+            date: getHeader(headers, 'Date'),
+            snippet: fullMsg.data.snippet || ''
           };
         } catch (error) {
           return null;
@@ -41,7 +41,6 @@ async function checkUnreadEmails() {
 
     const validMessages = messages.filter(m => m !== null);
 
-    // Categorize messages
     const categorized = {
       highUrgencyHighImportance: [],
       highUrgencyMediumImportance: [],
@@ -63,7 +62,6 @@ async function checkUnreadEmails() {
       }
     });
 
-    // Output results
     outputResults(categorized);
 
   } catch (error) {
@@ -78,7 +76,6 @@ function categorizeEmail(msg) {
   const snippet = msg.snippet.toLowerCase();
   const content = `${subject} ${from} ${snippet}`;
 
-  // Urgency detection
   let urgency = 'medium';
   const highUrgencyKeywords = [
     'urgent', 'asap', 'immediate', 'urgent action', 'critical',
@@ -97,7 +94,6 @@ function categorizeEmail(msg) {
     urgency = 'low';
   }
 
-  // Importance detection
   let importance = 'medium';
   const highImportanceKeywords = [
     'boss', 'manager', 'ceo', 'cto', 'director',
@@ -163,7 +159,6 @@ function outputResults(categorized) {
   console.log(`SUMMARY: ${totalProcessed} unread emails categorized`);
   console.log("=".repeat(80));
 
-  // Category breakdown
   console.log("\nCATEGORY BREAKDOWN:");
   categories.forEach(category => {
     const count = categorized[category.key]?.length || 0;

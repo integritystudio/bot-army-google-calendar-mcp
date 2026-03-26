@@ -18,7 +18,6 @@ const GMAIL_SCOPES = [
 
 async function authGmail() {
   try {
-    // Load credentials
     const credPath = path.join(__dirname, 'credentials.json');
     const credFile = JSON.parse(await fs.readFile(credPath, 'utf-8'));
     const cred = credFile.installed || credFile;
@@ -29,7 +28,6 @@ async function authGmail() {
       'http://localhost:3500/oauth2callback'
     );
 
-    // Generate auth URL
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: GMAIL_SCOPES
@@ -38,7 +36,6 @@ async function authGmail() {
     console.log('Opening browser for Gmail authentication...');
     console.log('Auth URL:', authUrl);
 
-    // Create local server to handle callback
     const server = createServer(async (req, res) => {
       const urlObj = new URL(req.url, 'http://localhost:3500');
       const code = urlObj.searchParams.get('code');
@@ -89,7 +86,6 @@ async function authGmail() {
 
     server.listen(3500, () => {
       console.log('Waiting for authentication...');
-      // Open browser
       exec(`open "${authUrl}"`, (error) => {
         if (error) {
           console.log(`\nManually open this URL in your browser:\n${authUrl}`);

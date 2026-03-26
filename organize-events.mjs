@@ -1,31 +1,32 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-
-const EVENTS_LABEL_ID = 'Label_1';
+import { USER_ID, LABEL_EVENTS } from './lib/constants.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 
 async function organizeEvents() {
   const gmail = createGmailClient();
 
   console.log('📅 ORGANIZING EVENT EMAILS\n');
+  const labelCache = await buildLabelCache(gmail);
+  const eventsLabelId = labelCache.get(LABEL_EVENTS);
+  if (!eventsLabelId) {
+    console.error('Events label not found');
+    process.exit(1);
+  }
   console.log('═'.repeat(80));
 
-  // Step 1: Find and label existing event emails
   console.log('\n1️⃣  APPLYING LABEL TO EXISTING EVENT EMAILS\n');
 
   const eventPatterns = [
-    // Meetup events
     'from:info@email.meetup.com',
 
-    // Calendly team events
     'from:teamcalendly@send.calendly.com',
     'from:support@calendly.zendesk.com',
 
-    // Community/spiritual events
     'from:"ATX - Awkwardly Zen"',
     'from:"Austin Cafe Drawing Group"',
     'from:"Austin Robotics & AI"',
     'from:"International House"',
 
-    // Event indicators in subject/body
     'subject:"📅 Just scheduled"',
     'subject:"Just scheduled"',
     'subject:event OR subject:conference OR subject:summit OR subject:workshop',
@@ -33,7 +34,6 @@ async function organizeEvents() {
     'subject:register OR subject:registration',
     'subject:happening OR subject:"save the date"',
 
-    // Calendar invitations
     'subject:invitation OR subject:invite',
   ];
 
@@ -41,13 +41,12 @@ async function organizeEvents() {
   const processedQueries = new Set();
 
   for (const query of eventPatterns) {
-    // Skip duplicate queries
     if (processedQueries.has(query)) continue;
     processedQueries.add(query);
 
     try {
       const searchResult = await gmail.users.messages.list({
-        userId: 'me',
+        userId: USER_ID,
         q: query,
         maxResults: 100,
       });
@@ -59,10 +58,10 @@ async function organizeEvents() {
 
       if (count > 0) {
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: messageIds,
-            addLabelIds: [EVENTS_LABEL_ID],
+            addLabelIds: [eventsLabelId],
           },
         });
 
@@ -76,7 +75,6 @@ async function organizeEvents() {
 
   console.log(`\n  📊 Total labeled: ${totalLabeled} emails\n`);
 
-  // Step 2: Create filters for future events
   console.log('═'.repeat(80));
   console.log('\n2️⃣  CREATING AUTO-LABEL FILTERS FOR FUTURE EVENTS\n');
 
@@ -112,11 +110,11 @@ async function organizeEvents() {
   for (const filterConfig of filters) {
     try {
       const response = await gmail.users.settings.filters.create({
-        userId: 'me',
+        userId: USER_ID,
         requestBody: {
           criteria: filterConfig.criteria,
           action: {
-            addLabelIds: [EVENTS_LABEL_ID],
+            addLabelIds: [eventsLabelId],
           },
         },
       });

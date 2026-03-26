@@ -1,5 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, GMAIL_INBOX, LABEL_EVENTS, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 import { classifyEmail, getGmailAction } from './lib/date-based-filter.mjs';
+import { getHeader } from './lib/email-utils.mjs';
 
 async function filterEventsByDate() {
   const gmail = createGmailClient();
@@ -8,10 +10,9 @@ async function filterEventsByDate() {
   console.log('═'.repeat(80) + '\n');
 
   try {
-    // Get labels
-    const labelsResponse = await gmail.users.labels.list({ userId: 'me' });
-    const eventsLabel = labelsResponse.data.labels.find(l => l.name === 'Events');
-    const keepImportantLabel = labelsResponse.data.labels.find(l => l.name === 'Keep Important');
+    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
+    const eventsLabel = labelsResponse.data.labels.find(l => l.name === LABEL_EVENTS);
+    const keepImportantLabel = labelsResponse.data.labels.find(l => l.name === LABEL_KEEP_IMPORTANT);
 
     if (!eventsLabel) {
       console.log('❌ Events label not found\n');
@@ -27,10 +28,10 @@ async function filterEventsByDate() {
 
     console.log('STEP 1: Finding event-like unread emails\n');
 
-    const searchQuery = `is:unread (subject:${eventKeywords} OR from:${eventSenders}) ${keepImportantLabelId ? `-label:"Keep Important"` : ''}`;
+    const searchQuery = `is:unread (subject:${eventKeywords} OR from:${eventSenders}) ${keepImportantLabelId ? `-label:"${LABEL_KEEP_IMPORTANT}"` : ''}`;
 
     const searchResponse = await gmail.users.messages.list({
-      userId: 'me',
+      userId: USER_ID,
       q: searchQuery,
       maxResults: 100
     });
@@ -45,88 +46,76 @@ async function filterEventsByDate() {
 
     console.log('STEP 2: Classifying events by date\n');
 
-    let futureCount = 0;
-    let pastCount = 0;
-    let unknownCount = 0;
+    const fullMsgs = await Promise.all(
+      messageIds.map(msg =>
+        gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'full' })
+          .catch(error => {
+            console.log(`⚠️  Error processing email: ${error.message}`);
+            return null;
+          })
+      )
+    );
 
     const futureIds = [];
     const pastIds = [];
 
-    // Process each email
-    for (const msg of messageIds) {
-      try {
-        const fullMsg = await gmail.users.messages.get({
-          userId: 'me',
-          id: msg.id,
-          format: 'full'
-        });
+    for (const fullMsg of fullMsgs.filter(Boolean)) {
+      const headers = fullMsg.data.payload?.headers || [];
+      const subject = getHeader(headers, 'Subject');
 
-        const headers = fullMsg.data.payload?.headers || [];
-        const subject = headers.find(h => h.name === 'Subject')?.value || '';
+      let body = '';
+      if (fullMsg.data.payload?.parts?.[0]?.body?.data) {
+        body = Buffer.from(fullMsg.data.payload.parts[0].body.data, 'base64').toString('utf-8');
+      } else if (fullMsg.data.payload?.body?.data) {
+        body = Buffer.from(fullMsg.data.payload.body.data, 'base64').toString('utf-8');
+      }
 
-        // Get email body
-        let body = '';
-        if (fullMsg.data.payload?.parts?.[0]?.body?.data) {
-          body = Buffer.from(fullMsg.data.payload.parts[0].body.data, 'base64').toString('utf-8');
-        } else if (fullMsg.data.payload?.body?.data) {
-          body = Buffer.from(fullMsg.data.payload.body.data, 'base64').toString('utf-8');
-        }
+      const classification = classifyEmail(subject, body);
 
-        // Classify email by date
-        const classification = classifyEmail(subject, body);
-
-        if (classification.status === 'future') {
-          futureIds.push(msg.id);
-          futureCount++;
-        } else if (classification.status === 'past') {
-          pastIds.push(msg.id);
-          pastCount++;
-        } else {
-          unknownCount++;
-        }
-
-      } catch (error) {
-        console.log(`⚠️  Error processing email: ${error.message}`);
+      if (classification.status === 'future') {
+        futureIds.push(fullMsg.data.id);
+      } else if (classification.status === 'past') {
+        pastIds.push(fullMsg.data.id);
       }
     }
 
-    console.log(`  Future events: ${futureCount}`);
-    console.log(`  Past events: ${pastCount}`);
+    const unknownCount = messageIds.length - futureIds.length - pastIds.length;
+
+    console.log(`  Future events: ${futureIds.length}`);
+    console.log(`  Past events: ${pastIds.length}`);
     console.log(`  Unknown date: ${unknownCount}\n`);
 
-    // Label future events
     if (futureIds.length > 0) {
       console.log('STEP 3: Labeling future events\n');
       const batchSize = 50;
       for (let i = 0; i < futureIds.length; i += batchSize) {
-        const batch = futureIds.slice(i, Math.min(i + batchSize, futureIds.length));
+        const batch = futureIds.slice(i, i + batchSize);
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch,
             addLabelIds: [eventsLabelId]
           }
         });
-        const processed = Math.min(i + batchSize, futureIds.length);
+        const processed = i + batch.length;
         console.log(`  ✅ Labeled ${processed}/${futureIds.length}`);
       }
     }
 
-    // Archive past events
     if (pastIds.length > 0) {
       console.log('\nSTEP 4: Archiving past events\n');
       const batchSize = 50;
       for (let i = 0; i < pastIds.length; i += batchSize) {
-        const batch = pastIds.slice(i, Math.min(i + batchSize, pastIds.length));
+        const batch = pastIds.slice(i, i + batchSize);
         await gmail.users.messages.batchModify({
-          userId: 'me',
+          userId: USER_ID,
           requestBody: {
             ids: batch,
             addLabelIds: [eventsLabelId],
-            removeLabelIds: ['INBOX']
+            removeLabelIds: [GMAIL_INBOX]
           }
         });
-        const processed = Math.min(i + batchSize, pastIds.length);
+        const processed = i + batch.length;
         console.log(`  ✅ Archived ${processed}/${pastIds.length}`);
       }
     }
@@ -134,8 +123,8 @@ async function filterEventsByDate() {
     console.log('\n' + '═'.repeat(80));
     console.log('COMPLETE\n');
     console.log(`✅ Processed: ${messageIds.length} event emails`);
-    console.log(`✅ Future events labeled: ${futureCount}`);
-    console.log(`✅ Past events archived: ${pastCount}`);
+    console.log(`✅ Future events labeled: ${futureIds.length}`);
+    console.log(`✅ Past events archived: ${pastIds.length}`);
     console.log(`ℹ️  Unknown date: ${unknownCount}\n`);
     console.log('Protected emails (Keep Important):');
     console.log(`  • Overdue payments, late fees, missed payments`);

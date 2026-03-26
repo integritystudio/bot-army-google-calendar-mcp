@@ -1,4 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID, LABEL_NEWSLETTERS_CCV } from './lib/constants.mjs';
+import { getHeader } from './lib/email-utils.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 
 async function analyzeCCVNewsletter() {
   const gmail = createGmailClient();
@@ -6,10 +9,14 @@ async function analyzeCCVNewsletter() {
   console.log('📊 ANALYZING CCV NEWSLETTER EMAILS\n');
   console.log('═'.repeat(80) + '\n');
 
-  // Get all CCV newsletter emails
-  const labelId = 'Label_11';
+  const labelCache = await buildLabelCache(gmail);
+  const labelId = labelCache.get(LABEL_NEWSLETTERS_CCV);
+  if (!labelId) {
+    console.log('Newsletters/CCV label not found');
+    return;
+  }
   const messagesResult = await gmail.users.messages.list({
-    userId: 'me',
+    userId: USER_ID,
     labelIds: [labelId],
     maxResults: 100,
   });
@@ -22,39 +29,39 @@ async function analyzeCCVNewsletter() {
   console.log(`📧 Found ${messagesResult.data.messages.length} CCV Newsletter emails\n`);
   console.log('═'.repeat(80) + '\n');
 
-  // Fetch full message details
-  const messages = [];
-  for (const msgHeader of messagesResult.data.messages) {
-    try {
-      const msg = await gmail.users.messages.get({
-        userId: 'me',
+  const fullMsgs = await Promise.all(
+    messagesResult.data.messages.map(msgHeader =>
+      gmail.users.messages.get({
+        userId: USER_ID,
         id: msgHeader.id,
         format: 'metadata',
         metadataHeaders: ['Subject', 'From', 'Date'],
-      });
+      }).catch(error => {
+        console.log(`Error fetching message: ${error.message}`);
+        return null;
+      })
+    )
+  );
 
+  const messages = fullMsgs
+    .filter(Boolean)
+    .map(msg => {
       const headers = msg.data.payload.headers || [];
-      const subject = headers.find(h => h.name === 'Subject')?.value || '(no subject)';
-      const from = headers.find(h => h.name === 'From')?.value || '(unknown)';
-      const date = headers.find(h => h.name === 'Date')?.value || '(no date)';
+      return {
+        subject: getHeader(headers, 'Subject', '(no subject)'),
+        from: getHeader(headers, 'From', '(unknown)'),
+        date: getHeader(headers, 'Date', '(no date)'),
+      };
+    });
 
-      messages.push({ subject, from, date });
-    } catch (error) {
-      console.log(`Error fetching message: ${error.message}`);
-    }
-  }
-
-  // Display all emails sorted by date
   console.log('📋 CCV NEWSLETTER EMAILS\n');
 
-  // Sort by date (most recent first)
   messages.sort((a, b) => {
     const dateA = new Date(a.date);
     const dateB = new Date(b.date);
     return dateB - dateA;
   });
 
-  // Group by month/year
   const emailsByMonth = {};
 
   for (const msg of messages) {
@@ -67,7 +74,6 @@ async function analyzeCCVNewsletter() {
     emailsByMonth[monthKey].push(msg);
   }
 
-  // Display organized by month
   for (const [monthKey, emails] of Object.entries(emailsByMonth)) {
     const [year, month] = monthKey.split('-');
     const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -84,7 +90,6 @@ async function analyzeCCVNewsletter() {
     console.log();
   }
 
-  // Analyze content patterns
   console.log('═'.repeat(80) + '\n');
   console.log('📋 CONTENT ANALYSIS\n');
 

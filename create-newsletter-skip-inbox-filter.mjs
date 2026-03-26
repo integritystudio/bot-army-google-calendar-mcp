@@ -1,6 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID } from './lib/constants.mjs';
-
+import { USER_ID, GMAIL_INBOX, LABEL_NEWSLETTERS } from './lib/constants.mjs';
 
 async function createNewsletterSkipInboxFilter() {
   const gmail = createGmailClient();
@@ -15,11 +14,11 @@ async function createNewsletterSkipInboxFilter() {
       userId: USER_ID,
       requestBody: {
         criteria: {
-          query: 'label:Newsletters',
+          query: `label:${LABEL_NEWSLETTERS}`,
         },
         action: {
           skip: true,
-          removeLabelIds: ['INBOX'],
+          removeLabelIds: [GMAIL_INBOX],
         },
       },
     });

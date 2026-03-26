@@ -4,6 +4,7 @@ import { classifyEmail, getGmailAction } from './lib/date-based-filter.mjs';
 import { getHeader } from './lib/email-utils.mjs';
 import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
 import { BANNER } from './lib/console-utils.mjs';
+import { decodeMessageBody } from './lib/gmail-message-utils.mjs';
 
 const EVENT_KEYWORDS = '(event OR meeting OR conference OR workshop OR seminar OR webinar OR presentation OR summit OR expo OR networking OR panel OR forum OR gathering OR ceremony OR celebration)';
 const EVENT_SENDERS = '(meetup OR eventbrite OR "international house" OR calendly OR calendar)';
@@ -49,14 +50,7 @@ async function filterEventsByDate() {
   for (const fullMsg of fullMsgs.filter(Boolean)) {
     const headers = fullMsg.data.payload?.headers || [];
     const subject = getHeader(headers, 'Subject');
-
-    let body = '';
-    if (fullMsg.data.payload?.parts?.[0]?.body?.data) {
-      body = Buffer.from(fullMsg.data.payload.parts[0].body.data, 'base64').toString('utf-8');
-    } else if (fullMsg.data.payload?.body?.data) {
-      body = Buffer.from(fullMsg.data.payload.body.data, 'base64').toString('utf-8');
-    }
-
+    const body = decodeMessageBody(fullMsg.data.payload);
     const classification = classifyEmail(subject, body);
     if (classification.status === 'future') futureIds.push(fullMsg.data.id);
     else if (classification.status === 'past') pastIds.push(fullMsg.data.id);

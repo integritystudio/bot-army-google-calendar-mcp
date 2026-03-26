@@ -1,139 +1,87 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, GMAIL_INBOX, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
+import { ensureLabelExists } from './lib/gmail-filter-utils.mjs';
+
+const BILLING_KEYWORDS = '(invoice OR billing OR payment OR charge OR receipt OR statement)';
 
 async function createBillingFilter() {
   const gmail = createGmailClient();
 
-  console.log('💳 CREATING BILLING FILTER WITH SMART RULES\n');
+  console.log('CREATING BILLING FILTER WITH SMART RULES\n');
   console.log('═'.repeat(80) + '\n');
 
+  const billingLabelId = await ensureLabelExists(gmail, LABEL_BILLING);
+  let keepImportantLabelId;
   try {
-    let billingLabelId, keepImportantLabelId;
-    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
-
-    const billingLabel = labelsResponse.data.labels.find(l => l.name === LABEL_BILLING);
-    if (billingLabel) {
-      billingLabelId = billingLabel.id;
-      console.log('✅ Using existing label: Billing\n');
-    } else {
-      const createBillingResponse = await gmail.users.labels.create({
-        userId: USER_ID,
-        requestBody: {
-          name: LABEL_BILLING,
-          labelListVisibility: 'labelShow',
-          messageListVisibility: 'show'
-        }
-      });
-      billingLabelId = createBillingResponse.data.id;
-      console.log('✅ Created label: Billing\n');
-    }
-
-    const keepImportantLabel = labelsResponse.data.labels.find(l => l.name === LABEL_KEEP_IMPORTANT);
-    if (keepImportantLabel) {
-      keepImportantLabelId = keepImportantLabel.id;
-      console.log('✅ Found label: Keep Important\n');
-    } else {
-      console.log('⚠️  Keep Important label not found\n');
-    }
-
-    // Define billing keywords
-    const billingKeywords = '(invoice OR billing OR payment OR charge OR receipt OR statement)';
-
-    console.log('STEP 1: Creating filters\n');
-
-    try {
-      const labelIds = keepImportantLabelId
-        ? [billingLabelId, keepImportantLabelId]
-        : [billingLabelId];
-
-      await gmail.users.settings.filters.create({
-        userId: USER_ID,
-        requestBody: {
-          criteria: {
-            query: `subject:${billingKeywords} subject:"rate limit"`
-          },
-          action: {
-            addLabelIds: labelIds
-          }
-        }
-      });
-      console.log('✅ Filter 1: Billing + Rate Limit (KEEP IN INBOX)');
-      console.log('   Criteria: Billing keywords + "rate limit"');
-      console.log('   Action: Label Billing + Keep Important\n');
-    } catch (error) {
-      console.log(`⚠️  Filter 1 error: ${error.message}\n`);
-    }
-
-    try {
-      await gmail.users.settings.filters.create({
-        userId: USER_ID,
-        requestBody: {
-          criteria: {
-            query: `subject:${billingKeywords} -"rate limit"`
-          },
-          action: {
-            addLabelIds: [billingLabelId],
-            removeLabelIds: [GMAIL_INBOX]
-          }
-        }
-      });
-      console.log('✅ Filter 2: Billing Only (SKIP INBOX)');
-      console.log('   Criteria: Billing keywords, excluding "rate limit"');
-      console.log('   Action: Label Billing + Archive\n');
-    } catch (error) {
-      console.log(`⚠️  Filter 2 error: ${error.message}\n`);
-    }
-
-    console.log('STEP 2: Applying to existing emails\n');
-
-    const rateLimitQuery = `subject:${billingKeywords} subject:"rate limit"`;
-    const rateLimitResponse = await gmail.users.messages.list({
-      userId: USER_ID,
-      q: rateLimitQuery,
-      maxResults: 100
-    });
-
-    const rateLimitIds = rateLimitResponse.data.messages || [];
-    if (rateLimitIds.length > 0) {
-      const labelIds = keepImportantLabelId
-        ? [billingLabelId, keepImportantLabelId]
-        : [billingLabelId];
-
-      await batchModifyMessages(gmail, rateLimitIds, { addLabelIds: labelIds });
-      console.log(`  ✅ Applied to ${rateLimitIds.length} rate limit emails (kept in inbox)`);
-    }
-
-    const regularBillingQuery = `subject:${billingKeywords} -"rate limit"`;
-    const regularBillingResponse = await gmail.users.messages.list({
-      userId: USER_ID,
-      q: regularBillingQuery,
-      maxResults: 100
-    });
-
-    const regularBillingIds = regularBillingResponse.data.messages || [];
-    if (regularBillingIds.length > 0) {
-      await batchModifyMessages(gmail, regularBillingIds, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] });
-      console.log(`  ✅ Applied to ${regularBillingIds.length} regular billing emails (archived)`);
-    }
-
-    console.log('\n' + '═'.repeat(80));
-    console.log('COMPLETE\n');
-    console.log('Billing Filter Rules:');
-    console.log('  📌 Rate Limit Alerts → Label: Billing + Keep Important → STAY IN INBOX');
-    console.log('  💳 Regular Billing → Label: Billing → ARCHIVED\n');
-    console.log('Emails detected:');
-    console.log(`  • Rate limit billing: ${rateLimitIds.length}`);
-    console.log(`  • Regular billing: ${regularBillingIds.length}\n`);
-    console.log('═'.repeat(80) + '\n');
-
-  } catch (error) {
-    console.error('❌ Error:', error.message);
-    process.exit(1);
+    keepImportantLabelId = await ensureLabelExists(gmail, LABEL_KEEP_IMPORTANT);
+  } catch {
+    console.log('Keep Important label not found\n');
   }
+
+  const rateLimitLabelIds = keepImportantLabelId
+    ? [billingLabelId, keepImportantLabelId]
+    : [billingLabelId];
+
+  console.log('STEP 1: Creating filters\n');
+
+  try {
+    await gmail.users.settings.filters.create({
+      userId: USER_ID,
+      requestBody: {
+        criteria: { query: `subject:${BILLING_KEYWORDS} subject:"rate limit"` },
+        action: { addLabelIds: rateLimitLabelIds },
+      },
+    });
+    console.log('Filter 1: Billing + Rate Limit (KEEP IN INBOX)');
+  } catch (error) {
+    console.log(`Filter 1 error: ${error.message}`);
+  }
+
+  try {
+    await gmail.users.settings.filters.create({
+      userId: USER_ID,
+      requestBody: {
+        criteria: { query: `subject:${BILLING_KEYWORDS} -"rate limit"` },
+        action: { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] },
+      },
+    });
+    console.log('Filter 2: Billing Only (SKIP INBOX)');
+  } catch (error) {
+    console.log(`Filter 2 error: ${error.message}`);
+  }
+
+  console.log('\nSTEP 2: Applying to existing emails\n');
+
+  const rateLimitResponse = await gmail.users.messages.list({
+    userId: USER_ID,
+    q: `subject:${BILLING_KEYWORDS} subject:"rate limit"`,
+    maxResults: 100,
+  });
+  const rateLimitIds = rateLimitResponse.data.messages || [];
+  if (rateLimitIds.length > 0) {
+    await batchModifyMessages(gmail, rateLimitIds, { addLabelIds: rateLimitLabelIds });
+    console.log(`Applied to ${rateLimitIds.length} rate limit emails (kept in inbox)`);
+  }
+
+  const regularResponse = await gmail.users.messages.list({
+    userId: USER_ID,
+    q: `subject:${BILLING_KEYWORDS} -"rate limit"`,
+    maxResults: 100,
+  });
+  const regularIds = regularResponse.data.messages || [];
+  if (regularIds.length > 0) {
+    await batchModifyMessages(gmail, regularIds, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] });
+    console.log(`Applied to ${regularIds.length} regular billing emails (archived)`);
+  }
+
+  console.log('\n' + '═'.repeat(80));
+  console.log('COMPLETE\n');
+  console.log(`Rate limit billing: ${rateLimitIds.length} | Regular billing: ${regularIds.length}\n`);
+  console.log('═'.repeat(80) + '\n');
 }
 
 createBillingFilter().catch(error => {
-  console.error('❌ Error:', error.message);
+  console.error('Error:', error.message);
   process.exit(1);
 });

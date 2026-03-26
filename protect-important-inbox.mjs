@@ -17,22 +17,10 @@ import { BANNER, printComplete } from './lib/console-utils.mjs';
 const billingMode = process.argv.includes('--billing');
 
 const IMPORTANT_FILTERS = [
-  {
-    name: 'Cloudflare Alerts',
-    query: 'from:noreply@notify.cloudflare.com',
-  },
-  {
-    name: 'Calendly Refunds & Support',
-    query: 'from:(support@calendly.zendesk.com OR invoice+statements@calendly.com) OR subject:(refund OR "Added to a team")',
-  },
-  {
-    name: 'Investment Banking Meetings',
-    query: 'from:notification@calendly.com subject:"Introductory Meeting"',
-  },
-  {
-    name: 'Capital City Village Services',
-    query: 'from:(capitalcity@a.helpfulvillage.com OR info@capitalcityvillage.org)',
-  },
+  { name: 'Cloudflare Alerts', query: 'from:noreply@notify.cloudflare.com' },
+  { name: 'Calendly Refunds & Support', query: 'from:(support@calendly.zendesk.com OR invoice+statements@calendly.com) OR subject:(refund OR "Added to a team")' },
+  { name: 'Investment Banking Meetings', query: 'from:notification@calendly.com subject:"Introductory Meeting"' },
+  { name: 'Capital City Village Services', query: 'from:(capitalcity@a.helpfulvillage.com OR info@capitalcityvillage.org)' },
 ];
 
 const BILLING_KEYWORDS = '(invoice OR billing OR payment OR charge OR receipt OR statement)';

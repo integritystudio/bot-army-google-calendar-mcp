@@ -135,7 +135,7 @@ describe('Duplicate Event Display', () => {
     // First duplicate
     expect(formatted).toContain('75% similar');
     expect(formatted).toContain('Event: Team Standup');
-    expect(formatted).toContain('Event ID: morning-standup');
+    expect(formatted).toContain(`${EVENT_ID_PREFIX}morning-standup`);
     
     // Second duplicate
     expect(formatted).toContain('82% similar');

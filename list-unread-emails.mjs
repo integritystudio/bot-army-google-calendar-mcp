@@ -10,6 +10,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { BANNER } from './lib/console-utils.mjs';
 import { extractDisplayName, getHeader } from './lib/email-utils.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import {
   USER_ID,
   LABEL_SENTRY,
@@ -110,8 +111,7 @@ async function listUnreadEmails(gmail) {
 }
 
 async function showStats(gmail) {
-  const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
-  const labelMap = new Map((labelsResponse.data.labels || []).map(l => [l.name, l.id]));
+  const labelMap = await buildLabelCache(gmail);
 
   const profile = await gmail.users.getProfile({ userId: USER_ID });
   console.log(`Total messages: ${profile.data.messagesTotal}`);

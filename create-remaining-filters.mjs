@@ -61,7 +61,7 @@ async function createRemainingFilters() {
         { query: filter.query },
         { addLabelIds: [labelId], removeLabelIds: [GMAIL_INBOX] },
       );
-      if (filterId !== undefined) {
+      if (filterId !== null) {
         console.log(`  ${filter.name}${filterId ? '' : ' (already exists)'}`);
         if (filterId) totalCreated++;
       } else {

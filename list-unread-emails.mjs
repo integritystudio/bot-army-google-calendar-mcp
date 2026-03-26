@@ -8,7 +8,7 @@
  *   node list-unread-emails.mjs --verify # spot-check label application on sample emails
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { BANNER } from './lib/console-utils.mjs';
+import { BANNER, DIVIDER } from './lib/console-utils.mjs';
 import { extractDisplayName, getHeader } from './lib/email-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import {
@@ -62,17 +62,15 @@ async function listUnreadEmails(gmail) {
 
   const fullMsgs = await Promise.all(
     messageIds.map(msg =>
-      gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'metadata', metadataHeaders: ['Subject', 'From', 'Date'] })
+      gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'metadata', metadataHeaders: ['Subject', 'From'] })
     )
   );
 
   const emails = fullMsgs.map(fullMsg => {
     const headers = fullMsg.data.payload?.headers || [];
     return {
-      id: fullMsg.data.id,
       subject: getHeader(headers, 'Subject', '(no subject)'),
       from: getHeader(headers, 'From', '(unknown)'),
-      date: getHeader(headers, 'Date'),
       labels: (fullMsg.data.labelIds || []).map(id => labelMap.get(id)).filter(Boolean),
     };
   });
@@ -93,7 +91,7 @@ async function listUnreadEmails(gmail) {
   for (const [category, items] of Object.entries(categories)) {
     if (items.length === 0) continue;
     console.log(`\n${category} (${items.length}):`);
-    console.log('─'.repeat(80));
+    console.log(DIVIDER);
     items.slice(0, PREVIEW_LIMIT).forEach(email => {
       console.log(`  • ${email.subject.substring(0, SUBJECT_MAX_LENGTH)}`);
       console.log(`    From: ${extractDisplayName(email.from).substring(0, 50)}`);

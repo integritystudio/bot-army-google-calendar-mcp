@@ -1,5 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, LABEL_PERFORMANCE_TRACKING, LABEL_NEWSLETTERS_SUBJECT_BASED } from './lib/constants.mjs';
+import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 
 async function createPerformanceTrackingLabel() {
   const gmail = createGmailClient();
@@ -62,28 +63,10 @@ async function createPerformanceTrackingLabel() {
 
   for (const query of sentryPatterns) {
     try {
-      const searchResult = await gmail.users.messages.list({
-        userId: USER_ID,
-        q: query,
-        maxResults: 100,
-      });
-
-      if (!searchResult.data.messages) continue;
-
-      const messageIds = searchResult.data.messages.map(m => m.id);
-      const count = messageIds.length;
-
+      const count = await searchAndModify(gmail, query,
+        { addLabelIds: [perfLabelId], removeLabelIds: [newsletterLabelId] }, 100);
       if (count > 0) {
-        await gmail.users.messages.batchModify({
-          userId: USER_ID,
-          requestBody: {
-            ids: messageIds,
-            addLabelIds: [perfLabelId],
-            removeLabelIds: [newsletterLabelId],
-          },
-        });
-
-        console.log(`  ✅ Relabeled ${count} emails matching: "${query.substring(0, 50)}..."`);
+        console.log(`  ✅ Relabeled ${count} emails matching: "${query.substring(0, 50)}"`);
         console.log(`     Added: Performance Tracking`);
         console.log(`     Removed: Newsletters/Subject-Based\n`);
         totalRelabeled += count;

@@ -1,5 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, GMAIL_INBOX, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
+import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
 
 async function createBillingFilter() {
   const gmail = createGmailClient();
@@ -99,17 +100,7 @@ async function createBillingFilter() {
         ? [billingLabelId, keepImportantLabelId]
         : [billingLabelId];
 
-      const batchSize = 50;
-      for (let i = 0; i < rateLimitIds.length; i += batchSize) {
-        const batch = rateLimitIds.slice(i, i + batchSize);
-        await gmail.users.messages.batchModify({
-          userId: USER_ID,
-          requestBody: {
-            ids: batch.map(m => m.id),
-            addLabelIds: labelIds
-          }
-        });
-      }
+      await batchModifyMessages(gmail, rateLimitIds, { addLabelIds: labelIds });
       console.log(`  ✅ Applied to ${rateLimitIds.length} rate limit emails (kept in inbox)`);
     }
 
@@ -122,18 +113,7 @@ async function createBillingFilter() {
 
     const regularBillingIds = regularBillingResponse.data.messages || [];
     if (regularBillingIds.length > 0) {
-      const batchSize = 50;
-      for (let i = 0; i < regularBillingIds.length; i += batchSize) {
-        const batch = regularBillingIds.slice(i, i + batchSize);
-        await gmail.users.messages.batchModify({
-          userId: USER_ID,
-          requestBody: {
-            ids: batch.map(m => m.id),
-            addLabelIds: [billingLabelId],
-            removeLabelIds: [GMAIL_INBOX]
-          }
-        });
-      }
+      await batchModifyMessages(gmail, regularBillingIds, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] });
       console.log(`  ✅ Applied to ${regularBillingIds.length} regular billing emails (archived)`);
     }
 

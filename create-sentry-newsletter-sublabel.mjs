@@ -1,6 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, LABEL_PERFORMANCE_TRACKING } from './lib/constants.mjs';
 import { buildLabelCache, createLabels } from './lib/gmail-label-utils.mjs';
+import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 
 async function createSentryNewsletterSubLabel() {
   const gmail = createGmailClient();
@@ -27,31 +28,14 @@ async function createSentryNewsletterSubLabel() {
   let digestsRelabeled = 0;
 
   try {
-    const searchResult = await gmail.users.messages.list({
-      userId: USER_ID,
-      q: sentryDigestQuery,
-      maxResults: 100,
-    });
-
-    if (searchResult.data.messages) {
-      const messageIds = searchResult.data.messages.map(m => m.id);
-      const count = messageIds.length;
-
-      if (count > 0) {
-        await gmail.users.messages.batchModify({
-          userId: USER_ID,
-          requestBody: {
-            ids: messageIds,
-            addLabelIds: [sentryNewsletterLabelId],
-            removeLabelIds: [performanceTrackingLabelId],
-          },
-        });
-
-        console.log(`  ✅ Relabeled ${count} Sentry weekly digest emails`);
-        console.log(`     Added: Newsletters/Sentry`);
-        console.log(`     Removed: Performance Tracking\n`);
-        digestsRelabeled = count;
-      }
+    digestsRelabeled = await searchAndModify(gmail, sentryDigestQuery, {
+      addLabelIds: [sentryNewsletterLabelId],
+      removeLabelIds: [performanceTrackingLabelId],
+    }, 100);
+    if (digestsRelabeled > 0) {
+      console.log(`  ✅ Relabeled ${digestsRelabeled} Sentry weekly digest emails`);
+      console.log(`     Added: Newsletters/Sentry`);
+      console.log(`     Removed: Performance Tracking\n`);
     }
   } catch (error) {
     console.log(`  ⚠️  Error finding digests: ${error.message}`);

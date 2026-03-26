@@ -1,5 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, GMAIL_INBOX, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES } from './lib/constants.mjs';
+import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 
 
 async function createRemainingFilters() {
@@ -120,35 +121,11 @@ async function createRemainingFilters() {
     if (!labelId) continue;
 
     const queries = categoryConfig.filters.map(f => `(${f.query})`).join(' OR ');
-
-    const searchResponse = await gmail.users.messages.list({
-      userId: USER_ID,
-      q: queries,
-      maxResults: 100
-    });
-
-    const messageIds = searchResponse.data.messages || [];
-
-    if (messageIds.length > 0) {
-      console.log(`${categoryConfig.labelName}: ${messageIds.length} emails`);
-
-      const batchSize = 50;
-      for (let i = 0; i < messageIds.length; i += batchSize) {
-        const batch = messageIds.slice(i, i + batchSize);
-
-        await gmail.users.messages.batchModify({
-          userId: USER_ID,
-          requestBody: {
-            ids: batch.map(m => m.id),
-            addLabelIds: [labelId],
-            removeLabelIds: [GMAIL_INBOX]
-          }
-        });
-
-        emailsProcessed += batch.length;
-      }
-
+    const count = await searchAndModify(gmail, queries, { addLabelIds: [labelId], removeLabelIds: [GMAIL_INBOX] }, 100);
+    if (count > 0) {
+      console.log(`${categoryConfig.labelName}: ${count} emails`);
       console.log(`  ✅ Labeled and archived\n`);
+      emailsProcessed += count;
     }
   }
 

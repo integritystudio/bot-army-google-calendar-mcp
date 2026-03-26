@@ -1,7 +1,8 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID, LABEL_EVENTS_INVITATIONS_PROFESSIONAL, LABEL_EVENTS_INVITATIONS_CONFERENCES, LABEL_EVENTS_INVITATIONS_COMMUNITY_SERVICES } from './lib/constants.mjs';
-import { extractEmailAddress, getHeader } from './lib/email-utils.mjs';
+import { LABEL_EVENTS_INVITATIONS_PROFESSIONAL, LABEL_EVENTS_INVITATIONS_CONFERENCES, LABEL_EVENTS_INVITATIONS_COMMUNITY_SERVICES } from './lib/constants.mjs';
+import { extractEmailAddress } from './lib/email-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { fetchLabeledMessageMetadata } from './lib/gmail-message-utils.mjs';
 
 async function analyzeRemainingInvitations() {
   const gmail = createGmailClient();
@@ -20,41 +21,14 @@ async function analyzeRemainingInvitations() {
     try {
       console.log(`📋 ${category.name.toUpperCase()}\n`);
 
-      const messagesResult = await gmail.users.messages.list({
-        userId: USER_ID,
-        labelIds: [category.labelId],
-        maxResults: 100,
-      });
-
-      if (!messagesResult.data.messages) {
+      const { total, messages } = await fetchLabeledMessageMetadata(gmail, category.labelId, { limit: 30 });
+      if (total === 0) {
         console.log('  No emails found\n');
         console.log('═'.repeat(80) + '\n');
         continue;
       }
 
-      const count = messagesResult.data.messages.length;
-      console.log(`  Total: ${count} emails\n`);
-
-      const fullMsgs = await Promise.all(
-        messagesResult.data.messages.slice(0, 30).map(msgHeader =>
-          gmail.users.messages.get({
-            userId: USER_ID,
-            id: msgHeader.id,
-            format: 'metadata',
-            metadataHeaders: ['Subject', 'From'],
-          }).catch(() => null)
-        )
-      );
-
-      const messages = fullMsgs
-        .filter(Boolean)
-        .map(msg => {
-          const headers = msg.data.payload.headers || [];
-          return {
-            subject: getHeader(headers, 'Subject', '(no subject)'),
-            from: getHeader(headers, 'From', '(unknown)'),
-          };
-        });
+      console.log(`  Total: ${total} emails\n`);
 
       console.log('  Sample subjects:\n');
       const samples = [...new Set(messages.map(m => m.subject))].slice(0, 5);

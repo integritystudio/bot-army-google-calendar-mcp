@@ -1,7 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID, LABEL_EVENTS_INVITATIONS_WORK } from './lib/constants.mjs';
-import { getHeader } from './lib/email-utils.mjs';
+import { LABEL_EVENTS_INVITATIONS_WORK } from './lib/constants.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { fetchLabeledMessageMetadata } from './lib/gmail-message-utils.mjs';
 
 async function analyzeWorkInvitations() {
   const gmail = createGmailClient();
@@ -16,41 +16,14 @@ async function analyzeWorkInvitations() {
       console.log('Events/Invitations/Work label not found');
       return;
     }
-    const messagesResult = await gmail.users.messages.list({
-      userId: USER_ID,
-      labelIds: [labelId],
-      maxResults: 100,
-    });
-
-    if (!messagesResult.data.messages) {
+    const { total, messages } = await fetchLabeledMessageMetadata(gmail, labelId);
+    if (total === 0) {
       console.log('No work invitation emails found');
       return;
     }
 
-    console.log(`📧 Found ${messagesResult.data.messages.length} Work Meeting Invitations\n`);
+    console.log(`📧 Found ${total} Work Meeting Invitations\n`);
     console.log('═'.repeat(80) + '\n');
-
-    const fullMsgs = await Promise.all(
-      messagesResult.data.messages.map(msgHeader =>
-        gmail.users.messages.get({
-          userId: USER_ID,
-          id: msgHeader.id,
-          format: 'metadata',
-          metadataHeaders: ['Subject', 'From', 'Date'],
-        }).catch(() => null)
-      )
-    );
-
-    const messages = fullMsgs
-      .filter(Boolean)
-      .map(msg => {
-        const headers = msg.data.payload.headers || [];
-        return {
-          subject: getHeader(headers, 'Subject', '(no subject)'),
-          from: getHeader(headers, 'From', '(unknown)'),
-          date: getHeader(headers, 'Date', '(no date)'),
-        };
-      });
 
     const meetingTypes = {
       'One-on-One Meetings': [],

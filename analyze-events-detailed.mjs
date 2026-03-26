@@ -1,7 +1,8 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID, LABEL_EVENTS_CALENDLY, LABEL_EVENTS_COMMUNITY, LABEL_EVENTS_WORKSHOPS, LABEL_EVENTS_INVITATIONS } from './lib/constants.mjs';
-import { extractEmailAddress, getHeader } from './lib/email-utils.mjs';
+import { LABEL_EVENTS_CALENDLY, LABEL_EVENTS_COMMUNITY, LABEL_EVENTS_WORKSHOPS, LABEL_EVENTS_INVITATIONS } from './lib/constants.mjs';
+import { extractEmailAddress } from './lib/email-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { fetchLabeledMessageMetadata } from './lib/gmail-message-utils.mjs';
 
 async function analyzeEventsDetailed() {
   const gmail = createGmailClient();
@@ -21,42 +22,14 @@ async function analyzeEventsDetailed() {
     try {
       console.log(`📋 ${category.name.toUpperCase()}\n`);
 
-      const messagesResult = await gmail.users.messages.list({
-        userId: USER_ID,
-        labelIds: [category.labelId],
-        maxResults: 100,
-      });
-
-      if (!messagesResult.data.messages) {
+      const { total, messages } = await fetchLabeledMessageMetadata(gmail, category.labelId, { limit: 30 });
+      if (total === 0) {
         console.log('  No emails found\n');
         console.log('═'.repeat(80) + '\n');
         continue;
       }
 
-      const count = messagesResult.data.messages.length;
-      console.log(`  Total emails: ${count}\n`);
-
-      const fullMsgs = await Promise.all(
-        messagesResult.data.messages.slice(0, 30).map(msgHeader =>
-          gmail.users.messages.get({
-            userId: USER_ID,
-            id: msgHeader.id,
-            format: 'metadata',
-            metadataHeaders: ['Subject', 'From', 'Date'],
-          }).catch(() => null)
-        )
-      );
-
-      const messages = fullMsgs
-        .filter(Boolean)
-        .map(msg => {
-          const headers = msg.data.payload.headers || [];
-          return {
-            subject: getHeader(headers, 'Subject', '(no subject)'),
-            from: getHeader(headers, 'From', '(unknown)'),
-            date: getHeader(headers, 'Date', '(no date)'),
-          };
-        });
+      console.log(`  Total emails: ${total}\n`);
 
       const eventTypes = {
         'Meeting Reminders': [],

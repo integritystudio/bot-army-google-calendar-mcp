@@ -1,7 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID, LABEL_NEWSLETTERS_SUBJECT_BASED } from './lib/constants.mjs';
-import { getHeader } from './lib/email-utils.mjs';
+import { LABEL_NEWSLETTERS_SUBJECT_BASED } from './lib/constants.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { fetchLabeledMessageMetadata } from './lib/gmail-message-utils.mjs';
 
 async function analyzeSubjectNewsletters() {
   const gmail = createGmailClient();
@@ -16,43 +16,14 @@ async function analyzeSubjectNewsletters() {
       console.log('Newsletters/Subject-Based label not found');
       return;
     }
-    const messagesResult = await gmail.users.messages.list({
-      userId: USER_ID,
-      labelIds: [labelId],
-      maxResults: 100,
-    });
-
-    if (!messagesResult.data.messages) {
+    const { total, messages } = await fetchLabeledMessageMetadata(gmail, labelId, { limit: 50 });
+    if (total === 0) {
       console.log('No Subject-Based newsletter emails found');
       return;
     }
 
-    console.log(`📧 Found ${messagesResult.data.messages.length} Subject-Based newsletter emails\n`);
+    console.log(`📧 Found ${total} Subject-Based newsletter emails\n`);
     console.log('═'.repeat(80) + '\n');
-
-    const fullMsgs = await Promise.all(
-      messagesResult.data.messages.slice(0, 50).map(msgHeader =>
-        gmail.users.messages.get({
-          userId: USER_ID,
-          id: msgHeader.id,
-          format: 'metadata',
-          metadataHeaders: ['Subject', 'From'],
-        }).catch(error => {
-          console.log(`Error fetching message: ${error.message}`);
-          return null;
-        })
-      )
-    );
-
-    const messages = fullMsgs
-      .filter(Boolean)
-      .map(msg => {
-        const headers = msg.data.payload.headers || [];
-        return {
-          subject: getHeader(headers, 'Subject', '(no subject)'),
-          from: getHeader(headers, 'From', '(unknown)'),
-        };
-      });
 
     const categories = {
       'Weekly Reports/Digests': [],

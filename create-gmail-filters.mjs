@@ -35,20 +35,18 @@ const remainingMode = process.argv.includes('--remaining');
  * applyQuery used when backfilling existing messages (may differ from filter
  * query to narrow to unread/recent). maxResults is optional.
  */
-/**
- * applyQuery defaults to `is:unread <filterQuery>` when omitted.
- */
+/** applyQuery defaults to `is:unread <filterQuery>` when omitted. */
 const FILTER_CONFIGS = [
-  { label: LABEL_SENTRY, filterQuery: 'from:noreply@md.getsentry.com', description: 'Sentry error/alert notifications' },
-  { label: LABEL_MEETUP_EVENTS, filterQuery: 'from:info@email.meetup.com', description: 'Meetup group invitations and event updates' },
-  { label: LABEL_COMMUNITY_EVENTS, filterQuery: 'from:("ATX - Awkwardly Zen" OR "Austin Cafe Drawing Group" OR "Austin Robotics & AI")', description: 'Local community event invitations' },
-  { label: LABEL_PRODUCT_UPDATES, filterQuery: 'from:(noreply@email.openai.com OR no-reply@email.claude.com OR googlecloud@google.com OR "AlphaSignal" OR lukak@storylane.io)', description: 'AI/SaaS product announcements and updates' },
-  { label: LABEL_CALENDLY_NOTIFICATIONS, filterQuery: 'from:teamcalendly@send.calendly.com', description: 'Calendly team setup and scheduling guides' },
-  { label: LABEL_LINKEDIN_UPDATES, filterQuery: 'from:updates-noreply@linkedin.com', description: 'LinkedIn job notifications and updates' },
-  { label: LABEL_DMARC_REPORTS, filterQuery: 'subject:DMARC', applyQuery: 'subject:DMARC', description: 'Automated DMARC aggregate reports', maxResults: 100 },
-  { label: LABEL_EVENTS, filterQuery: 'from:noreply@reminder.eventbrite.com', description: 'Eventbrite event reminders' },
-  { label: LABEL_MEETING_NOTES, filterQuery: 'from:meetings-noreply@google.com subject:Notes', description: 'Google Meet auto-generated notes' },
-  { label: LABEL_MONITORING, filterQuery: 'from:alertmanager@signoz.cloud', applyQuery: 'from:alertmanager@signoz.cloud', description: 'SigNoz alertmanager notifications', maxResults: 200 },
+  { label: LABEL_SENTRY, filterQuery: 'from:noreply@md.getsentry.com' },
+  { label: LABEL_MEETUP_EVENTS, filterQuery: 'from:info@email.meetup.com' },
+  { label: LABEL_COMMUNITY_EVENTS, filterQuery: 'from:("ATX - Awkwardly Zen" OR "Austin Cafe Drawing Group" OR "Austin Robotics & AI")' },
+  { label: LABEL_PRODUCT_UPDATES, filterQuery: 'from:(noreply@email.openai.com OR no-reply@email.claude.com OR googlecloud@google.com OR "AlphaSignal" OR lukak@storylane.io)' },
+  { label: LABEL_CALENDLY_NOTIFICATIONS, filterQuery: 'from:teamcalendly@send.calendly.com' },
+  { label: LABEL_LINKEDIN_UPDATES, filterQuery: 'from:updates-noreply@linkedin.com' },
+  { label: LABEL_DMARC_REPORTS, filterQuery: 'subject:DMARC', applyQuery: 'subject:DMARC', maxResults: 100 },
+  { label: LABEL_EVENTS, filterQuery: 'from:noreply@reminder.eventbrite.com' },
+  { label: LABEL_MEETING_NOTES, filterQuery: 'from:meetings-noreply@google.com subject:Notes' },
+  { label: LABEL_MONITORING, filterQuery: 'from:alertmanager@signoz.cloud', applyQuery: 'from:alertmanager@signoz.cloud', maxResults: 200 },
 ];
 
 /** Grouped filter categories for the --remaining mode */

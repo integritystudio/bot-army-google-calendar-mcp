@@ -3,6 +3,7 @@ import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js
 import { OAuth2Client } from 'google-auth-library';
 import { makeEvent, getTextContent, createCreateEventArgs, makeCalendarMock, createConflictEventArgs, createFullEventArgs, STANDARD_ATTACHMENTS } from '../helpers/index.js';
 import type { ConflictCheckResult } from '../../../services/conflict-detection/types.js';
+import { performConflictCheck } from '../../../handlers/core/eventManipulationUtils.js';
 
 // Mock the googleapis module
 vi.mock('googleapis', () => ({
@@ -591,6 +592,96 @@ describe('CreateEventHandler', () => {
       
       expect(callArgs.conferenceDataVersion).toBe(1);
       expect(callArgs.sendUpdates).toBe('all');
+    });
+  });
+
+  describe('Conflict Detection', () => {
+    const mockPerformConflictCheck = vi.mocked(performConflictCheck);
+
+    const EMPTY_CONFLICTS: ConflictCheckResult = { hasConflicts: false, conflicts: [], duplicates: [] };
+
+    const BLOCKING_DUPLICATE: ConflictCheckResult = {
+      hasConflicts: true,
+      conflicts: [],
+      duplicates: [
+        {
+          event: { id: 'dup-event-001', title: 'Test Event', similarity: 0.97 },
+          suggestion: 'This appears to be a duplicate. Consider updating the existing event instead.'
+        }
+      ]
+    };
+
+    const NON_BLOCKING_CONFLICT: ConflictCheckResult = {
+      hasConflicts: true,
+      conflicts: [
+        {
+          type: 'overlap',
+          calendar: 'primary',
+          event: { id: 'other-event', title: 'Other Meeting' }
+        }
+      ],
+      duplicates: []
+    };
+
+    beforeEach(() => {
+      mockPerformConflictCheck.mockResolvedValue(EMPTY_CONFLICTS);
+    });
+
+    it('should block creation when a blocking duplicate is detected', async () => {
+      mockPerformConflictCheck.mockResolvedValue(BLOCKING_DUPLICATE);
+
+      const args = createCreateEventArgs();
+      const result = await handler.runTool(args, mockOAuth2Client);
+
+      expect(mockCalendar.events.insert).not.toHaveBeenCalled();
+      const text = getTextContent(result);
+      expect(text).toContain('DUPLICATE EVENT DETECTED');
+      expect(text).toContain('97%');
+      expect(text).toContain('allowDuplicates');
+    });
+
+    it('should create event when allowDuplicates bypasses the blocking duplicate', async () => {
+      mockPerformConflictCheck.mockResolvedValue(BLOCKING_DUPLICATE);
+      mockCalendar.events.insert.mockResolvedValue({ data: makeEvent({ id: 'new-event' }) });
+
+      const args = createCreateEventArgs('primary', { allowDuplicates: true } as any);
+      const result = await handler.runTool(args, mockOAuth2Client);
+
+      expect(mockCalendar.events.insert).toHaveBeenCalled();
+      expect(getTextContent(result)).toContain('Event created');
+    });
+
+    it('should include conflict warning in response when non-blocking conflicts exist', async () => {
+      mockPerformConflictCheck.mockResolvedValue(NON_BLOCKING_CONFLICT);
+      mockCalendar.events.insert.mockResolvedValue({ data: makeEvent({ id: 'new-event' }) });
+
+      const args = createCreateEventArgs();
+      const result = await handler.runTool(args, mockOAuth2Client);
+
+      expect(mockCalendar.events.insert).toHaveBeenCalled();
+      expect(getTextContent(result)).toContain('Event created with warnings!');
+    });
+
+    it('should pass calendarsToCheck and duplicateSimilarityThreshold to conflict check', async () => {
+      mockCalendar.events.insert.mockResolvedValue({ data: makeEvent({ id: 'new-event' }) });
+
+      const args = createCreateEventArgs('primary', {
+        calendarsToCheck: ['primary', 'work@example.com'],
+        duplicateSimilarityThreshold: 0.8
+      } as any);
+
+      await handler.runTool(args, mockOAuth2Client);
+
+      expect(mockPerformConflictCheck).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        'primary',
+        expect.objectContaining({
+          calendarsToCheck: ['primary', 'work@example.com'],
+          duplicateSimilarityThreshold: 0.8
+        })
+      );
     });
   });
 });

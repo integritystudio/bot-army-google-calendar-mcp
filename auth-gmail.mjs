@@ -70,7 +70,7 @@ async function authGmail() {
           mode: 0o600
         });
 
-        console.log(`\n✓ Gmail tokens saved for account: ${accountMode}`);
+        console.log(`\nGmail tokens saved for account: ${accountMode}`);
         console.log(`Token path: ${tokenPath}`);
 
         res.writeHead(200);
@@ -100,6 +100,6 @@ async function authGmail() {
 }
 
 authGmail().catch(error => {
-  console.error('❌ Error:', error.message);
+  console.error('Error:', error.message);
   process.exit(1);
 });

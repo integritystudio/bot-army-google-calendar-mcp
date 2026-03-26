@@ -10,6 +10,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, GMAIL_INBOX, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 import { ensureLabelExists } from './lib/gmail-filter-utils.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
 import { BANNER, printComplete } from './lib/console-utils.mjs';
 
@@ -82,14 +83,14 @@ async function protectImportantItems() {
 
 async function resolveBillingLabelIds(gmail, mode) {
   if (mode === 'apply-only') {
-    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
-    const billingLabel = labelsResponse.data.labels.find(l => l.name === LABEL_BILLING);
-    const keepImportantLabel = labelsResponse.data.labels.find(l => l.name === LABEL_KEEP_IMPORTANT);
-    if (!billingLabel || !keepImportantLabel) {
+    const labelCache = await buildLabelCache(gmail);
+    const billingLabelId = labelCache.get(LABEL_BILLING);
+    const keepImportantLabelId = labelCache.get(LABEL_KEEP_IMPORTANT);
+    if (!billingLabelId || !keepImportantLabelId) {
       console.log('Required labels not found\n');
       process.exit(1);
     }
-    return { billingLabelId: billingLabel.id, keepImportantLabelId: keepImportantLabel.id };
+    return { billingLabelId, keepImportantLabelId };
   }
 
   const billingLabelId = await ensureLabelExists(gmail, LABEL_BILLING);

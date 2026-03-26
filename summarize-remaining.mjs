@@ -1,6 +1,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID } from './lib/constants.mjs';
 import { extractDisplayName, getHeader } from './lib/email-utils.mjs';
+import { BANNER } from './lib/console-utils.mjs';
 
 const MAX_RESULTS = 20;
 const INTERNAL_PREVIEW_COUNT = 2;
@@ -47,7 +48,7 @@ try {
   }
 
   console.log('📋 REMAINING UNREAD SUMMARY\n');
-  console.log('═'.repeat(80) + '\n');
+  console.log(BANNER + '\n');
 
   const internalQueries = [
     { label: 'John Skelton (files)', q: 'from:john@integritystudio.ai' },
@@ -64,7 +65,7 @@ try {
   console.log('\nFORUMS: Technical summaries\n');
   await Promise.all(forumQueries.map(q => printQueryResults(q, q.label, FORUM_PREVIEW_COUNT)));
 
-  console.log('═'.repeat(80) + '\n');
+  console.log(BANNER + '\n');
 } catch (error) {
   console.error('Error:', error.message);
   process.exit(1);

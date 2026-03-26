@@ -3,6 +3,7 @@ import { USER_ID, GMAIL_INBOX, LABEL_EVENTS, LABEL_KEEP_IMPORTANT } from './lib/
 import { classifyEmail, getGmailAction } from './lib/date-based-filter.mjs';
 import { getHeader } from './lib/email-utils.mjs';
 import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
+import { BANNER } from './lib/console-utils.mjs';
 
 const EVENT_KEYWORDS = '(event OR meeting OR conference OR workshop OR seminar OR webinar OR presentation OR summit OR expo OR networking OR panel OR forum OR gathering OR ceremony OR celebration)';
 const EVENT_SENDERS = '(meetup OR eventbrite OR "international house" OR calendly OR calendar)';
@@ -11,7 +12,7 @@ async function filterEventsByDate() {
   const gmail = createGmailClient();
 
   console.log('FILTERING EVENTS BY DATE (WITH DATE-BASED ARCHIVE)\n');
-  console.log('═'.repeat(80) + '\n');
+  console.log(BANNER + '\n');
 
   const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
   const eventsLabel = labelsResponse.data.labels.find(l => l.name === LABEL_EVENTS);
@@ -71,10 +72,10 @@ async function filterEventsByDate() {
     await batchModifyMessages(gmail, pastIds, { addLabelIds: [eventsLabelId], removeLabelIds: [GMAIL_INBOX] });
   }
 
-  console.log('═'.repeat(80));
+  console.log(BANNER);
   console.log('COMPLETE\n');
   console.log(`Future events labeled: ${futureIds.length} | Past events archived: ${pastIds.length} | Unknown: ${unknownCount}\n`);
-  console.log('═'.repeat(80) + '\n');
+  console.log(BANNER + '\n');
 }
 
 filterEventsByDate().catch(error => {

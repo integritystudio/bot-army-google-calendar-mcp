@@ -2,11 +2,12 @@ import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, GMAIL_INBOX, GMAIL_UNREAD } from './lib/constants.mjs';
 import { getHeader } from './lib/email-utils.mjs';
 import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
+import { BANNER } from './lib/console-utils.mjs';
 
 const gmail = createGmailClient();
 
 console.log('📅 ARCHIVING OLD MEETING RESPONSES\n');
-console.log('═'.repeat(80) + '\n');
+console.log(BANNER + '\n');
 
 const today = new Date();
 const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -70,7 +71,7 @@ for (const query of searchQueries) {
   }
 }
 
-console.log('═'.repeat(80));
+console.log(BANNER);
 console.log('COMPLETE\n');
 console.log(`✅ Total archived: ${totalArchived} meeting responses\n`);
-console.log('═'.repeat(80) + '\n');
+console.log(BANNER + '\n');

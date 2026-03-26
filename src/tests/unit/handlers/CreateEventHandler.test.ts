@@ -47,6 +47,7 @@ describe('CreateEventHandler', () => {
   let handler: CreateEventHandler;
   let mockOAuth2Client: OAuth2Client;
   let mockCalendar: ReturnType<typeof makeCalendarMock>;
+  let getCalendarTimezoneSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     handler = new CreateEventHandler();
@@ -56,9 +57,9 @@ describe('CreateEventHandler', () => {
 
     // Mock the getCalendar method
     vi.spyOn(handler as any, 'getCalendar').mockReturnValue(mockCalendar);
-    
+
     // Mock getCalendarTimezone
-    vi.spyOn(handler as any, 'getCalendarTimezone').mockResolvedValue('America/Los_Angeles');
+    getCalendarTimezoneSpy = vi.spyOn(handler as any, 'getCalendarTimezone').mockResolvedValue('America/Los_Angeles');
   });
 
   describe('Basic Event Creation', () => {
@@ -592,6 +593,26 @@ describe('CreateEventHandler', () => {
       
       expect(callArgs.conferenceDataVersion).toBe(1);
       expect(callArgs.sendUpdates).toBe('all');
+    });
+  });
+
+  describe('Timezone Resolution', () => {
+    it('should not call getCalendarTimezone when args.timeZone is provided', async () => {
+      mockCalendar.events.insert.mockResolvedValue({ data: makeEvent({ id: 'tz-event' }) });
+
+      const args = createCreateEventArgs('primary', { timeZone: 'Europe/London' } as any);
+      await handler.runTool(args, mockOAuth2Client);
+
+      expect(getCalendarTimezoneSpy).not.toHaveBeenCalled();
+    });
+
+    it('should call getCalendarTimezone when args.timeZone is absent', async () => {
+      mockCalendar.events.insert.mockResolvedValue({ data: makeEvent({ id: 'tz-event' }) });
+
+      const args = createCreateEventArgs();
+      await handler.runTool(args, mockOAuth2Client);
+
+      expect(getCalendarTimezoneSpy).toHaveBeenCalled();
     });
   });
 

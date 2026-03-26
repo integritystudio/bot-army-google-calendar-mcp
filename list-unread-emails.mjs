@@ -57,8 +57,8 @@ async function listUnreadEmails(gmail) {
     return;
   }
 
-  const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
-  const labelMap = new Map((labelsResponse.data.labels || []).map(l => [l.id, l.name]));
+  const labelCache = await buildLabelCache(gmail);
+  const labelMap = new Map([...labelCache.entries()].map(([name, id]) => [id, name]));
 
   const fullMsgs = await Promise.all(
     messageIds.map(msg =>
@@ -151,8 +151,8 @@ async function showStats(gmail) {
 }
 
 async function verifyLabels(gmail) {
-  const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
-  const labelMapById = new Map((labelsResponse.data.labels || []).map(l => [l.id, l.name]));
+  const labelCache = await buildLabelCache(gmail);
+  const labelMapById = new Map([...labelCache.entries()].map(([name, id]) => [id, name]));
 
   console.log('Checking if labels were applied...\n');
 

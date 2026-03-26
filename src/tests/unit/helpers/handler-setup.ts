@@ -46,7 +46,9 @@ export interface HandlerSetup {
 export function setupListEventsHandler(): HandlerSetup {
   vi.clearAllMocks();
   const mockOAuth2Client = new OAuth2Client();
-  const mockCalendarApi = makeCalendarMock();
+  const mockCalendarApi = makeCalendarMock({
+    calendarListGet: vi.fn().mockResolvedValue({ data: { timeZone: 'UTC' } })
+  });
   const handler = new ListEventsHandler();
   vi.spyOn(handler as any, 'getCalendar').mockReturnValue(mockCalendarApi);
 

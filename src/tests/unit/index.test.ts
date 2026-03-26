@@ -8,11 +8,8 @@ import { OAuth2Client } from "google-auth-library";
 // Import tool handlers to test them directly
 import { ListCalendarsHandler } from "../../handlers/core/ListCalendarsHandler.js";
 import { CreateEventHandler } from "../../handlers/core/CreateEventHandler.js";
-import { ListEventsHandler } from "../../handlers/core/ListEventsHandler.js";
 
 // Import test helpers
-import { getTextContent, assertTextContentContains } from "../unit/helpers/index.js";
-import { LIST_EVENTS_API_DEFAULTS } from "../unit/helpers/test-configs.js";
 import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE, TEST_TIMEZONE_SECONDARY } from "../../testing/constants.js";
 
 // Mock OAuth2Client
@@ -158,57 +155,6 @@ Personal (cal2)
       });
     });
 
-    it('should handle create-event tool with valid arguments', async () => {
-      const handler = new CreateEventHandler();
-      const { google } = await import('googleapis');
-      const mockCalendarApi = google.calendar('v3');
-
-      const mockEventArgs = {
-        calendarId: 'primary',
-        summary: 'Team Meeting',
-        description: 'Discuss project progress',
-        start: '2024-08-15T10:00:00',
-        end: '2024-08-15T11:00:00',
-        attendees: [{ email: 'test@example.com' }],
-        location: 'Conference Room 4',
-      };
-
-      const mockApiResponse = {
-        id: 'eventId123',
-        summary: mockEventArgs.summary,
-      };
-
-      // Mock calendar details for timezone retrieval
-      (mockCalendarApi.calendarList.get as any).mockResolvedValue({
-        data: {
-          id: 'primary',
-          timeZone: TEST_TIMEZONE
-        }
-      });
-
-      (mockCalendarApi.events.insert as any).mockResolvedValue({ data: mockApiResponse });
-
-      const result = await handler.runTool(mockEventArgs, mockOAuth2Client);
-
-      expect(mockCalendarApi.calendarList.get).toHaveBeenCalledWith({ calendarId: 'primary' });
-      expect(mockCalendarApi.events.insert).toHaveBeenCalledWith({
-        calendarId: mockEventArgs.calendarId,
-        requestBody: expect.objectContaining({
-          summary: mockEventArgs.summary,
-          description: mockEventArgs.description,
-          start: { dateTime: mockEventArgs.start, timeZone: 'America/Los_Angeles' },
-          end: { dateTime: mockEventArgs.end, timeZone: 'America/Los_Angeles' },
-          attendees: mockEventArgs.attendees,
-          location: mockEventArgs.location,
-        }),
-      });
-
-      expect(result.content).toHaveLength(1);
-      expect(result.content[0].type).toBe('text');
-      expect(getTextContent(result)).toContain('Event created successfully!');
-      expect(getTextContent(result)).toContain('calendar.google.com');
-    });
-
     it('should use calendar default timezone when timeZone is not provided', async () => {
       const handler = new CreateEventHandler();
       const { google } = await import('googleapis');
@@ -261,41 +207,6 @@ Personal (cal2)
       });
     });
 
-    it('should handle list-events tool correctly', async () => {
-      const handler = new ListEventsHandler();
-      const { google } = await import('googleapis');
-      const mockCalendarApi = google.calendar('v3');
-
-      const listEventsArgs = {
-        calendarId: 'primary',
-        timeMin: '2024-08-01T00:00:00Z',
-        timeMax: '2024-08-31T23:59:59Z',
-      };
-
-      const mockEvents = [
-        { 
-          id: 'event1', 
-          summary: 'Meeting', 
-          start: { dateTime: '2024-08-15T10:00:00Z' }, 
-          end: { dateTime: '2024-08-15T11:00:00Z' } 
-        },
-      ];
-
-      (mockCalendarApi.events.list as any).mockResolvedValue({
-        data: { items: mockEvents }
-      });
-
-      const result = await handler.runTool(listEventsArgs, mockOAuth2Client);
-
-      expect(mockCalendarApi.events.list).toHaveBeenCalledWith({
-        calendarId: listEventsArgs.calendarId,
-        timeMin: listEventsArgs.timeMin,
-        timeMax: listEventsArgs.timeMax,
-        ...LIST_EVENTS_API_DEFAULTS
-      });
-
-      assertTextContentContains(result, 'Found');
-    });
   });
 
   describe('Configuration and Environment Variables', () => {

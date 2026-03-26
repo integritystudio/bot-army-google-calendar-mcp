@@ -92,6 +92,7 @@ src/
       ListEventsHandler.ts
       RecurringEventHelpers.ts
       SearchEventsHandler.ts
+      types.ts
       UpdateEventHandler.ts
     gmail/
       GmailApplyFiltersHandler.ts
@@ -181,7 +182,6 @@ src/
     http.ts
     stdio.ts
   utils/
-    aggregationHelpers.ts
     batchProcessor.ts
     date-utils.ts
     event-id-validator.ts
@@ -796,6 +796,54 @@ export interface ConflictDetectionOptions {
   duplicateSimilarityThreshold?: number;
   includeDeclinedEvents?: boolean;
 }
+</file>
+
+<file path="src/testing/example.test.ts">
+import { describe, it, beforeEach, afterEach, expect } from 'vitest';
+import { withTestContext, typedTest, ResourceTracker } from './index.js';
+import type { TestContext } from './index.js';
+</file>
+
+<file path="src/testing/index.ts">
+
+</file>
+
+<file path="src/testing/types.ts">
+import { z } from 'zod';
+import type { Vitest } from 'vitest';
+export interface TestContext {
+  skip(): void;
+  todo(): void;
+  skipIf(condition: boolean): void;
+  todoIf(condition: boolean): void;
+  onTestFinished(fn: () => void | Promise<void>): void;
+}
+⋮----
+skip(): void;
+todo(): void;
+skipIf(condition: boolean): void;
+todoIf(condition: boolean): void;
+onTestFinished(fn: ()
+⋮----
+export type TestOAuthConfig = z.infer<typeof TestOAuthConfigSchema>;
+⋮----
+export type TestEnvConfig = z.infer<typeof TestEnvConfigSchema>;
+⋮----
+export type TestEventConfig = z.infer<typeof TestEventConfigSchema>;
+⋮----
+export type TestResourceTracker = z.infer<typeof TestResourceTrackerSchema>;
+⋮----
+export type TestAssertion = z.infer<typeof TestAssertionSchema>;
+⋮----
+export type ToolResult = z.infer<typeof ToolResultSchema>;
+export class TypedTestContext implements TestContext
+⋮----
+constructor(context: any)
+skip(): void
+todo(): void
+skipIf(condition: boolean): void
+todoIf(condition: boolean): void
+onTestFinished(fn: () => void | Promise<void>): void
 </file>
 
 <file path="src/tests/integration/claude-mcp-integration.test.ts">
@@ -1870,84 +1918,6 @@ async function organizeNewsletters()
 // Step 2: Create filter for future newsletters
 </file>
 
-<file path="package.json">
-{
-  "name": "@cocal/google-calendar-mcp",
-  "version": "1.4.9",
-  "description": "Google Calendar MCP Server with extensive support for calendar management",
-  "type": "module",
-  "main": "build/index.js",
-  "bin": {
-    "google-calendar-mcp": "build/index.js"
-  },
-  "files": [
-    "build/",
-    "README.md",
-    "LICENSE"
-  ],
-  "keywords": [
-    "mcp",
-    "model-context-protocol",
-    "claude",
-    "google-calendar",
-    "calendar",
-    "ai",
-    "llm",
-    "integration"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/nspady/google-calendar-mcp.git"
-  },
-  "bugs": {
-    "url": "https://github.com/nspady/google-calendar-mcp/issues"
-  },
-  "homepage": "https://github.com/nspady/google-calendar-mcp#readme",
-  "author": "nspady",
-  "license": "MIT",
-  "scripts": {
-    "start": "node build/index.js",
-    "build": "node scripts/build.js",
-    "auth": "node build/auth-server.js",
-    "verify-tokens": "GOOGLE_OAUTH_CREDENTIALS=./credentials.json npx vite-node src/verify-tokens.ts",
-    "dev": "node scripts/dev.js",
-    "check-duplicates": "node scripts/check-duplicates.mjs src 6",
-    "lint": "tsc --noEmit -p tsconfig.lint.json",
-    "test": "vitest run src/tests/unit",
-    "test:watch": "vitest src/tests/unit",
-    "test:integration": "vitest run src/tests/integration",
-    "test:all": "vitest run src/tests",
-    "test:coverage": "vitest run src/tests/unit --coverage",
-    "test:integration:doppler": "GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json doppler run --project integrity-studio --config dev -- npm run test:integration",
-    "test:doppler": "GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json doppler run --project integrity-studio --config dev -- npm test",
-    "test:all:doppler": "GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json doppler run --project integrity-studio --config dev -- npm run test:all",
-    "start:http": "node build/index.js --transport http --port 3000",
-    "start:http:public": "node build/index.js --transport http --port 3000 --host 0.0.0.0",
-    "repomix": "bash scripts/repomix/repomix-regen.sh"
-  },
-  "dependencies": {
-    "@google-cloud/local-auth": "^3.0.1",
-    "@modelcontextprotocol/sdk": "^1.12.1",
-    "@sentry/node": "^8.0.0",
-    "esbuild": "^0.25.0",
-    "google-auth-library": "^9.15.0",
-    "googleapis": "^144.0.0",
-    "open": "^7.4.2",
-    "simple-rrule": "^1.8.1",
-    "zod": "^4.3.6",
-    "zod-to-json-schema": "^3.24.5"
-  },
-  "devDependencies": {
-    "@anthropic-ai/sdk": "^0.52.0",
-    "@types/node": "^20.10.4",
-    "@vitest/coverage-v8": "^3.1.1",
-    "openai": "^4.104.0",
-    "typescript": "^5.3.3",
-    "vitest": "^3.1.1"
-  }
-}
-</file>
-
 <file path="protect-important-inbox.mjs">
 async function protectImportantItems()
 ⋮----
@@ -2424,6 +2394,21 @@ export function buildErrorResponse(message: string, details?: Record<string, unk
 export function formatApiError(error: unknown, context?: string): string
 </file>
 
+<file path="src/handlers/core/types.ts">
+import { calendar_v3 } from 'googleapis';
+export interface ExtendedEvent extends calendar_v3.Schema$Event {
+  calendarId: string;
+}
+export interface ListEventsOptions {
+  timeMin?: string;
+  timeMax?: string;
+  timeZone?: string;
+  fields?: string[];
+  privateExtendedProperty?: string[];
+  sharedExtendedProperty?: string[];
+}
+</file>
+
 <file path="src/handlers/gmail/GmailApplyFiltersHandler.ts">
 import { BaseToolHandler } from "../core/BaseToolHandler.js";
 import { OAuth2Client } from "google-auth-library";
@@ -2625,52 +2610,35 @@ isDuplicate(event1: calendar_v3.Schema$Event, event2: calendar_v3.Schema$Event, 
 
 </file>
 
-<file path="src/testing/example.test.ts">
-import { describe, it, beforeEach, afterEach, expect } from 'vitest';
-import { withTestContext, typedTest, ResourceTracker } from './index.js';
-import type { TestContext } from './index.js';
-</file>
-
-<file path="src/testing/index.ts">
-
-</file>
-
-<file path="src/testing/types.ts">
+<file path="src/testing/test-data.ts">
 import { z } from 'zod';
-import type { Vitest } from 'vitest';
-export interface TestContext {
-  skip(): void;
-  todo(): void;
-  skipIf(condition: boolean): void;
-  todoIf(condition: boolean): void;
-  onTestFinished(fn: () => void | Promise<void>): void;
-}
+import type { calendar_v3 } from 'googleapis';
+import {
+  TestEventConfigSchema,
+  TestOAuthConfigSchema,
+  type TestEventConfig,
+  type TestOAuthConfig
+} from './types.js';
+export class TestConfigFactory
 ⋮----
-skip(): void;
-todo(): void;
-skipIf(condition: boolean): void;
-todoIf(condition: boolean): void;
-onTestFinished(fn: ()
+static validateEventConfig(
+    config: Partial<TestEventConfig>
+): TestEventConfig
+static validateOAuthConfig(
+    config: Partial<TestOAuthConfig>
+): TestOAuthConfig
 ⋮----
-export type TestOAuthConfig = z.infer<typeof TestOAuthConfigSchema>;
+export class TestOAuthFactory
 ⋮----
-export type TestEnvConfig = z.infer<typeof TestEnvConfigSchema>;
+static createTestConfig(
+    overrides?: Partial<TestOAuthConfig>
+): TestOAuthConfig
 ⋮----
-export type TestEventConfig = z.infer<typeof TestEventConfigSchema>;
+export function createMockOAuth2Client()
 ⋮----
-export type TestResourceTracker = z.infer<typeof TestResourceTrackerSchema>;
-⋮----
-export type TestAssertion = z.infer<typeof TestAssertionSchema>;
-⋮----
-export type ToolResult = z.infer<typeof ToolResultSchema>;
-export class TypedTestContext implements TestContext
-⋮----
-constructor(context: any)
-skip(): void
-todo(): void
-skipIf(condition: boolean): void
-todoIf(condition: boolean): void
-onTestFinished(fn: () => void | Promise<void>): void
+updateEvent(overrides?: Partial<Record<string, any>>): Record<string, any>
+createEvent(overrides?: Partial<Record<string, any>>): Record<string, any>
+getEvent(overrides?: Partial<Record<string, any>>): Record<string, any>
 </file>
 
 <file path="src/tests/integration/UpdateEventHandler.recurring.integration.test.ts">
@@ -2774,14 +2742,6 @@ constructor(server: McpServer, config: HttpTransportConfig =
 async connect(): Promise<void>
 </file>
 
-<file path="src/utils/aggregationHelpers.ts">
-export function sumBy<T>(items: T[], keyFn: (item: T) => number): number
-export function groupBy<T>(items: T[], keyFn: (item: T) => string): Record<string, T[]>
-export function countBy<T>(items: T[], keyFn: (item: T) => string): Record<string, number>
-export function indexBy<T>(items: T[], keyFn: (item: T) => string): Record<string, T>
-export function uniqBy<T, K>(items: T[], keyFn: (item: T) => K): K[]
-</file>
-
 <file path="src/index.ts">
 import { fileURLToPath } from "url";
 import { GoogleCalendarMcpServer } from './server.js';
@@ -2835,40 +2795,6 @@ import { getSecureTokenPath } from './auth/utils.js';
 async function verifyAndRefreshTokens()
 </file>
 
-<file path="scripts/repomix/repomix-compressed.config.json">
-{
-  "output": {
-    "filePath": "docs/repomix/repo-compressed.xml",
-    "style": "xml",
-    "removeComments": true,
-    "removeEmptyLines": true,
-    "showLineNumbers": true,
-    "topFilesLength": 10,
-    "copyToClipboard": false
-  },
-  "ignore": {
-    "useGitignore": true,
-    "useDefaultPatterns": true,
-    "customPatterns": [
-      "docs/**",
-      "examples/**",
-      "scripts/repomix/*.sh",
-      "*.tsbuildinfo",
-      ".env.*.local",
-      ".cache/**",
-      "**/README.md",
-      "instructions/**",
-      ".claude/settings.local.json",
-      "AGENTS.md",
-      "CLAUDE.md"
-    ]
-  },
-  "security": {
-    "enableSecurityCheck": true
-  }
-}
-</file>
-
 <file path="src/auth/server.ts">
 import { OAuth2Client } from 'google-auth-library';
 import { TokenManager } from './tokenManager.js';
@@ -2911,47 +2837,6 @@ protected async getCalendarDetails(client: OAuth2Client, calendarId: string): Pr
 protected async getCalendarTimezone(client: OAuth2Client, calendarId: string): Promise<string>
 </file>
 
-<file path="src/handlers/core/batchUtils.ts">
-export interface ExtendedEvent {
-  calendarId: string;
-  [key: string]: any;
-}
-export interface BatchResponseResult<T extends ExtendedEvent = ExtendedEvent> {
-  events: T[];
-  errors: Array<{ calendarId: string; error: string }>;
-}
-export interface ProcessBatchResponsesOptions {
-  includeErrors?: boolean;
-  errorFormatter?: (statusCode: number, body: any) => string;
-}
-const defaultErrorFormatter = (statusCode: number, body: any): string =>
-export function processBatchResponses<T extends ExtendedEvent = ExtendedEvent>(
-  responses: any[],
-  calendarIds: string[],
-  options: ProcessBatchResponsesOptions = {}
-): BatchResponseResult<T>
-</file>
-
-<file path="src/handlers/core/eventFormatting.ts">
-import { calendar_v3 } from 'googleapis';
-import { formatEventWithDetails } from '../utils.js';
-import { groupBy } from '../../utils/aggregationHelpers.js';
-export interface ExtendedEvent extends calendar_v3.Schema$Event {
-  calendarId?: string;
-}
-export interface FormatEventsListOptions {
-  groupByCalendar?: boolean;
-  header?: string;
-}
-export function formatEventsList(
-  events: ExtendedEvent[],
-  options: FormatEventsListOptions = {}
-): string
-function formatSimpleEventsList(events: ExtendedEvent[]): string
-function formatGroupedEventsList(events: ExtendedEvent[]): string
-function groupEventsByCalendar(events: ExtendedEvent[]): Record<string, ExtendedEvent[]>
-</file>
-
 <file path="src/handlers/core/FreeBusyEventHandler.ts">
 import { BaseToolHandler } from './BaseToolHandler.js';
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
@@ -2984,6 +2869,48 @@ export class GmailCreateLabelHandler extends BaseToolHandler
 ⋮----
 async runTool(args: GmailCreateLabelInput, oauth2Client: OAuth2Client): Promise<CallToolResult>
 async execute(input: GmailCreateLabelInput, oauth2Client: OAuth2Client): Promise<any>
+</file>
+
+<file path="src/testing/test-utils.ts">
+import type { TestContext } from './types.js';
+import { TypedTestContext } from './types.js';
+import { tryGetTextContent } from '../tests/unit/helpers/index.js';
+import {
+  EVENT_ID_MIN_LENGTH,
+  RESPONSE_PATTERNS,
+  RESPONSE_INDICATORS
+} from './constants.js';
+export function withTestContext(
+  testFn: (this: TestContext, ctx: TestContext) => Promise<void> | void
+): (this: any) => Promise<void>
+export function typedTest(
+  testFn: (this: TestContext) => Promise<void> | void
+): (this: any) => Promise<void>
+export function createTypedContext(rawContext: any): TestContext
+export function skipTestIf(
+  condition: boolean,
+  reason: string,
+  ctx: TestContext
+): void
+export function todoTestIf(
+  condition: boolean,
+  reason: string,
+  ctx: TestContext
+): void
+export async function withCleanup<T, C>(
+  setup: () => Promise<T>,
+  cleanup: (resource: T) => Promise<void>
+): Promise<T>
+export class ResourceTracker
+⋮----
+constructor(calendarId: string)
+track(eventId: string): void
+getTracked(): string[]
+async cleanup(
+    calendarDeleteFn: (calendarId: string, eventId: string) => Promise<void>
+): Promise<void>
+⋮----
+export function extractEventIdFromResponse(response: any): string | null
 </file>
 
 <file path="src/tests/integration/integration-test-helpers.ts">
@@ -3075,6 +3002,24 @@ function resolveWith(overrides: Partial<calendar_v3.Schema$Event>)
 function expectSystemFieldsRemoved(result: calendar_v3.Schema$Event): void
 </file>
 
+<file path="src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { OAuth2Client } from 'google-auth-library';
+import { calendar_v3, google } from 'googleapis';
+import { UpdateEventHandler } from '../../../handlers/core/UpdateEventHandler.js';
+import { UpdateEventInput, ToolSchemas } from '../../../tools/registry.js';
+import { makeEvent, makeCalendarMock } from '../helpers/factories.js';
+import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
+⋮----
+function createMockEvent(overrides: Partial<calendar_v3.Schema$Event> =
+function createMockRecurringEvent(overrides: Partial<calendar_v3.Schema$Event> =
+function buildUpdateEventInput(overrides: Partial<UpdateEventInput> =
+function setupMocks(
+    eventData: calendar_v3.Schema$Event,
+    insertData?: calendar_v3.Schema$Event
+): void
+</file>
+
 <file path="src/tests/unit/helpers/content.ts">
 export function getTextContent(result:
 export function tryGetTextContent(result: unknown): string | null
@@ -3123,6 +3068,58 @@ import {
   createTimeObject,
   applyTimezone,
 } from '../../../utils/timezone-utils.js';
+</file>
+
+<file path="scripts/repomix/repomix-compressed.config.json">
+{
+  "output": {
+    "filePath": "docs/repomix/repo-compressed.xml",
+    "style": "xml",
+    "removeComments": true,
+    "removeEmptyLines": true,
+    "showLineNumbers": true,
+    "topFilesLength": 10,
+    "copyToClipboard": false
+  },
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "docs/**",
+      "examples/**",
+      "scripts/repomix/*.sh",
+      "*.tsbuildinfo",
+      ".env.*.local",
+      ".cache/**",
+      "**/README.md",
+      "instructions/**",
+      ".claude/settings.local.json",
+      "AGENTS.md",
+      "CLAUDE.md"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}
+</file>
+
+<file path="src/handlers/core/batchUtils.ts">
+import { ExtendedEvent } from './types.js';
+export interface BatchResponseResult<T extends ExtendedEvent = ExtendedEvent> {
+  events: T[];
+  errors: Array<{ calendarId: string; error: string }>;
+}
+export interface ProcessBatchResponsesOptions {
+  includeErrors?: boolean;
+  errorFormatter?: (statusCode: number, body: any) => string;
+}
+const defaultErrorFormatter = (statusCode: number, body: any): string =>
+export function processBatchResponses<T extends ExtendedEvent = ExtendedEvent>(
+  responses: any[],
+  calendarIds: string[],
+  options: ProcessBatchResponsesOptions = {}
+): BatchResponseResult<T>
 </file>
 
 <file path="src/handlers/core/eventManipulationUtils.ts">
@@ -3174,87 +3171,6 @@ export async function performConflictCheck(
 export function getConferenceAndAttachmentOptions(
   input: CreateEventInput | UpdateEventInput
 ):
-</file>
-
-<file path="src/handlers/utils.ts">
-import { calendar_v3 } from "googleapis";
-import { ConflictCheckResult } from "../services/conflict-detection/types.js";
-import { RESPONSE_PATTERNS } from "../testing/constants.js";
-import { groupBy } from "../utils/aggregationHelpers.js";
-import { oneDayBefore } from "../utils/date-utils.js";
-export function generateEventUrl(calendarId: string, eventId: string): string
-export function getEventUrl(event: calendar_v3.Schema$Event, calendarId?: string): string | null
-function formatDateTime(dateTime?: string | null, date?: string | null, timeZone?: string): string
-function formatAttendees(attendees?: calendar_v3.Schema$EventAttendee[]): string
-export function formatEventWithDetails(event: calendar_v3.Schema$Event, calendarId?: string): string
-⋮----
-// Format start and end times with timezone
-⋮----
-// All-day event
-⋮----
-// Single day all-day event
-⋮----
-// Multi-day all-day event - end date is exclusive, so subtract 1 day for display
-⋮----
-// Timed event
-⋮----
-/**
- * Formats conflict check results for display
- */
-export function formatConflictWarnings(conflicts: ConflictCheckResult): string
-⋮----
-// Format duplicate warnings
-⋮----
-// Show full event details if available
-⋮----
-// Fallback to basic info
-⋮----
-// Format conflict warnings
-⋮----
-// Show full event details if available
-⋮----
-// Fallback to basic info
-⋮----
-/**
- * Creates a response with event details and optional conflict warnings
- */
-export function createEventResponseWithConflicts(
-    event: calendar_v3.Schema$Event,
-    calendarId: string,
-    conflicts?: ConflictCheckResult,
-    actionVerb: string = "created"
-): string
-</file>
-
-<file path="src/testing/test-data.ts">
-import { z } from 'zod';
-import type { calendar_v3 } from 'googleapis';
-import {
-  TestEventConfigSchema,
-  TestOAuthConfigSchema,
-  type TestEventConfig,
-  type TestOAuthConfig
-} from './types.js';
-export class TestConfigFactory
-⋮----
-static validateEventConfig(
-    config: Partial<TestEventConfig>
-): TestEventConfig
-static validateOAuthConfig(
-    config: Partial<TestOAuthConfig>
-): TestOAuthConfig
-⋮----
-export class TestOAuthFactory
-⋮----
-static createTestConfig(
-    overrides?: Partial<TestOAuthConfig>
-): TestOAuthConfig
-⋮----
-export function createMockOAuth2Client()
-⋮----
-updateEvent(overrides?: Partial<Record<string, any>>): Record<string, any>
-createEvent(overrides?: Partial<Record<string, any>>): Record<string, any>
-getEvent(overrides?: Partial<Record<string, any>>): Record<string, any>
 </file>
 
 <file path="src/tests/integration/test-data-factory.ts">
@@ -3464,46 +3380,22 @@ static async registerAll(
 )
 </file>
 
-<file path="src/utils/batchProcessor.ts">
-import { formatErrorMessage } from "../handlers/core/errorFormatting.js";
-export interface BatchResult<T> {
-  results: T[];
-  errors: Array<{ id: string; error: string }>;
-}
-export interface BatchProcessorOptions<T, TItem = string> {
-  items: TItem[];
-  operation: (item: TItem) => Promise<T>;
-  errorFormatter?: (error: unknown) => string;
-  continueOnError?: boolean;
-}
-const defaultErrorFormatter = (error: unknown): string =>
-export async function processBatchItems<T, TItem = string>(
-  options: BatchProcessorOptions<T, TItem>
-): Promise<BatchResult<T>>
-export async function processBatchItemsChunked<T, TItem = string>(
-  items: TItem[],
-  operation: (item: TItem) => Promise<T>,
-  batchSize: number = 5,
-  continueOnError: boolean = true
-): Promise<BatchResult<T>>
-</file>
-
-<file path="src/handlers/core/SearchEventsHandler.ts">
-import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { OAuth2Client } from "google-auth-library";
-import { SearchEventsInput } from "../../tools/registry.js";
-import { BaseToolHandler } from "./BaseToolHandler.js";
-import { calendar_v3 } from 'googleapis';
-import { resolveTimeRange } from "../../utils/timezone-utils.js";
-import { buildListFieldMask } from "../../utils/field-mask-builder.js";
-import { formatEventsList } from "./eventFormatting.js";
-export class SearchEventsHandler extends BaseToolHandler
+<file path="src/handlers/core/eventFormatting.ts">
+import { formatEventWithDetails } from '../utils.js';
+import { groupBy } from 'lodash-es';
+import { ExtendedEvent } from './types.js';
 ⋮----
-async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult>
-private async searchEvents(
-        client: OAuth2Client,
-        args: SearchEventsInput
-): Promise<calendar_v3.Schema$Event[]>
+export interface FormatEventsListOptions {
+  groupByCalendar?: boolean;
+  header?: string;
+}
+export function formatEventsList(
+  events: ExtendedEvent[],
+  options: FormatEventsListOptions = {}
+): string
+function formatSimpleEventsList(events: ExtendedEvent[]): string
+function formatGroupedEventsList(events: ExtendedEvent[]): string
+function groupEventsByCalendar(events: ExtendedEvent[]): Record<string, ExtendedEvent[]>
 </file>
 
 <file path="src/handlers/core/UpdateEventHandler.ts">
@@ -3546,46 +3438,70 @@ private async updateFutureInstances(
 ): Promise<calendar_v3.Schema$Event>
 </file>
 
-<file path="src/testing/test-utils.ts">
-import type { TestContext } from './types.js';
-import { TypedTestContext } from './types.js';
-import { tryGetTextContent } from '../tests/unit/helpers/index.js';
+<file path="src/handlers/utils.ts">
+import { calendar_v3 } from "googleapis";
+import { ConflictCheckResult } from "../services/conflict-detection/types.js";
+import { RESPONSE_PATTERNS } from "../testing/constants.js";
+import { groupBy } from "lodash-es";
+import { oneDayBefore } from "../utils/date-utils.js";
+export function generateEventUrl(calendarId: string, eventId: string): string
+export function getEventUrl(event: calendar_v3.Schema$Event, calendarId?: string): string | null
+function formatDateTime(dateTime?: string | null, date?: string | null, timeZone?: string): string
+function formatAttendees(attendees?: calendar_v3.Schema$EventAttendee[]): string
+export function formatEventWithDetails(event: calendar_v3.Schema$Event, calendarId?: string): string
+⋮----
+// Format start and end times with timezone
+⋮----
+// All-day event
+⋮----
+// Single day all-day event
+⋮----
+// Multi-day all-day event - end date is exclusive, so subtract 1 day for display
+⋮----
+// Timed event
+⋮----
+/**
+ * Formats conflict check results for display
+ */
+export function formatConflictWarnings(conflicts: ConflictCheckResult): string
+⋮----
+// Format duplicate warnings
+⋮----
+// Show full event details if available
+⋮----
+// Fallback to basic info
+⋮----
+// Format conflict warnings
+⋮----
+// Show full event details if available
+⋮----
+// Fallback to basic info
+⋮----
+/**
+ * Creates a response with event details and optional conflict warnings
+ */
+export function createEventResponseWithConflicts(
+    event: calendar_v3.Schema$Event,
+    calendarId: string,
+    conflicts?: ConflictCheckResult,
+    actionVerb: string = "created"
+): string
+</file>
+
+<file path="src/tests/integration/conflict-detection-integration.test.ts">
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { initializeOAuth2Client } from '../../auth/client.js';
+import { TokenManager } from '../../auth/tokenManager.js';
+import { TestDataFactory } from './test-data-factory.js';
+import { getTextContent } from '../unit/helpers/content.js';
 import {
-  EVENT_ID_MIN_LENGTH,
-  RESPONSE_PATTERNS,
-  RESPONSE_INDICATORS
-} from './constants.js';
-export function withTestContext(
-  testFn: (this: TestContext, ctx: TestContext) => Promise<void> | void
-): (this: any) => Promise<void>
-export function typedTest(
-  testFn: (this: TestContext) => Promise<void> | void
-): (this: any) => Promise<void>
-export function createTypedContext(rawContext: any): TestContext
-export function skipTestIf(
-  condition: boolean,
-  reason: string,
-  ctx: TestContext
-): void
-export function todoTestIf(
-  condition: boolean,
-  reason: string,
-  ctx: TestContext
-): void
-export async function withCleanup<T, C>(
-  setup: () => Promise<T>,
-  cleanup: (resource: T) => Promise<void>
-): Promise<T>
-export class ResourceTracker
-⋮----
-constructor(calendarId: string)
-track(eventId: string): void
-getTracked(): string[]
-async cleanup(
-    calendarDeleteFn: (calendarId: string, eventId: string) => Promise<void>
-): Promise<void>
-⋮----
-export function extractEventIdFromResponse(response: any): string | null
+  createAndVerifyEvent,
+  updateAndVerifyEvent,
+  createNonOverlappingEventPair,
+  createOverlappingEventPair
+} from './integration-test-helpers.js';
 </file>
 
 <file path="src/tests/unit/handlers/ListEventsHandler.test.ts">
@@ -3647,53 +3563,105 @@ export function resolveTimeRange(
 ):
 </file>
 
-<file path="src/handlers/core/ListEventsHandler.ts">
+<file path="package.json">
+{
+  "name": "@cocal/google-calendar-mcp",
+  "version": "1.4.9",
+  "description": "Google Calendar MCP Server with extensive support for calendar management",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "google-calendar-mcp": "build/index.js"
+  },
+  "files": [
+    "build/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "google-calendar",
+    "calendar",
+    "ai",
+    "llm",
+    "integration"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nspady/google-calendar-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nspady/google-calendar-mcp/issues"
+  },
+  "homepage": "https://github.com/nspady/google-calendar-mcp#readme",
+  "author": "nspady",
+  "license": "MIT",
+  "scripts": {
+    "start": "node build/index.js",
+    "build": "node scripts/build.js",
+    "auth": "node build/auth-server.js",
+    "verify-tokens": "GOOGLE_OAUTH_CREDENTIALS=./credentials.json npx vite-node src/verify-tokens.ts",
+    "dev": "node scripts/dev.js",
+    "check-duplicates": "node scripts/check-duplicates.mjs src 6",
+    "lint": "tsc --noEmit -p tsconfig.lint.json",
+    "test": "vitest run src/tests/unit",
+    "test:watch": "vitest src/tests/unit",
+    "test:integration": "vitest run src/tests/integration",
+    "test:all": "vitest run src/tests",
+    "test:coverage": "vitest run src/tests/unit --coverage",
+    "test:integration:doppler": "GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json doppler run --project integrity-studio --config dev -- npm run test:integration",
+    "test:doppler": "GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json doppler run --project integrity-studio --config dev -- npm test",
+    "test:all:doppler": "GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json doppler run --project integrity-studio --config dev -- npm run test:all",
+    "start:http": "node build/index.js --transport http --port 3000",
+    "start:http:public": "node build/index.js --transport http --port 3000 --host 0.0.0.0",
+    "repomix": "bash scripts/repomix/repomix-regen.sh"
+  },
+  "dependencies": {
+    "@google-cloud/local-auth": "^3.0.1",
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@sentry/node": "^8.0.0",
+    "date-fns": "^4.1.0",
+    "esbuild": "^0.25.0",
+    "google-auth-library": "^9.15.0",
+    "googleapis": "^144.0.0",
+    "lodash-es": "^4.17.23",
+    "open": "^7.4.2",
+    "p-limit": "^7.3.0",
+    "simple-rrule": "^1.8.1",
+    "zod": "^4.3.6",
+    "zod-to-json-schema": "^3.24.5"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "@types/lodash-es": "^4.17.12",
+    "@types/node": "^20.10.4",
+    "@vitest/coverage-v8": "^3.1.1",
+    "openai": "^4.104.0",
+    "typescript": "^5.3.3",
+    "vitest": "^3.1.1"
+  }
+}
+</file>
+
+<file path="src/handlers/core/SearchEventsHandler.ts">
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OAuth2Client } from "google-auth-library";
+import { SearchEventsInput } from "../../tools/registry.js";
 import { BaseToolHandler } from "./BaseToolHandler.js";
 import { calendar_v3 } from 'googleapis';
-import { BatchRequestHandler } from "./BatchRequestHandler.js";
 import { resolveTimeRange } from "../../utils/timezone-utils.js";
 import { buildListFieldMask } from "../../utils/field-mask-builder.js";
-import { processBatchResponses } from "./batchUtils.js";
 import { formatEventsList } from "./eventFormatting.js";
-interface ExtendedEvent extends calendar_v3.Schema$Event {
-  calendarId: string;
-}
-interface ListEventsArgs {
-  calendarId: string | string[];
-  timeMin?: string;
-  timeMax?: string;
-  timeZone?: string;
-  fields?: string[];
-  privateExtendedProperty?: string[];
-  sharedExtendedProperty?: string[];
-}
-export class ListEventsHandler extends BaseToolHandler
+import { ListEventsOptions } from "./types.js";
+export class SearchEventsHandler extends BaseToolHandler
 ⋮----
-async runTool(args: ListEventsArgs, oauth2Client: OAuth2Client): Promise<CallToolResult>
-private async fetchEvents(
+async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult>
+private async searchEvents(
         client: OAuth2Client,
-        calendarIds: string[],
-        options: { timeMin?: string; timeMax?: string; timeZone?: string; fields?: string[]; privateExtendedProperty?: string[]; sharedExtendedProperty?: string[] }
-): Promise<ExtendedEvent[]>
-private async resolveTimeRange(
-        client: OAuth2Client,
-        calendarId: string,
-        options: { timeMin?: string; timeMax?: string; timeZone?: string }
-): Promise<
-private async fetchSingleCalendarEvents(
-        client: OAuth2Client,
-        calendarId: string,
-        options: { timeMin?: string; timeMax?: string; timeZone?: string; fields?: string[]; privateExtendedProperty?: string[]; sharedExtendedProperty?: string[] }
-): Promise<ExtendedEvent[]>
-private async fetchMultipleCalendarEvents(
-        client: OAuth2Client,
-        calendarIds: string[],
-        options: { timeMin?: string; timeMax?: string; timeZone?: string; fields?: string[]; privateExtendedProperty?: string[]; sharedExtendedProperty?: string[] }
-): Promise<ExtendedEvent[]>
-private async buildEventsPath(client: OAuth2Client, calendarId: string, options:
-private sortEventsByStartTime(events: ExtendedEvent[]): ExtendedEvent[]
+        args: SearchEventsInput
+): Promise<calendar_v3.Schema$Event[]>
 </file>
 
 <file path="src/services/conflict-detection/ConflictDetectionService.ts">
@@ -3753,20 +3721,74 @@ async checkConflictsWithFreeBusy(
 ): Promise<ConflictInfo[]>
 </file>
 
-<file path="src/tests/integration/conflict-detection-integration.test.ts">
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { initializeOAuth2Client } from '../../auth/client.js';
-import { TokenManager } from '../../auth/tokenManager.js';
-import { TestDataFactory } from './test-data-factory.js';
-import { getTextContent } from '../unit/helpers/content.js';
-import {
-  createAndVerifyEvent,
-  updateAndVerifyEvent,
-  createNonOverlappingEventPair,
-  createOverlappingEventPair
-} from './integration-test-helpers.js';
+<file path="src/utils/batchProcessor.ts">
+import pLimit from 'p-limit';
+import { formatErrorMessage } from "../handlers/core/errorFormatting.js";
+export interface BatchResult<T> {
+  results: T[];
+  errors: Array<{ id: string; error: string }>;
+}
+export interface BatchProcessorOptions<T, TItem = string> {
+  items: TItem[];
+  operation: (item: TItem) => Promise<T>;
+  errorFormatter?: (error: unknown) => string;
+  continueOnError?: boolean;
+}
+const defaultErrorFormatter = (error: unknown): string =>
+export async function processBatchItems<T, TItem = string>(
+  options: BatchProcessorOptions<T, TItem>
+): Promise<BatchResult<T>>
+export async function processBatchItemsChunked<T, TItem = string>(
+  items: TItem[],
+  operation: (item: TItem) => Promise<T>,
+  batchSize: number = 5,
+  continueOnError: boolean = true
+): Promise<BatchResult<T>>
+</file>
+
+<file path="src/handlers/core/ListEventsHandler.ts">
+import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { OAuth2Client } from "google-auth-library";
+import { BaseToolHandler } from "./BaseToolHandler.js";
+import { BatchRequestHandler } from "./BatchRequestHandler.js";
+import { resolveTimeRange } from "../../utils/timezone-utils.js";
+import { buildListFieldMask } from "../../utils/field-mask-builder.js";
+import { processBatchResponses } from "./batchUtils.js";
+import { formatEventsList } from "./eventFormatting.js";
+import { ListEventsOptions, ExtendedEvent } from "./types.js";
+interface ListEventsArgs {
+  calendarId: string | string[];
+  timeMin?: string;
+  timeMax?: string;
+  timeZone?: string;
+  fields?: string[];
+  privateExtendedProperty?: string[];
+  sharedExtendedProperty?: string[];
+}
+export class ListEventsHandler extends BaseToolHandler
+⋮----
+async runTool(args: ListEventsArgs, oauth2Client: OAuth2Client): Promise<CallToolResult>
+private async fetchEvents(
+        client: OAuth2Client,
+        calendarIds: string[],
+        options: ListEventsOptions
+): Promise<ExtendedEvent[]>
+private async fetchSingleCalendarEvents(
+        client: OAuth2Client,
+        calendarId: string,
+        options: ListEventsOptions
+): Promise<ExtendedEvent[]>
+private async fetchMultipleCalendarEvents(
+        client: OAuth2Client,
+        calendarIds: string[],
+        options: ListEventsOptions
+): Promise<ExtendedEvent[]>
+private buildEventsPath(
+        calendarId: string,
+        timezone: string,
+        options: ListEventsOptions,
+        fieldMask: string | null
+): string
 </file>
 
 <file path="src/handlers/core/RecurringEventHelpers.ts">
@@ -3849,6 +3871,28 @@ export function createEventWithExtendedProperties(
 ): calendar_v3.Schema$Event
 </file>
 
+<file path="src/tests/unit/handlers/CreateEventHandler.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
+import { OAuth2Client } from 'google-auth-library';
+import { makeEvent, getTextContent, createCreateEventArgs, makeCalendarMock, createConflictEventArgs, createEventWithExtendedProperties, createFullEventArgs, STANDARD_ATTACHMENTS } from '../helpers/index.js';
+</file>
+
+<file path="src/tests/unit/schemas/validators.test.ts">
+import { describe, it, expect } from 'vitest';
+import { ToolSchemas } from '../../../tools/registry.js';
+import { makePastDateString } from '../helpers/factories.js';
+import { TIME_MIN, TIME_MAX } from '../helpers/test-configs.js';
+import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
+import {
+  createUpdateEventArgs,
+  createComplexUpdateEventArgs,
+  DEFAULT_CALENDAR_ID,
+  DEFAULT_EVENT_ID
+} from '../helpers/event-test-data.js';
+import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from '../../../testing/constants.js';
+</file>
+
 <file path="src/utils/date-utils.ts">
 import {
   addDays as _addDays,
@@ -3864,8 +3908,8 @@ import {
   getDaysInMonth,
   isBefore,
   isLastDayOfMonth,
-  toRRuleDateString,
-} from 'simple-rrule';
+} from 'date-fns';
+import { toRRuleDateString } from 'simple-rrule';
 ⋮----
 export function addDays(date: Date, days: number): Date
 export function addMilliseconds(date: Date, ms: number): Date
@@ -3961,56 +4005,16 @@ import { ExtendedEvent } from '../../../handlers/core/batchUtils.js';
 ⋮----
 import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
 import { processBatchResponses } from '../../../handlers/core/batchUtils.js';
-import { groupBy } from '../../../utils/aggregationHelpers.js';
+import { groupBy } from 'lodash-es';
 ⋮----
 const sortByStartTime = (a: ExtendedEvent, b: ExtendedEvent) =>
-</file>
-
-<file path="src/tests/unit/handlers/CreateEventHandler.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
-import { OAuth2Client } from 'google-auth-library';
-import { makeEvent, getTextContent, createCreateEventArgs, makeCalendarMock, createConflictEventArgs, createEventWithExtendedProperties, createFullEventArgs, STANDARD_ATTACHMENTS } from '../helpers/index.js';
-</file>
-
-<file path="src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { OAuth2Client } from 'google-auth-library';
-import { calendar_v3, google } from 'googleapis';
-import { UpdateEventHandler } from '../../../handlers/core/UpdateEventHandler.js';
-import { UpdateEventInput, ToolSchemas } from '../../../tools/registry.js';
-import { makeEvent, makeCalendarMock } from '../helpers/factories.js';
-import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
-⋮----
-function createMockEvent(overrides: Partial<calendar_v3.Schema$Event> =
-function createMockRecurringEvent(overrides: Partial<calendar_v3.Schema$Event> =
-function buildUpdateEventInput(overrides: Partial<UpdateEventInput> =
-function setupMocks(
-    eventData: calendar_v3.Schema$Event,
-    insertData?: calendar_v3.Schema$Event
-): void
-</file>
-
-<file path="src/tests/unit/schemas/validators.test.ts">
-import { describe, it, expect } from 'vitest';
-import { ToolSchemas } from '../../../tools/registry.js';
-import { makePastDateString } from '../helpers/factories.js';
-import { TIME_MIN, TIME_MAX } from '../helpers/test-configs.js';
-import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
-import {
-  createUpdateEventArgs,
-  createComplexUpdateEventArgs,
-  DEFAULT_CALENDAR_ID,
-  DEFAULT_EVENT_ID
-} from '../helpers/event-test-data.js';
-import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from '../../../testing/constants.js';
 </file>
 
 <file path="src/tests/unit/helpers/factories.ts">
 import { calendar_v3 } from 'googleapis';
 import { GaxiosError } from 'gaxios';
 import { vi } from 'vitest';
-import { addHours, addMinutes } from 'simple-rrule';
+import { addHours, addMinutes } from 'date-fns';
 import {
   addDays,
   getFutureDate,

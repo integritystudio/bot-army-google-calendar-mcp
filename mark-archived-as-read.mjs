@@ -3,6 +3,7 @@ import {
   USER_ID, GMAIL_UNREAD,
   LABEL_PRODUCT_UPDATES, LABEL_MONITORING, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING,
 } from './lib/constants.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 
 async function markArchivedAsRead() {
   const gmail = createGmailClient();
@@ -21,17 +22,10 @@ async function markArchivedAsRead() {
   let totalMarked = 0;
 
   try {
-    const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
-    const labels = labelsResponse.data.labels || [];
-    if (labels.length === 0) {
-      console.log('No labels found\n');
-      return;
-    }
-    const labelMap = {};
-    labels.forEach(l => { labelMap[l.name] = l.id; });
+    const labelCache = await buildLabelCache(gmail);
 
     for (const category of categoriesToProcess) {
-      const labelId = labelMap[category];
+      const labelId = labelCache.get(category);
       if (!labelId) continue;
 
       const searchQuery = `label:"${category}" is:unread -label:INBOX`;

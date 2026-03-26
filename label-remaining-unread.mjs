@@ -1,12 +1,12 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID, LABEL_EVENTS, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 
 const gmail = createGmailClient();
 
 console.log('🏷️  LABELING REMAINING UNREAD EMAILS\n');
 console.log('═'.repeat(80) + '\n');
 
-// Define labeling rules by sender/content pattern
 const labelingRules = [
   {
     label: LABEL_EVENTS,
@@ -40,12 +40,11 @@ const labelingRules = [
   }
 ];
 
-const labelsResponse = await gmail.users.labels.list({ userId: USER_ID });
-const labelMap = {};
-labelsResponse.data.labels.forEach(l => { labelMap[l.name] = l.id; });
+const labelCache = await buildLabelCache(gmail);
 
 for (const rule of labelingRules) {
-  if (!labelMap[rule.label]) {
+  const labelId = labelCache.get(rule.label);
+  if (!labelId) {
     console.log(`⚠️  Label not found: ${rule.label}\n`);
     continue;
   }
@@ -69,7 +68,7 @@ for (const rule of labelingRules) {
         userId: USER_ID,
         requestBody: {
           ids: batch.map(m => m.id),
-          addLabelIds: [labelMap[rule.label]]
+          addLabelIds: [labelId]
         }
       });
     }

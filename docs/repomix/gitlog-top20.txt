@@ -1,3 +1,9 @@
+1e4638a 2026-03-27 refactor(email): generalize archive-old-meeting-responses into reusable archive-old-emails script
+  docs/repomix/gitlog-top20.txt
+  docs/repomix/repo-compressed.xml
+  docs/repomix/repomix-git-ranked.xml
+  docs/repomix/repomix.xml
+
 de0cebd 2026-03-26 refactor(field-mask-builder): extract resolveFields helper and LIST_METADATA_FIELDS constant
   docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml

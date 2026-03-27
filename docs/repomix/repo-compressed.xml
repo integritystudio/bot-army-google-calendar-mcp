@@ -204,7 +204,7 @@ src/
   verify-tokens.ts
 .env.test
 .gitignore
-archive-old-meeting-responses.mjs
+archive-old-emails.mjs
 auth-gmail.mjs
 create-gmail-filters.mjs
 doppler.yaml
@@ -229,14 +229,6 @@ vitest.config.ts
 
 <files>
 This section contains the contents of the repository's files.
-
-<file path="lib/constants.mjs">
-/** Gmail user ID (special value 'me' = authenticated user) */
-⋮----
-/** Gmail system label IDs */
-⋮----
-/** Gmail label names for email categories */
-</file>
 
 <file path="lib/date-based-filter.mjs">
 /**
@@ -340,28 +332,6 @@ export function extractDisplayName(from)
  * @returns {string}
  */
 export function extractEmailAddress(from)
-</file>
-
-<file path="lib/gmail-batch-utils.mjs">
-/**
- * Apply label modifications to messages in batches.
- * @param {Object} gmail - Authenticated Gmail client
- * @param {Array<string|{id:string}>} messages - Message IDs or message objects
- * @param {{ addLabelIds?: string[], removeLabelIds?: string[] }} modifications
- * @param {number} [batchSize]
- * @returns {Promise<number>} Count of messages processed
- */
-export async function batchModifyMessages(gmail, messages, modifications, batchSize = DEFAULT_BATCH_SIZE)
-⋮----
-/**
- * Search for messages and apply label modifications in one operation.
- * @param {Object} gmail - Authenticated Gmail client
- * @param {string} query - Gmail search query
- * @param {{ addLabelIds?: string[], removeLabelIds?: string[] }} modifications
- * @param {number} [maxResults]
- * @returns {Promise<number>} Count of messages processed
- */
-export async function searchAndModify(gmail, query, modifications, maxResults = 500)
 </file>
 
 <file path="lib/gmail-batch.mjs">
@@ -2915,6 +2885,17 @@ export function buildListFieldMask(
 ): string | undefined
 </file>
 
+<file path="archive-old-emails.mjs">
+/**
+ * Archive emails older than DAYS_AGO that match a given label.
+ *
+ * Usage:
+ *   node archive-old-emails.mjs --label "Meeting Responses"
+ */
+⋮----
+async function archiveOldEmails()
+</file>
+
 <file path="auth-gmail.mjs">
 // Gmail scopes
 ⋮----
@@ -3011,6 +2992,51 @@ async function verifyAndRefreshTokens()
 
 <file path="lib/console-utils.mjs">
 export function printComplete(summary)
+</file>
+
+<file path="lib/constants.mjs">
+/** Gmail user ID (special value 'me' = authenticated user) */
+⋮----
+/** Gmail system label IDs */
+⋮----
+/** Gmail label names for email categories */
+⋮----
+/** Default maximum results for Gmail list queries */
+⋮----
+/** Milliseconds in one day */
+</file>
+
+<file path="lib/gmail-batch-utils.mjs">
+/**
+ * Apply label modifications to messages in batches.
+ * @param {Object} gmail - Authenticated Gmail client
+ * @param {Array<string|{id:string}>} messages - Message IDs or message objects
+ * @param {{ addLabelIds?: string[], removeLabelIds?: string[] }} modifications
+ * @param {number} [batchSize]
+ * @returns {Promise<number>} Count of messages processed
+ */
+export async function batchModifyMessages(gmail, messages, modifications, batchSize = DEFAULT_BATCH_SIZE)
+⋮----
+/**
+ * Search for messages and apply label modifications in one operation.
+ * @param {Object} gmail - Authenticated Gmail client
+ * @param {string} query - Gmail search query
+ * @param {{ addLabelIds?: string[], removeLabelIds?: string[] }} modifications
+ * @param {number} [maxResults]
+ * @returns {Promise<number>} Count of messages processed
+ */
+export async function searchAndModify(gmail, query, modifications, maxResults = 500)
+⋮----
+/**
+ * Search for messages, filter to those older than daysAgo, and apply label modifications.
+ * @param {Object} gmail - Authenticated Gmail client
+ * @param {string} query - Gmail search query
+ * @param {number} daysAgo - Only modify messages older than this many days
+ * @param {{ addLabelIds?: string[], removeLabelIds?: string[] }} modifications
+ * @param {number} [maxResults]
+ * @returns {Promise<string[]>} IDs of messages that were modified
+ */
+export async function searchAndModifyOlderThan(gmail, query, daysAgo, modifications, maxResults = DEFAULT_MAX_RESULTS)
 </file>
 
 <file path="lib/gmail-message-utils.mjs">
@@ -3144,10 +3170,6 @@ import { CreateEventHandler } from "../../handlers/core/CreateEventHandler.js";
 import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE, TEST_TIMEZONE_SECONDARY } from "../../testing/constants.js";
 ⋮----
 function mockCalendarEuropeTimezone(mockCalendarApi: ReturnType<typeof import('googleapis')['google']['calendar']>, summary: string)
-</file>
-
-<file path="archive-old-meeting-responses.mjs">
-async function archiveOldMeetingResponses()
 </file>
 
 <file path="mark-read.mjs">

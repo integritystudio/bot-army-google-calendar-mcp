@@ -276,7 +276,7 @@ src/
 .env.test
 .gitignore
 AGENTS.md
-archive-old-meeting-responses.mjs
+archive-old-emails.mjs
 auth-gmail.mjs
 CLAUDE.md
 create-gmail-filters.mjs
@@ -17179,62 +17179,6 @@ The following files were removed as they were auto-generated and redundant:
 These files are now included in `.gitignore` to prevent future accumulation.
 </file>
 
-<file path="lib/constants.mjs">
-/** Gmail user ID (special value 'me' = authenticated user) */
-export const USER_ID = 'me';
-
-/** Gmail system label IDs */
-export const GMAIL_INBOX = 'INBOX';
-
-/** Gmail label names for email categories */
-export const LABEL_SENTRY = 'Sentry Alerts';
-export const LABEL_PRODUCT_UPDATES = 'Product Updates';
-export const LABEL_COMMUNITIES = 'Communities';
-export const LABEL_SERVICES = 'Services & Alerts';
-export const LABEL_KEEP_IMPORTANT = 'Keep Important';
-export const LABEL_EVENTS = 'Events';
-export const LABEL_MONITORING = 'Monitoring';
-export const LABEL_BILLING = 'Billing';
-export const LABEL_MEETUP_EVENTS = 'Meetup Events';
-export const LABEL_COMMUNITY_EVENTS = 'Community Events';
-export const LABEL_CALENDLY_NOTIFICATIONS = 'Calendly Notifications';
-export const LABEL_LINKEDIN_UPDATES = 'LinkedIn Updates';
-export const LABEL_DMARC_REPORTS = 'DMARC Reports';
-export const LABEL_MEETING_NOTES = 'Meeting Notes';
-export const LABEL_CCV = 'CCV';
-export const LABEL_UPDATES = 'Updates';
-export const LABEL_ORG_GOOGLE_WORKSPACE = 'Organization: Google Workspace';
-export const LABEL_PERFORMANCE_TRACKING = 'Performance Tracking';
-export const LABEL_SOCIAL = 'Social';
-export const LABEL_MEETING_TRANSCRIPTS = 'Meeting Transcripts';
-export const LABEL_EVENTS_COMMUNITY = 'Events/Community';
-export const LABEL_EVENTS_INVITATIONS_WORK = 'Events/Invitations/Work';
-export const LABEL_EVENTS_WORKSHOPS = 'Events/Workshops';
-export const LABEL_EVENTS_INVITATIONS_COMMUNITY_SERVICES = 'Events/Invitations/Community Services';
-export const LABEL_EVENTS_MEETUP = 'Events/Meetup';
-export const LABEL_EVENTS_CALENDLY = 'Events/Calendly';
-export const LABEL_EVENTS_INVITATIONS = 'Events/Invitations';
-export const LABEL_EVENTS_INVITATIONS_PROFESSIONAL = 'Events/Invitations/Professional';
-export const LABEL_EVENTS_INVITATIONS_CONFERENCES = 'Events/Invitations/Conferences';
-export const LABEL_EVENTS_COMMUNITY_CREATIVE_ARTS = 'Events/Community/Creative-Arts';
-export const LABEL_EVENTS_COMMUNITY_TECH_PROFESSIONAL = 'Events/Community/Tech-Professional';
-export const LABEL_EVENTS_COMMUNITY_SPIRITUAL_WELLNESS = 'Events/Community/Spiritual-Wellness';
-export const LABEL_EVENTS_COMMUNITY_NETWORKING = 'Events/Community/Networking';
-export const LABEL_EVENTS_COMMUNITY_LEARNING_EDUCATION = 'Events/Community/Learning-Education';
-export const LABEL_EVENTS_COMMUNITY_SOCIAL_RECREATION = 'Events/Community/Social-Recreation';
-export const LABEL_EVENTS_COMMUNITY_FOOD_DINING = 'Events/Community/Food-Dining';
-export const LABEL_NEWSLETTERS = 'Newsletters';
-export const LABEL_NEWSLETTERS_SUBJECT_BASED = 'Newsletters/Subject-Based';
-export const LABEL_NEWSLETTERS_CCV = 'Newsletters/CCV';
-
-export const GMAIL_UNREAD = 'UNREAD';
-export const GMAIL_SENT = 'SENT';
-export const GMAIL_DRAFT = 'DRAFT';
-export const GMAIL_SPAM = 'SPAM';
-export const GMAIL_TRASH = 'TRASH';
-export const GMAIL_IMPORTANT = 'IMPORTANT';
-</file>
-
 <file path="lib/date-based-filter.mjs">
 /**
  * Date-based email filter utility
@@ -17495,48 +17439,6 @@ export function extractEmailAddress(from) {
   if (!from) return '';
   const match = from.match(/<(.+?)>/);
   return match ? match[1].trim() : from.trim();
-}
-</file>
-
-<file path="lib/gmail-batch-utils.mjs">
-import { USER_ID } from './constants.mjs';
-
-const DEFAULT_BATCH_SIZE = 50;
-
-/**
- * Apply label modifications to messages in batches.
- * @param {Object} gmail - Authenticated Gmail client
- * @param {Array<string|{id:string}>} messages - Message IDs or message objects
- * @param {{ addLabelIds?: string[], removeLabelIds?: string[] }} modifications
- * @param {number} [batchSize]
- * @returns {Promise<number>} Count of messages processed
- */
-export async function batchModifyMessages(gmail, messages, modifications, batchSize = DEFAULT_BATCH_SIZE) {
-  const ids = messages.map(m => (typeof m === 'string' ? m : m.id));
-  for (let i = 0; i < ids.length; i += batchSize) {
-    const batch = ids.slice(i, i + batchSize);
-    await gmail.users.messages.batchModify({
-      userId: USER_ID,
-      requestBody: { ids: batch, ...modifications }
-    });
-    console.log(`  Processed ${Math.min(i + batchSize, ids.length)}/${ids.length}`);
-  }
-  return ids.length;
-}
-
-/**
- * Search for messages and apply label modifications in one operation.
- * @param {Object} gmail - Authenticated Gmail client
- * @param {string} query - Gmail search query
- * @param {{ addLabelIds?: string[], removeLabelIds?: string[] }} modifications
- * @param {number} [maxResults]
- * @returns {Promise<number>} Count of messages processed
- */
-export async function searchAndModify(gmail, query, modifications, maxResults = 500) {
-  const res = await gmail.users.messages.list({ userId: USER_ID, q: query, maxResults });
-  const messages = res.data.messages || [];
-  if (messages.length === 0) return 0;
-  return batchModifyMessages(gmail, messages, modifications);
 }
 </file>
 
@@ -38253,6 +38155,65 @@ export function buildListFieldMask(
 }
 </file>
 
+<file path="archive-old-emails.mjs">
+/**
+ * Archive emails older than DAYS_AGO that match a given label.
+ *
+ * Usage:
+ *   node archive-old-emails.mjs --label "Meeting Responses"
+ */
+import { createGmailClient } from './lib/gmail-client.mjs';
+import { GMAIL_INBOX, GMAIL_UNREAD, DEFAULT_MAX_RESULTS, MS_PER_DAY } from './lib/constants.mjs';
+import { searchAndModifyOlderThan } from './lib/gmail-batch-utils.mjs';
+import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { BANNER } from './lib/console-utils.mjs';
+
+const DAYS_AGO = 7;
+
+const labelArgIndex = process.argv.indexOf('--label');
+const labelName = labelArgIndex !== -1 ? process.argv[labelArgIndex + 1] : null;
+
+if (!labelName) {
+  console.error('Usage: node archive-old-emails.mjs --label "<label name>"');
+  process.exit(1);
+}
+
+async function archiveOldEmails() {
+  const gmail = createGmailClient();
+
+  const labelCache = await buildLabelCache(gmail);
+  const labelId = labelCache.get(labelName);
+  if (!labelId) {
+    console.error(`Label not found: "${labelName}"`);
+    process.exit(1);
+  }
+
+  console.log(`ARCHIVING OLD EMAILS — label: ${labelName}\n`);
+  console.log(BANNER + '\n');
+
+  const cutoffDate = new Date(Date.now() - DAYS_AGO * MS_PER_DAY).toISOString().split('T')[0];
+  console.log(`Archiving emails before ${cutoffDate}\n`);
+
+  const archivedIds = await searchAndModifyOlderThan(
+    gmail,
+    `label:"${labelName}"`,
+    DAYS_AGO,
+    { removeLabelIds: [GMAIL_UNREAD, GMAIL_INBOX] },
+    DEFAULT_MAX_RESULTS
+  );
+
+  console.log(BANNER);
+  console.log('COMPLETE\n');
+  console.log(`Total archived: ${archivedIds.length} emails\n`);
+  console.log(BANNER + '\n');
+}
+
+archiveOldEmails().catch(error => {
+  console.error('Error:', error.message);
+  process.exit(1);
+});
+</file>
+
 <file path="auth-gmail.mjs">
 import { OAuth2Client } from 'google-auth-library';
 import fs from 'fs/promises';
@@ -38506,6 +38467,2166 @@ verifyAndRefreshTokens().catch(error => {
 });
 </file>
 
+<file path="lib/console-utils.mjs">
+const BANNER_WIDTH = 80;
+const BANNER_CHAR = '═';
+const DIVIDER_CHAR = '─';
+
+export const BANNER = BANNER_CHAR.repeat(BANNER_WIDTH);
+export const DIVIDER = DIVIDER_CHAR.repeat(BANNER_WIDTH);
+
+export function printComplete(summary) {
+  console.log(BANNER);
+  console.log('COMPLETE\n');
+  if (summary) console.log(summary);
+  console.log(BANNER + '\n');
+}
+</file>
+
+<file path="lib/constants.mjs">
+/** Gmail user ID (special value 'me' = authenticated user) */
+export const USER_ID = 'me';
+
+/** Gmail system label IDs */
+export const GMAIL_INBOX = 'INBOX';
+
+/** Gmail label names for email categories */
+export const LABEL_SENTRY = 'Sentry Alerts';
+export const LABEL_PRODUCT_UPDATES = 'Product Updates';
+export const LABEL_COMMUNITIES = 'Communities';
+export const LABEL_SERVICES = 'Services & Alerts';
+export const LABEL_KEEP_IMPORTANT = 'Keep Important';
+export const LABEL_EVENTS = 'Events';
+export const LABEL_MONITORING = 'Monitoring';
+export const LABEL_BILLING = 'Billing';
+export const LABEL_MEETUP_EVENTS = 'Meetup Events';
+export const LABEL_COMMUNITY_EVENTS = 'Community Events';
+export const LABEL_CALENDLY_NOTIFICATIONS = 'Calendly Notifications';
+export const LABEL_LINKEDIN_UPDATES = 'LinkedIn Updates';
+export const LABEL_DMARC_REPORTS = 'DMARC Reports';
+export const LABEL_MEETING_NOTES = 'Meeting Notes';
+export const LABEL_CCV = 'CCV';
+export const LABEL_UPDATES = 'Updates';
+export const LABEL_ORG_GOOGLE_WORKSPACE = 'Organization: Google Workspace';
+export const LABEL_PERFORMANCE_TRACKING = 'Performance Tracking';
+export const LABEL_SOCIAL = 'Social';
+export const LABEL_MEETING_TRANSCRIPTS = 'Meeting Transcripts';
+export const LABEL_EVENTS_COMMUNITY = 'Events/Community';
+export const LABEL_EVENTS_INVITATIONS_WORK = 'Events/Invitations/Work';
+export const LABEL_EVENTS_WORKSHOPS = 'Events/Workshops';
+export const LABEL_EVENTS_INVITATIONS_COMMUNITY_SERVICES = 'Events/Invitations/Community Services';
+export const LABEL_EVENTS_MEETUP = 'Events/Meetup';
+export const LABEL_EVENTS_CALENDLY = 'Events/Calendly';
+export const LABEL_EVENTS_INVITATIONS = 'Events/Invitations';
+export const LABEL_EVENTS_INVITATIONS_PROFESSIONAL = 'Events/Invitations/Professional';
+export const LABEL_EVENTS_INVITATIONS_CONFERENCES = 'Events/Invitations/Conferences';
+export const LABEL_EVENTS_COMMUNITY_CREATIVE_ARTS = 'Events/Community/Creative-Arts';
+export const LABEL_EVENTS_COMMUNITY_TECH_PROFESSIONAL = 'Events/Community/Tech-Professional';
+export const LABEL_EVENTS_COMMUNITY_SPIRITUAL_WELLNESS = 'Events/Community/Spiritual-Wellness';
+export const LABEL_EVENTS_COMMUNITY_NETWORKING = 'Events/Community/Networking';
+export const LABEL_EVENTS_COMMUNITY_LEARNING_EDUCATION = 'Events/Community/Learning-Education';
+export const LABEL_EVENTS_COMMUNITY_SOCIAL_RECREATION = 'Events/Community/Social-Recreation';
+export const LABEL_EVENTS_COMMUNITY_FOOD_DINING = 'Events/Community/Food-Dining';
+export const LABEL_NEWSLETTERS = 'Newsletters';
+export const LABEL_NEWSLETTERS_SUBJECT_BASED = 'Newsletters/Subject-Based';
+export const LABEL_NEWSLETTERS_CCV = 'Newsletters/CCV';
+
+/** Default maximum results for Gmail list queries */
+export const DEFAULT_MAX_RESULTS = 100;
+
+/** Milliseconds in one day */
+export const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+export const GMAIL_UNREAD = 'UNREAD';
+export const GMAIL_SENT = 'SENT';
+export const GMAIL_DRAFT = 'DRAFT';
+export const GMAIL_SPAM = 'SPAM';
+export const GMAIL_TRASH = 'TRASH';
+export const GMAIL_IMPORTANT = 'IMPORTANT';
+</file>
+
+<file path="lib/gmail-batch-utils.mjs">
+import { USER_ID, DEFAULT_MAX_RESULTS, MS_PER_DAY } from './constants.mjs';
+import { getHeader } from './email-utils.mjs';
+
+const DEFAULT_BATCH_SIZE = 50;
+
+/**
+ * Apply label modifications to messages in batches.
+ * @param {Object} gmail - Authenticated Gmail client
+ * @param {Array<string|{id:string}>} messages - Message IDs or message objects
+ * @param {{ addLabelIds?: string[], removeLabelIds?: string[] }} modifications
+ * @param {number} [batchSize]
+ * @returns {Promise<number>} Count of messages processed
+ */
+export async function batchModifyMessages(gmail, messages, modifications, batchSize = DEFAULT_BATCH_SIZE) {
+  const ids = messages.map(m => (typeof m === 'string' ? m : m.id));
+  for (let i = 0; i < ids.length; i += batchSize) {
+    const batch = ids.slice(i, i + batchSize);
+    await gmail.users.messages.batchModify({
+      userId: USER_ID,
+      requestBody: { ids: batch, ...modifications }
+    });
+    console.log(`  Processed ${Math.min(i + batchSize, ids.length)}/${ids.length}`);
+  }
+  return ids.length;
+}
+
+/**
+ * Search for messages and apply label modifications in one operation.
+ * @param {Object} gmail - Authenticated Gmail client
+ * @param {string} query - Gmail search query
+ * @param {{ addLabelIds?: string[], removeLabelIds?: string[] }} modifications
+ * @param {number} [maxResults]
+ * @returns {Promise<number>} Count of messages processed
+ */
+export async function searchAndModify(gmail, query, modifications, maxResults = 500) {
+  const res = await gmail.users.messages.list({ userId: USER_ID, q: query, maxResults });
+  const messages = res.data.messages || [];
+  if (messages.length === 0) return 0;
+  return batchModifyMessages(gmail, messages, modifications);
+}
+
+/**
+ * Search for messages, filter to those older than daysAgo, and apply label modifications.
+ * @param {Object} gmail - Authenticated Gmail client
+ * @param {string} query - Gmail search query
+ * @param {number} daysAgo - Only modify messages older than this many days
+ * @param {{ addLabelIds?: string[], removeLabelIds?: string[] }} modifications
+ * @param {number} [maxResults]
+ * @returns {Promise<string[]>} IDs of messages that were modified
+ */
+export async function searchAndModifyOlderThan(gmail, query, daysAgo, modifications, maxResults = DEFAULT_MAX_RESULTS) {
+  const cutoff = new Date(Date.now() - daysAgo * MS_PER_DAY);
+  const res = await gmail.users.messages.list({ userId: USER_ID, q: query, maxResults });
+  const messages = res.data.messages || [];
+  if (messages.length === 0) return [];
+
+  const fullMsgs = await Promise.all(
+    messages.map(msg =>
+      gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'metadata', metadataHeaders: ['Date'] })
+    )
+  );
+
+  const oldIds = fullMsgs
+    .filter(res => new Date(getHeader(res.data.payload?.headers || [], 'Date')) < cutoff)
+    .map(res => res.data.id);
+
+  if (oldIds.length > 0) {
+    await batchModifyMessages(gmail, oldIds, modifications);
+  }
+  return oldIds;
+}
+</file>
+
+<file path="lib/gmail-message-utils.mjs">
+import { USER_ID } from './constants.mjs';
+import { getHeader } from './email-utils.mjs';
+
+/**
+ * Decodes the plain-text body from a Gmail message payload.
+ * Checks direct body data first, then looks for a text/plain part.
+ *
+ * @param {Object} payload - message.data.payload
+ * @returns {string}
+ */
+export function decodeMessageBody(payload) {
+  if (payload?.body?.data) {
+    return Buffer.from(payload.body.data, 'base64').toString('utf-8');
+  }
+  const textPart = payload?.parts?.find(p => p.mimeType === 'text/plain');
+  if (textPart?.body?.data) {
+    return Buffer.from(textPart.body.data, 'base64').toString('utf-8');
+  }
+  console.warn('decodeMessageBody: no text/plain body found in payload');
+  return '';
+}
+
+/**
+ * Fetches messages under a label and returns their metadata (Subject, From, Date).
+ * Handles individual fetch failures by filtering them out.
+ *
+ * @param {Object} gmail - Gmail API client
+ * @param {string} labelId - Label ID to query
+ * @param {Object} [options]
+ * @param {number} [options.maxResults=100] - Max results from messages.list
+ * @param {number} [options.limit] - Cap on how many messages to fetch metadata for
+ * @returns {Promise<{total: number, messages: Array<{subject: string, from: string, date: string}>}>}
+ */
+export async function fetchLabeledMessageMetadata(gmail, labelId, { maxResults = 100, limit } = {}) {
+  const result = await gmail.users.messages.list({
+    userId: USER_ID,
+    labelIds: [labelId],
+    maxResults,
+  });
+
+  const messageHeaders = result.data.messages || [];
+  const toFetch = limit ? messageHeaders.slice(0, limit) : messageHeaders;
+
+  const fullMsgs = await Promise.all(
+    toFetch.map(({ id }) =>
+      gmail.users.messages.get({
+        userId: USER_ID,
+        id,
+        format: 'metadata',
+        metadataHeaders: ['Subject', 'From', 'Date'],
+      }).catch(() => null)
+    )
+  );
+
+  return {
+    total: messageHeaders.length,
+    messages: fullMsgs
+      .filter(Boolean)
+      .map(msg => {
+        const headers = msg.data.payload?.headers || [];
+        return {
+          subject: getHeader(headers, 'Subject', '(no subject)'),
+          from: getHeader(headers, 'From', '(unknown)'),
+          date: getHeader(headers, 'Date', '(no date)'),
+        };
+      }),
+  };
+}
+</file>
+
+<file path="src/handlers/utils.ts">
+import { calendar_v3 } from "googleapis";
+import { ConflictCheckResult } from "../services/conflict-detection/types.js";
+import { groupBy } from "lodash-es";
+import { oneDayBefore } from "../utils/date-utils.js";
+
+export const EVENT_ID_PREFIX = 'Event ID: ';
+export const TIME_START_PREFIX = 'Start: ';
+export const TIME_END_PREFIX = 'End: ';
+export const DUPLICATE_DETECTED_HEADER = '⚠️ POTENTIAL DUPLICATES DETECTED:';
+export const CONFLICT_DETECTED_HEADER = '⚠️ SCHEDULING CONFLICTS DETECTED:';
+export const EXISTING_EVENT_DETAILS_LABEL = 'Existing event details:';
+export const CONFLICTING_EVENT_DETAILS_LABEL = 'Conflicting event details:';
+export const CONFLICTING_EVENT_HEADER = '━━━ Conflicting Event ━━━';
+export const VIEW_URL_PREFIX = 'View: ';
+export const VIEW_EXISTING_EVENT_PREFIX = 'View existing event: ';
+export const GUESTS_PREFIX = 'Guests: ';
+export const CALENDAR_PREFIX = 'Calendar: ';
+export const OVERLAP_PREFIX = '⚠️  Overlap: ';
+
+/**
+ * Generates a Google Calendar event view URL
+ */
+export function generateEventUrl(calendarId: string, eventId: string): string {
+    const encodedCalendarId = encodeURIComponent(calendarId);
+    const encodedEventId = encodeURIComponent(eventId);
+    return `https://calendar.google.com/calendar/event?eid=${encodedEventId}&cid=${encodedCalendarId}`;
+}
+
+/**
+ * Gets the URL for a calendar event
+ */
+export function getEventUrl(event: calendar_v3.Schema$Event, calendarId?: string): string | null {
+    if (event.htmlLink) {
+        return event.htmlLink;
+    } else if (calendarId && event.id) {
+        return generateEventUrl(calendarId, event.id);
+    }
+    return null;
+}
+
+/**
+ * Formats a date/time with timezone abbreviation
+ */
+function formatDateTime(dateTime?: string | null, date?: string | null, timeZone?: string): string {
+    if (!dateTime && !date) return "unspecified";
+    
+    try {
+        const dt = dateTime || date;
+        if (!dt) return "unspecified";
+        
+        // If it's a date-only event (all-day), handle it specially
+        if (date && !dateTime) {
+            // For all-day events, just format the date string directly
+            // Date-only strings like "2025-03-15" should be displayed as-is
+            const [year, month, day] = date.split('-').map(Number);
+            
+            // Create a date string without any timezone conversion
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            
+            // Calculate day of week using Zeller's congruence (timezone-independent)
+            const q = day;
+            const m = month <= 2 ? month + 12 : month;
+            const y = month <= 2 ? year - 1 : year;
+            const k = y % 100;
+            const j = Math.floor(y / 100);
+            const h = (q + Math.floor((13 * (m + 1)) / 5) + k + Math.floor(k / 4) + Math.floor(j / 4) - 2 * j) % 7;
+            const dayOfWeek = (h + 6) % 7; // Convert to 0=Sunday format
+            
+            return `${dayNames[dayOfWeek]}, ${monthNames[month - 1]} ${day}, ${year}`;
+        }
+        
+        const parsedDate = new Date(dt);
+        if (isNaN(parsedDate.getTime())) return dt;
+        
+        // For timed events, include timezone
+        const options: Intl.DateTimeFormatOptions = {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            timeZoneName: 'short'
+        };
+        
+        if (timeZone) {
+            options.timeZone = timeZone;
+        }
+        
+        return parsedDate.toLocaleString('en-US', options);
+    } catch (error) {
+        return dateTime || date || "unspecified";
+    }
+}
+
+/**
+ * Formats attendees with their response status
+ */
+function formatAttendees(attendees?: calendar_v3.Schema$EventAttendee[]): string {
+    if (!attendees || attendees.length === 0) return "";
+    
+    const formatted = attendees.map(attendee => {
+        const email = attendee.email || "unknown";
+        const name = attendee.displayName || email;
+        const status = attendee.responseStatus || "unknown";
+        
+        const statusText = {
+            'accepted': 'accepted',
+            'declined': 'declined', 
+            'tentative': 'tentative',
+            'needsAction': 'pending'
+        }[status] || 'unknown';
+        
+        return `${name} (${statusText})`;
+    }).join(", ");
+    
+    return `\n${GUESTS_PREFIX}${formatted}`;
+}
+
+/**
+ * Formats a single event with rich details
+ */
+export function formatEventWithDetails(event: calendar_v3.Schema$Event, calendarId?: string): string {
+    const title = event.summary ? `Event: ${event.summary}` : "Untitled Event";
+    const eventId = event.id ? `\n${EVENT_ID_PREFIX}${event.id}` : "";
+    const description = event.description ? `\nDescription: ${event.description}` : "";
+    const location = event.location ? `\nLocation: ${event.location}` : "";
+    const colorId = event.colorId ? `\nColor ID: ${event.colorId}` : "";
+
+    // Format start and end times with timezone
+    const startTime = formatDateTime(event.start?.dateTime, event.start?.date, event.start?.timeZone || undefined);
+    const endTime = formatDateTime(event.end?.dateTime, event.end?.date, event.end?.timeZone || undefined);
+    
+    let timeInfo: string;
+    if (event.start?.date) {
+        // All-day event
+        if (event.start.date === event.end?.date) {
+            // Single day all-day event
+            timeInfo = `\nDate: ${startTime}`;
+        } else {
+            // Multi-day all-day event - end date is exclusive, so subtract 1 day for display
+            if (event.end?.date) {
+                const endDate = new Date(event.end.date);
+                const adjustedEndDate = oneDayBefore(endDate);
+                const adjustedEndTime = formatDateTime(undefined, adjustedEndDate.toISOString().split('T')[0]);
+                timeInfo = `\nStart Date: ${startTime}\nEnd Date: ${adjustedEndTime}`;
+            } else {
+                timeInfo = `\nStart Date: ${startTime}`;
+            }
+        }
+    } else {
+        // Timed event
+        timeInfo = `\n${TIME_START_PREFIX}${startTime}\n${TIME_END_PREFIX}${endTime}`;
+    }
+    
+    const attendeeInfo = formatAttendees(event.attendees);
+    
+    const eventUrl = getEventUrl(event, calendarId);
+    const urlInfo = eventUrl ? `\n${VIEW_URL_PREFIX}${eventUrl}` : "";
+    
+    return `${title}${eventId}${description}${timeInfo}${location}${colorId}${attendeeInfo}${urlInfo}`;
+}
+
+/**
+ * Formats conflict check results for display
+ */
+export function formatConflictWarnings(conflicts: ConflictCheckResult): string {
+    if (!conflicts.hasConflicts) return "";
+    
+    let warnings = "";
+    
+    // Format duplicate warnings
+    if (conflicts.duplicates.length > 0) {
+        warnings += `\n\n${DUPLICATE_DETECTED_HEADER}`;
+        for (const dup of conflicts.duplicates) {
+            warnings += `\n\n━━━ Duplicate Event (${Math.round(dup.event.similarity * 100)}% similar) ━━━`;
+            warnings += `\n${dup.suggestion}`;
+            
+            // Show full event details if available
+            if (dup.fullEvent) {
+                warnings += `\n\n${EXISTING_EVENT_DETAILS_LABEL}`;
+                warnings += `\n${formatEventWithDetails(dup.fullEvent, dup.calendarId)}`;
+            } else {
+                // Fallback to basic info
+                warnings += `\n• "${dup.event.title}"`;
+                if (dup.event.url) {
+                    warnings += `\n  ${VIEW_EXISTING_EVENT_PREFIX}${dup.event.url}`;
+                }
+            }
+        }
+    }
+    
+    // Format conflict warnings
+    if (conflicts.conflicts.length > 0) {
+        warnings += `\n\n${CONFLICT_DETECTED_HEADER}`;
+        const conflictsByCalendar = groupBy(conflicts.conflicts, (conflict) => conflict.calendar);
+        
+        for (const [calendar, calendarConflicts] of Object.entries(conflictsByCalendar)) {
+            warnings += `\n\n${CALENDAR_PREFIX}${calendar}`;
+            for (const conflict of calendarConflicts) {
+                warnings += `\n\n${CONFLICTING_EVENT_HEADER}`;
+                if (conflict.overlap) {
+                    warnings += `\n${OVERLAP_PREFIX}${conflict.overlap.duration} (${conflict.overlap.percentage}% of your event)`;
+                }
+
+                // Show full event details if available
+                if (conflict.fullEvent) {
+                    warnings += `\n\n${CONFLICTING_EVENT_DETAILS_LABEL}`;
+                    warnings += `\n${formatEventWithDetails(conflict.fullEvent, calendar)}`;
+                } else {
+                    // Fallback to basic info
+                    warnings += `\n• Conflicts with "${conflict.event.title}"`;
+                    if (conflict.event.start && conflict.event.end) {
+                        const start = formatDateTime(conflict.event.start);
+                        const end = formatDateTime(conflict.event.end);
+                        warnings += `\n  Time: ${start} - ${end}`;
+                    }
+                    if (conflict.event.url) {
+                        warnings += `\n  View event: ${conflict.event.url}`;
+                    }
+                }
+            }
+        }
+    }
+    
+    return warnings;
+}
+
+/**
+ * Creates a response with event details and optional conflict warnings
+ */
+export function createEventResponseWithConflicts(
+    event: calendar_v3.Schema$Event,
+    calendarId: string,
+    conflicts?: ConflictCheckResult,
+    actionVerb: string = "created"
+): string {
+    const eventDetails = formatEventWithDetails(event, calendarId);
+    const conflictWarnings = conflicts ? formatConflictWarnings(conflicts) : "";
+    
+    const successMessage = conflicts?.hasConflicts 
+        ? `Event ${actionVerb} with warnings!`
+        : `Event ${actionVerb} successfully!`;
+    
+    return `${successMessage}\n\n${eventDetails}${conflictWarnings}`;
+}
+</file>
+
+<file path="src/testing/constants.ts">
+/**
+ * Shared constants for test utilities and data factories
+ */
+
+// Event ID extraction constraints
+export const EVENT_ID_MIN_LENGTH = 10;
+
+// Response format patterns for event ID extraction
+export const RESPONSE_PATTERNS = {
+  LEGACY_CREATED: 'Event created: ',
+  LEGACY_UPDATED: 'Event updated: ',
+  NEW_CREATED: '✅ Event created successfully',
+  NEW_UPDATED: '✅ Event updated successfully',
+  CREATED_EVENT: 'Created event: ',
+  ID_SUFFIX: 'ID: ',
+  EVENT_ID_CHAR_CLASS: '[a-zA-Z0-9_@.-]'
+} as const;
+
+// Time range durations (in milliseconds)
+export const TIME_DURATIONS = {
+  WEEK: 7 * 24 * 60 * 60 * 1000,
+  MONTH: 30 * 24 * 60 * 60 * 1000,
+  QUARTER: 90 * 24 * 60 * 60 * 1000
+} as const;
+
+// Timezone for integration test events
+export const TEST_TIMEZONE = 'America/Los_Angeles';
+// Standard-time abbreviation for TEST_TIMEZONE (used in January fixtures)
+export const TEST_TIMEZONE_ABBREVIATION_WINTER = 'PST';
+
+// Secondary timezone used in unit tests for timezone-fallback scenarios
+export const TEST_TIMEZONE_SECONDARY = 'Europe/London';
+
+// Test event constants
+export const TEST_EVENT_DEFAULTS = {
+  SUMMARY: 'Test Integration Event',
+  DESCRIPTION: 'Created by integration test suite',
+  LOCATION: 'Test Conference Room',
+  REMINDER_MINUTES: 15,
+  RECURRING_SUMMARY: 'Test Recurring Meeting',
+  RECURRING_DESCRIPTION: 'Weekly recurring test meeting',
+  RECURRING_LOCATION: 'Recurring Meeting Room',
+  RECURRING_EMAIL_REMINDER_MINUTES: 1440,
+  ALL_DAY_SUMMARY: 'Test All-Day Event',
+  ALL_DAY_DESCRIPTION: 'All-day test event',
+  COLORED_EVENT_SUMMARY_PREFIX: 'Test Event - Color '
+} as const;
+
+// MCP response status indicators
+export const RESPONSE_INDICATORS = {
+  SUCCESS_CHECK: '✅'
+} as const;
+</file>
+
+<file path="src/tests/unit/handlers/SearchEventsHandler.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SearchEventsHandler } from '../../../handlers/core/SearchEventsHandler.js';
+import { OAuth2Client } from 'google-auth-library';
+import { getTextContent, makeEvent, makeEvents, makeGaxiosError, makeCalendarMock } from '../helpers/index.js';
+import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
+
+vi.mock('googleapis');
+
+vi.mock('../../../utils/field-mask-builder.js', () => ({
+  buildListFieldMask: vi.fn((fields) => {
+    if (!fields || fields.length === 0) return undefined;
+    return fields.join(',');
+  })
+}));
+
+vi.mock('../../../utils/timezone-utils.js', () => ({
+  resolveTimeRange: vi.fn((timeMin, timeMax, _timezone) => ({
+    timeMin: timeMin ? (timeMin.includes('Z') || timeMin.includes('+') ? timeMin : `${timeMin}Z`) : undefined,
+    timeMax: timeMax ? (timeMax.includes('Z') || timeMax.includes('+') ? timeMax : `${timeMax}Z`) : undefined,
+  }))
+}));
+
+vi.mock('../../../handlers/utils.js', () => ({
+  formatEventWithDetails: vi.fn((event) => {
+    return `${event.summary || 'No Title'} (${event.start?.dateTime || event.start?.date || 'No Date'})`;
+  })
+}));
+
+const BASE_ARGS = {
+  calendarId: 'primary' as const,
+  query: 'test',
+  timeMin: '2025-01-01T00:00:00',
+  timeMax: '2025-01-31T23:59:59'
+} as const;
+
+describe('SearchEventsHandler', () => {
+  let handler: SearchEventsHandler;
+  let mockOAuth2Client: OAuth2Client;
+  let mockCalendar: ReturnType<typeof makeCalendarMock>;
+
+  beforeEach(() => {
+    handler = new SearchEventsHandler();
+    mockOAuth2Client = new OAuth2Client();
+
+    mockCalendar = makeCalendarMock({ list: vi.fn().mockResolvedValue({ data: { items: [] } }) });
+
+    vi.spyOn(handler as any, 'getCalendar').mockReturnValue(mockCalendar);
+    vi.spyOn(handler as any, 'getCalendarTimezone').mockResolvedValue('America/Los_Angeles');
+  });
+
+  describe('runTool', () => {
+    it('should search and return events successfully', async () => {
+      const mockEvents = [
+        makeEvent({ summary: 'Team Meeting' }),
+        makeEvent({
+          id: 'event2',
+          summary: 'Project Review',
+          start: { dateTime: '2025-01-15T14:00:00Z' },
+          end: { dateTime: '2025-01-15T15:00:00Z' }
+        })
+      ];
+
+      mockCalendar.events.list.mockResolvedValue({ data: { items: mockEvents } });
+
+      const result = await handler.runTool({ ...BASE_ARGS, query: 'meeting' }, mockOAuth2Client);
+
+      expect(result.content).toHaveLength(1);
+      const text = getTextContent(result);
+      expect(text).toContain('Found 2 event(s)');
+      expect(text).toContain('Team Meeting');
+      expect(text).toContain('Project Review');
+    });
+
+    it('should return no events message when search yields no results', async () => {
+      const result = await handler.runTool({ ...BASE_ARGS, query: 'nonexistent' }, mockOAuth2Client);
+
+      expect(result.content).toHaveLength(1);
+      expect(getTextContent(result)).toBe('No events found matching your search criteria.');
+    });
+
+    it('should return no events message when items is undefined', async () => {
+      mockCalendar.events.list.mockResolvedValue({ data: {} });
+
+      const result = await handler.runTool(BASE_ARGS, mockOAuth2Client);
+
+      expect(result.content).toHaveLength(1);
+      expect(getTextContent(result)).toBe('No events found matching your search criteria.');
+    });
+
+    it('should include event index numbers in response', async () => {
+      const mockEvents = [
+        makeEvent({ summary: 'First Event' }),
+        makeEvent({ id: 'event2', summary: 'Second Event', start: { dateTime: '2025-01-15T14:00:00Z' }, end: { dateTime: '2025-01-15T15:00:00Z' } })
+      ];
+
+      mockCalendar.events.list.mockResolvedValue({ data: { items: mockEvents } });
+
+      const result = await handler.runTool({ ...BASE_ARGS, query: 'event' }, mockOAuth2Client);
+      const text = getTextContent(result);
+
+      expect(text).toContain('1. First Event');
+      expect(text).toContain('2. Second Event');
+    });
+  });
+
+  describe('searchEvents - API Parameters', () => {
+    it('should pass correct parameters to calendar.events.list', async () => {
+      await handler.runTool({ ...BASE_ARGS, query: 'meeting', timeZone: 'America/New_York' }, mockOAuth2Client);
+
+      expect(mockCalendar.events.list).toHaveBeenCalledWith(
+        expect.objectContaining({
+          calendarId: 'primary',
+          q: 'meeting',
+          ...LIST_EVENTS_API_DEFAULTS
+        })
+      );
+
+      const callArgs = mockCalendar.events.list.mock.calls[0][0];
+      expect(callArgs.timeMin).toBeDefined();
+      expect(callArgs.timeMax).toBeDefined();
+    });
+
+    it('should use provided timeZone for conversion', async () => {
+      const { resolveTimeRange } = await import('../../../utils/timezone-utils.js');
+
+      await handler.runTool({ ...BASE_ARGS, timeZone: 'Asia/Tokyo' }, mockOAuth2Client);
+
+      expect(vi.mocked(resolveTimeRange)).toHaveBeenCalledWith('2025-01-01T00:00:00', '2025-01-31T23:59:59', 'Asia/Tokyo');
+    });
+
+    it('should fallback to calendar timezone when timeZone not provided', async () => {
+      await handler.runTool(BASE_ARGS, mockOAuth2Client);
+
+      expect(handler['getCalendarTimezone']).toHaveBeenCalledWith(mockOAuth2Client, 'primary');
+    });
+  });
+
+  describe('searchEvents - Field Handling', () => {
+    it('should not include fields parameter when no fields requested', async () => {
+      await handler.runTool(BASE_ARGS, mockOAuth2Client);
+
+      const callArgs = mockCalendar.events.list.mock.calls[0][0];
+      expect(callArgs.fields).toBeUndefined();
+    });
+
+    it('should include fields parameter when fields are requested', async () => {
+      await handler.runTool({ ...BASE_ARGS, fields: ['description', 'attendees'] }, mockOAuth2Client);
+
+      const callArgs = mockCalendar.events.list.mock.calls[0][0];
+      expect(callArgs.fields).toBe('description,attendees');
+    });
+  });
+
+  describe('searchEvents - Extended Properties', () => {
+    it('should include privateExtendedProperty when provided', async () => {
+      await handler.runTool({ ...BASE_ARGS, privateExtendedProperty: ['key1=value1', 'key2=value2'] }, mockOAuth2Client);
+
+      const callArgs = mockCalendar.events.list.mock.calls[0][0];
+      expect(callArgs.privateExtendedProperty).toEqual(['key1=value1', 'key2=value2']);
+    });
+
+    it('should include sharedExtendedProperty when provided', async () => {
+      await handler.runTool({ ...BASE_ARGS, sharedExtendedProperty: ['prop1=val1'] }, mockOAuth2Client);
+
+      const callArgs = mockCalendar.events.list.mock.calls[0][0];
+      expect(callArgs.sharedExtendedProperty).toEqual(['prop1=val1']);
+    });
+
+    it('should not include extended properties when not provided', async () => {
+      await handler.runTool(BASE_ARGS, mockOAuth2Client);
+
+      const callArgs = mockCalendar.events.list.mock.calls[0][0];
+      expect(callArgs.privateExtendedProperty).toBeUndefined();
+      expect(callArgs.sharedExtendedProperty).toBeUndefined();
+    });
+  });
+
+  describe('Error Handling', () => {
+    it.each([
+      [500, 'Internal Server Error'],
+      [404, 'Calendar not found'],
+      [403, 'Insufficient permissions'],
+      [429, 'Rate limit exceeded'],
+      [400, 'Token expired']
+    ])('should throw on HTTP %i error', async (status, message) => {
+      const error = makeGaxiosError(status, 'Error', { error: { message } });
+      mockCalendar.events.list.mockRejectedValue(error);
+
+      await expect(handler.runTool(BASE_ARGS, mockOAuth2Client)).rejects.toThrow();
+    });
+
+    it('should handle non-GaxiosError errors gracefully', async () => {
+      const genericError = new Error('Something went wrong');
+      mockCalendar.events.list.mockRejectedValue(genericError);
+
+      await expect(handler.runTool(BASE_ARGS, mockOAuth2Client)).rejects.toThrow();
+    });
+  });
+
+  describe('Response Formatting', () => {
+    it('should trim whitespace from final response', async () => {
+      mockCalendar.events.list.mockResolvedValue({ data: { items: [makeEvent()] } });
+
+      const result = await handler.runTool(BASE_ARGS, mockOAuth2Client);
+      const text = getTextContent(result);
+
+      expect(text).not.toMatch(/^\s+/);
+      expect(text).not.toMatch(/\s+$/);
+    });
+
+    it('should format single event correctly', async () => {
+      mockCalendar.events.list.mockResolvedValue({ data: { items: [makeEvent({ summary: 'Single Event' })] } });
+
+      const result = await handler.runTool({ ...BASE_ARGS, query: 'single' }, mockOAuth2Client);
+      const text = getTextContent(result);
+
+      expect(text).toContain('Found 1 event(s)');
+      expect(text).toContain('1. Single Event');
+    });
+  });
+
+
+  describe('Query handling', () => {
+    it('should pass query parameter to API', async () => {
+      await handler.runTool({ ...BASE_ARGS, query: 'important project' }, mockOAuth2Client);
+
+      expect(mockCalendar.events.list).toHaveBeenCalledWith(
+        expect.objectContaining({ q: 'important project' })
+      );
+    });
+
+    it('should handle special characters in query', async () => {
+      await handler.runTool({ ...BASE_ARGS, query: '"exact phrase" OR tag:important' }, mockOAuth2Client);
+
+      expect(mockCalendar.events.list).toHaveBeenCalledWith(
+        expect.objectContaining({ q: '"exact phrase" OR tag:important' })
+      );
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('should handle events with minimal properties', async () => {
+      mockCalendar.events.list.mockResolvedValue({ data: { items: [{ id: 'minimal-event' }] } });
+
+      const result = await handler.runTool(BASE_ARGS, mockOAuth2Client);
+
+      expect(getTextContent(result)).toContain('Found 1 event(s)');
+    });
+
+    it('should handle many events', async () => {
+      mockCalendar.events.list.mockResolvedValue({ data: { items: makeEvents(50) } });
+
+      const result = await handler.runTool(BASE_ARGS, mockOAuth2Client);
+      const text = getTextContent(result);
+
+      expect(text).toContain('Found 50 event(s)');
+      expect(text).toContain('50. Event 50');
+    });
+
+    it('should handle events with all-day dates', async () => {
+      mockCalendar.events.list.mockResolvedValue({
+        data: { items: [{ id: 'allday-event', summary: 'All Day Event', start: { date: '2025-01-15' }, end: { date: '2025-01-16' } }] }
+      });
+
+      const result = await handler.runTool({ ...BASE_ARGS, query: 'allday' }, mockOAuth2Client);
+
+      expect(getTextContent(result)).toContain('All Day Event');
+    });
+
+    it('should handle events with RFC3339 timezone-aware times', async () => {
+      mockCalendar.events.list.mockResolvedValue({
+        data: {
+          items: [makeEvent({ summary: 'TZ Event', start: { dateTime: '2025-01-15T10:00:00-08:00' }, end: { dateTime: '2025-01-15T11:00:00-08:00' } })]
+        }
+      });
+
+      const result = await handler.runTool({ ...BASE_ARGS, query: 'tz' }, mockOAuth2Client);
+
+      expect(getTextContent(result)).toContain('TZ Event');
+    });
+  });
+
+});
+</file>
+
+<file path="src/tests/unit/handlers/utils-conflict-format.test.ts">
+import { describe, it, expect } from 'vitest';
+import { formatConflictWarnings } from '../../../handlers/utils.js';
+import { ConflictCheckResult } from '../../../services/conflict-detection/types.js';
+import { makeEvent } from '../helpers/index.js';
+import {
+  CONFLICT_DETECTED_HEADER,
+  CALENDAR_PREFIX,
+  CONFLICTING_EVENT_HEADER,
+  OVERLAP_PREFIX,
+  CONFLICTING_EVENT_DETAILS_LABEL,
+} from '../../../handlers/utils.js';
+
+describe('Enhanced Conflict Response Formatting', () => {
+  it('should format conflict warnings with full event details', () => {
+    const conflictingEvent = makeEvent({
+      id: 'conflict456',
+      summary: 'Design Review',
+      description: 'Q4 design review meeting',
+      location: 'Room 201',
+      start: { dateTime: '2024-01-15T13:30:00Z' },
+      end: { dateTime: '2024-01-15T14:30:00Z' },
+      htmlLink: 'https://calendar.google.com/event?eid=conflict456'
+    });
+
+    const conflicts: ConflictCheckResult = {
+      hasConflicts: true,
+      duplicates: [],
+      conflicts: [{
+        type: 'overlap',
+        calendar: 'primary',
+        event: {
+          id: 'conflict456',
+          title: 'Design Review',
+          url: 'https://calendar.google.com/event?eid=conflict456',
+          start: '2024-01-15T13:30:00Z',
+          end: '2024-01-15T14:30:00Z'
+        },
+        fullEvent: conflictingEvent,
+        overlap: {
+          duration: '30 minutes',
+          percentage: 50,
+          startTime: '2024-01-15T13:30:00Z',
+          endTime: '2024-01-15T14:00:00Z'
+        }
+      }]
+    };
+
+    const formatted = formatConflictWarnings(conflicts);
+    
+    expect(formatted).toContain(CONFLICT_DETECTED_HEADER);
+    expect(formatted).toContain(`${CALENDAR_PREFIX}primary`);
+    expect(formatted).toContain(CONFLICTING_EVENT_HEADER);
+    expect(formatted).toContain(`${OVERLAP_PREFIX}30 minutes (50% of your event)`);
+    expect(formatted).toContain(CONFLICTING_EVENT_DETAILS_LABEL);
+    expect(formatted).toContain('Event: Design Review');
+    expect(formatted).toContain('Description: Q4 design review meeting');
+    expect(formatted).toContain('Location: Room 201');
+  });
+
+  it('should format multiple conflicts with proper separation', () => {
+    const conflicts: ConflictCheckResult = {
+      hasConflicts: true,
+      duplicates: [],
+      conflicts: [
+        {
+          type: 'overlap',
+          calendar: 'work@company.com',
+          event: {
+            id: 'work1',
+            title: 'Sprint Planning',
+            url: 'https://calendar.google.com/event?eid=work1'
+          },
+          fullEvent: makeEvent({
+            id: 'work1',
+            summary: 'Sprint Planning',
+            start: { dateTime: '2024-01-15T09:00:00Z' },
+            end: { dateTime: '2024-01-15T10:00:00Z' }
+          }),
+          overlap: {
+            duration: '15 minutes',
+            percentage: 25,
+            startTime: '2024-01-15T09:45:00Z',
+            endTime: '2024-01-15T10:00:00Z'
+          }
+        },
+        {
+          type: 'overlap',
+          calendar: 'work@company.com',
+          event: {
+            id: 'work2',
+            title: 'Daily Standup',
+            url: 'https://calendar.google.com/event?eid=work2'
+          },
+          overlap: {
+            duration: '30 minutes',
+            percentage: 100,
+            startTime: '2024-01-15T10:00:00Z',
+            endTime: '2024-01-15T10:30:00Z'
+          }
+        }
+      ]
+    };
+
+    const formatted = formatConflictWarnings(conflicts);
+    
+    expect(formatted).toContain(`${CALENDAR_PREFIX}work@company.com`);
+    expect(formatted.split(CONFLICTING_EVENT_HEADER).length - 1).toBe(2);
+    expect(formatted).toContain('Sprint Planning');
+    expect(formatted).toContain('Daily Standup');
+    expect(formatted).toContain(`${OVERLAP_PREFIX}15 minutes (25% of your event)`);
+    expect(formatted).toContain(`${OVERLAP_PREFIX}30 minutes (100% of your event)`);
+  });
+});
+</file>
+
+<file path="src/tests/unit/helpers/handler-setup.ts">
+import { vi } from 'vitest';
+import { OAuth2Client } from 'google-auth-library';
+import { makeCalendarMock } from './factories.js';
+import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
+
+export interface HandlerSetup {
+  mockOAuth2Client: OAuth2Client;
+  handler: ListEventsHandler;
+  mockCalendarApi: ReturnType<typeof makeCalendarMock>;
+}
+
+/**
+ * Set up mocked handler with calendar API for testing.
+ * Replaces repeated beforeEach initialization blocks.
+ */
+export function setupListEventsHandler(): HandlerSetup {
+  vi.clearAllMocks();
+  const mockOAuth2Client = new OAuth2Client();
+  const mockCalendarApi = makeCalendarMock({
+    calendarListGet: vi.fn().mockResolvedValue({ data: { timeZone: 'UTC' } })
+  });
+  const handler = new ListEventsHandler();
+  vi.spyOn(handler as any, 'getCalendar').mockReturnValue(mockCalendarApi);
+
+  return {
+    mockOAuth2Client,
+    handler,
+    mockCalendarApi
+  };
+}
+</file>
+
+<file path="src/tests/unit/schemas/validators.test.ts">
+import { describe, it, expect } from 'vitest';
+import { ToolSchemas } from '../../../tools/registry.js';
+import { makePastDateString, createUpdateEventArgs, createComplexUpdateEventArgs, DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID } from '../helpers/index.js';
+import { TIME_MIN, TIME_MAX } from '../helpers/test-configs.js';
+import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
+import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from '../../../testing/constants.js';
+
+const UpdateEventArgumentsSchema = ToolSchemas['update-event'];
+const ListEventsArgumentsSchema = ToolSchemas['list-events'];
+
+const MODIFICATION_SCOPES = ['thisEventOnly', 'all', 'thisAndFollowing'] as const;
+const VALID_DATETIMES = [
+  '2024-06-15T10:00:00',
+  '2024-12-31T23:59:59',
+  '2024-01-01T00:00:00',
+  '2024-06-15T10:00:00Z',
+  '2024-06-15T10:00:00-07:00',
+  '2024-06-15T10:00:00+05:30'
+] as const;
+
+const INVALID_DATETIMES = [
+  '2024-06-15 10:00:00',
+  '24-06-15T10:00:00',
+  '2024-6-15T10:00:00',
+  '2024-06-15T10:00'
+] as const;
+
+describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
+  describe('Basic Validation', () => {
+    it('should validate basic required fields', () => {
+      const validArgs = createUpdateEventArgs();
+
+      const result = UpdateEventArgumentsSchema.parse(validArgs);
+      expect(result.modificationScope).toBeUndefined(); // optional with no default
+      expect(result.calendarId).toBe('primary');
+      expect(result.eventId).toBe('event123');
+      expect(result.timeZone).toBe(TEST_TIMEZONE);
+    });
+
+    it('should accept omitted timeZone (optional field)', () => {
+      const args = { calendarId: DEFAULT_CALENDAR_ID, eventId: DEFAULT_EVENT_ID };
+
+      const result = UpdateEventArgumentsSchema.parse(args);
+      expect(result.timeZone).toBeUndefined();
+    });
+
+    it('should reject missing required fields', () => {
+      const invalidArgs = {
+        calendarId: 'primary',
+        // missing eventId
+      };
+
+      expect(() => UpdateEventArgumentsSchema.parse(invalidArgs)).toThrow();
+    });
+
+    it('should validate optional fields when provided', () => {
+      const validArgs = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
+        summary: 'Updated Meeting',
+        description: 'Updated description',
+        location: 'New Location',
+        colorId: '9',
+        start: '2024-06-15T10:00:00',
+        end: '2024-06-15T11:00:00'
+      });
+
+      const result = UpdateEventArgumentsSchema.parse(validArgs);
+      expect(result.summary).toBe('Updated Meeting');
+      expect(result.description).toBe('Updated description');
+      expect(result.location).toBe('New Location');
+      expect(result.colorId).toBe('9');
+    });
+  });
+
+  describe('Modification Scope Validation', () => {
+    it('should leave modificationScope undefined when not provided', () => {
+      const args = createUpdateEventArgs();
+
+      const result = UpdateEventArgumentsSchema.parse(args);
+      expect(result.modificationScope).toBeUndefined();
+    });
+
+    it('should accept valid modificationScope values', () => {
+      MODIFICATION_SCOPES.forEach(scope => {
+        const scopeOverrides: Record<string, any> = { modificationScope: scope };
+
+        if (scope === 'thisEventOnly') {
+          scopeOverrides.originalStartTime = '2024-06-15T10:00:00';
+        } else if (scope === 'thisAndFollowing') {
+          scopeOverrides.futureStartDate = formatTZNaiveDateTime(getFutureDate(90));
+        }
+
+        const args = createUpdateEventArgs(DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID, TEST_TIMEZONE, scopeOverrides);
+        const result = UpdateEventArgumentsSchema.parse(args);
+        expect(result.modificationScope).toBe(scope);
+      });
+    });
+
+    it('should reject invalid modificationScope values', () => {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
+        modificationScope: 'invalid'
+      });
+
+      expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow();
+    });
+  });
+
+  describe('Single Instance Scope Validation', () => {
+    it('should require originalStartTime when modificationScope is "thisEventOnly"', () => {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
+        modificationScope: 'thisEventOnly'
+        // missing originalStartTime
+      });
+
+      expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow(
+        /originalStartTime is required when modificationScope is 'thisEventOnly'/
+      );
+    });
+
+    it('should accept valid originalStartTime for thisEventOnly scope', () => {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
+        modificationScope: 'thisEventOnly',
+        originalStartTime: '2024-06-15T10:00:00'
+      });
+
+      const result = UpdateEventArgumentsSchema.parse(args);
+      expect(result.modificationScope).toBe('thisEventOnly');
+      expect(result.originalStartTime).toBe('2024-06-15T10:00:00');
+    });
+
+    it('should reject invalid originalStartTime format', () => {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
+        modificationScope: 'thisEventOnly',
+        originalStartTime: '2024-06-15 10:00:00' // invalid format
+      });
+
+      expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow();
+    });
+
+    it('should accept originalStartTime without timezone designator', () => {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
+        modificationScope: 'thisEventOnly',
+        originalStartTime: '2024-06-15T10:00:00' // timezone-naive format (expected)
+      });
+
+      expect(() => UpdateEventArgumentsSchema.parse(args)).not.toThrow();
+    });
+  });
+
+  describe('Future Instances Scope Validation', () => {
+    it('should require futureStartDate when modificationScope is "thisAndFollowing"', () => {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
+        modificationScope: 'thisAndFollowing'
+        // missing futureStartDate
+      });
+
+      expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow(
+        /futureStartDate is required when modificationScope is 'thisAndFollowing'/
+      );
+    });
+
+    it('should accept valid futureStartDate for thisAndFollowing scope', () => {
+      const futureDateString = formatTZNaiveDateTime(getFutureDate(30));
+
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
+        modificationScope: 'thisAndFollowing',
+        futureStartDate: futureDateString
+      });
+
+      const result = UpdateEventArgumentsSchema.parse(args);
+      expect(result.modificationScope).toBe('thisAndFollowing');
+      expect(result.futureStartDate).toBe(futureDateString);
+    });
+
+    it('should reject futureStartDate in the past', () => {
+      const pastDateString = makePastDateString(1);
+
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
+        modificationScope: 'thisAndFollowing',
+        futureStartDate: pastDateString
+      });
+
+      expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow(
+        /futureStartDate must be in the future/
+      );
+    });
+
+    it('should reject invalid futureStartDate format', () => {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
+        modificationScope: 'thisAndFollowing',
+        futureStartDate: '2024-12-31 10:00:00' // invalid format
+      });
+
+      expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow();
+    });
+  });
+
+  describe('Datetime Format Validation', () => {
+    it.each(VALID_DATETIMES)('should accept valid datetime format: %s', (datetime) => {
+      const args = createUpdateEventArgs(DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID, TEST_TIMEZONE, {
+        start: datetime,
+        end: datetime
+      });
+
+      expect(() => UpdateEventArgumentsSchema.parse(args)).not.toThrow();
+    });
+
+    it.each(INVALID_DATETIMES)('should reject invalid datetime format: %s', (datetime) => {
+      const args = createUpdateEventArgs(DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID, TEST_TIMEZONE, {
+        start: datetime
+      });
+
+      expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow();
+    });
+  });
+
+  describe('Complex Scenarios', () => {
+    it('should validate complete update with all fields', () => {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
+        modificationScope: 'thisAndFollowing',
+        futureStartDate: formatTZNaiveDateTime(getFutureDate(60)),
+        summary: 'Updated Meeting',
+        description: 'Updated description',
+        location: 'New Conference Room',
+        start: '2024-06-15T10:00:00',
+        end: '2024-06-15T11:00:00',
+        colorId: '9',
+        attendees: [
+          { email: 'user1@example.com' },
+          { email: 'user2@example.com' }
+        ],
+        reminders: {
+          useDefault: false,
+          overrides: [
+            { method: 'email', minutes: TEST_EVENT_DEFAULTS.RECURRING_EMAIL_REMINDER_MINUTES },
+            { method: 'popup', minutes: 10 }
+          ]
+        },
+        recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO']
+      });
+
+      const result = UpdateEventArgumentsSchema.parse(args);
+      expect(result).toMatchObject(args);
+    });
+
+    it('should not require conditional fields for "all" scope', () => {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
+        modificationScope: 'all',
+        summary: 'Updated Meeting'
+        // no originalStartTime or futureStartDate required
+      });
+
+      expect(() => UpdateEventArgumentsSchema.parse(args)).not.toThrow();
+    });
+
+    it('should allow optional conditional fields when not required', () => {
+      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
+        modificationScope: 'all',
+        originalStartTime: '2024-06-15T10:00:00', // optional for 'all' scope
+        summary: 'Updated Meeting'
+      });
+
+      const result = UpdateEventArgumentsSchema.parse(args);
+      expect(result.originalStartTime).toBe('2024-06-15T10:00:00');
+    });
+  });
+
+  describe('Backward Compatibility', () => {
+    it('should maintain compatibility with existing update calls', () => {
+      // Existing call format without new parameters
+      const legacyArgs = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
+        summary: 'Updated Meeting',
+        location: 'Conference Room A'
+      });
+
+      const result = UpdateEventArgumentsSchema.parse(legacyArgs);
+      expect(result.modificationScope).toBeUndefined(); // optional with no default
+      expect(result.summary).toBe('Updated Meeting');
+      expect(result.location).toBe('Conference Room A');
+    });
+  });
+});
+
+describe('ListEventsArgumentsSchema JSON String Handling', () => {
+  it('should parse JSON string calendarId into array', () => {
+    const input = {
+      calendarId: '["primary", "secondary@gmail.com"]',
+      timeMin: TIME_MIN,
+      timeMax: TIME_MAX
+    };
+
+    const result = ListEventsArgumentsSchema.parse(input);
+    // The new schema keeps JSON strings as strings (they are parsed in the handler)
+    expect(result.calendarId).toBe('["primary", "secondary@gmail.com"]');
+  });
+
+  it('should handle regular string calendarId', () => {
+    const input = {
+      calendarId: 'primary',
+      timeMin: TIME_MIN,
+      timeMax: TIME_MAX
+    };
+
+    const result = ListEventsArgumentsSchema.parse(input);
+    expect(result.calendarId).toBe('primary');
+  });
+
+  it('should handle regular array calendarId', () => {
+    // Arrays are no longer directly supported - they must be JSON strings
+    const input = {
+      calendarId: ['primary', 'secondary@gmail.com'],
+      timeMin: TIME_MIN,
+      timeMax: TIME_MAX
+    };
+
+    // This should now throw because arrays aren't accepted directly
+    expect(() => ListEventsArgumentsSchema.parse(input)).toThrow();
+  });
+
+  it('should pass through invalid JSON strings for handler validation', () => {
+    // Invalid JSON strings are accepted by the schema but will fail in the handler
+    const input = {
+      calendarId: '["primary", invalid]',
+      timeMin: TIME_MIN,
+      timeMax: TIME_MAX
+    };
+
+    // The schema accepts any string - validation happens in the handler
+    const result = ListEventsArgumentsSchema.parse(input);
+    expect(result.calendarId).toBe('["primary", invalid]');
+  });
+
+  it('should pass through JSON strings with non-string elements for handler validation', () => {
+    // Schema accepts any string - validation happens in the handler
+    const input = {
+      calendarId: '["primary", 123]',
+      timeMin: TIME_MIN,
+      timeMax: TIME_MAX
+    };
+
+    // The schema accepts any string - validation happens in the handler
+    const result = ListEventsArgumentsSchema.parse(input);
+    expect(result.calendarId).toBe('["primary", 123]');
+  });
+});
+</file>
+
+<file path="src/tests/unit/index.test.ts">
+/**
+ * Tests for the Google Calendar MCP Server implementation
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { OAuth2Client } from "google-auth-library";
+
+// Import tool handlers to test them directly
+import { ListCalendarsHandler } from "../../handlers/core/ListCalendarsHandler.js";
+import { CreateEventHandler } from "../../handlers/core/CreateEventHandler.js";
+
+// Import test helpers
+import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE, TEST_TIMEZONE_SECONDARY } from "../../testing/constants.js";
+
+// Mock OAuth2Client
+vi.mock('google-auth-library', () => ({
+  OAuth2Client: vi.fn().mockImplementation(() => ({
+    setCredentials: vi.fn(),
+    refreshAccessToken: vi.fn().mockResolvedValue({ credentials: { access_token: 'mock_access_token' } }),
+    on: vi.fn(),
+  }))
+}));
+
+// Mock googleapis
+vi.mock('googleapis', () => ({
+  google: {
+    calendar: vi.fn().mockReturnValue({
+      calendarList: {
+        list: vi.fn(),
+        get: vi.fn()
+      },
+      events: {
+        list: vi.fn(),
+        insert: vi.fn(),
+        patch: vi.fn(),
+        delete: vi.fn()
+      },
+      colors: {
+        get: vi.fn()
+      },
+      freebusy: {
+        query: vi.fn()
+      }
+    })
+  }
+}));
+
+// Mock TokenManager
+vi.mock('./auth/tokenManager.js', () => ({
+  TokenManager: vi.fn().mockImplementation(() => ({
+    validateTokens: vi.fn().mockResolvedValue(true),
+    loadSavedTokens: vi.fn().mockResolvedValue(true),
+    clearTokens: vi.fn(),
+  })),
+}));
+
+describe('Google Calendar MCP Server', () => {
+  let mockOAuth2Client: OAuth2Client;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockOAuth2Client = new OAuth2Client();
+  });
+
+  describe('McpServer Configuration', () => {
+    it('should create McpServer with correct configuration', () => {
+      const server = new McpServer({
+        name: "google-calendar",
+        version: "1.2.0"
+      });
+
+      expect(server).toBeDefined();
+      // McpServer doesn't expose internal configuration for testing,
+      // but we can verify it doesn't throw during creation
+    });
+  });
+
+  describe('Tool Handlers', () => {
+    function mockCalendarEuropeTimezone(mockCalendarApi: ReturnType<typeof import('googleapis')['google']['calendar']>, summary: string) {
+      (mockCalendarApi.calendarList.get as any).mockResolvedValue({
+        data: { id: 'primary', timeZone: TEST_TIMEZONE_SECONDARY }
+      });
+      (mockCalendarApi.events.insert as any).mockResolvedValue({
+        data: { id: 'testEvent', summary }
+      });
+    }
+
+    it('should handle list-calendars tool correctly', async () => {
+      const handler = new ListCalendarsHandler();
+      const { google } = await import('googleapis');
+      const mockCalendarApi = google.calendar('v3');
+
+      // Mock the API response
+      (mockCalendarApi.calendarList.list as any).mockResolvedValue({
+        data: {
+          items: [
+            { 
+              id: 'cal1', 
+              summary: 'Work Calendar',
+              timeZone: 'America/New_York',
+              kind: 'calendar#calendarListEntry',
+              accessRole: 'owner',
+              primary: true,
+              selected: true,
+              hidden: false,
+              backgroundColor: '#0D7377',
+              defaultReminders: [
+                { method: 'popup', minutes: TEST_EVENT_DEFAULTS.REMINDER_MINUTES },
+                { method: 'email', minutes: 60 }
+              ],
+              description: 'Work-related events and meetings'
+            },
+            {
+              id: 'cal2',
+              summary: 'Personal',
+              timeZone: TEST_TIMEZONE,
+              kind: 'calendar#calendarListEntry',
+              accessRole: 'reader',
+              primary: false,
+              selected: true,
+              hidden: false,
+              backgroundColor: '#D50000'
+            },
+          ]
+        }
+      });
+
+      const result = await handler.runTool({}, mockOAuth2Client);
+
+      expect(mockCalendarApi.calendarList.list).toHaveBeenCalled();
+      expect(result).toEqual({
+        content: [
+          {
+            type: 'text',
+            text: `Work Calendar (PRIMARY) (cal1)
+  Timezone: America/New_York
+  Kind: calendar#calendarListEntry
+  Access Role: owner
+  Selected: Yes
+  Hidden: No
+  Background Color: #0D7377
+  Default Reminders: popup (${TEST_EVENT_DEFAULTS.REMINDER_MINUTES}min before), email (60min before)
+  Description: Work-related events and meetings
+
+Personal (cal2)
+  Timezone: ${TEST_TIMEZONE}
+  Kind: calendar#calendarListEntry
+  Access Role: reader
+  Selected: Yes
+  Hidden: No
+  Background Color: #D50000
+  Default Reminders: None`,
+          },
+        ],
+      });
+    });
+
+    it('should use calendar default timezone when timeZone is not provided', async () => {
+      const handler = new CreateEventHandler();
+      const { google } = await import('googleapis');
+      const mockCalendarApi = google.calendar('v3');
+
+      const mockEventArgs = {
+        calendarId: 'primary',
+        summary: 'Meeting without timezone',
+        start: '2024-08-15T10:00:00', // Timezone-naive datetime
+        end: '2024-08-15T11:00:00', // Timezone-naive datetime
+      };
+
+      mockCalendarEuropeTimezone(mockCalendarApi, mockEventArgs.summary);
+
+      await handler.runTool(mockEventArgs, mockOAuth2Client);
+
+      // Verify that the calendar's timezone was used
+      expect(mockCalendarApi.events.insert).toHaveBeenCalledWith({
+        calendarId: mockEventArgs.calendarId,
+        requestBody: expect.objectContaining({
+          start: { dateTime: mockEventArgs.start, timeZone: TEST_TIMEZONE_SECONDARY },
+          end: { dateTime: mockEventArgs.end, timeZone: TEST_TIMEZONE_SECONDARY },
+        }),
+      });
+    });
+
+    it('should handle timezone-aware datetime strings correctly', async () => {
+      const handler = new CreateEventHandler();
+      const { google } = await import('googleapis');
+      const mockCalendarApi = google.calendar('v3');
+
+      const mockEventArgs = {
+        calendarId: 'primary',
+        summary: 'Meeting with timezone in datetime',
+        start: '2024-08-15T10:00:00-07:00', // Timezone-aware datetime
+        end: '2024-08-15T11:00:00-07:00', // Timezone-aware datetime
+      };
+
+      mockCalendarEuropeTimezone(mockCalendarApi, mockEventArgs.summary);
+
+      await handler.runTool(mockEventArgs, mockOAuth2Client);
+
+      // Verify that timezone from datetime was used (no timeZone property)
+      expect(mockCalendarApi.events.insert).toHaveBeenCalledWith({
+        calendarId: mockEventArgs.calendarId,
+        requestBody: expect.objectContaining({
+          start: { dateTime: mockEventArgs.start }, // No timeZone property
+          end: { dateTime: mockEventArgs.end }, // No timeZone property
+        }),
+      });
+    });
+
+  });
+
+  describe('Configuration and Environment Variables', () => {
+    it('should parse environment variables correctly', async () => {
+      const originalEnv = process.env;
+      
+      try {
+        // Set test environment variables
+        process.env.TRANSPORT = 'http';
+        process.env.PORT = '4000';
+        process.env.HOST = '0.0.0.0';
+        process.env.DEBUG = 'true';
+
+        // Import config parser after setting env vars
+        const { parseArgs } = await import('../../config/TransportConfig.js');
+        
+        const config = parseArgs([]);
+
+        expect(config.transport.type).toBe('http');
+        expect(config.transport.port).toBe(4000);
+        expect(config.transport.host).toBe('0.0.0.0');
+        expect(config.debug).toBe(true);
+      } finally {
+        // Restore original environment
+        process.env = originalEnv;
+      }
+    });
+
+    it('should allow CLI arguments to override environment variables', async () => {
+      const originalEnv = process.env;
+      
+      try {
+        // Set environment variables
+        process.env.TRANSPORT = 'http';
+        process.env.PORT = '4000';
+
+        const { parseArgs } = await import('../../config/TransportConfig.js');
+        
+        // CLI arguments should override env vars
+        const config = parseArgs(['--transport', 'stdio', '--port', '5000']);
+
+        expect(config.transport.type).toBe('stdio');
+        expect(config.transport.port).toBe(5000);
+      } finally {
+        process.env = originalEnv;
+      }
+    });
+  });
+});
+</file>
+
+<file path="mark-read.mjs">
+/**
+ * Mark emails as read based on label membership or past-event date detection.
+ *
+ * Usage:
+ *   node mark-read.mjs                  # mark all labeled emails as read
+ *   node mark-read.mjs --archived-only  # restrict to emails no longer in inbox
+ *   node mark-read.mjs --past-events    # mark only past-date event emails as read
+ */
+import { createGmailClient } from './lib/gmail-client.mjs';
+import {
+  USER_ID,
+  GMAIL_UNREAD,
+  LABEL_EVENTS, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES,
+  LABEL_SERVICES, LABEL_BILLING, LABEL_MONITORING,
+} from './lib/constants.mjs';
+import { extractEventDate, isPastEvent } from './lib/date-based-filter.mjs';
+import { getHeader } from './lib/email-utils.mjs';
+import { batchModifyMessages, searchAndModify } from './lib/gmail-batch-utils.mjs';
+import { decodeMessageBody } from './lib/gmail-message-utils.mjs';
+
+const pastEventsMode = process.argv.includes('--past-events');
+const archivedOnly = process.argv.includes('--archived-only');
+
+const LABELED_LABELS = [LABEL_EVENTS, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING, LABEL_MONITORING];
+
+async function markLabeledRead(gmail) {
+  const archiveSuffix = archivedOnly ? ' -label:INBOX' : '';
+  let total = 0;
+  for (const label of LABELED_LABELS) {
+    const count = await searchAndModify(gmail, `label:"${label}" is:unread${archiveSuffix}`, { removeLabelIds: [GMAIL_UNREAD] });
+    if (count > 0) console.log(`${label}: ${count} marked as read`);
+    total += count;
+  }
+  const qualifier = archivedOnly ? 'archived ' : '';
+  console.log(`Total: ${total} ${qualifier}emails marked as read`);
+}
+
+async function markPastEventsRead(gmail) {
+  const searchResponse = await gmail.users.messages.list({
+    userId: USER_ID,
+    q: `label:${LABEL_EVENTS} is:unread`,
+    maxResults: 500,
+  });
+
+  const messageIds = searchResponse.data.messages || [];
+  console.log(`Found ${messageIds.length} unread event emails`);
+  if (messageIds.length === 0) return;
+
+  const fullMsgs = await Promise.all(
+    messageIds.map(msg =>
+      gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'full' })
+    )
+  );
+
+  const pastIds = fullMsgs
+    .filter(fullMsg => {
+      const headers = fullMsg.data.payload?.headers || [];
+      const subject = getHeader(headers, 'Subject');
+      const body = decodeMessageBody(fullMsg.data.payload);
+      const eventDate = extractEventDate(subject + '\n' + body);
+      return eventDate && isPastEvent(eventDate);
+    })
+    .map(fullMsg => fullMsg.data.id);
+
+  console.log(`Identified ${pastIds.length} past events`);
+  if (pastIds.length === 0) return;
+
+  await batchModifyMessages(gmail, pastIds, { removeLabelIds: [GMAIL_UNREAD] });
+  console.log(`Past events marked as read: ${pastIds.length}`);
+  console.log(`Future events remaining unread: ${messageIds.length - pastIds.length}`);
+}
+
+const gmail = createGmailClient();
+const action = pastEventsMode ? markPastEventsRead : markLabeledRead;
+action(gmail).catch(error => {
+  console.error('Error:', error.message);
+  process.exit(1);
+});
+</file>
+
+<file path="README.md">
+# Google Calendar & Gmail MCP Server
+
+A Model Context Protocol (MCP) server that provides Google Calendar and Gmail integration for AI assistants like Claude.
+
+## Features
+
+### Calendar
+- **Multi-Calendar Support**: List events from multiple calendars simultaneously
+- **Event Management**: Create, update, delete, and search calendar events
+- **Recurring Events**: Advanced modification capabilities for recurring events
+- **Free/Busy Queries**: Check availability across calendars
+- **Smart Scheduling**: Natural language understanding for dates and times
+- **Inteligent Import**: Add calendar events from images, PDFs or web links
+
+### Gmail
+- **Message Search**: Query Gmail with flexible search filters (is:unread, from:, subject:, etc.)
+- **Profile Management**: Get account information (message count, thread count, email address)
+- **Multi-Account Support**: Use multiple Gmail accounts with separate OAuth tokens
+
+## Recent Updates (v1.4.9)
+
+**Code Quality & Maintainability:**
+- 🧹 **Test Fixture Consolidation** - Extracted 9+ duplicate fixtures into shared factories (70% reduction in test boilerplate)
+- 🛠️ **Test Helper Utilities** - Added assertion helpers (`expectValidToolResponse`, `expectJsonResponse`) and error pattern extractors
+- 🎯 **Runtime Optimization** - Refactored `buildOptionalEventFields()` to eliminate 13 repetitive if-checks with `conditionallyAddFields()` utility (85% reduction)
+- 🔄 **Mock Setup Consolidation** - Created `createGoogleCalendarMocks()` factory to eliminate vi.mock duplication across handler tests
+
+**Performance & Reliability:**
+- 🚀 Dynamic label ID resolution (L6) - Scripts now work across accounts with different label hierarchies
+- ⚡ Sequential API optimization - ~500ms latency reduction per operation
+- 📦 Batch filter operations - 10-100x speedup for bulk Gmail tasks
+- 🔧 Timezone utilities consolidation - Reduced codebase by 19 lines, eliminated duplicate datetime logic
+
+**Tooling & Infrastructure:**
+- ✅ Comprehensive label resolution guide ([docs/LABEL-RESOLUTION-GUIDE.md](docs/LABEL-RESOLUTION-GUIDE.md))
+- 🧪 Parametrized test expansion (25 → 30+ test cases)
+- 📋 New changelog system ([docs/changelog/](docs/changelog/)) tracking all improvements
+- 🔐 Auth refactor: new `isAuthenticated()` and `getCredentials()` methods
+
+**Testing:**
+- 486/486 tests passing (100%) ✅
+- Integration tests for conflict detection via MCP protocol (real server, real API)
+- Reduced technical debt with shared utilities in `lib/gmail-*.mjs`
+- Consolidated test helpers reduce maintenance burden across 30+ test files
+- CLAUDE.md updated with test utilities and patterns documentation
+
+See [CHANGELOG](docs/CHANGELOG.md) for complete v1.4.9 release notes.
+
+## Quick Start
+
+### Prerequisites
+
+1. A Google Cloud project with the Calendar API enabled
+2. OAuth 2.0 credentials (Desktop app type)
+
+### Google Cloud Setup
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com)
+2. Create a new project or select an existing one.
+3. Enable the [Google Calendar API](https://console.cloud.google.com/apis/library/calendar-json.googleapis.com) for your project. Ensure that the right project is selected from the top bar before enabling the API.
+4. Create OAuth 2.0 credentials:
+   - Go to Credentials
+   - Click "Create Credentials" > "OAuth client ID"
+   - Choose "User data" for the type of data that the app will be accessing
+   - Add your app name and contact information
+   - Add the following scopes (optional):
+     - `https://www.googleapis.com/auth/calendar.events` and `https://www.googleapis.com/auth/calendar`
+   - Select "Desktop app" as the application type (Important!)
+   - Save the auth key, you'll need to add its path to the JSON in the next step
+   - Add your email address as a test user under the [Audience screen](https://console.cloud.google.com/auth/audience)
+      - Note: it might take a few minutes for the test user to be added. The OAuth consent will not allow you to proceed until the test user has propagated.
+      - Note about test mode: While an app is in test mode the auth tokens will expire after 1 week and need to be refreshed (see Re-authentication section below).
+
+### Installation
+
+**Option 1: Use with npx (Recommended)**
+
+Add to your Claude Desktop configuration:
+
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+```json
+{
+  "mcpServers": {
+    "google-calendar": {
+      "command": "npx",
+      "args": ["@cocal/google-calendar-mcp"],
+      "env": {
+        "GOOGLE_OAUTH_CREDENTIALS": "/path/to/your/gcp-oauth.keys.json"
+      }
+    }
+  }
+}
+```
+
+**⚠️ Important Note for npx Users**: When using npx, you **must** specify the credentials file path using the `GOOGLE_OAUTH_CREDENTIALS` environment variable.
+
+**Option 2: Local Installation**
+
+```bash
+git clone https://github.com/nspady/google-calendar-mcp.git
+cd google-calendar-mcp
+npm install
+npm run build
+```
+
+Then add to Claude Desktop config using the local path or by specifying the path with the `GOOGLE_OAUTH_CREDENTIALS` environment variable.
+
+### First Run
+
+1. Start Claude Desktop
+2. The server will prompt for authentication on first use
+3. Complete the OAuth flow in your browser
+4. You're ready to use calendar features!
+
+### Multi-Account Support (Test Mode)
+
+This server supports multiple Google accounts in test mode with automatic token management.
+
+**Setup both accounts:**
+
+Account 1 (Initial):
+```bash
+export ACCOUNT_MODE=test
+export CALENDARMCP_TOKEN_PATH=~/.config/google-calendar-mcp/tokens.json
+npm run auth
+```
+
+Account 2 (Same file, different account key):
+```bash
+export ACCOUNT_MODE=test
+export CALENDARMCP_TOKEN_PATH=~/.config/google-calendar-mcp/tokens.json
+npm run auth  # Authenticates second account in same tokens.json
+```
+
+**Verify both accounts:**
+```bash
+export GOOGLE_OAUTH_CREDENTIALS="./credentials.json"
+npm run verify-tokens
+```
+
+Outputs token status, expiry times, and account validity for all authenticated accounts.
+
+**Important Notes:**
+- Both accounts stored in single `tokens.json` file with separate keys
+- Tokens expire after 7 days in test mode (Google requirement)
+- TokenManager auto-refreshes tokens 5 minutes before expiry
+- Set `ACCOUNT_MODE` environment variable before running the server to select which account is active
+
+### Re-authentication
+
+If you're in test mode (default), tokens expire after 7 days. If you are using a client like Claude Desktop it should open up a browser window to automatically re-auth. However, if you see authentication errors you can also resolve by following these steps:
+
+**For npx users:**
+```bash
+export GOOGLE_OAUTH_CREDENTIALS="/path/to/your/gcp-oauth.keys.json"
+export ACCOUNT_MODE=test
+npx @cocal/google-calendar-mcp auth
+```
+
+**For local installation:**
+```bash
+export ACCOUNT_MODE=test
+npm run auth
+```
+
+**To avoid weekly re-authentication**, publish your app to production mode (without verification):
+1. Go to Google Cloud Console → "APIs & Services" → "OAuth consent screen"
+2. Click "PUBLISH APP" and confirm
+3. Your tokens will no longer expire after 7 days but Google will show a more threatning warning when connecting to the app about it being unverified.
+
+See [Authentication Guide](docs/authentication.md#moving-to-production-mode-recommended) for details.
+
+### Gmail OAuth Setup
+
+To enable Gmail features, authenticate with Gmail scopes:
+
+```bash
+# Using the provided auth script
+node auth-gmail.mjs
+```
+
+This will:
+1. Open your browser for OAuth authentication
+2. Request Gmail access (read and modify permissions)
+3. Save tokens to `~/.config/google-calendar-mcp/tokens-gmail.json`
+
+**Quick Check:**
+```bash
+# Check unread message count
+node check-gmail.mjs
+```
+
+**Important Notes:**
+- Gmail and Calendar tokens are stored separately
+- Gmail scopes: `gmail.readonly`, `gmail.modify`
+- Tokens expire after 7 days in test mode
+- Re-authenticate as needed with `node auth-gmail.mjs`
+
+### Email Organization & Filtering Scripts
+
+Automated scripts for organizing and filtering large volumes of Gmail with focus on correctness and efficiency.
+
+**Management Scripts:** (use shared `createGmailClient()` for OAuth, error handling, and multi-account support)
+- `list-unread-emails.mjs` - Categorize and summarize unread emails; `--stats` for per-label counts, `--verify` for label spot-checks, `--count` for quick total
+- `summarize-remaining.mjs` - Summary of uncategorized/remaining unread emails (internal work, forums, misc); parallel fetching
+- `describe-internal.mjs` - Detailed breakdown of internal team emails with subjects and dates; hardcoded summary removed
+- `apply-filters-to-unread.mjs` - Apply existing filters to current unread emails
+- `create-remaining-filters.mjs` - Batch create filters for multiple categories (Product Updates, Communities, Services)
+
+**Specialized Filters:**
+- `protect-important-inbox.mjs --billing` - Smart billing filter with conditional rate-limit detection (merged from create-billing-filter.mjs)
+- `create-signoz-filter.mjs` - Archive SigNoz monitoring alerts automatically
+- `create-dmarc-filter.mjs` - Organize DMARC authentication reports
+- `create-eventbrite-filter.mjs` - Label and archive Eventbrite event emails
+- `create-meet-notes-filter.mjs` - Label Google Meet notes
+- `delete-sentry-filter.mjs` - Remove outdated filters
+
+**Archive & Processing Scripts:**
+- `archive-signoz-dmarc.mjs` - Batch archive monitoring and DMARC report emails using Gmail batch API
+- `mark-signoz-read.mjs` - Mark SigNoz alerts as read in bulk
+- `mark-past-events-read.mjs` - Classify event emails by date and mark past events as read
+- `protect-important-inbox.mjs` - Label critical items to prevent archiving; `--billing` mode for smart billing filters
+
+**Event Management:**
+- `filter-events-by-date.mjs` - Classify event emails as future (label + keep) or past (label + archive)
+- `organize-international-house.mjs` - Label and organize International House event emails
+
+**Utilities:**
+- `lib/gmail-client.mjs` - Authenticated Gmail API client factory. Centralizes OAuth2 init, token validation, and multi-account support:
+  ```js
+  import { createGmailClient } from './lib/gmail-client.mjs';
+  const gmail = createGmailClient(); // Uses ACCOUNT_MODE env var, throws on missing tokens
+  ```
+- `lib/gmail-label-utils.mjs` - Label ID resolution (NEW in v1.4.9). Resolves hardcoded label IDs dynamically for account portability:
+  ```js
+  import { buildLabelCache, resolveLabelId } from './lib/gmail-label-utils.mjs';
+  const labelCache = await buildLabelCache(gmail);
+  const labelId = labelCache.get('Events/Community'); // Dynamic instead of hardcoded Label_N
+  ```
+  See [`docs/LABEL-RESOLUTION-GUIDE.md`](docs/LABEL-RESOLUTION-GUIDE.md) for complete documentation.
+- `lib/gmail-batch.mjs` - Batch filter operations for bulk Gmail tasks (10-100x speedup)
+- `lib/date-based-filter.mjs` - Pure utility for date-based email classification: extracts dates (ISO, US format, text dates, weekday patterns), compares to today, classifies as past/future/unknown. Does not mutate input. Handles dates without year by inferring current or next year.
+
+## Example Usage
+
+Along with the normal capabilities you would expect for a calendar integration you can also do really dynamic, multi-step processes like:
+
+1. **Cross-calendar availability**:
+   ```
+   Please provide availability looking at both my personal and work calendar for this upcoming week.
+   I am looking for a good time to meet with someone in London for 1 hr.
+   ```
+
+2. Add events from screenshots, images and other data sources:
+   ```
+   Add this event to my calendar based on the attached screenshot.
+   ```
+   Supported image formats: PNG, JPEG, GIF
+   Images can contain event details like date, time, location, and description
+
+3. Calendar analysis:
+   ```
+   What events do I have coming up this week that aren't part of my usual routine?
+   ```
+4. Check attendance:
+   ```
+   Which events tomorrow have attendees who have not accepted the invitation?
+   ```
+5. Auto coordinate events:
+   ```
+   Here's some available that was provided to me by someone. {available times}
+   Take a look at the times provided and let me know which ones are open on my calendar.
+   ```
+
+6. **Gmail workflows**:
+   ```
+   How many unread emails do I have from my work account?
+   ```
+   ```
+   Search for all emails from john@company.com that I haven't replied to yet.
+   ```
+   ```
+   Show me all unread messages from the past week.
+   ```
+   ```
+   Mark all unread emails from my boss as read.
+   ```
+   ```
+   Archive all promotional emails from marketing.
+   ```
+   ```
+   Delete these 5 spam messages (provide IDs).
+   ```
+
+## Date Parsing
+
+The email organization system uses intelligent date parsing (`lib/date-based-filter.mjs`) to classify event emails:
+
+**Supported Formats:**
+- ISO 8601: `2026-03-25`, `2026/03/25`
+- US format: `03/25/2026`, `3/25/2026`
+- Text format: `March 25, 2026`, `March 25` (infers year)
+- Weekday patterns: `@ Mon, Mar 23`, `@ Friday Mar 22`
+- Returns `null` for unparseable dates
+
+**Classification:**
+- Past events (date < today): archive from inbox, keep label
+- Future events (date ≥ today): label and keep in inbox
+- Unknown: marked for manual review
+
+**Implementation Notes:**
+- Pure function: does not mutate input dates
+- Handles missing years by inferring current or next year
+- Used by `mark-past-events-read.mjs` to auto-archive old events
+
+## Available Tools
+
+### Calendar Tools
+| Tool | Description |
+|------|-------------|
+| `list-calendars` | List all available calendars |
+| `list-events` | List events with date filtering |
+| `search-events` | Search events by text query |
+| `create-event` | Create new calendar events |
+| `update-event` | Update existing events |
+| `delete-event` | Delete events |
+| `get-freebusy` | Check availability across calendars, including external calendars |
+| `list-colors` | List available event colors |
+
+### Gmail Tools
+| Tool | Description |
+|------|-------------|
+| `gmail-search-messages` | Search Gmail messages (e.g., `is:unread`, `from:user@example.com`) |
+| `gmail-get-profile` | Get Gmail profile info (email, message count, thread count) |
+| `gmail-modify-messages` | Modify messages: mark read/unread, archive, delete, add/remove labels |
+| `gmail-create-label` | Create new labels for organizing emails |
+| `gmail-create-filter` | Create filters to auto-organize emails (auto-label, archive, delete, etc.) |
+
+## Documentation
+
+- [Authentication Setup](docs/authentication.md) - Detailed Google Cloud setup
+- [Advanced Usage](docs/advanced-usage.md) - Multi-account, batch operations
+- [Deployment Guide](docs/deployment.md) - Remote access and integration
+- [OAuth Verification](docs/oauth-verification.md) - Moving from test to production mode
+- [Architecture](docs/architecture.md) - Technical architecture overview
+- [Development](docs/development.md) - Contributing and testing
+- [Backlog & Roadmap](docs/BACKLOG.md) - Future work, refactoring targets, design decisions
+
+## Development
+
+**Project Guidelines:**
+- See [`CLAUDE.md`](CLAUDE.md) for code quality standards, script patterns, and refactoring guidelines
+- OAuth extraction pattern: use `createGmailClient()` from `lib/gmail-client.mjs`
+- Established patterns: error handling with try/catch, named constants, parallel API fetches with `Promise.all`
+- TypeScript, ES modules, 2-space indent, no magic strings
+
+**Code Quality Tools:**
+- Detect duplicated code blocks: `node scripts/check-duplicates.mjs src 6` (reports suspicious file pairs, overlapping logic)
+- Consolidated: `GmailCreateHandler.ts` unifies filter and label creation logic (single source of truth)
+
+**Completed Roadmap:**
+- ✅ All 24 backlog items complete (v1.4.9)
+- ✅ Test architecture for conflict detection implemented (MCP protocol, real API)
+- ✅ Email parsing helpers extracted (email-analyzer.mjs with 4 reusable exports)
+- ✅ Timezone utilities consolidated (19 lines reduced)
+- See [`docs/BACKLOG.md`](docs/BACKLOG.md) for detailed implementation notes and [`docs/CHANGELOG.md`](docs/CHANGELOG.md) for version history
+
+## Testing Status
+
+Run tests with `npm test`. Current test suite includes:
+- **Handler Tests**: Core functionality for create, get, list, search, update, and delete operations; content assertions use narrower `{ type: 'text'; text: string }` type instead of `as any`
+- **Service Tests**: Conflict detection and event similarity analysis
+- **Schema Tests**: Tool schema validation and compatibility
+
+**Note**: Integration tests referencing non-existent `AuthenticationService` and `initializeApp` exports were removed. Re-implement when the authentication service architecture is finalized.
+
+## Configuration
+
+**Environment Variables:**
+- `GOOGLE_OAUTH_CREDENTIALS` - Path to OAuth credentials file
+- `CALENDARMCP_TOKEN_PATH` - Custom token storage location for Calendar tokens (optional)
+- `ACCOUNT_MODE` - Account mode selection (normal or test; default: test)
+
+**Token Storage:**
+- Calendar tokens: `~/.config/google-calendar-mcp/tokens.json`
+- Gmail tokens: `~/.config/google-calendar-mcp/tokens-gmail.json`
+- Both stored with secure permissions (0600)
+
+**Claude Desktop Config Location:**
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+
+## Security
+
+- OAuth tokens are stored securely in your system's config directory
+- Credentials never leave your local machine
+- All calendar operations require explicit user consent
+
+### Troubleshooting
+
+1. **OAuth Credentials File Not Found:**
+   - For npx users: You **must** specify the credentials file path using `GOOGLE_OAUTH_CREDENTIALS`
+   - Verify file paths are absolute and accessible
+
+2. **Authentication Errors:**
+   - Ensure your credentials file contains credentials for a **Desktop App** type
+   - Verify your user email is added as a **Test User** in the Google Cloud OAuth Consent screen
+   - Try deleting saved tokens and re-authenticating
+   - Check that no other process is blocking ports 3000-3004
+
+3. **Build Errors:**
+   - Run `npm install && npm run build` again
+   - Check Node.js version (use LTS)
+   - Delete the `build/` directory and run `npm run build`
+4. **"Something went wrong" screen during browser authentication**
+   - Perform manual authentication per the below steps
+   - Use a Chromium-based browser to open the authentication URL. Test app authentication may not be supported on some non-Chromium browsers.
+
+### Manual Authentication
+For re-authentication or troubleshooting:
+```bash
+# For npx installations
+export GOOGLE_OAUTH_CREDENTIALS="/path/to/your/credentials.json"
+npx @cocal/google-calendar-mcp auth
+
+# For local installations
+npm run auth
+```
+
+## License
+
+MIT
+
+## Support
+
+- [GitHub Issues](https://github.com/nspady/google-calendar-mcp/issues)
+- [Documentation](docs/)
+</file>
+
+<file path="summarize-remaining.mjs">
+import { createGmailClient } from './lib/gmail-client.mjs';
+import { USER_ID } from './lib/constants.mjs';
+import { extractDisplayName, getHeader } from './lib/email-utils.mjs';
+import { BANNER } from './lib/console-utils.mjs';
+
+const MAX_RESULTS = 20;
+const INTERNAL_PREVIEW_COUNT = 2;
+const FORUM_PREVIEW_COUNT = 1;
+const SUBJECT_MAX_LENGTH = 60;
+const HEADER_SUBJECT = 'Subject';
+const HEADER_FROM = 'From';
+
+const internalQueries = [
+  { label: 'John Skelton (files)', q: 'from:john@integritystudio.ai' },
+  { label: 'Project discussions (misc)', q: 'from:chandra@integritystudio.ai OR from:alex@integritystudio.ai OR from:jordan' }
+];
+
+const forumQueries = [
+  { label: 'Misc/sales', q: 'from:marcella@inmyteam.com' }
+];
+
+async function printQueryResults(gmail, query, label, previewCount) {
+  const resp = await gmail.users.messages.list({ userId: USER_ID, q: `${query.q} is:unread`, maxResults: MAX_RESULTS });
+  const messages = resp.data.messages || [];
+  if (messages.length === 0) return;
+
+  console.log(`${label}: ${messages.length}`);
+
+  const previews = await Promise.all(
+    messages.slice(0, previewCount).map(m =>
+      gmail.users.messages.get({ userId: USER_ID, id: m.id, format: 'metadata', metadataHeaders: [HEADER_SUBJECT, HEADER_FROM] })
+    )
+  );
+
+  for (const msg of previews) {
+    const headers = msg.data.payload?.headers || [];
+    const subject = getHeader(headers, HEADER_SUBJECT) ?? '(no subject)';
+    const from = getHeader(headers, HEADER_FROM) ?? '';
+    console.log(`  • ${subject.substring(0, SUBJECT_MAX_LENGTH)}`);
+    console.log(`    From: ${extractDisplayName(from)}\n`);
+  }
+}
+
+async function run() {
+  const gmail = createGmailClient();
+
+  console.log('REMAINING UNREAD SUMMARY\n');
+  console.log(BANNER + '\n');
+
+  console.log('INTERNAL: Work file shares, project discussions\n');
+  await Promise.all(internalQueries.map(q => printQueryResults(gmail, q, q.label, INTERNAL_PREVIEW_COUNT)));
+
+  console.log('\nFORUMS: Technical summaries\n');
+  await Promise.all(forumQueries.map(q => printQueryResults(gmail, q, q.label, FORUM_PREVIEW_COUNT)));
+
+  console.log(BANNER + '\n');
+}
+
+run().catch(error => {
+  console.error('Error:', error.message);
+  process.exit(1);
+});
+</file>
+
 <file path="docs/repomix/repo-compressed.xml">
 This file is a merged representation of a subset of the codebase, containing files not matching ignore patterns, combined into a single document by Repomix.
 The content has been processed where comments have been removed, empty lines have been removed, line numbers have been added, content has been compressed (code blocks are separated by ⋮---- delimiter).
@@ -38713,7 +40834,7 @@ src/
   verify-tokens.ts
 .env.test
 .gitignore
-archive-old-meeting-responses.mjs
+archive-old-emails.mjs
 auth-gmail.mjs
 create-gmail-filters.mjs
 doppler.yaml
@@ -38738,14 +40859,6 @@ vitest.config.ts
 
 <files>
 This section contains the contents of the repository's files.
-
-<file path="lib/constants.mjs">
-/** Gmail user ID (special value 'me' = authenticated user) */
-⋮----
-/** Gmail system label IDs */
-⋮----
-/** Gmail label names for email categories */
-</file>
 
 <file path="lib/date-based-filter.mjs">
 /**
@@ -38849,28 +40962,6 @@ export function extractDisplayName(from)
  * @returns {string}
  */
 export function extractEmailAddress(from)
-</file>
-
-<file path="lib/gmail-batch-utils.mjs">
-/**
- * Apply label modifications to messages in batches.
- * @param {Object} gmail - Authenticated Gmail client
- * @param {Array<string|{id:string}>} messages - Message IDs or message objects
- * @param {{ addLabelIds?: string[], removeLabelIds?: string[] }} modifications
- * @param {number} [batchSize]
- * @returns {Promise<number>} Count of messages processed
- */
-export async function batchModifyMessages(gmail, messages, modifications, batchSize = DEFAULT_BATCH_SIZE)
-⋮----
-/**
- * Search for messages and apply label modifications in one operation.
- * @param {Object} gmail - Authenticated Gmail client
- * @param {string} query - Gmail search query
- * @param {{ addLabelIds?: string[], removeLabelIds?: string[] }} modifications
- * @param {number} [maxResults]
- * @returns {Promise<number>} Count of messages processed
- */
-export async function searchAndModify(gmail, query, modifications, maxResults = 500)
 </file>
 
 <file path="lib/gmail-batch.mjs">
@@ -41424,6 +43515,17 @@ export function buildListFieldMask(
 ): string | undefined
 </file>
 
+<file path="archive-old-emails.mjs">
+/**
+ * Archive emails older than DAYS_AGO that match a given label.
+ *
+ * Usage:
+ *   node archive-old-emails.mjs --label "Meeting Responses"
+ */
+⋮----
+async function archiveOldEmails()
+</file>
+
 <file path="auth-gmail.mjs">
 // Gmail scopes
 ⋮----
@@ -41520,6 +43622,51 @@ async function verifyAndRefreshTokens()
 
 <file path="lib/console-utils.mjs">
 export function printComplete(summary)
+</file>
+
+<file path="lib/constants.mjs">
+/** Gmail user ID (special value 'me' = authenticated user) */
+⋮----
+/** Gmail system label IDs */
+⋮----
+/** Gmail label names for email categories */
+⋮----
+/** Default maximum results for Gmail list queries */
+⋮----
+/** Milliseconds in one day */
+</file>
+
+<file path="lib/gmail-batch-utils.mjs">
+/**
+ * Apply label modifications to messages in batches.
+ * @param {Object} gmail - Authenticated Gmail client
+ * @param {Array<string|{id:string}>} messages - Message IDs or message objects
+ * @param {{ addLabelIds?: string[], removeLabelIds?: string[] }} modifications
+ * @param {number} [batchSize]
+ * @returns {Promise<number>} Count of messages processed
+ */
+export async function batchModifyMessages(gmail, messages, modifications, batchSize = DEFAULT_BATCH_SIZE)
+⋮----
+/**
+ * Search for messages and apply label modifications in one operation.
+ * @param {Object} gmail - Authenticated Gmail client
+ * @param {string} query - Gmail search query
+ * @param {{ addLabelIds?: string[], removeLabelIds?: string[] }} modifications
+ * @param {number} [maxResults]
+ * @returns {Promise<number>} Count of messages processed
+ */
+export async function searchAndModify(gmail, query, modifications, maxResults = 500)
+⋮----
+/**
+ * Search for messages, filter to those older than daysAgo, and apply label modifications.
+ * @param {Object} gmail - Authenticated Gmail client
+ * @param {string} query - Gmail search query
+ * @param {number} daysAgo - Only modify messages older than this many days
+ * @param {{ addLabelIds?: string[], removeLabelIds?: string[] }} modifications
+ * @param {number} [maxResults]
+ * @returns {Promise<string[]>} IDs of messages that were modified
+ */
+export async function searchAndModifyOlderThan(gmail, query, daysAgo, modifications, maxResults = DEFAULT_MAX_RESULTS)
 </file>
 
 <file path="lib/gmail-message-utils.mjs">
@@ -41653,10 +43800,6 @@ import { CreateEventHandler } from "../../handlers/core/CreateEventHandler.js";
 import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE, TEST_TIMEZONE_SECONDARY } from "../../testing/constants.js";
 ⋮----
 function mockCalendarEuropeTimezone(mockCalendarApi: ReturnType<typeof import('googleapis')['google']['calendar']>, summary: string)
-</file>
-
-<file path="archive-old-meeting-responses.mjs">
-async function archiveOldMeetingResponses()
 </file>
 
 <file path="mark-read.mjs">
@@ -41914,7 +44057,7 @@ async function runBillingFilters()
 ────────────────────
 ├── .env.test (42 tokens)
 ├── .gitignore (281 tokens)
-├── archive-old-meeting-responses.mjs (823 tokens)
+├── archive-old-emails.mjs (594 tokens)
 ├── auth-gmail.mjs (1,077 tokens)
 ├── create-gmail-filters.mjs (2,479 tokens)
 ├── doppler.yaml (13 tokens)
@@ -41935,13 +44078,13 @@ async function runBillingFilters()
 ├── tsconfig.lint.json (94 tokens)
 ├── verify-tokens.mjs (680 tokens)
 ├── vitest.config.ts (216 tokens)
-├── lib/ (10,222 tokens)
+├── lib/ (10,687 tokens)
 │   ├── console-utils.mjs (127 tokens)
-│   ├── constants.mjs (799 tokens)
+│   ├── constants.mjs (857 tokens)
 │   ├── date-based-filter.mjs (2,420 tokens)
 │   ├── email-analyzer.mjs (1,315 tokens)
 │   ├── email-utils.mjs (448 tokens)
-│   ├── gmail-batch-utils.mjs (501 tokens)
+│   ├── gmail-batch-utils.mjs (908 tokens)
 │   ├── gmail-batch.mjs (1,121 tokens)
 │   ├── gmail-client.mjs (551 tokens)
 │   ├── gmail-filter-utils.mjs (515 tokens)
@@ -42089,2106 +44232,6 @@ async function runBillingFilters()
         ├── event-id-validator.ts (681 tokens)
         ├── field-mask-builder.ts (992 tokens)
         └── timezone-utils.ts (2,134 tokens)
-</file>
-
-<file path="lib/console-utils.mjs">
-const BANNER_WIDTH = 80;
-const BANNER_CHAR = '═';
-const DIVIDER_CHAR = '─';
-
-export const BANNER = BANNER_CHAR.repeat(BANNER_WIDTH);
-export const DIVIDER = DIVIDER_CHAR.repeat(BANNER_WIDTH);
-
-export function printComplete(summary) {
-  console.log(BANNER);
-  console.log('COMPLETE\n');
-  if (summary) console.log(summary);
-  console.log(BANNER + '\n');
-}
-</file>
-
-<file path="lib/gmail-message-utils.mjs">
-import { USER_ID } from './constants.mjs';
-import { getHeader } from './email-utils.mjs';
-
-/**
- * Decodes the plain-text body from a Gmail message payload.
- * Checks direct body data first, then looks for a text/plain part.
- *
- * @param {Object} payload - message.data.payload
- * @returns {string}
- */
-export function decodeMessageBody(payload) {
-  if (payload?.body?.data) {
-    return Buffer.from(payload.body.data, 'base64').toString('utf-8');
-  }
-  const textPart = payload?.parts?.find(p => p.mimeType === 'text/plain');
-  if (textPart?.body?.data) {
-    return Buffer.from(textPart.body.data, 'base64').toString('utf-8');
-  }
-  console.warn('decodeMessageBody: no text/plain body found in payload');
-  return '';
-}
-
-/**
- * Fetches messages under a label and returns their metadata (Subject, From, Date).
- * Handles individual fetch failures by filtering them out.
- *
- * @param {Object} gmail - Gmail API client
- * @param {string} labelId - Label ID to query
- * @param {Object} [options]
- * @param {number} [options.maxResults=100] - Max results from messages.list
- * @param {number} [options.limit] - Cap on how many messages to fetch metadata for
- * @returns {Promise<{total: number, messages: Array<{subject: string, from: string, date: string}>}>}
- */
-export async function fetchLabeledMessageMetadata(gmail, labelId, { maxResults = 100, limit } = {}) {
-  const result = await gmail.users.messages.list({
-    userId: USER_ID,
-    labelIds: [labelId],
-    maxResults,
-  });
-
-  const messageHeaders = result.data.messages || [];
-  const toFetch = limit ? messageHeaders.slice(0, limit) : messageHeaders;
-
-  const fullMsgs = await Promise.all(
-    toFetch.map(({ id }) =>
-      gmail.users.messages.get({
-        userId: USER_ID,
-        id,
-        format: 'metadata',
-        metadataHeaders: ['Subject', 'From', 'Date'],
-      }).catch(() => null)
-    )
-  );
-
-  return {
-    total: messageHeaders.length,
-    messages: fullMsgs
-      .filter(Boolean)
-      .map(msg => {
-        const headers = msg.data.payload?.headers || [];
-        return {
-          subject: getHeader(headers, 'Subject', '(no subject)'),
-          from: getHeader(headers, 'From', '(unknown)'),
-          date: getHeader(headers, 'Date', '(no date)'),
-        };
-      }),
-  };
-}
-</file>
-
-<file path="src/handlers/utils.ts">
-import { calendar_v3 } from "googleapis";
-import { ConflictCheckResult } from "../services/conflict-detection/types.js";
-import { groupBy } from "lodash-es";
-import { oneDayBefore } from "../utils/date-utils.js";
-
-export const EVENT_ID_PREFIX = 'Event ID: ';
-export const TIME_START_PREFIX = 'Start: ';
-export const TIME_END_PREFIX = 'End: ';
-export const DUPLICATE_DETECTED_HEADER = '⚠️ POTENTIAL DUPLICATES DETECTED:';
-export const CONFLICT_DETECTED_HEADER = '⚠️ SCHEDULING CONFLICTS DETECTED:';
-export const EXISTING_EVENT_DETAILS_LABEL = 'Existing event details:';
-export const CONFLICTING_EVENT_DETAILS_LABEL = 'Conflicting event details:';
-export const CONFLICTING_EVENT_HEADER = '━━━ Conflicting Event ━━━';
-export const VIEW_URL_PREFIX = 'View: ';
-export const VIEW_EXISTING_EVENT_PREFIX = 'View existing event: ';
-export const GUESTS_PREFIX = 'Guests: ';
-export const CALENDAR_PREFIX = 'Calendar: ';
-export const OVERLAP_PREFIX = '⚠️  Overlap: ';
-
-/**
- * Generates a Google Calendar event view URL
- */
-export function generateEventUrl(calendarId: string, eventId: string): string {
-    const encodedCalendarId = encodeURIComponent(calendarId);
-    const encodedEventId = encodeURIComponent(eventId);
-    return `https://calendar.google.com/calendar/event?eid=${encodedEventId}&cid=${encodedCalendarId}`;
-}
-
-/**
- * Gets the URL for a calendar event
- */
-export function getEventUrl(event: calendar_v3.Schema$Event, calendarId?: string): string | null {
-    if (event.htmlLink) {
-        return event.htmlLink;
-    } else if (calendarId && event.id) {
-        return generateEventUrl(calendarId, event.id);
-    }
-    return null;
-}
-
-/**
- * Formats a date/time with timezone abbreviation
- */
-function formatDateTime(dateTime?: string | null, date?: string | null, timeZone?: string): string {
-    if (!dateTime && !date) return "unspecified";
-    
-    try {
-        const dt = dateTime || date;
-        if (!dt) return "unspecified";
-        
-        // If it's a date-only event (all-day), handle it specially
-        if (date && !dateTime) {
-            // For all-day events, just format the date string directly
-            // Date-only strings like "2025-03-15" should be displayed as-is
-            const [year, month, day] = date.split('-').map(Number);
-            
-            // Create a date string without any timezone conversion
-            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            
-            // Calculate day of week using Zeller's congruence (timezone-independent)
-            const q = day;
-            const m = month <= 2 ? month + 12 : month;
-            const y = month <= 2 ? year - 1 : year;
-            const k = y % 100;
-            const j = Math.floor(y / 100);
-            const h = (q + Math.floor((13 * (m + 1)) / 5) + k + Math.floor(k / 4) + Math.floor(j / 4) - 2 * j) % 7;
-            const dayOfWeek = (h + 6) % 7; // Convert to 0=Sunday format
-            
-            return `${dayNames[dayOfWeek]}, ${monthNames[month - 1]} ${day}, ${year}`;
-        }
-        
-        const parsedDate = new Date(dt);
-        if (isNaN(parsedDate.getTime())) return dt;
-        
-        // For timed events, include timezone
-        const options: Intl.DateTimeFormatOptions = {
-            weekday: 'short',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            timeZoneName: 'short'
-        };
-        
-        if (timeZone) {
-            options.timeZone = timeZone;
-        }
-        
-        return parsedDate.toLocaleString('en-US', options);
-    } catch (error) {
-        return dateTime || date || "unspecified";
-    }
-}
-
-/**
- * Formats attendees with their response status
- */
-function formatAttendees(attendees?: calendar_v3.Schema$EventAttendee[]): string {
-    if (!attendees || attendees.length === 0) return "";
-    
-    const formatted = attendees.map(attendee => {
-        const email = attendee.email || "unknown";
-        const name = attendee.displayName || email;
-        const status = attendee.responseStatus || "unknown";
-        
-        const statusText = {
-            'accepted': 'accepted',
-            'declined': 'declined', 
-            'tentative': 'tentative',
-            'needsAction': 'pending'
-        }[status] || 'unknown';
-        
-        return `${name} (${statusText})`;
-    }).join(", ");
-    
-    return `\n${GUESTS_PREFIX}${formatted}`;
-}
-
-/**
- * Formats a single event with rich details
- */
-export function formatEventWithDetails(event: calendar_v3.Schema$Event, calendarId?: string): string {
-    const title = event.summary ? `Event: ${event.summary}` : "Untitled Event";
-    const eventId = event.id ? `\n${EVENT_ID_PREFIX}${event.id}` : "";
-    const description = event.description ? `\nDescription: ${event.description}` : "";
-    const location = event.location ? `\nLocation: ${event.location}` : "";
-    const colorId = event.colorId ? `\nColor ID: ${event.colorId}` : "";
-
-    // Format start and end times with timezone
-    const startTime = formatDateTime(event.start?.dateTime, event.start?.date, event.start?.timeZone || undefined);
-    const endTime = formatDateTime(event.end?.dateTime, event.end?.date, event.end?.timeZone || undefined);
-    
-    let timeInfo: string;
-    if (event.start?.date) {
-        // All-day event
-        if (event.start.date === event.end?.date) {
-            // Single day all-day event
-            timeInfo = `\nDate: ${startTime}`;
-        } else {
-            // Multi-day all-day event - end date is exclusive, so subtract 1 day for display
-            if (event.end?.date) {
-                const endDate = new Date(event.end.date);
-                const adjustedEndDate = oneDayBefore(endDate);
-                const adjustedEndTime = formatDateTime(undefined, adjustedEndDate.toISOString().split('T')[0]);
-                timeInfo = `\nStart Date: ${startTime}\nEnd Date: ${adjustedEndTime}`;
-            } else {
-                timeInfo = `\nStart Date: ${startTime}`;
-            }
-        }
-    } else {
-        // Timed event
-        timeInfo = `\n${TIME_START_PREFIX}${startTime}\n${TIME_END_PREFIX}${endTime}`;
-    }
-    
-    const attendeeInfo = formatAttendees(event.attendees);
-    
-    const eventUrl = getEventUrl(event, calendarId);
-    const urlInfo = eventUrl ? `\n${VIEW_URL_PREFIX}${eventUrl}` : "";
-    
-    return `${title}${eventId}${description}${timeInfo}${location}${colorId}${attendeeInfo}${urlInfo}`;
-}
-
-/**
- * Formats conflict check results for display
- */
-export function formatConflictWarnings(conflicts: ConflictCheckResult): string {
-    if (!conflicts.hasConflicts) return "";
-    
-    let warnings = "";
-    
-    // Format duplicate warnings
-    if (conflicts.duplicates.length > 0) {
-        warnings += `\n\n${DUPLICATE_DETECTED_HEADER}`;
-        for (const dup of conflicts.duplicates) {
-            warnings += `\n\n━━━ Duplicate Event (${Math.round(dup.event.similarity * 100)}% similar) ━━━`;
-            warnings += `\n${dup.suggestion}`;
-            
-            // Show full event details if available
-            if (dup.fullEvent) {
-                warnings += `\n\n${EXISTING_EVENT_DETAILS_LABEL}`;
-                warnings += `\n${formatEventWithDetails(dup.fullEvent, dup.calendarId)}`;
-            } else {
-                // Fallback to basic info
-                warnings += `\n• "${dup.event.title}"`;
-                if (dup.event.url) {
-                    warnings += `\n  ${VIEW_EXISTING_EVENT_PREFIX}${dup.event.url}`;
-                }
-            }
-        }
-    }
-    
-    // Format conflict warnings
-    if (conflicts.conflicts.length > 0) {
-        warnings += `\n\n${CONFLICT_DETECTED_HEADER}`;
-        const conflictsByCalendar = groupBy(conflicts.conflicts, (conflict) => conflict.calendar);
-        
-        for (const [calendar, calendarConflicts] of Object.entries(conflictsByCalendar)) {
-            warnings += `\n\n${CALENDAR_PREFIX}${calendar}`;
-            for (const conflict of calendarConflicts) {
-                warnings += `\n\n${CONFLICTING_EVENT_HEADER}`;
-                if (conflict.overlap) {
-                    warnings += `\n${OVERLAP_PREFIX}${conflict.overlap.duration} (${conflict.overlap.percentage}% of your event)`;
-                }
-
-                // Show full event details if available
-                if (conflict.fullEvent) {
-                    warnings += `\n\n${CONFLICTING_EVENT_DETAILS_LABEL}`;
-                    warnings += `\n${formatEventWithDetails(conflict.fullEvent, calendar)}`;
-                } else {
-                    // Fallback to basic info
-                    warnings += `\n• Conflicts with "${conflict.event.title}"`;
-                    if (conflict.event.start && conflict.event.end) {
-                        const start = formatDateTime(conflict.event.start);
-                        const end = formatDateTime(conflict.event.end);
-                        warnings += `\n  Time: ${start} - ${end}`;
-                    }
-                    if (conflict.event.url) {
-                        warnings += `\n  View event: ${conflict.event.url}`;
-                    }
-                }
-            }
-        }
-    }
-    
-    return warnings;
-}
-
-/**
- * Creates a response with event details and optional conflict warnings
- */
-export function createEventResponseWithConflicts(
-    event: calendar_v3.Schema$Event,
-    calendarId: string,
-    conflicts?: ConflictCheckResult,
-    actionVerb: string = "created"
-): string {
-    const eventDetails = formatEventWithDetails(event, calendarId);
-    const conflictWarnings = conflicts ? formatConflictWarnings(conflicts) : "";
-    
-    const successMessage = conflicts?.hasConflicts 
-        ? `Event ${actionVerb} with warnings!`
-        : `Event ${actionVerb} successfully!`;
-    
-    return `${successMessage}\n\n${eventDetails}${conflictWarnings}`;
-}
-</file>
-
-<file path="src/testing/constants.ts">
-/**
- * Shared constants for test utilities and data factories
- */
-
-// Event ID extraction constraints
-export const EVENT_ID_MIN_LENGTH = 10;
-
-// Response format patterns for event ID extraction
-export const RESPONSE_PATTERNS = {
-  LEGACY_CREATED: 'Event created: ',
-  LEGACY_UPDATED: 'Event updated: ',
-  NEW_CREATED: '✅ Event created successfully',
-  NEW_UPDATED: '✅ Event updated successfully',
-  CREATED_EVENT: 'Created event: ',
-  ID_SUFFIX: 'ID: ',
-  EVENT_ID_CHAR_CLASS: '[a-zA-Z0-9_@.-]'
-} as const;
-
-// Time range durations (in milliseconds)
-export const TIME_DURATIONS = {
-  WEEK: 7 * 24 * 60 * 60 * 1000,
-  MONTH: 30 * 24 * 60 * 60 * 1000,
-  QUARTER: 90 * 24 * 60 * 60 * 1000
-} as const;
-
-// Timezone for integration test events
-export const TEST_TIMEZONE = 'America/Los_Angeles';
-// Standard-time abbreviation for TEST_TIMEZONE (used in January fixtures)
-export const TEST_TIMEZONE_ABBREVIATION_WINTER = 'PST';
-
-// Secondary timezone used in unit tests for timezone-fallback scenarios
-export const TEST_TIMEZONE_SECONDARY = 'Europe/London';
-
-// Test event constants
-export const TEST_EVENT_DEFAULTS = {
-  SUMMARY: 'Test Integration Event',
-  DESCRIPTION: 'Created by integration test suite',
-  LOCATION: 'Test Conference Room',
-  REMINDER_MINUTES: 15,
-  RECURRING_SUMMARY: 'Test Recurring Meeting',
-  RECURRING_DESCRIPTION: 'Weekly recurring test meeting',
-  RECURRING_LOCATION: 'Recurring Meeting Room',
-  RECURRING_EMAIL_REMINDER_MINUTES: 1440,
-  ALL_DAY_SUMMARY: 'Test All-Day Event',
-  ALL_DAY_DESCRIPTION: 'All-day test event',
-  COLORED_EVENT_SUMMARY_PREFIX: 'Test Event - Color '
-} as const;
-
-// MCP response status indicators
-export const RESPONSE_INDICATORS = {
-  SUCCESS_CHECK: '✅'
-} as const;
-</file>
-
-<file path="src/tests/unit/handlers/SearchEventsHandler.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SearchEventsHandler } from '../../../handlers/core/SearchEventsHandler.js';
-import { OAuth2Client } from 'google-auth-library';
-import { getTextContent, makeEvent, makeEvents, makeGaxiosError, makeCalendarMock } from '../helpers/index.js';
-import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
-
-vi.mock('googleapis');
-
-vi.mock('../../../utils/field-mask-builder.js', () => ({
-  buildListFieldMask: vi.fn((fields) => {
-    if (!fields || fields.length === 0) return undefined;
-    return fields.join(',');
-  })
-}));
-
-vi.mock('../../../utils/timezone-utils.js', () => ({
-  resolveTimeRange: vi.fn((timeMin, timeMax, _timezone) => ({
-    timeMin: timeMin ? (timeMin.includes('Z') || timeMin.includes('+') ? timeMin : `${timeMin}Z`) : undefined,
-    timeMax: timeMax ? (timeMax.includes('Z') || timeMax.includes('+') ? timeMax : `${timeMax}Z`) : undefined,
-  }))
-}));
-
-vi.mock('../../../handlers/utils.js', () => ({
-  formatEventWithDetails: vi.fn((event) => {
-    return `${event.summary || 'No Title'} (${event.start?.dateTime || event.start?.date || 'No Date'})`;
-  })
-}));
-
-const BASE_ARGS = {
-  calendarId: 'primary' as const,
-  query: 'test',
-  timeMin: '2025-01-01T00:00:00',
-  timeMax: '2025-01-31T23:59:59'
-} as const;
-
-describe('SearchEventsHandler', () => {
-  let handler: SearchEventsHandler;
-  let mockOAuth2Client: OAuth2Client;
-  let mockCalendar: ReturnType<typeof makeCalendarMock>;
-
-  beforeEach(() => {
-    handler = new SearchEventsHandler();
-    mockOAuth2Client = new OAuth2Client();
-
-    mockCalendar = makeCalendarMock({ list: vi.fn().mockResolvedValue({ data: { items: [] } }) });
-
-    vi.spyOn(handler as any, 'getCalendar').mockReturnValue(mockCalendar);
-    vi.spyOn(handler as any, 'getCalendarTimezone').mockResolvedValue('America/Los_Angeles');
-  });
-
-  describe('runTool', () => {
-    it('should search and return events successfully', async () => {
-      const mockEvents = [
-        makeEvent({ summary: 'Team Meeting' }),
-        makeEvent({
-          id: 'event2',
-          summary: 'Project Review',
-          start: { dateTime: '2025-01-15T14:00:00Z' },
-          end: { dateTime: '2025-01-15T15:00:00Z' }
-        })
-      ];
-
-      mockCalendar.events.list.mockResolvedValue({ data: { items: mockEvents } });
-
-      const result = await handler.runTool({ ...BASE_ARGS, query: 'meeting' }, mockOAuth2Client);
-
-      expect(result.content).toHaveLength(1);
-      const text = getTextContent(result);
-      expect(text).toContain('Found 2 event(s)');
-      expect(text).toContain('Team Meeting');
-      expect(text).toContain('Project Review');
-    });
-
-    it('should return no events message when search yields no results', async () => {
-      const result = await handler.runTool({ ...BASE_ARGS, query: 'nonexistent' }, mockOAuth2Client);
-
-      expect(result.content).toHaveLength(1);
-      expect(getTextContent(result)).toBe('No events found matching your search criteria.');
-    });
-
-    it('should return no events message when items is undefined', async () => {
-      mockCalendar.events.list.mockResolvedValue({ data: {} });
-
-      const result = await handler.runTool(BASE_ARGS, mockOAuth2Client);
-
-      expect(result.content).toHaveLength(1);
-      expect(getTextContent(result)).toBe('No events found matching your search criteria.');
-    });
-
-    it('should include event index numbers in response', async () => {
-      const mockEvents = [
-        makeEvent({ summary: 'First Event' }),
-        makeEvent({ id: 'event2', summary: 'Second Event', start: { dateTime: '2025-01-15T14:00:00Z' }, end: { dateTime: '2025-01-15T15:00:00Z' } })
-      ];
-
-      mockCalendar.events.list.mockResolvedValue({ data: { items: mockEvents } });
-
-      const result = await handler.runTool({ ...BASE_ARGS, query: 'event' }, mockOAuth2Client);
-      const text = getTextContent(result);
-
-      expect(text).toContain('1. First Event');
-      expect(text).toContain('2. Second Event');
-    });
-  });
-
-  describe('searchEvents - API Parameters', () => {
-    it('should pass correct parameters to calendar.events.list', async () => {
-      await handler.runTool({ ...BASE_ARGS, query: 'meeting', timeZone: 'America/New_York' }, mockOAuth2Client);
-
-      expect(mockCalendar.events.list).toHaveBeenCalledWith(
-        expect.objectContaining({
-          calendarId: 'primary',
-          q: 'meeting',
-          ...LIST_EVENTS_API_DEFAULTS
-        })
-      );
-
-      const callArgs = mockCalendar.events.list.mock.calls[0][0];
-      expect(callArgs.timeMin).toBeDefined();
-      expect(callArgs.timeMax).toBeDefined();
-    });
-
-    it('should use provided timeZone for conversion', async () => {
-      const { resolveTimeRange } = await import('../../../utils/timezone-utils.js');
-
-      await handler.runTool({ ...BASE_ARGS, timeZone: 'Asia/Tokyo' }, mockOAuth2Client);
-
-      expect(vi.mocked(resolveTimeRange)).toHaveBeenCalledWith('2025-01-01T00:00:00', '2025-01-31T23:59:59', 'Asia/Tokyo');
-    });
-
-    it('should fallback to calendar timezone when timeZone not provided', async () => {
-      await handler.runTool(BASE_ARGS, mockOAuth2Client);
-
-      expect(handler['getCalendarTimezone']).toHaveBeenCalledWith(mockOAuth2Client, 'primary');
-    });
-  });
-
-  describe('searchEvents - Field Handling', () => {
-    it('should not include fields parameter when no fields requested', async () => {
-      await handler.runTool(BASE_ARGS, mockOAuth2Client);
-
-      const callArgs = mockCalendar.events.list.mock.calls[0][0];
-      expect(callArgs.fields).toBeUndefined();
-    });
-
-    it('should include fields parameter when fields are requested', async () => {
-      await handler.runTool({ ...BASE_ARGS, fields: ['description', 'attendees'] }, mockOAuth2Client);
-
-      const callArgs = mockCalendar.events.list.mock.calls[0][0];
-      expect(callArgs.fields).toBe('description,attendees');
-    });
-  });
-
-  describe('searchEvents - Extended Properties', () => {
-    it('should include privateExtendedProperty when provided', async () => {
-      await handler.runTool({ ...BASE_ARGS, privateExtendedProperty: ['key1=value1', 'key2=value2'] }, mockOAuth2Client);
-
-      const callArgs = mockCalendar.events.list.mock.calls[0][0];
-      expect(callArgs.privateExtendedProperty).toEqual(['key1=value1', 'key2=value2']);
-    });
-
-    it('should include sharedExtendedProperty when provided', async () => {
-      await handler.runTool({ ...BASE_ARGS, sharedExtendedProperty: ['prop1=val1'] }, mockOAuth2Client);
-
-      const callArgs = mockCalendar.events.list.mock.calls[0][0];
-      expect(callArgs.sharedExtendedProperty).toEqual(['prop1=val1']);
-    });
-
-    it('should not include extended properties when not provided', async () => {
-      await handler.runTool(BASE_ARGS, mockOAuth2Client);
-
-      const callArgs = mockCalendar.events.list.mock.calls[0][0];
-      expect(callArgs.privateExtendedProperty).toBeUndefined();
-      expect(callArgs.sharedExtendedProperty).toBeUndefined();
-    });
-  });
-
-  describe('Error Handling', () => {
-    it.each([
-      [500, 'Internal Server Error'],
-      [404, 'Calendar not found'],
-      [403, 'Insufficient permissions'],
-      [429, 'Rate limit exceeded'],
-      [400, 'Token expired']
-    ])('should throw on HTTP %i error', async (status, message) => {
-      const error = makeGaxiosError(status, 'Error', { error: { message } });
-      mockCalendar.events.list.mockRejectedValue(error);
-
-      await expect(handler.runTool(BASE_ARGS, mockOAuth2Client)).rejects.toThrow();
-    });
-
-    it('should handle non-GaxiosError errors gracefully', async () => {
-      const genericError = new Error('Something went wrong');
-      mockCalendar.events.list.mockRejectedValue(genericError);
-
-      await expect(handler.runTool(BASE_ARGS, mockOAuth2Client)).rejects.toThrow();
-    });
-  });
-
-  describe('Response Formatting', () => {
-    it('should trim whitespace from final response', async () => {
-      mockCalendar.events.list.mockResolvedValue({ data: { items: [makeEvent()] } });
-
-      const result = await handler.runTool(BASE_ARGS, mockOAuth2Client);
-      const text = getTextContent(result);
-
-      expect(text).not.toMatch(/^\s+/);
-      expect(text).not.toMatch(/\s+$/);
-    });
-
-    it('should format single event correctly', async () => {
-      mockCalendar.events.list.mockResolvedValue({ data: { items: [makeEvent({ summary: 'Single Event' })] } });
-
-      const result = await handler.runTool({ ...BASE_ARGS, query: 'single' }, mockOAuth2Client);
-      const text = getTextContent(result);
-
-      expect(text).toContain('Found 1 event(s)');
-      expect(text).toContain('1. Single Event');
-    });
-  });
-
-
-  describe('Query handling', () => {
-    it('should pass query parameter to API', async () => {
-      await handler.runTool({ ...BASE_ARGS, query: 'important project' }, mockOAuth2Client);
-
-      expect(mockCalendar.events.list).toHaveBeenCalledWith(
-        expect.objectContaining({ q: 'important project' })
-      );
-    });
-
-    it('should handle special characters in query', async () => {
-      await handler.runTool({ ...BASE_ARGS, query: '"exact phrase" OR tag:important' }, mockOAuth2Client);
-
-      expect(mockCalendar.events.list).toHaveBeenCalledWith(
-        expect.objectContaining({ q: '"exact phrase" OR tag:important' })
-      );
-    });
-  });
-
-  describe('Edge cases', () => {
-    it('should handle events with minimal properties', async () => {
-      mockCalendar.events.list.mockResolvedValue({ data: { items: [{ id: 'minimal-event' }] } });
-
-      const result = await handler.runTool(BASE_ARGS, mockOAuth2Client);
-
-      expect(getTextContent(result)).toContain('Found 1 event(s)');
-    });
-
-    it('should handle many events', async () => {
-      mockCalendar.events.list.mockResolvedValue({ data: { items: makeEvents(50) } });
-
-      const result = await handler.runTool(BASE_ARGS, mockOAuth2Client);
-      const text = getTextContent(result);
-
-      expect(text).toContain('Found 50 event(s)');
-      expect(text).toContain('50. Event 50');
-    });
-
-    it('should handle events with all-day dates', async () => {
-      mockCalendar.events.list.mockResolvedValue({
-        data: { items: [{ id: 'allday-event', summary: 'All Day Event', start: { date: '2025-01-15' }, end: { date: '2025-01-16' } }] }
-      });
-
-      const result = await handler.runTool({ ...BASE_ARGS, query: 'allday' }, mockOAuth2Client);
-
-      expect(getTextContent(result)).toContain('All Day Event');
-    });
-
-    it('should handle events with RFC3339 timezone-aware times', async () => {
-      mockCalendar.events.list.mockResolvedValue({
-        data: {
-          items: [makeEvent({ summary: 'TZ Event', start: { dateTime: '2025-01-15T10:00:00-08:00' }, end: { dateTime: '2025-01-15T11:00:00-08:00' } })]
-        }
-      });
-
-      const result = await handler.runTool({ ...BASE_ARGS, query: 'tz' }, mockOAuth2Client);
-
-      expect(getTextContent(result)).toContain('TZ Event');
-    });
-  });
-
-});
-</file>
-
-<file path="src/tests/unit/handlers/utils-conflict-format.test.ts">
-import { describe, it, expect } from 'vitest';
-import { formatConflictWarnings } from '../../../handlers/utils.js';
-import { ConflictCheckResult } from '../../../services/conflict-detection/types.js';
-import { makeEvent } from '../helpers/index.js';
-import {
-  CONFLICT_DETECTED_HEADER,
-  CALENDAR_PREFIX,
-  CONFLICTING_EVENT_HEADER,
-  OVERLAP_PREFIX,
-  CONFLICTING_EVENT_DETAILS_LABEL,
-} from '../../../handlers/utils.js';
-
-describe('Enhanced Conflict Response Formatting', () => {
-  it('should format conflict warnings with full event details', () => {
-    const conflictingEvent = makeEvent({
-      id: 'conflict456',
-      summary: 'Design Review',
-      description: 'Q4 design review meeting',
-      location: 'Room 201',
-      start: { dateTime: '2024-01-15T13:30:00Z' },
-      end: { dateTime: '2024-01-15T14:30:00Z' },
-      htmlLink: 'https://calendar.google.com/event?eid=conflict456'
-    });
-
-    const conflicts: ConflictCheckResult = {
-      hasConflicts: true,
-      duplicates: [],
-      conflicts: [{
-        type: 'overlap',
-        calendar: 'primary',
-        event: {
-          id: 'conflict456',
-          title: 'Design Review',
-          url: 'https://calendar.google.com/event?eid=conflict456',
-          start: '2024-01-15T13:30:00Z',
-          end: '2024-01-15T14:30:00Z'
-        },
-        fullEvent: conflictingEvent,
-        overlap: {
-          duration: '30 minutes',
-          percentage: 50,
-          startTime: '2024-01-15T13:30:00Z',
-          endTime: '2024-01-15T14:00:00Z'
-        }
-      }]
-    };
-
-    const formatted = formatConflictWarnings(conflicts);
-    
-    expect(formatted).toContain(CONFLICT_DETECTED_HEADER);
-    expect(formatted).toContain(`${CALENDAR_PREFIX}primary`);
-    expect(formatted).toContain(CONFLICTING_EVENT_HEADER);
-    expect(formatted).toContain(`${OVERLAP_PREFIX}30 minutes (50% of your event)`);
-    expect(formatted).toContain(CONFLICTING_EVENT_DETAILS_LABEL);
-    expect(formatted).toContain('Event: Design Review');
-    expect(formatted).toContain('Description: Q4 design review meeting');
-    expect(formatted).toContain('Location: Room 201');
-  });
-
-  it('should format multiple conflicts with proper separation', () => {
-    const conflicts: ConflictCheckResult = {
-      hasConflicts: true,
-      duplicates: [],
-      conflicts: [
-        {
-          type: 'overlap',
-          calendar: 'work@company.com',
-          event: {
-            id: 'work1',
-            title: 'Sprint Planning',
-            url: 'https://calendar.google.com/event?eid=work1'
-          },
-          fullEvent: makeEvent({
-            id: 'work1',
-            summary: 'Sprint Planning',
-            start: { dateTime: '2024-01-15T09:00:00Z' },
-            end: { dateTime: '2024-01-15T10:00:00Z' }
-          }),
-          overlap: {
-            duration: '15 minutes',
-            percentage: 25,
-            startTime: '2024-01-15T09:45:00Z',
-            endTime: '2024-01-15T10:00:00Z'
-          }
-        },
-        {
-          type: 'overlap',
-          calendar: 'work@company.com',
-          event: {
-            id: 'work2',
-            title: 'Daily Standup',
-            url: 'https://calendar.google.com/event?eid=work2'
-          },
-          overlap: {
-            duration: '30 minutes',
-            percentage: 100,
-            startTime: '2024-01-15T10:00:00Z',
-            endTime: '2024-01-15T10:30:00Z'
-          }
-        }
-      ]
-    };
-
-    const formatted = formatConflictWarnings(conflicts);
-    
-    expect(formatted).toContain(`${CALENDAR_PREFIX}work@company.com`);
-    expect(formatted.split(CONFLICTING_EVENT_HEADER).length - 1).toBe(2);
-    expect(formatted).toContain('Sprint Planning');
-    expect(formatted).toContain('Daily Standup');
-    expect(formatted).toContain(`${OVERLAP_PREFIX}15 minutes (25% of your event)`);
-    expect(formatted).toContain(`${OVERLAP_PREFIX}30 minutes (100% of your event)`);
-  });
-});
-</file>
-
-<file path="src/tests/unit/helpers/handler-setup.ts">
-import { vi } from 'vitest';
-import { OAuth2Client } from 'google-auth-library';
-import { makeCalendarMock } from './factories.js';
-import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
-
-export interface HandlerSetup {
-  mockOAuth2Client: OAuth2Client;
-  handler: ListEventsHandler;
-  mockCalendarApi: ReturnType<typeof makeCalendarMock>;
-}
-
-/**
- * Set up mocked handler with calendar API for testing.
- * Replaces repeated beforeEach initialization blocks.
- */
-export function setupListEventsHandler(): HandlerSetup {
-  vi.clearAllMocks();
-  const mockOAuth2Client = new OAuth2Client();
-  const mockCalendarApi = makeCalendarMock({
-    calendarListGet: vi.fn().mockResolvedValue({ data: { timeZone: 'UTC' } })
-  });
-  const handler = new ListEventsHandler();
-  vi.spyOn(handler as any, 'getCalendar').mockReturnValue(mockCalendarApi);
-
-  return {
-    mockOAuth2Client,
-    handler,
-    mockCalendarApi
-  };
-}
-</file>
-
-<file path="src/tests/unit/schemas/validators.test.ts">
-import { describe, it, expect } from 'vitest';
-import { ToolSchemas } from '../../../tools/registry.js';
-import { makePastDateString, createUpdateEventArgs, createComplexUpdateEventArgs, DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID } from '../helpers/index.js';
-import { TIME_MIN, TIME_MAX } from '../helpers/test-configs.js';
-import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
-import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from '../../../testing/constants.js';
-
-const UpdateEventArgumentsSchema = ToolSchemas['update-event'];
-const ListEventsArgumentsSchema = ToolSchemas['list-events'];
-
-const MODIFICATION_SCOPES = ['thisEventOnly', 'all', 'thisAndFollowing'] as const;
-const VALID_DATETIMES = [
-  '2024-06-15T10:00:00',
-  '2024-12-31T23:59:59',
-  '2024-01-01T00:00:00',
-  '2024-06-15T10:00:00Z',
-  '2024-06-15T10:00:00-07:00',
-  '2024-06-15T10:00:00+05:30'
-] as const;
-
-const INVALID_DATETIMES = [
-  '2024-06-15 10:00:00',
-  '24-06-15T10:00:00',
-  '2024-6-15T10:00:00',
-  '2024-06-15T10:00'
-] as const;
-
-describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
-  describe('Basic Validation', () => {
-    it('should validate basic required fields', () => {
-      const validArgs = createUpdateEventArgs();
-
-      const result = UpdateEventArgumentsSchema.parse(validArgs);
-      expect(result.modificationScope).toBeUndefined(); // optional with no default
-      expect(result.calendarId).toBe('primary');
-      expect(result.eventId).toBe('event123');
-      expect(result.timeZone).toBe(TEST_TIMEZONE);
-    });
-
-    it('should accept omitted timeZone (optional field)', () => {
-      const args = { calendarId: DEFAULT_CALENDAR_ID, eventId: DEFAULT_EVENT_ID };
-
-      const result = UpdateEventArgumentsSchema.parse(args);
-      expect(result.timeZone).toBeUndefined();
-    });
-
-    it('should reject missing required fields', () => {
-      const invalidArgs = {
-        calendarId: 'primary',
-        // missing eventId
-      };
-
-      expect(() => UpdateEventArgumentsSchema.parse(invalidArgs)).toThrow();
-    });
-
-    it('should validate optional fields when provided', () => {
-      const validArgs = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
-        summary: 'Updated Meeting',
-        description: 'Updated description',
-        location: 'New Location',
-        colorId: '9',
-        start: '2024-06-15T10:00:00',
-        end: '2024-06-15T11:00:00'
-      });
-
-      const result = UpdateEventArgumentsSchema.parse(validArgs);
-      expect(result.summary).toBe('Updated Meeting');
-      expect(result.description).toBe('Updated description');
-      expect(result.location).toBe('New Location');
-      expect(result.colorId).toBe('9');
-    });
-  });
-
-  describe('Modification Scope Validation', () => {
-    it('should leave modificationScope undefined when not provided', () => {
-      const args = createUpdateEventArgs();
-
-      const result = UpdateEventArgumentsSchema.parse(args);
-      expect(result.modificationScope).toBeUndefined();
-    });
-
-    it('should accept valid modificationScope values', () => {
-      MODIFICATION_SCOPES.forEach(scope => {
-        const scopeOverrides: Record<string, any> = { modificationScope: scope };
-
-        if (scope === 'thisEventOnly') {
-          scopeOverrides.originalStartTime = '2024-06-15T10:00:00';
-        } else if (scope === 'thisAndFollowing') {
-          scopeOverrides.futureStartDate = formatTZNaiveDateTime(getFutureDate(90));
-        }
-
-        const args = createUpdateEventArgs(DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID, TEST_TIMEZONE, scopeOverrides);
-        const result = UpdateEventArgumentsSchema.parse(args);
-        expect(result.modificationScope).toBe(scope);
-      });
-    });
-
-    it('should reject invalid modificationScope values', () => {
-      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
-        modificationScope: 'invalid'
-      });
-
-      expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow();
-    });
-  });
-
-  describe('Single Instance Scope Validation', () => {
-    it('should require originalStartTime when modificationScope is "thisEventOnly"', () => {
-      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
-        modificationScope: 'thisEventOnly'
-        // missing originalStartTime
-      });
-
-      expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow(
-        /originalStartTime is required when modificationScope is 'thisEventOnly'/
-      );
-    });
-
-    it('should accept valid originalStartTime for thisEventOnly scope', () => {
-      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
-        modificationScope: 'thisEventOnly',
-        originalStartTime: '2024-06-15T10:00:00'
-      });
-
-      const result = UpdateEventArgumentsSchema.parse(args);
-      expect(result.modificationScope).toBe('thisEventOnly');
-      expect(result.originalStartTime).toBe('2024-06-15T10:00:00');
-    });
-
-    it('should reject invalid originalStartTime format', () => {
-      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
-        modificationScope: 'thisEventOnly',
-        originalStartTime: '2024-06-15 10:00:00' // invalid format
-      });
-
-      expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow();
-    });
-
-    it('should accept originalStartTime without timezone designator', () => {
-      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
-        modificationScope: 'thisEventOnly',
-        originalStartTime: '2024-06-15T10:00:00' // timezone-naive format (expected)
-      });
-
-      expect(() => UpdateEventArgumentsSchema.parse(args)).not.toThrow();
-    });
-  });
-
-  describe('Future Instances Scope Validation', () => {
-    it('should require futureStartDate when modificationScope is "thisAndFollowing"', () => {
-      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
-        modificationScope: 'thisAndFollowing'
-        // missing futureStartDate
-      });
-
-      expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow(
-        /futureStartDate is required when modificationScope is 'thisAndFollowing'/
-      );
-    });
-
-    it('should accept valid futureStartDate for thisAndFollowing scope', () => {
-      const futureDateString = formatTZNaiveDateTime(getFutureDate(30));
-
-      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
-        modificationScope: 'thisAndFollowing',
-        futureStartDate: futureDateString
-      });
-
-      const result = UpdateEventArgumentsSchema.parse(args);
-      expect(result.modificationScope).toBe('thisAndFollowing');
-      expect(result.futureStartDate).toBe(futureDateString);
-    });
-
-    it('should reject futureStartDate in the past', () => {
-      const pastDateString = makePastDateString(1);
-
-      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
-        modificationScope: 'thisAndFollowing',
-        futureStartDate: pastDateString
-      });
-
-      expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow(
-        /futureStartDate must be in the future/
-      );
-    });
-
-    it('should reject invalid futureStartDate format', () => {
-      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
-        modificationScope: 'thisAndFollowing',
-        futureStartDate: '2024-12-31 10:00:00' // invalid format
-      });
-
-      expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow();
-    });
-  });
-
-  describe('Datetime Format Validation', () => {
-    it.each(VALID_DATETIMES)('should accept valid datetime format: %s', (datetime) => {
-      const args = createUpdateEventArgs(DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID, TEST_TIMEZONE, {
-        start: datetime,
-        end: datetime
-      });
-
-      expect(() => UpdateEventArgumentsSchema.parse(args)).not.toThrow();
-    });
-
-    it.each(INVALID_DATETIMES)('should reject invalid datetime format: %s', (datetime) => {
-      const args = createUpdateEventArgs(DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID, TEST_TIMEZONE, {
-        start: datetime
-      });
-
-      expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow();
-    });
-  });
-
-  describe('Complex Scenarios', () => {
-    it('should validate complete update with all fields', () => {
-      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
-        modificationScope: 'thisAndFollowing',
-        futureStartDate: formatTZNaiveDateTime(getFutureDate(60)),
-        summary: 'Updated Meeting',
-        description: 'Updated description',
-        location: 'New Conference Room',
-        start: '2024-06-15T10:00:00',
-        end: '2024-06-15T11:00:00',
-        colorId: '9',
-        attendees: [
-          { email: 'user1@example.com' },
-          { email: 'user2@example.com' }
-        ],
-        reminders: {
-          useDefault: false,
-          overrides: [
-            { method: 'email', minutes: TEST_EVENT_DEFAULTS.RECURRING_EMAIL_REMINDER_MINUTES },
-            { method: 'popup', minutes: 10 }
-          ]
-        },
-        recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO']
-      });
-
-      const result = UpdateEventArgumentsSchema.parse(args);
-      expect(result).toMatchObject(args);
-    });
-
-    it('should not require conditional fields for "all" scope', () => {
-      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
-        modificationScope: 'all',
-        summary: 'Updated Meeting'
-        // no originalStartTime or futureStartDate required
-      });
-
-      expect(() => UpdateEventArgumentsSchema.parse(args)).not.toThrow();
-    });
-
-    it('should allow optional conditional fields when not required', () => {
-      const args = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
-        modificationScope: 'all',
-        originalStartTime: '2024-06-15T10:00:00', // optional for 'all' scope
-        summary: 'Updated Meeting'
-      });
-
-      const result = UpdateEventArgumentsSchema.parse(args);
-      expect(result.originalStartTime).toBe('2024-06-15T10:00:00');
-    });
-  });
-
-  describe('Backward Compatibility', () => {
-    it('should maintain compatibility with existing update calls', () => {
-      // Existing call format without new parameters
-      const legacyArgs = createUpdateEventArgs('primary', 'event123', TEST_TIMEZONE, {
-        summary: 'Updated Meeting',
-        location: 'Conference Room A'
-      });
-
-      const result = UpdateEventArgumentsSchema.parse(legacyArgs);
-      expect(result.modificationScope).toBeUndefined(); // optional with no default
-      expect(result.summary).toBe('Updated Meeting');
-      expect(result.location).toBe('Conference Room A');
-    });
-  });
-});
-
-describe('ListEventsArgumentsSchema JSON String Handling', () => {
-  it('should parse JSON string calendarId into array', () => {
-    const input = {
-      calendarId: '["primary", "secondary@gmail.com"]',
-      timeMin: TIME_MIN,
-      timeMax: TIME_MAX
-    };
-
-    const result = ListEventsArgumentsSchema.parse(input);
-    // The new schema keeps JSON strings as strings (they are parsed in the handler)
-    expect(result.calendarId).toBe('["primary", "secondary@gmail.com"]');
-  });
-
-  it('should handle regular string calendarId', () => {
-    const input = {
-      calendarId: 'primary',
-      timeMin: TIME_MIN,
-      timeMax: TIME_MAX
-    };
-
-    const result = ListEventsArgumentsSchema.parse(input);
-    expect(result.calendarId).toBe('primary');
-  });
-
-  it('should handle regular array calendarId', () => {
-    // Arrays are no longer directly supported - they must be JSON strings
-    const input = {
-      calendarId: ['primary', 'secondary@gmail.com'],
-      timeMin: TIME_MIN,
-      timeMax: TIME_MAX
-    };
-
-    // This should now throw because arrays aren't accepted directly
-    expect(() => ListEventsArgumentsSchema.parse(input)).toThrow();
-  });
-
-  it('should pass through invalid JSON strings for handler validation', () => {
-    // Invalid JSON strings are accepted by the schema but will fail in the handler
-    const input = {
-      calendarId: '["primary", invalid]',
-      timeMin: TIME_MIN,
-      timeMax: TIME_MAX
-    };
-
-    // The schema accepts any string - validation happens in the handler
-    const result = ListEventsArgumentsSchema.parse(input);
-    expect(result.calendarId).toBe('["primary", invalid]');
-  });
-
-  it('should pass through JSON strings with non-string elements for handler validation', () => {
-    // Schema accepts any string - validation happens in the handler
-    const input = {
-      calendarId: '["primary", 123]',
-      timeMin: TIME_MIN,
-      timeMax: TIME_MAX
-    };
-
-    // The schema accepts any string - validation happens in the handler
-    const result = ListEventsArgumentsSchema.parse(input);
-    expect(result.calendarId).toBe('["primary", 123]');
-  });
-});
-</file>
-
-<file path="src/tests/unit/index.test.ts">
-/**
- * Tests for the Google Calendar MCP Server implementation
- */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { OAuth2Client } from "google-auth-library";
-
-// Import tool handlers to test them directly
-import { ListCalendarsHandler } from "../../handlers/core/ListCalendarsHandler.js";
-import { CreateEventHandler } from "../../handlers/core/CreateEventHandler.js";
-
-// Import test helpers
-import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE, TEST_TIMEZONE_SECONDARY } from "../../testing/constants.js";
-
-// Mock OAuth2Client
-vi.mock('google-auth-library', () => ({
-  OAuth2Client: vi.fn().mockImplementation(() => ({
-    setCredentials: vi.fn(),
-    refreshAccessToken: vi.fn().mockResolvedValue({ credentials: { access_token: 'mock_access_token' } }),
-    on: vi.fn(),
-  }))
-}));
-
-// Mock googleapis
-vi.mock('googleapis', () => ({
-  google: {
-    calendar: vi.fn().mockReturnValue({
-      calendarList: {
-        list: vi.fn(),
-        get: vi.fn()
-      },
-      events: {
-        list: vi.fn(),
-        insert: vi.fn(),
-        patch: vi.fn(),
-        delete: vi.fn()
-      },
-      colors: {
-        get: vi.fn()
-      },
-      freebusy: {
-        query: vi.fn()
-      }
-    })
-  }
-}));
-
-// Mock TokenManager
-vi.mock('./auth/tokenManager.js', () => ({
-  TokenManager: vi.fn().mockImplementation(() => ({
-    validateTokens: vi.fn().mockResolvedValue(true),
-    loadSavedTokens: vi.fn().mockResolvedValue(true),
-    clearTokens: vi.fn(),
-  })),
-}));
-
-describe('Google Calendar MCP Server', () => {
-  let mockOAuth2Client: OAuth2Client;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockOAuth2Client = new OAuth2Client();
-  });
-
-  describe('McpServer Configuration', () => {
-    it('should create McpServer with correct configuration', () => {
-      const server = new McpServer({
-        name: "google-calendar",
-        version: "1.2.0"
-      });
-
-      expect(server).toBeDefined();
-      // McpServer doesn't expose internal configuration for testing,
-      // but we can verify it doesn't throw during creation
-    });
-  });
-
-  describe('Tool Handlers', () => {
-    function mockCalendarEuropeTimezone(mockCalendarApi: ReturnType<typeof import('googleapis')['google']['calendar']>, summary: string) {
-      (mockCalendarApi.calendarList.get as any).mockResolvedValue({
-        data: { id: 'primary', timeZone: TEST_TIMEZONE_SECONDARY }
-      });
-      (mockCalendarApi.events.insert as any).mockResolvedValue({
-        data: { id: 'testEvent', summary }
-      });
-    }
-
-    it('should handle list-calendars tool correctly', async () => {
-      const handler = new ListCalendarsHandler();
-      const { google } = await import('googleapis');
-      const mockCalendarApi = google.calendar('v3');
-
-      // Mock the API response
-      (mockCalendarApi.calendarList.list as any).mockResolvedValue({
-        data: {
-          items: [
-            { 
-              id: 'cal1', 
-              summary: 'Work Calendar',
-              timeZone: 'America/New_York',
-              kind: 'calendar#calendarListEntry',
-              accessRole: 'owner',
-              primary: true,
-              selected: true,
-              hidden: false,
-              backgroundColor: '#0D7377',
-              defaultReminders: [
-                { method: 'popup', minutes: TEST_EVENT_DEFAULTS.REMINDER_MINUTES },
-                { method: 'email', minutes: 60 }
-              ],
-              description: 'Work-related events and meetings'
-            },
-            {
-              id: 'cal2',
-              summary: 'Personal',
-              timeZone: TEST_TIMEZONE,
-              kind: 'calendar#calendarListEntry',
-              accessRole: 'reader',
-              primary: false,
-              selected: true,
-              hidden: false,
-              backgroundColor: '#D50000'
-            },
-          ]
-        }
-      });
-
-      const result = await handler.runTool({}, mockOAuth2Client);
-
-      expect(mockCalendarApi.calendarList.list).toHaveBeenCalled();
-      expect(result).toEqual({
-        content: [
-          {
-            type: 'text',
-            text: `Work Calendar (PRIMARY) (cal1)
-  Timezone: America/New_York
-  Kind: calendar#calendarListEntry
-  Access Role: owner
-  Selected: Yes
-  Hidden: No
-  Background Color: #0D7377
-  Default Reminders: popup (${TEST_EVENT_DEFAULTS.REMINDER_MINUTES}min before), email (60min before)
-  Description: Work-related events and meetings
-
-Personal (cal2)
-  Timezone: ${TEST_TIMEZONE}
-  Kind: calendar#calendarListEntry
-  Access Role: reader
-  Selected: Yes
-  Hidden: No
-  Background Color: #D50000
-  Default Reminders: None`,
-          },
-        ],
-      });
-    });
-
-    it('should use calendar default timezone when timeZone is not provided', async () => {
-      const handler = new CreateEventHandler();
-      const { google } = await import('googleapis');
-      const mockCalendarApi = google.calendar('v3');
-
-      const mockEventArgs = {
-        calendarId: 'primary',
-        summary: 'Meeting without timezone',
-        start: '2024-08-15T10:00:00', // Timezone-naive datetime
-        end: '2024-08-15T11:00:00', // Timezone-naive datetime
-      };
-
-      mockCalendarEuropeTimezone(mockCalendarApi, mockEventArgs.summary);
-
-      await handler.runTool(mockEventArgs, mockOAuth2Client);
-
-      // Verify that the calendar's timezone was used
-      expect(mockCalendarApi.events.insert).toHaveBeenCalledWith({
-        calendarId: mockEventArgs.calendarId,
-        requestBody: expect.objectContaining({
-          start: { dateTime: mockEventArgs.start, timeZone: TEST_TIMEZONE_SECONDARY },
-          end: { dateTime: mockEventArgs.end, timeZone: TEST_TIMEZONE_SECONDARY },
-        }),
-      });
-    });
-
-    it('should handle timezone-aware datetime strings correctly', async () => {
-      const handler = new CreateEventHandler();
-      const { google } = await import('googleapis');
-      const mockCalendarApi = google.calendar('v3');
-
-      const mockEventArgs = {
-        calendarId: 'primary',
-        summary: 'Meeting with timezone in datetime',
-        start: '2024-08-15T10:00:00-07:00', // Timezone-aware datetime
-        end: '2024-08-15T11:00:00-07:00', // Timezone-aware datetime
-      };
-
-      mockCalendarEuropeTimezone(mockCalendarApi, mockEventArgs.summary);
-
-      await handler.runTool(mockEventArgs, mockOAuth2Client);
-
-      // Verify that timezone from datetime was used (no timeZone property)
-      expect(mockCalendarApi.events.insert).toHaveBeenCalledWith({
-        calendarId: mockEventArgs.calendarId,
-        requestBody: expect.objectContaining({
-          start: { dateTime: mockEventArgs.start }, // No timeZone property
-          end: { dateTime: mockEventArgs.end }, // No timeZone property
-        }),
-      });
-    });
-
-  });
-
-  describe('Configuration and Environment Variables', () => {
-    it('should parse environment variables correctly', async () => {
-      const originalEnv = process.env;
-      
-      try {
-        // Set test environment variables
-        process.env.TRANSPORT = 'http';
-        process.env.PORT = '4000';
-        process.env.HOST = '0.0.0.0';
-        process.env.DEBUG = 'true';
-
-        // Import config parser after setting env vars
-        const { parseArgs } = await import('../../config/TransportConfig.js');
-        
-        const config = parseArgs([]);
-
-        expect(config.transport.type).toBe('http');
-        expect(config.transport.port).toBe(4000);
-        expect(config.transport.host).toBe('0.0.0.0');
-        expect(config.debug).toBe(true);
-      } finally {
-        // Restore original environment
-        process.env = originalEnv;
-      }
-    });
-
-    it('should allow CLI arguments to override environment variables', async () => {
-      const originalEnv = process.env;
-      
-      try {
-        // Set environment variables
-        process.env.TRANSPORT = 'http';
-        process.env.PORT = '4000';
-
-        const { parseArgs } = await import('../../config/TransportConfig.js');
-        
-        // CLI arguments should override env vars
-        const config = parseArgs(['--transport', 'stdio', '--port', '5000']);
-
-        expect(config.transport.type).toBe('stdio');
-        expect(config.transport.port).toBe(5000);
-      } finally {
-        process.env = originalEnv;
-      }
-    });
-  });
-});
-</file>
-
-<file path="archive-old-meeting-responses.mjs">
-import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID, GMAIL_INBOX, GMAIL_UNREAD } from './lib/constants.mjs';
-import { getHeader } from './lib/email-utils.mjs';
-import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
-import { BANNER } from './lib/console-utils.mjs';
-
-const DAYS_AGO = 7;
-const MAX_RESULTS = 100;
-
-const searchQueries = [
-  'subject:Accepted subject:Integrity',
-  'subject:Declined subject:Integrity',
-  'subject:"Added to a team"',
-  'from:john@integritystudio.ai subject:(Accepted OR Declined)',
-  'from:chandra@integritystudio.ai subject:(Accepted OR Declined)'
-];
-
-async function archiveOldMeetingResponses() {
-  const gmail = createGmailClient();
-
-  console.log('ARCHIVING OLD MEETING RESPONSES\n');
-  console.log(BANNER + '\n');
-
-  const oneWeekAgo = new Date(Date.now() - DAYS_AGO * 24 * 60 * 60 * 1000);
-  const dateStr = oneWeekAgo.toISOString().split('T')[0];
-  console.log(`Archiving responses before ${dateStr}\n`);
-
-  let totalArchived = 0;
-
-  for (const query of searchQueries) {
-    const searchResp = await gmail.users.messages.list({ userId: USER_ID, q: query, maxResults: MAX_RESULTS });
-    const messages = searchResp.data.messages || [];
-    if (messages.length === 0) continue;
-
-    console.log(`Query: ${query}`);
-    console.log(`Found ${messages.length} emails\n`);
-
-    const fullMsgs = await Promise.all(
-      messages.map(msg =>
-        gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'metadata', metadataHeaders: ['Date', 'Subject'] })
-      )
-    );
-
-    const oldIds = [];
-    for (const fullMsg of fullMsgs) {
-      const headers = fullMsg.data.payload?.headers || [];
-      const msgDateStr = getHeader(headers, 'Date');
-      const subject = getHeader(headers, 'Subject');
-      const emailDate = new Date(msgDateStr);
-      if (emailDate < oneWeekAgo) {
-        oldIds.push(fullMsg.data.id);
-        console.log(`  ${subject.substring(0, 50)}`);
-        console.log(`    Date: ${emailDate.toLocaleDateString()}\n`);
-      }
-    }
-
-    if (oldIds.length > 0) {
-      await batchModifyMessages(gmail, oldIds, { removeLabelIds: [GMAIL_UNREAD, GMAIL_INBOX] });
-      totalArchived += oldIds.length;
-      console.log(`Archived and marked ${oldIds.length} as read\n`);
-    }
-  }
-
-  console.log(BANNER);
-  console.log('COMPLETE\n');
-  console.log(`Total archived: ${totalArchived} meeting responses\n`);
-  console.log(BANNER + '\n');
-}
-
-archiveOldMeetingResponses().catch(error => {
-  console.error('Error:', error.message);
-  process.exit(1);
-});
-</file>
-
-<file path="mark-read.mjs">
-/**
- * Mark emails as read based on label membership or past-event date detection.
- *
- * Usage:
- *   node mark-read.mjs                  # mark all labeled emails as read
- *   node mark-read.mjs --archived-only  # restrict to emails no longer in inbox
- *   node mark-read.mjs --past-events    # mark only past-date event emails as read
- */
-import { createGmailClient } from './lib/gmail-client.mjs';
-import {
-  USER_ID,
-  GMAIL_UNREAD,
-  LABEL_EVENTS, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES,
-  LABEL_SERVICES, LABEL_BILLING, LABEL_MONITORING,
-} from './lib/constants.mjs';
-import { extractEventDate, isPastEvent } from './lib/date-based-filter.mjs';
-import { getHeader } from './lib/email-utils.mjs';
-import { batchModifyMessages, searchAndModify } from './lib/gmail-batch-utils.mjs';
-import { decodeMessageBody } from './lib/gmail-message-utils.mjs';
-
-const pastEventsMode = process.argv.includes('--past-events');
-const archivedOnly = process.argv.includes('--archived-only');
-
-const LABELED_LABELS = [LABEL_EVENTS, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING, LABEL_MONITORING];
-
-async function markLabeledRead(gmail) {
-  const archiveSuffix = archivedOnly ? ' -label:INBOX' : '';
-  let total = 0;
-  for (const label of LABELED_LABELS) {
-    const count = await searchAndModify(gmail, `label:"${label}" is:unread${archiveSuffix}`, { removeLabelIds: [GMAIL_UNREAD] });
-    if (count > 0) console.log(`${label}: ${count} marked as read`);
-    total += count;
-  }
-  const qualifier = archivedOnly ? 'archived ' : '';
-  console.log(`Total: ${total} ${qualifier}emails marked as read`);
-}
-
-async function markPastEventsRead(gmail) {
-  const searchResponse = await gmail.users.messages.list({
-    userId: USER_ID,
-    q: `label:${LABEL_EVENTS} is:unread`,
-    maxResults: 500,
-  });
-
-  const messageIds = searchResponse.data.messages || [];
-  console.log(`Found ${messageIds.length} unread event emails`);
-  if (messageIds.length === 0) return;
-
-  const fullMsgs = await Promise.all(
-    messageIds.map(msg =>
-      gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'full' })
-    )
-  );
-
-  const pastIds = fullMsgs
-    .filter(fullMsg => {
-      const headers = fullMsg.data.payload?.headers || [];
-      const subject = getHeader(headers, 'Subject');
-      const body = decodeMessageBody(fullMsg.data.payload);
-      const eventDate = extractEventDate(subject + '\n' + body);
-      return eventDate && isPastEvent(eventDate);
-    })
-    .map(fullMsg => fullMsg.data.id);
-
-  console.log(`Identified ${pastIds.length} past events`);
-  if (pastIds.length === 0) return;
-
-  await batchModifyMessages(gmail, pastIds, { removeLabelIds: [GMAIL_UNREAD] });
-  console.log(`Past events marked as read: ${pastIds.length}`);
-  console.log(`Future events remaining unread: ${messageIds.length - pastIds.length}`);
-}
-
-const gmail = createGmailClient();
-const action = pastEventsMode ? markPastEventsRead : markLabeledRead;
-action(gmail).catch(error => {
-  console.error('Error:', error.message);
-  process.exit(1);
-});
-</file>
-
-<file path="README.md">
-# Google Calendar & Gmail MCP Server
-
-A Model Context Protocol (MCP) server that provides Google Calendar and Gmail integration for AI assistants like Claude.
-
-## Features
-
-### Calendar
-- **Multi-Calendar Support**: List events from multiple calendars simultaneously
-- **Event Management**: Create, update, delete, and search calendar events
-- **Recurring Events**: Advanced modification capabilities for recurring events
-- **Free/Busy Queries**: Check availability across calendars
-- **Smart Scheduling**: Natural language understanding for dates and times
-- **Inteligent Import**: Add calendar events from images, PDFs or web links
-
-### Gmail
-- **Message Search**: Query Gmail with flexible search filters (is:unread, from:, subject:, etc.)
-- **Profile Management**: Get account information (message count, thread count, email address)
-- **Multi-Account Support**: Use multiple Gmail accounts with separate OAuth tokens
-
-## Recent Updates (v1.4.9)
-
-**Code Quality & Maintainability:**
-- 🧹 **Test Fixture Consolidation** - Extracted 9+ duplicate fixtures into shared factories (70% reduction in test boilerplate)
-- 🛠️ **Test Helper Utilities** - Added assertion helpers (`expectValidToolResponse`, `expectJsonResponse`) and error pattern extractors
-- 🎯 **Runtime Optimization** - Refactored `buildOptionalEventFields()` to eliminate 13 repetitive if-checks with `conditionallyAddFields()` utility (85% reduction)
-- 🔄 **Mock Setup Consolidation** - Created `createGoogleCalendarMocks()` factory to eliminate vi.mock duplication across handler tests
-
-**Performance & Reliability:**
-- 🚀 Dynamic label ID resolution (L6) - Scripts now work across accounts with different label hierarchies
-- ⚡ Sequential API optimization - ~500ms latency reduction per operation
-- 📦 Batch filter operations - 10-100x speedup for bulk Gmail tasks
-- 🔧 Timezone utilities consolidation - Reduced codebase by 19 lines, eliminated duplicate datetime logic
-
-**Tooling & Infrastructure:**
-- ✅ Comprehensive label resolution guide ([docs/LABEL-RESOLUTION-GUIDE.md](docs/LABEL-RESOLUTION-GUIDE.md))
-- 🧪 Parametrized test expansion (25 → 30+ test cases)
-- 📋 New changelog system ([docs/changelog/](docs/changelog/)) tracking all improvements
-- 🔐 Auth refactor: new `isAuthenticated()` and `getCredentials()` methods
-
-**Testing:**
-- 486/486 tests passing (100%) ✅
-- Integration tests for conflict detection via MCP protocol (real server, real API)
-- Reduced technical debt with shared utilities in `lib/gmail-*.mjs`
-- Consolidated test helpers reduce maintenance burden across 30+ test files
-- CLAUDE.md updated with test utilities and patterns documentation
-
-See [CHANGELOG](docs/CHANGELOG.md) for complete v1.4.9 release notes.
-
-## Quick Start
-
-### Prerequisites
-
-1. A Google Cloud project with the Calendar API enabled
-2. OAuth 2.0 credentials (Desktop app type)
-
-### Google Cloud Setup
-
-1. Go to the [Google Cloud Console](https://console.cloud.google.com)
-2. Create a new project or select an existing one.
-3. Enable the [Google Calendar API](https://console.cloud.google.com/apis/library/calendar-json.googleapis.com) for your project. Ensure that the right project is selected from the top bar before enabling the API.
-4. Create OAuth 2.0 credentials:
-   - Go to Credentials
-   - Click "Create Credentials" > "OAuth client ID"
-   - Choose "User data" for the type of data that the app will be accessing
-   - Add your app name and contact information
-   - Add the following scopes (optional):
-     - `https://www.googleapis.com/auth/calendar.events` and `https://www.googleapis.com/auth/calendar`
-   - Select "Desktop app" as the application type (Important!)
-   - Save the auth key, you'll need to add its path to the JSON in the next step
-   - Add your email address as a test user under the [Audience screen](https://console.cloud.google.com/auth/audience)
-      - Note: it might take a few minutes for the test user to be added. The OAuth consent will not allow you to proceed until the test user has propagated.
-      - Note about test mode: While an app is in test mode the auth tokens will expire after 1 week and need to be refreshed (see Re-authentication section below).
-
-### Installation
-
-**Option 1: Use with npx (Recommended)**
-
-Add to your Claude Desktop configuration:
-
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-```json
-{
-  "mcpServers": {
-    "google-calendar": {
-      "command": "npx",
-      "args": ["@cocal/google-calendar-mcp"],
-      "env": {
-        "GOOGLE_OAUTH_CREDENTIALS": "/path/to/your/gcp-oauth.keys.json"
-      }
-    }
-  }
-}
-```
-
-**⚠️ Important Note for npx Users**: When using npx, you **must** specify the credentials file path using the `GOOGLE_OAUTH_CREDENTIALS` environment variable.
-
-**Option 2: Local Installation**
-
-```bash
-git clone https://github.com/nspady/google-calendar-mcp.git
-cd google-calendar-mcp
-npm install
-npm run build
-```
-
-Then add to Claude Desktop config using the local path or by specifying the path with the `GOOGLE_OAUTH_CREDENTIALS` environment variable.
-
-### First Run
-
-1. Start Claude Desktop
-2. The server will prompt for authentication on first use
-3. Complete the OAuth flow in your browser
-4. You're ready to use calendar features!
-
-### Multi-Account Support (Test Mode)
-
-This server supports multiple Google accounts in test mode with automatic token management.
-
-**Setup both accounts:**
-
-Account 1 (Initial):
-```bash
-export ACCOUNT_MODE=test
-export CALENDARMCP_TOKEN_PATH=~/.config/google-calendar-mcp/tokens.json
-npm run auth
-```
-
-Account 2 (Same file, different account key):
-```bash
-export ACCOUNT_MODE=test
-export CALENDARMCP_TOKEN_PATH=~/.config/google-calendar-mcp/tokens.json
-npm run auth  # Authenticates second account in same tokens.json
-```
-
-**Verify both accounts:**
-```bash
-export GOOGLE_OAUTH_CREDENTIALS="./credentials.json"
-npm run verify-tokens
-```
-
-Outputs token status, expiry times, and account validity for all authenticated accounts.
-
-**Important Notes:**
-- Both accounts stored in single `tokens.json` file with separate keys
-- Tokens expire after 7 days in test mode (Google requirement)
-- TokenManager auto-refreshes tokens 5 minutes before expiry
-- Set `ACCOUNT_MODE` environment variable before running the server to select which account is active
-
-### Re-authentication
-
-If you're in test mode (default), tokens expire after 7 days. If you are using a client like Claude Desktop it should open up a browser window to automatically re-auth. However, if you see authentication errors you can also resolve by following these steps:
-
-**For npx users:**
-```bash
-export GOOGLE_OAUTH_CREDENTIALS="/path/to/your/gcp-oauth.keys.json"
-export ACCOUNT_MODE=test
-npx @cocal/google-calendar-mcp auth
-```
-
-**For local installation:**
-```bash
-export ACCOUNT_MODE=test
-npm run auth
-```
-
-**To avoid weekly re-authentication**, publish your app to production mode (without verification):
-1. Go to Google Cloud Console → "APIs & Services" → "OAuth consent screen"
-2. Click "PUBLISH APP" and confirm
-3. Your tokens will no longer expire after 7 days but Google will show a more threatning warning when connecting to the app about it being unverified.
-
-See [Authentication Guide](docs/authentication.md#moving-to-production-mode-recommended) for details.
-
-### Gmail OAuth Setup
-
-To enable Gmail features, authenticate with Gmail scopes:
-
-```bash
-# Using the provided auth script
-node auth-gmail.mjs
-```
-
-This will:
-1. Open your browser for OAuth authentication
-2. Request Gmail access (read and modify permissions)
-3. Save tokens to `~/.config/google-calendar-mcp/tokens-gmail.json`
-
-**Quick Check:**
-```bash
-# Check unread message count
-node check-gmail.mjs
-```
-
-**Important Notes:**
-- Gmail and Calendar tokens are stored separately
-- Gmail scopes: `gmail.readonly`, `gmail.modify`
-- Tokens expire after 7 days in test mode
-- Re-authenticate as needed with `node auth-gmail.mjs`
-
-### Email Organization & Filtering Scripts
-
-Automated scripts for organizing and filtering large volumes of Gmail with focus on correctness and efficiency.
-
-**Management Scripts:** (use shared `createGmailClient()` for OAuth, error handling, and multi-account support)
-- `list-unread-emails.mjs` - Categorize and summarize unread emails; `--stats` for per-label counts, `--verify` for label spot-checks, `--count` for quick total
-- `summarize-remaining.mjs` - Summary of uncategorized/remaining unread emails (internal work, forums, misc); parallel fetching
-- `describe-internal.mjs` - Detailed breakdown of internal team emails with subjects and dates; hardcoded summary removed
-- `apply-filters-to-unread.mjs` - Apply existing filters to current unread emails
-- `create-remaining-filters.mjs` - Batch create filters for multiple categories (Product Updates, Communities, Services)
-
-**Specialized Filters:**
-- `protect-important-inbox.mjs --billing` - Smart billing filter with conditional rate-limit detection (merged from create-billing-filter.mjs)
-- `create-signoz-filter.mjs` - Archive SigNoz monitoring alerts automatically
-- `create-dmarc-filter.mjs` - Organize DMARC authentication reports
-- `create-eventbrite-filter.mjs` - Label and archive Eventbrite event emails
-- `create-meet-notes-filter.mjs` - Label Google Meet notes
-- `delete-sentry-filter.mjs` - Remove outdated filters
-
-**Archive & Processing Scripts:**
-- `archive-signoz-dmarc.mjs` - Batch archive monitoring and DMARC report emails using Gmail batch API
-- `mark-signoz-read.mjs` - Mark SigNoz alerts as read in bulk
-- `mark-past-events-read.mjs` - Classify event emails by date and mark past events as read
-- `protect-important-inbox.mjs` - Label critical items to prevent archiving; `--billing` mode for smart billing filters
-
-**Event Management:**
-- `filter-events-by-date.mjs` - Classify event emails as future (label + keep) or past (label + archive)
-- `organize-international-house.mjs` - Label and organize International House event emails
-
-**Utilities:**
-- `lib/gmail-client.mjs` - Authenticated Gmail API client factory. Centralizes OAuth2 init, token validation, and multi-account support:
-  ```js
-  import { createGmailClient } from './lib/gmail-client.mjs';
-  const gmail = createGmailClient(); // Uses ACCOUNT_MODE env var, throws on missing tokens
-  ```
-- `lib/gmail-label-utils.mjs` - Label ID resolution (NEW in v1.4.9). Resolves hardcoded label IDs dynamically for account portability:
-  ```js
-  import { buildLabelCache, resolveLabelId } from './lib/gmail-label-utils.mjs';
-  const labelCache = await buildLabelCache(gmail);
-  const labelId = labelCache.get('Events/Community'); // Dynamic instead of hardcoded Label_N
-  ```
-  See [`docs/LABEL-RESOLUTION-GUIDE.md`](docs/LABEL-RESOLUTION-GUIDE.md) for complete documentation.
-- `lib/gmail-batch.mjs` - Batch filter operations for bulk Gmail tasks (10-100x speedup)
-- `lib/date-based-filter.mjs` - Pure utility for date-based email classification: extracts dates (ISO, US format, text dates, weekday patterns), compares to today, classifies as past/future/unknown. Does not mutate input. Handles dates without year by inferring current or next year.
-
-## Example Usage
-
-Along with the normal capabilities you would expect for a calendar integration you can also do really dynamic, multi-step processes like:
-
-1. **Cross-calendar availability**:
-   ```
-   Please provide availability looking at both my personal and work calendar for this upcoming week.
-   I am looking for a good time to meet with someone in London for 1 hr.
-   ```
-
-2. Add events from screenshots, images and other data sources:
-   ```
-   Add this event to my calendar based on the attached screenshot.
-   ```
-   Supported image formats: PNG, JPEG, GIF
-   Images can contain event details like date, time, location, and description
-
-3. Calendar analysis:
-   ```
-   What events do I have coming up this week that aren't part of my usual routine?
-   ```
-4. Check attendance:
-   ```
-   Which events tomorrow have attendees who have not accepted the invitation?
-   ```
-5. Auto coordinate events:
-   ```
-   Here's some available that was provided to me by someone. {available times}
-   Take a look at the times provided and let me know which ones are open on my calendar.
-   ```
-
-6. **Gmail workflows**:
-   ```
-   How many unread emails do I have from my work account?
-   ```
-   ```
-   Search for all emails from john@company.com that I haven't replied to yet.
-   ```
-   ```
-   Show me all unread messages from the past week.
-   ```
-   ```
-   Mark all unread emails from my boss as read.
-   ```
-   ```
-   Archive all promotional emails from marketing.
-   ```
-   ```
-   Delete these 5 spam messages (provide IDs).
-   ```
-
-## Date Parsing
-
-The email organization system uses intelligent date parsing (`lib/date-based-filter.mjs`) to classify event emails:
-
-**Supported Formats:**
-- ISO 8601: `2026-03-25`, `2026/03/25`
-- US format: `03/25/2026`, `3/25/2026`
-- Text format: `March 25, 2026`, `March 25` (infers year)
-- Weekday patterns: `@ Mon, Mar 23`, `@ Friday Mar 22`
-- Returns `null` for unparseable dates
-
-**Classification:**
-- Past events (date < today): archive from inbox, keep label
-- Future events (date ≥ today): label and keep in inbox
-- Unknown: marked for manual review
-
-**Implementation Notes:**
-- Pure function: does not mutate input dates
-- Handles missing years by inferring current or next year
-- Used by `mark-past-events-read.mjs` to auto-archive old events
-
-## Available Tools
-
-### Calendar Tools
-| Tool | Description |
-|------|-------------|
-| `list-calendars` | List all available calendars |
-| `list-events` | List events with date filtering |
-| `search-events` | Search events by text query |
-| `create-event` | Create new calendar events |
-| `update-event` | Update existing events |
-| `delete-event` | Delete events |
-| `get-freebusy` | Check availability across calendars, including external calendars |
-| `list-colors` | List available event colors |
-
-### Gmail Tools
-| Tool | Description |
-|------|-------------|
-| `gmail-search-messages` | Search Gmail messages (e.g., `is:unread`, `from:user@example.com`) |
-| `gmail-get-profile` | Get Gmail profile info (email, message count, thread count) |
-| `gmail-modify-messages` | Modify messages: mark read/unread, archive, delete, add/remove labels |
-| `gmail-create-label` | Create new labels for organizing emails |
-| `gmail-create-filter` | Create filters to auto-organize emails (auto-label, archive, delete, etc.) |
-
-## Documentation
-
-- [Authentication Setup](docs/authentication.md) - Detailed Google Cloud setup
-- [Advanced Usage](docs/advanced-usage.md) - Multi-account, batch operations
-- [Deployment Guide](docs/deployment.md) - Remote access and integration
-- [OAuth Verification](docs/oauth-verification.md) - Moving from test to production mode
-- [Architecture](docs/architecture.md) - Technical architecture overview
-- [Development](docs/development.md) - Contributing and testing
-- [Backlog & Roadmap](docs/BACKLOG.md) - Future work, refactoring targets, design decisions
-
-## Development
-
-**Project Guidelines:**
-- See [`CLAUDE.md`](CLAUDE.md) for code quality standards, script patterns, and refactoring guidelines
-- OAuth extraction pattern: use `createGmailClient()` from `lib/gmail-client.mjs`
-- Established patterns: error handling with try/catch, named constants, parallel API fetches with `Promise.all`
-- TypeScript, ES modules, 2-space indent, no magic strings
-
-**Code Quality Tools:**
-- Detect duplicated code blocks: `node scripts/check-duplicates.mjs src 6` (reports suspicious file pairs, overlapping logic)
-- Consolidated: `GmailCreateHandler.ts` unifies filter and label creation logic (single source of truth)
-
-**Completed Roadmap:**
-- ✅ All 24 backlog items complete (v1.4.9)
-- ✅ Test architecture for conflict detection implemented (MCP protocol, real API)
-- ✅ Email parsing helpers extracted (email-analyzer.mjs with 4 reusable exports)
-- ✅ Timezone utilities consolidated (19 lines reduced)
-- See [`docs/BACKLOG.md`](docs/BACKLOG.md) for detailed implementation notes and [`docs/CHANGELOG.md`](docs/CHANGELOG.md) for version history
-
-## Testing Status
-
-Run tests with `npm test`. Current test suite includes:
-- **Handler Tests**: Core functionality for create, get, list, search, update, and delete operations; content assertions use narrower `{ type: 'text'; text: string }` type instead of `as any`
-- **Service Tests**: Conflict detection and event similarity analysis
-- **Schema Tests**: Tool schema validation and compatibility
-
-**Note**: Integration tests referencing non-existent `AuthenticationService` and `initializeApp` exports were removed. Re-implement when the authentication service architecture is finalized.
-
-## Configuration
-
-**Environment Variables:**
-- `GOOGLE_OAUTH_CREDENTIALS` - Path to OAuth credentials file
-- `CALENDARMCP_TOKEN_PATH` - Custom token storage location for Calendar tokens (optional)
-- `ACCOUNT_MODE` - Account mode selection (normal or test; default: test)
-
-**Token Storage:**
-- Calendar tokens: `~/.config/google-calendar-mcp/tokens.json`
-- Gmail tokens: `~/.config/google-calendar-mcp/tokens-gmail.json`
-- Both stored with secure permissions (0600)
-
-**Claude Desktop Config Location:**
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-
-
-## Security
-
-- OAuth tokens are stored securely in your system's config directory
-- Credentials never leave your local machine
-- All calendar operations require explicit user consent
-
-### Troubleshooting
-
-1. **OAuth Credentials File Not Found:**
-   - For npx users: You **must** specify the credentials file path using `GOOGLE_OAUTH_CREDENTIALS`
-   - Verify file paths are absolute and accessible
-
-2. **Authentication Errors:**
-   - Ensure your credentials file contains credentials for a **Desktop App** type
-   - Verify your user email is added as a **Test User** in the Google Cloud OAuth Consent screen
-   - Try deleting saved tokens and re-authenticating
-   - Check that no other process is blocking ports 3000-3004
-
-3. **Build Errors:**
-   - Run `npm install && npm run build` again
-   - Check Node.js version (use LTS)
-   - Delete the `build/` directory and run `npm run build`
-4. **"Something went wrong" screen during browser authentication**
-   - Perform manual authentication per the below steps
-   - Use a Chromium-based browser to open the authentication URL. Test app authentication may not be supported on some non-Chromium browsers.
-
-### Manual Authentication
-For re-authentication or troubleshooting:
-```bash
-# For npx installations
-export GOOGLE_OAUTH_CREDENTIALS="/path/to/your/credentials.json"
-npx @cocal/google-calendar-mcp auth
-
-# For local installations
-npm run auth
-```
-
-## License
-
-MIT
-
-## Support
-
-- [GitHub Issues](https://github.com/nspady/google-calendar-mcp/issues)
-- [Documentation](docs/)
-</file>
-
-<file path="summarize-remaining.mjs">
-import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID } from './lib/constants.mjs';
-import { extractDisplayName, getHeader } from './lib/email-utils.mjs';
-import { BANNER } from './lib/console-utils.mjs';
-
-const MAX_RESULTS = 20;
-const INTERNAL_PREVIEW_COUNT = 2;
-const FORUM_PREVIEW_COUNT = 1;
-const SUBJECT_MAX_LENGTH = 60;
-const HEADER_SUBJECT = 'Subject';
-const HEADER_FROM = 'From';
-
-const internalQueries = [
-  { label: 'John Skelton (files)', q: 'from:john@integritystudio.ai' },
-  { label: 'Project discussions (misc)', q: 'from:chandra@integritystudio.ai OR from:alex@integritystudio.ai OR from:jordan' }
-];
-
-const forumQueries = [
-  { label: 'Misc/sales', q: 'from:marcella@inmyteam.com' }
-];
-
-async function printQueryResults(gmail, query, label, previewCount) {
-  const resp = await gmail.users.messages.list({ userId: USER_ID, q: `${query.q} is:unread`, maxResults: MAX_RESULTS });
-  const messages = resp.data.messages || [];
-  if (messages.length === 0) return;
-
-  console.log(`${label}: ${messages.length}`);
-
-  const previews = await Promise.all(
-    messages.slice(0, previewCount).map(m =>
-      gmail.users.messages.get({ userId: USER_ID, id: m.id, format: 'metadata', metadataHeaders: [HEADER_SUBJECT, HEADER_FROM] })
-    )
-  );
-
-  for (const msg of previews) {
-    const headers = msg.data.payload?.headers || [];
-    const subject = getHeader(headers, HEADER_SUBJECT) ?? '(no subject)';
-    const from = getHeader(headers, HEADER_FROM) ?? '';
-    console.log(`  • ${subject.substring(0, SUBJECT_MAX_LENGTH)}`);
-    console.log(`    From: ${extractDisplayName(from)}\n`);
-  }
-}
-
-async function run() {
-  const gmail = createGmailClient();
-
-  console.log('REMAINING UNREAD SUMMARY\n');
-  console.log(BANNER + '\n');
-
-  console.log('INTERNAL: Work file shares, project discussions\n');
-  await Promise.all(internalQueries.map(q => printQueryResults(gmail, q, q.label, INTERNAL_PREVIEW_COUNT)));
-
-  console.log('\nFORUMS: Technical summaries\n');
-  await Promise.all(forumQueries.map(q => printQueryResults(gmail, q, q.label, FORUM_PREVIEW_COUNT)));
-
-  console.log(BANNER + '\n');
-}
-
-run().catch(error => {
-  console.error('Error:', error.message);
-  process.exit(1);
-});
 </file>
 
 <file path="docs/BACKLOG.md">

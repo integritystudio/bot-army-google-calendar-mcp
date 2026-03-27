@@ -54,7 +54,6 @@ export function makeGaxiosError(
     status,
   } as any);
 
-  // Attach data property for testing error responses
   if (data) {
     (error as any).data = data;
   }
@@ -75,12 +74,13 @@ export function makeEvents(
 ): calendar_v3.Schema$Event[] {
   return EVENT_BUILDER.buildMany(count, (i) => {
     const variantOverrides = variantFn?.(i) ?? {};
+    const day = String((i % 28) + 1).padStart(2, '0');
     return {
       ...baseOverrides,
       id: `event${i + 1}`,
       summary: `Event ${i + 1}`,
-      start: { dateTime: `2025-01-${String((i % 28) + 1).padStart(2, '0')}T10:00:00Z` },
-      end: { dateTime: `2025-01-${String((i % 28) + 1).padStart(2, '0')}T11:00:00Z` },
+      start: { dateTime: `2025-01-${day}T10:00:00Z` },
+      end: { dateTime: `2025-01-${day}T11:00:00Z` },
       ...variantOverrides
     };
   });
@@ -119,6 +119,11 @@ export function makePastDateString(yearsAgo: number = 1): string {
 // or handler tests that need fixed dates for timezone assertions.
 // ============================================================================
 
+function appendUntil(rrule: string, untilDaysFromNow: number): string {
+  const untilDate = oneDayBefore(getFutureDate(untilDaysFromNow));
+  return rrule + `;UNTIL=${formatBasicDateTime(untilDate)}`;
+}
+
 /**
  * Create a recurring event with a weekly recurrence pattern.
  * @param daysFromNow Start date offset (default 7 days)
@@ -134,11 +139,7 @@ export function makeWeeklyRecurringEvent(
 ): calendar_v3.Schema$Event {
   const startDate = getFutureDate(daysFromNow);
   let rrule = `RRULE:FREQ=WEEKLY;BYDAY=${weeklyPattern}`;
-
-  if (untilDaysFromNow !== undefined) {
-    const untilDate = oneDayBefore(getFutureDate(untilDaysFromNow));
-    rrule += `;UNTIL=${formatBasicDateTime(untilDate)}`;
-  }
+  if (untilDaysFromNow !== undefined) rrule = appendUntil(rrule, untilDaysFromNow);
 
   return makeEvent({
     id: 'recurring-weekly-1',
@@ -169,10 +170,8 @@ export function makeDailyRecurringEvent(
   if (countOccurrences !== undefined) {
     rrule += `;COUNT=${countOccurrences}`;
   } else if (untilDaysFromNow !== undefined) {
-    const untilDate = oneDayBefore(getFutureDate(untilDaysFromNow));
-    rrule += `;UNTIL=${formatBasicDateTime(untilDate)}`;
+    rrule = appendUntil(rrule, untilDaysFromNow);
   } else {
-    // Default to 5 occurrences if neither specified
     rrule += ';COUNT=5';
   }
 
@@ -201,11 +200,7 @@ export function makeMonthlyRecurringEvent(
 ): calendar_v3.Schema$Event {
   const startDate = getFutureDate(daysFromNow);
   let rrule = `RRULE:FREQ=MONTHLY;BYMONTHDAY=${monthlyDay}`;
-
-  if (untilDaysFromNow !== undefined) {
-    const untilDate = oneDayBefore(getFutureDate(untilDaysFromNow));
-    rrule += `;UNTIL=${formatBasicDateTime(untilDate)}`;
-  }
+  if (untilDaysFromNow !== undefined) rrule = appendUntil(rrule, untilDaysFromNow);
 
   return makeEvent({
     id: 'recurring-monthly-1',
@@ -334,6 +329,45 @@ export function makeRecurringEventInstances(
 // MOCK BUILDERS - Create mocks for Google Calendar API responses
 // ============================================================================
 
+/**
+ * Create a typed mock calendar object for testing handlers.
+ * Provides the minimal calendar_v3.Calendar interface needed by handlers.
+ * @param overrides Custom mock implementations for specific methods
+ * @returns Typed mock calendar with get/patch/insert/list methods and calendarList.get
+ */
+export function makeCalendarMock(overrides: {
+  get?: ReturnType<typeof vi.fn>;
+  patch?: ReturnType<typeof vi.fn>;
+  insert?: ReturnType<typeof vi.fn>;
+  list?: ReturnType<typeof vi.fn>;
+  delete?: ReturnType<typeof vi.fn>;
+  calendarListGet?: ReturnType<typeof vi.fn>;
+} = {}): Pick<calendar_v3.Calendar, 'events'> & {
+  events: {
+    get: ReturnType<typeof vi.fn>;
+    patch: ReturnType<typeof vi.fn>;
+    insert: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+  };
+  calendarList: {
+    get: ReturnType<typeof vi.fn>;
+  };
+} {
+  return {
+    events: {
+      get: overrides.get ?? vi.fn(),
+      patch: overrides.patch ?? vi.fn(),
+      insert: overrides.insert ?? vi.fn(),
+      list: overrides.list ?? vi.fn(),
+      delete: overrides.delete ?? vi.fn(),
+    } as any,
+    calendarList: {
+      get: overrides.calendarListGet ?? vi.fn(),
+    },
+  };
+}
+
 // ============================================================================
 // CONFLICT DETECTION BUILDERS - Pre-configured events for conflict tests
 // ============================================================================
@@ -384,45 +418,6 @@ export function makeTeamMeetingEvent(
     end: { dateTime: '2024-01-01T11:00:00' },
     ...overrides,
   });
-}
-
-/**
- * Create a typed mock calendar object for testing handlers.
- * Provides the minimal calendar_v3.Calendar interface needed by handlers.
- * @param overrides Custom mock implementations for specific methods
- * @returns Typed mock calendar with get/patch/insert/list methods and calendarList.get
- */
-export function makeCalendarMock(overrides: {
-  get?: ReturnType<typeof vi.fn>;
-  patch?: ReturnType<typeof vi.fn>;
-  insert?: ReturnType<typeof vi.fn>;
-  list?: ReturnType<typeof vi.fn>;
-  delete?: ReturnType<typeof vi.fn>;
-  calendarListGet?: ReturnType<typeof vi.fn>;
-} = {}): Pick<calendar_v3.Calendar, 'events'> & {
-  events: {
-    get: ReturnType<typeof vi.fn>;
-    patch: ReturnType<typeof vi.fn>;
-    insert: ReturnType<typeof vi.fn>;
-    list: ReturnType<typeof vi.fn>;
-    delete: ReturnType<typeof vi.fn>;
-  };
-  calendarList: {
-    get: ReturnType<typeof vi.fn>;
-  };
-} {
-  return {
-    events: {
-      get: overrides.get ?? vi.fn(),
-      patch: overrides.patch ?? vi.fn(),
-      insert: overrides.insert ?? vi.fn(),
-      list: overrides.list ?? vi.fn(),
-      delete: overrides.delete ?? vi.fn(),
-    } as any,
-    calendarList: {
-      get: overrides.calendarListGet ?? vi.fn(),
-    },
-  };
 }
 
 /**

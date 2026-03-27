@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ConflictAnalyzer } from '../../../../services/conflict-detection/ConflictAnalyzer.js';
-import { makeEvent, makeConflictingEvents } from '../../helpers/factories.js';
+import { makeEvent, makeConflictingEvents } from '../../helpers/index.js';
 
 describe('ConflictAnalyzer', () => {
   const analyzer = new ConflictAnalyzer();

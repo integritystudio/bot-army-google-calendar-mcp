@@ -5,6 +5,8 @@ export {
   makeEvents,
   makeGaxiosError,
   makeCalendarMock,
+  makeConflictingEvents,
+  makeTeamMeetingEvent,
   createFullEventArgs,
   ATTACHMENT_IDS,
   STANDARD_ATTACHMENTS,

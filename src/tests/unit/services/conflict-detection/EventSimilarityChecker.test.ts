@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { EventSimilarityChecker } from '../../../../services/conflict-detection/EventSimilarityChecker.js';
-import { makeEvent, makeTeamMeetingEvent } from '../../helpers/factories.js';
+import { makeEvent, makeTeamMeetingEvent } from '../../helpers/index.js';
 
 describe('EventSimilarityChecker', () => {
   const checker = new EventSimilarityChecker();

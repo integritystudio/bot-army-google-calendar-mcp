@@ -1,3 +1,39 @@
+e366f83 2026-03-26 test(DeleteEventHandler): add unit tests for delete handler
+  src/tests/unit/helpers/factories.ts
+
+94c2007 2026-03-26 test(CreateEventHandler): cover getCalendarTimezone short-circuit on args.timeZone
+  src/tests/unit/handlers/CreateEventHandler.test.ts
+
+5566e2a 2026-03-26 test(CreateEventHandler): add conflict detection coverage
+  src/tests/unit/handlers/CreateEventHandler.test.ts
+
+c9c0f2f 2026-03-26 test(CreateEventHandler): mock performConflictCheck to eliminate implicit API calls
+  src/tests/unit/handlers/CreateEventHandler.test.ts
+
+15b8cf7 2026-03-26 test(CreateEventHandler): remove unused createEventWithExtendedProperties import
+  src/tests/unit/handlers/CreateEventHandler.test.ts
+
+ec8c469 2026-03-26 test(CreateEventHandler): remove dead datetime.js mock
+  src/tests/unit/handlers/CreateEventHandler.test.ts
+
+b85e433 2026-03-26 refactor(registry): extract extendedPropertyFilters to eliminate duplication
+  src/tools/registry.ts
+
+23d0326 2026-03-26 test(batch-list-events): replace ExtendedEvent with googleapis type and tighten assertions
+  src/tests/unit/handlers/BatchListEvents.test.ts
+
+b24da18 2026-03-26 refactor(scripts): merge label-status.mjs into list-unread-emails.mjs
+  README.md
+
+3398903 2026-03-26 refactor(scripts): merge create-billing-filter.mjs into protect-important-inbox.mjs
+  README.md
+
+0819b3f 2026-03-26 chore(docs): regenerate repomix snapshots after wave3 refactors
+  docs/repomix/gitlog-top20.txt
+  docs/repomix/repo-compressed.xml
+  docs/repomix/repomix-git-ranked.xml
+  docs/repomix/repomix.xml
+
 9cb9828 2026-03-26 refactor(gmail): extract batch utils and simplify mark-read scripts
   docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml

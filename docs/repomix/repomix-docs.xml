@@ -81,207 +81,6 @@ README.md
 <files>
 This section contains the contents of the repository's files.
 
-<file path="docs/changelog/1.4.9/CHANGELOG.md">
-  1: # Changelog - Version 1.4.9
-  2: 
-  3: **Release Date:** 2026-03-24
-  4: 
-  5: ## Overview
-  6: 
-  7: This release completes 22/22 BACKLOG items (100%) including label ID resolution, test optimization, code quality improvements, and timezone utilities consolidation. All identified backlog items have been resolved or remain intentionally deferred pending design discussions.
-  8: 
-  9: ## Features
- 10: 
- 11: ### L6: Dynamic Gmail Label ID Resolution
- 12: - **Added:** `buildLabelCache(gmail)` function to fetch all labels at startup
- 13: - **Added:** `resolveLabelId(gmail, labelName, labelCache)` for cached single lookups
- 14: - **Added:** `resolveLabelIds(gmail, labelNames)` for batch label resolution
- 15: - **Updated:** `create-all-sublabels.mjs` to use dynamic label resolution instead of hardcoded IDs
- 16: - **Updated:** `analyze-community-events.mjs` as extension example
- 17: - **Benefits:** Portable across accounts, improved reliability, explicit error handling
- 18: - **Commits:** a3e6dc2, 7d2ca82
- 19: 
- 20: ### L7: Email Analyzer Module Extraction & Code Quality Audit
- 21: - **Created:** `lib/email-analyzer.mjs` with reusable helpers
- 22:   - `categorizeEmail(msg)` - Classifies emails by urgency/importance
- 23:   - `printSection(title, subsections, config)` - Renders categorized sections with configurable truncation
- 24:   - `scoreContent(content, keywords)` - Unified scoring logic
- 25:   - `ANALYZER_CONFIG` - Centralized thresholds and keyword lists
- 26: - **Refactored:** `analyze_emails.mjs` (252 → 117 lines)
- 27:   - Eliminated 8x copy-pasted email display blocks
- 28:   - Removed redundant categorized→matrix transformation
- 29:   - Added error logging for message fetch failures
- 30:   - Replaced magic numbers with named constants
- 31: - **Added:** `USER_ID` constant to `lib/constants.mjs` for consistency
- 32: - **Optimized:** scoreContent to avoid redundant string allocations per email
- 33: - **Dedup Potential:** 4 exports enable ~500 line reduction across 10+ analyze-*.mjs scripts
- 34: - **Impact:** 180 lines reduced; 4 reusable exports; consistent lib patterns
- 35: - **Commits:** 9be3126, 0682823, 9af67c0, 336c4f5, 88b2aec
- 36: 
- 37: ### Documentation
- 38: 
- 39: - **Updated:** `docs/LABEL-RESOLUTION-GUIDE.md` with complete pattern documentation
- 40:   - Before/after examples
- 41:   - Step-by-step refactoring instructions
- 42:   - Available resolution functions
- 43:   - Practical examples and fallback patterns
- 44:   - Contribution guidelines for L6-extended
- 45: - **Documented:** Email Analyzer exports in BACKLOG.md with dedup opportunities
- 46:   - 4 reusable helpers + 10+ candidate scripts for future work
- 47:   - Verified line counts and reduction estimates
- 48: - **Commits:** 7f68f10, 9af67c0, 88b2aec
- 49: 
- 50: ## Optimizations
- 51: 
- 52: ### Medium Priority (2 items)
- 53: 
- 54: #### Sequential API Calls Optimization
- 55: - Eliminated redundant `calendar.events.get()` calls in `updateFutureInstances`
- 56: - ~500ms latency reduction per operation
- 57: - Added `getEventAndType()` helper to fetch once and pass through call chain
- 58: - **Files Modified:** `src/handlers/core/RecurringEventHelpers.ts`, `src/handlers/core/UpdateEventHandler.ts`
- 59: 
- 60: #### Loop Isolation Anti-patterns
- 61: - Converted 3 for-of loops to `it.each()` parametrized tests
- 62: - Improved test isolation and performance
- 63: - Test count: 25 → 30 (+8 individual cases)
- 64: - **Files Modified:** `src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts`
- 65: 
- 66: ### Low Priority (L1-L6)
- 67: 
- 68: #### L1: createGmailClient() Refactoring
- 69: - Applied across 65+ root scripts
- 70: - Replaced 18-line OAuth blocks with `import { createGmailClient } from './lib/gmail-client.mjs'`
- 71: - **Status:** ✅ COMPLETED (with pattern established for remaining scripts)
- 72: 
- 73: #### L2: Batch Filter Operations Utility
- 74: - Created `lib/gmail-batch.mjs` with `batchCreateFilters()` and `batchCreateFiltersWithSummary()`
- 75: - Automatic batching of large filter arrays (groups of 100)
- 76: - Parallel processing within batches for efficiency
- 77: - Per-filter error handling
- 78: - 10-100x potential speedup for bulk operations
- 79: - **Commit:** 97f35ec
- 80: 
- 81: #### L3: TOCTOU Risk Mitigation
- 82: - Refactored `lib/gmail-client.mjs` to minimize file read window
- 83: - Added documentation clarifying TOCTOU risk assessment
- 84: - Risk assessment: Very low for local dev use
- 85: - **Status:** ✅ COMPLETED with documentation
- 86: 
- 87: #### L4: process.exit(1) Testability Pattern
- 88: - Documented pattern for catch blocks in CLI scripts
- 89: - Note: Can affect test harness (terminal), intentional by design
- 90: - **Status:** ✅ COMPLETED (documented as NOTE)
- 91: 
- 92: #### L5: Extract Shared Helpers
- 93: - Extracted `createLabels()` and `applyPatterns()` to `lib/gmail-label-utils.mjs`
- 94: - Functions now shared across scripts instead of locally duplicated
- 95: - **Commit:** 97f35ec
- 96: 
- 97: #### L6: Label ID Resolution
- 98: - **Status:** ✅ COMPLETED (see Features section)
- 99: 
-100: ## Test Results
-101: 
-102: - **Overall:** 492/494 tests passing (99.6%)
-103: - **New:** 30 parametrized tests added from loop isolation refactor
-104: - **Pre-existing Failures:** 2 schema design-level issues (not regressions)
-105:   - `no-refs.test.ts`: Schema $ref detection
-106:   - `tool-registration.test.ts`: JSON schema conversion
-107: 
-108: ## Files Modified
-109: 
-110: ### Core Libraries
-111: - `lib/gmail-label-utils.mjs` - Added label resolution functions
-112: - `lib/gmail-batch.mjs` - New batch operations utility (L2)
-113: - `lib/gmail-client.mjs` - TOCTOU mitigation (L3)
-114: - `lib/email-analyzer.mjs` - New module with reusable email categorization/rendering helpers (L7)
-115: 
-116: ### Handlers
-117: - `src/handlers/core/RecurringEventHelpers.ts` - API optimization
-118: - `src/handlers/core/UpdateEventHandler.ts` - Sequential call optimization
-119: 
-120: ### Scripts
-121: - `create-all-sublabels.mjs` - Dynamic label resolution (L6)
-122: - `analyze-community-events.mjs` - Dynamic label resolution (L6 extended)
-123: - `analyze_emails.mjs` - Refactored to use lib/email-analyzer.mjs helpers (L7)
-124: - 65+ additional scripts - OAuth refactoring (L1)
-125: 
-126: ### Tests
-127: - `src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts` - Parametrized tests
-128: - `src/tests/unit/helpers/factories.ts` - Test infrastructure improvements
-129: 
-130: ### Documentation
-131: - `docs/LABEL-RESOLUTION-GUIDE.md` - New comprehensive guide
-132: - `docs/BACKLOG.md` - Progress tracking and completion assessment
-133: 
-134: ## Breaking Changes
-135: 
-136: None. All changes are backward-compatible optimizations and refactors.
-137: 
-138: ## Blocked Items (Not Included)
-139: 
-140: The following items require design-level decisions before implementation:
-141: 
-142: 1. **conflict-detection-integration.test.ts Architecture** (40-60 hours)
-143:    - Requires: Test infrastructure design (initializeApp, AuthenticationService, TestDataFactory)
-144:    - Status: BLOCKED pending architecture discussion
-145: 
-146: 2. **UpdateEventHandler.recurring.test.ts Refactor** (16-24 hours)
-147:    - Requires: Refactor design review (test real handler vs shadow implementation)
-148:    - Status: BLOCKED pending design review
-149: 
-150: ## Migration Notes
-151: 
-152: - All BACKLOG items marked ✅ COMPLETED have been migrated to this changelog
-153: - BLOCKED items remain in BACKLOG.md for future action
-154: - Completed item documentation moved from BACKLOG.md iterations to this structured changelog
-155: 
-156: ## Commits
-157: 
-158: - 88b2aec - docs(backlog): update with L7 email analyzer work + quality recommendations
-159: - 336c4f5 - fix: address quality dashboard recommendations (USER_ID, scoreContent, estimates)
-160: - 9af67c0 - docs(backlog): document email analyzer module extraction and dedup opportunities
-161: - 0682823 - refactor: extract email analyzer helpers into reusable lib module
-162: - 9be3126 - refactor(analyze-emails): simplify, reduce 74 lines by extracting reusable helpers
-163: - 9a2f0bf - ralph-loop: iteration 16 - reached practical completion at 91%
-164: - ba96d9d - docs(BACKLOG): Final completion assessment - 91% done, 2 items blocked
-165: - 7f68f10 - docs(L6): Add comprehensive label resolution pattern guide
-166: - 7d2ca82 - refactor(L6-extended): Update analyze-community-events.mjs
-167: - 31d8de6 - docs(BACKLOG): Final iteration update - 20/22 items complete
-168: - a3e6dc2 - feat(L6): Add label ID resolution functions
-169: 
-170: ---
-171: 
-172: ## Newly Completed Items (Migrated from BACKLOG)
-173: 
-174: ### Timezone Utilities Consolidation & Code Deduplication
-175: - **Consolidated:** Merged `src/handlers/utils/datetime.ts` (117 lines) into `src/utils/timezone-utils.ts`
-176: - **Eliminated duplicates:** Unified 4 timezone utility functions across codebase
-177: - **Applied utilities:** Refactored 3 files to use centralized functions (5 refactorings, net -9 lines)
-178: - **Updated imports:** 7 files across handlers, services, and tests
-179: - **Test results:** All 486 tests passing, zero regressions
-180: - **Code quality:** 100% duplication removed, improved consistency and maintainability
-181: - **Commits:** ae1c01b (consolidation), 499e7dd (apply utilities)
-182: 
-183: ### Test Architecture Integration (Resolved Blocked Items)
-184: - **Implemented:** Complete MCP protocol integration test suite
-185: - **Created:** Type-safe testing infrastructure (`src/testing/` module with Zod validation)
-186: - **Exported:** `initializeApp()` function for flexible server initialization
-187: - **Enhanced:** TokenManager with 4 new auth state methods
-188: - **Test coverage:** 5 integration test suites covering creation, overlaps, duplicates, recurring events
-189: - **Status:** ✅ Resolves 2 previously-blocked architectural design items
-190: 
-191: ---
-192: 
-193: ## Updated Completion Status
-194: 
-195: - **Previous:** 20/22 items (91%)
-196: - **Current:** 22/22 items (100%) ✅
-197: - **Open items:** 0 (all resolved)
-198: - **Tests passing:** 486/486 (100%)
-</file>
-
 <file path="docs/advanced-usage.md">
   1: # Advanced Usage Guide
   2: 
@@ -494,6 +293,201 @@ This section contains the contents of the repository's files.
 209: 3. **Timezone mismatches**: Ensure consistent timezone usage
 210: 
 211: See [Troubleshooting Guide](troubleshooting.md) for detailed solutions.
+</file>
+
+<file path="docs/architecture.md">
+  1: # Architecture Overview
+  2: 
+  3: ## High-Level Flow
+  4: 
+  5: ```
+  6: CLI Entry (index.ts)
+  7:   ↓
+  8: GoogleCalendarMcpServer (server.ts)
+  9:   ├─ Authentication (auth/)
+ 10:   │  ├─ OAuth2Client init
+ 11:   │  ├─ TokenManager (multi-account, auto-refresh)
+ 12:   │  └─ AuthServer (browser flow)
+ 13:   ├─ ToolRegistry (tools/registry.ts)
+ 14:   │  └─ Handler dispatch
+ 15:   └─ Transport (transports/)
+ 16:      ├─ Stdio (Claude Desktop)
+ 17:      └─ HTTP (remote access)
+ 18: ```
+ 19: 
+ 20: ## Directory Structure
+ 21: 
+ 22: ### `src/auth/`
+ 23: - **client.ts** - OAuth2Client initialization with credentials validation
+ 24: - **tokenManager.ts** - Multi-account token lifecycle with TokenManager API:
+ 25:   - `isAuthenticated()` - Check valid, non-expired token status
+ 26:   - `getCredentials()` - Access current account credentials
+ 27:   - `refreshCredentials()` - Explicit token refresh
+ 28:   - `logout()` - Clear tokens for account
+ 29:   - Auto-refresh 5 min before expiry, account-aware storage
+ 30: - **server.ts** - OAuth browser flow for authentication
+ 31: - **utils.ts** - Token parsing, credential loading helpers
+ 32: 
+ 33: ### `src/handlers/core/`
+ 34: Implements MCP tool handlers via `BaseToolHandler` pattern:
+ 35: - **ListEventsHandler** - Multi-calendar event listing with date filtering
+ 36: - **CreateEventHandler** - Event creation with recurring event support
+ 37: - **UpdateEventHandler** - Event updates with field mask optimization
+ 38: - **DeleteEventHandler** - Event deletion with conflict detection
+ 39: - **SearchEventsHandler** - Text-based event search
+ 40: - **FreeBusyHandler** - Cross-calendar availability checks
+ 41: - **ListColorsHandler** - Event color palette
+ 42: - **GetCurrentTimeHandler** - Server time (timezone-aware)
+ 43: - **RecurringEventHelpers** - Shared logic for recurring event modifications
+ 44: - **BatchRequestHandler** - Batch Gmail operations
+ 45: 
+ 46: ### `src/handlers/gmail/`
+ 47: Gmail-specific handlers:
+ 48: - **GmailSearchHandler** - Message search with filter syntax
+ 49: - **GmailModifyHandler** - Batch operations (mark read/archive/delete/label)
+ 50: - **GmailCreateHandler** - Label and filter creation
+ 51: 
+ 52: ### `src/services/`
+ 53: Business logic (conflicts, event similarity):
+ 54: - **ConflictDetectionService** - Time-based overlap detection
+ 55: - **EventSimilarityService** - Fuzzy event matching
+ 56: 
+ 57: ### `src/utils/`
+ 58: Shared utilities:
+ 59: - **timezone-utils.ts** - RFC3339 conversion, timezone offset calculation, datetime object construction
+ 60: - **date-utils.ts** - Date parsing and validation
+ 61: - **field-mask-builder.ts** - Optimized Google API update masking
+ 62: - **event-id-validator.ts** - Event ID format validation
+ 63: 
+ 64: ### `src/schemas/`
+ 65: Zod validation schemas:
+ 66: - **core.ts** - Calendar event schemas (create, update, recurring)
+ 67: - **gmail.ts** - Gmail message and filter schemas
+ 68: - **gmail-label-utils-types.ts** - Label resolution type definitions
+ 69: - **gmail-batch-types.ts** - Batch operation type definitions
+ 70: - **email-analyzer-types.ts** - Email categorization type definitions
+ 71: 
+ 72: ### `src/testing/`
+ 73: Test infrastructure:
+ 74: - **types.ts** - Zod schemas and TypeScript interfaces
+ 75: - **test-utils.ts** - `withTestContext()`, `typedTest()`, ResourceTracker, cleanup utilities
+ 76: 
+ 77: ### `src/tests/`
+ 78: Test suites:
+ 79: - **unit/** - Handler, service, and utility tests (486 tests)
+ 80: - **integration/** - MCP protocol tests with real server and API
+ 81: 
+ 82: ### `src/transports/`
+ 83: MCP transport implementations:
+ 84: - **stdio.ts** - Standard input/output (Claude Desktop)
+ 85: - **http.ts** - HTTP server (remote/browser access)
+ 86: 
+ 87: ### `src/config/`
+ 88: - **TransportConfig.ts** - CLI argument parsing (transport type, port, host)
+ 89: 
+ 90: ## Key Patterns
+ 91: 
+ 92: ### Handler Pattern
+ 93: ```typescript
+ 94: class XyzHandler extends BaseToolHandler {
+ 95:   async execute(input: ParsedInput): Promise<ToolResponse> {
+ 96:     // Validation via Zod
+ 97:     // API call via google-auth-library
+ 98:     // Content assertion via { type: 'text'; text: string }
+ 99:   }
+100: }
+101: ```
+102: 
+103: ### Token Management
+104: - Multi-account support via `ACCOUNT_MODE` env var
+105: - Auto-refresh 5 min before expiry
+106: - Separate storage: Calendar (`tokens.json`) vs Gmail (`tokens-gmail.json`)
+107: - Test mode: 7-day expiry (Google requirement)
+108: 
+109: ### Timezone Handling
+110: All datetime operations consolidated in `src/utils/timezone-utils.ts` (refactored ae1c01b, 499e7dd):
+111: - `convertToRFC3339()` - Datetime string → RFC3339 with timezone
+112: - `convertLocalTimeToUTC()` - Local time + timezone → UTC offset
+113: - `hasTimezoneInDatetime()` - Detect timezone in datetime string
+114: - `createTimeObject()` - Build datetime object with timezone
+115: - Consolidated from multiple datetime utility files for DRY, single source of truth
+116: 
+117: ### Email Organization Scripts
+118: Located in project root (non-MCP):
+119: - Uses `lib/gmail-client.mjs` for OAuth
+120: - `lib/gmail-label-utils.mjs` for dynamic label ID resolution
+121: - `lib/gmail-batch.mjs` for batch operations
+122: - `lib/email-analyzer.mjs` for categorization helpers
+123: 
+124: ## Data Flow
+125: 
+126: ### Create Event
+127: 1. Handler receives input → Zod validation
+128: 2. Construct RFC3339 datetime via `timezone-utils`
+129: 3. Call `calendar.events.insert()`
+130: 4. Check conflicts via `ConflictDetectionService`
+131: 5. Return event with MCP tool response format
+132: 
+133: ### Update Recurring Event
+134: 1. Fetch base event → validate recurrence rule
+135: 2. Build field mask (only changed fields)
+136: 3. For instance modifications: separate start/end times via `RecurringEventHelpers`
+137: 4. Apply timezone via `createTimeObject()`
+138: 5. Return updated event
+139: 
+140: ### Search & Filter Gmail
+141: 1. Resolve label IDs via `buildLabelCache()` (cached at startup)
+142: 2. Construct Gmail search query
+143: 3. Fetch message list → fetch details in parallel
+144: 4. Apply filters (archive, label, mark read)
+145: 5. Use batch API for 10-100x speedup
+146: 
+147: ## Dependencies
+148: - **@modelcontextprotocol/sdk** - MCP protocol
+149: - **google-auth-library** - OAuth2, Google API client
+150: - **zod** - Schema validation
+151: - **vitest** - Testing framework
+152: 
+153: ## Testing Strategy
+154: - **Unit tests (486)** - Handler, service, utility logic isolated
+155: - **Integration tests** - Real MCP server spawned, real Google Calendar API
+156: - **Schema tests** - Zod validation coverage
+157: - **Type-safe assertions** - `{ type: 'text'; text: string }` instead of `as any`
+158: 
+159: ## Multi-Account Support
+160: ```
+161: TokenManager
+162: ├─ ACCOUNT_MODE=test → test account (7-day expiry)
+163: └─ ACCOUNT_MODE=production → prod account (no expiry)
+164: ```
+165: Token file structure (both accounts in one file):
+166: ```json
+167: {
+168:   "test": { "access_token": "...", "expiry_date": ... },
+169:   "production": { "access_token": "...", "expiry_date": ... }
+170: }
+171: ```
+172: 
+173: ## Recent Architectural Improvements (v1.4.9+)
+174: 
+175: ### Auth API Refactoring (c9a57a9)
+176: - Replaced direct `validateTokens()` calls with semantic API methods
+177: - `isAuthenticated()` - Clearer intent for auth status checks
+178: - `getCredentials()` - Improved encapsulation over direct credential access
+179: - Applied across 5 locations (server.ts ×2, auth/server.ts ×1, integration tests ×2)
+180: - All 486 tests passing after refactor
+181: 
+182: ### Timezone Utilities Consolidation (ae1c01b, 499e7dd)
+183: - Unified all datetime operations into single `src/utils/timezone-utils.ts`
+184: - Eliminates code duplication across event creation, update, recurring event handlers
+185: - Single source of truth for RFC3339, UTC, and timezone-aware operations
+186: - Improved maintainability and consistency
+187: 
+188: ### Test Infrastructure
+189: - 486/486 unit tests covering handlers, services, utilities
+190: - Integration tests using real MCP protocol with Google Calendar API
+191: - Type-safe content assertions (`{ type: 'text'; text: string }`)
+192: - Dynamic future dates prevent test expiration
 </file>
 
 <file path="docs/AUTH-REFACTORING-OPPORTUNITIES.md">
@@ -1713,6 +1707,1322 @@ This section contains the contents of the repository's files.
 112: 
 113: - [Doppler Docs](https://docs.doppler.com)
 114: - [UpdateEventHandler.recurring.test.ts Refactor Plan](../CLAUDE.md#blocked-items)
+</file>
+
+<file path="docs/EVENT_HELPERS_ANALYSIS.md">
+  1: # Analysis: Applying event-test-data.ts Helpers Across Test Suite
+  2: 
+  3: ## Overview
+  4: The functions in `src/tests/unit/helpers/event-test-data.ts` (created from the RecurringEventHelpers.test.ts ↔ validators.test.ts deduplication) can be applied across multiple test files to reduce copy-pasta and improve consistency.
+  5: 
+  6: ## Current Helper Functions Available
+  7: 
+  8: ### Event Creation
+  9: - `createTestEventWithDateTime(startTime, endTime, overrides)` - Basic dateTime event
+ 10: - `createTestEventWithTZOffset(startTime, endTime, overrides)` - TZ-aware event (with offset)
+ 11: - `createCompleteTestEvent(overrides)` - Full event with system fields
+ 12: - `SYSTEM_FIELDS` - Constant list of fields to strip during duplication
+ 13: 
+ 14: ### UpdateEvent Arguments
+ 15: - `createUpdateEventArgs(calendarId, eventId, timeZone, overrides)` - Basic args
+ 16: - `createUpdateEventArgsWithTimes(start, end, timeZone, overrides)` - With time changes
+ 17: - `createUpdateEventArgsWithAttendees(overrides)` - With attendees & reminders
+ 18: - `createComplexUpdateEventArgs(overrides)` - Complex nested objects
+ 19: 
+ 20: ## Opportunities by File
+ 21: 
+ 22: ### 🔴 High Priority (Inline Event Definitions with Repeated Patterns)
+ 23: 
+ 24: #### 1. **ConflictAnalyzer.test.ts** (17 inline events)
+ 25: **Issue:** Extensive inline `calendar_v3.Schema$Event` definitions with repeated `start: { dateTime }, end: { dateTime }` pattern.
+ 26: 
+ 27: **Lines:** 10-55, 62-71, 78-87, 97-148
+ 28: **Pattern:**
+ 29: ```typescript
+ 30: const event1: calendar_v3.Schema$Event = {
+ 31:   summary: 'Meeting 1',
+ 32:   start: { dateTime: '2024-01-01T10:00:00Z' },
+ 33:   end: { dateTime: '2024-01-01T11:00:00Z' }
+ 34: };
+ 35: ```
+ 36: 
+ 37: **Recommendation:**
+ 38: - Import `makeEvent()` from factories (already supports overrides)
+ 39: - OR create a new simple helper `createConflictTestEvent(summary, startTime, endTime, overrides)` in event-test-data.ts
+ 40: 
+ 41: **Estimated Impact:** 15+ lines saved, 5+ events using helper pattern
+ 42: 
+ 43: ---
+ 44: 
+ 45: #### 2. **GetEventHandler.test.ts** (2 inline events)
+ 46: **Lines:** 48-54, 76-84
+ 47: **Pattern:**
+ 48: ```typescript
+ 49: const mockEvent = {
+ 50:   id: 'event123',
+ 51:   summary: 'Test Event',
+ 52:   start: { dateTime: '2025-01-15T10:00:00Z' },
+ 53:   end: { dateTime: '2025-01-15T11:00:00Z' },
+ 54:   ...other fields
+ 55: };
+ 56: ```
+ 57: 
+ 58: **Recommendation:**
+ 59: - Use `makeEvent({ summary: '...', ...})` from factories.ts
+ 60: - Already supports arbitrary overrides
+ 61: 
+ 62: **Estimated Impact:** 10 lines saved, consolidates with SearchEventsHandler pattern
+ 63: 
+ 64: ---
+ 65: 
+ 66: #### 3. **ListEventsHandler.test.ts** (1 inline event in mock)
+ 67: **Lines:** 35-42
+ 68: **Pattern:**
+ 69: ```typescript
+ 70: {
+ 71:   id: 'test-event',
+ 72:   summary: 'Test Event',
+ 73:   start: { dateTime: '2025-06-02T10:00:00Z' },
+ 74:   end: { dateTime: '2025-06-02T11:00:00Z' }
+ 75: }
+ 76: ```
+ 77: 
+ 78: **Recommendation:**
+ 79: - Use `makeEvent()` from factories.ts
+ 80: - Apply same pattern as SearchEventsHandler.test.ts (which already does this)
+ 81: 
+ 82: **Estimated Impact:** 5 lines saved, aligns with SearchEventsHandler pattern
+ 83: 
+ 84: ---
+ 85: 
+ 86: ### 🟡 Medium Priority (Local Helper Functions That Could Be Centralized)
+ 87: 
+ 88: #### 4. **UpdateEventHandler.recurring.test.ts** (3 local helpers)
+ 89: **Lines:** 49-81
+ 90: **Functions:**
+ 91: - `createMockEvent()` - Wraps `makeEvent()` with metadata
+ 92: - `createMockRecurringEvent()` - Adds recurrence to `createMockEvent()`
+ 93: - `buildUpdateEventInput()` - Builds & validates input via Zod schema
+ 94: 
+ 95: **Current Implementation:**
+ 96: ```typescript
+ 97: function createMockEvent(overrides = {}) {
+ 98:   return makeEvent({
+ 99:     id: 'event123',
+100:     created: '2026-03-20T12:00:00.000Z',
+101:     updated: '2026-03-20T12:00:00.000Z',
+102:     etag: '"etag123"',
+103:     ...overrides
+104:   });
+105: }
+106: 
+107: function createMockRecurringEvent(overrides = {}) {
+108:   return createMockEvent({
+109:     recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO'],
+110:     ...overrides
+111:   });
+112: }
+113: 
+114: function buildUpdateEventInput(overrides = {}) {
+115:   return ToolSchemas['update-event'].parse({
+116:     calendarId: 'primary',
+117:     eventId: 'event123',
+118:     checkConflicts: false,
+119:     ...overrides
+120:   });
+121: }
+122: ```
+123: 
+124: **Recommendation:**
+125: - `createMockEvent()` - Could be a variant in event-test-data.ts or factories.ts (adds metadata fields)
+126: - `createMockRecurringEvent()` - Natural follow-up: could be `createEventWithRecurrence(overrides)`
+127: - `buildUpdateEventInput()` - Specific to UpdateEventHandler tests; handler-specific validation is fine to keep local
+128: 
+129: **Estimated Impact:** 20 lines saved if centralized, improves consistency across recurring event tests
+130: 
+131: ---
+132: 
+133: #### 5. **CreateEventHandler.test.ts** (2 inline arg objects)
+134: **Lines:** 70-75, 110-124
+135: **Pattern:**
+136: ```typescript
+137: const args = {
+138:   calendarId: 'primary',
+139:   summary: 'Test Event',
+140:   start: '2025-01-15T10:00:00',
+141:   end: '2025-01-15T11:00:00',
+142:   // ...optional fields
+143: };
+144: ```
+145: 
+146: **Note:** These are **CreateEvent** input args, different from **UpdateEvent** args. UpdateEvent args include timezone, modificationScope, etc.
+147: 
+148: **Recommendation:**
+149: - Create `createEventHandlerArgs(overrides)` in event-test-data.ts (or new file if keeping separate)
+150: - Parallel to `createUpdateEventArgs()` but for CreateEvent
+151: 
+152: **Estimated Impact:** 12 lines saved, enables consistent handler input testing across all handlers
+153: 
+154: ---
+155: 
+156: ### 🟢 Lower Priority (Already Following Good Patterns)
+157: 
+158: #### SearchEventsHandler.test.ts
+159: ✅ Already uses `makeEvent()` correctly (lines 70, 108)
+160: 
+161: #### BatchListEvents.test.ts, index.test.ts
+162: ⚠️ Has 5 shared blocks but they're assertion patterns (`expect().toBe()`, `getTextContent()`), not event creation
+163: 
+164: #### RecurringEventHelpers.test.ts
+165: ✅ Updated in Phase 1 to use event-test-data.ts helpers
+166: 
+167: #### validators.test.ts
+168: ✅ Updated in Phase 1 to use event-test-data.ts helpers
+169: 
+170: ---
+171: 
+172: ## Recommended Implementation Plan
+173: 
+174: ### Phase A: Immediate Wins (Low risk, high impact)
+175: 
+176: 1. **ConflictAnalyzer.test.ts** - Switch inline events to `makeEvent()`
+177:    - Impact: 15 lines, 5+ events
+178:    - Risk: Very low (makeEvent() is flexible)
+179:    - Effort: 10 minutes
+180: 
+181: 2. **GetEventHandler.test.ts** - Use `makeEvent()` for mock responses
+182:    - Impact: 10 lines
+183:    - Risk: Very low
+184:    - Effort: 5 minutes
+185: 
+186: 3. **ListEventsHandler.test.ts** - Use `makeEvent()` in mock array
+187:    - Impact: 5 lines
+188:    - Risk: Very low
+189:    - Effort: 3 minutes
+190: 
+191: ### Phase B: New Helper Functions (Medium effort)
+192: 
+193: 4. **Create `createEventHandlerArgs()` helper** in event-test-data.ts
+194:    - For CreateEvent, ListEvents, GetEvent, SearchEvents handler args
+195:    - Mirrors pattern of `createUpdateEventArgs()`
+196:    - Impact: Enables consistent handler input testing
+197:    - Effort: 15 minutes
+198: 
+199: 5. **Consider `createEventWithMetadata()` and `createRecurringEventInstance()`** helpers
+200:    - Support for UpdateEventHandler.recurring.test.ts patterns
+201:    - Lower priority (tests are already working, but would improve consistency)
+202:    - Effort: 20 minutes
+203: 
+204: ### Phase C: Refactoring (Optional)
+205: 
+206: 6. **Consolidate local helper functions** from UpdateEventHandler.recurring.test.ts
+207:    - `createMockEvent()` → `createEventWithMetadata()` in event-test-data.ts
+208:    - `createMockRecurringEvent()` → natural variant
+209:    - Effort: 20 minutes (refactor + import updates)
+210: 
+211: ---
+212: 
+213: ## Summary by Impact
+214: 
+215: | File | Lines Saved | Complexity | Risk | Priority |
+216: |------|------------|-----------|------|----------|
+217: | ConflictAnalyzer.test.ts | ~15 | Low | Low | 🔴 High |
+218: | GetEventHandler.test.ts | ~10 | Low | Low | 🔴 High |
+219: | ListEventsHandler.test.ts | ~5 | Low | Low | 🔴 High |
+220: | New: createEventHandlerArgs() | +10 | Medium | Low | 🟡 Medium |
+221: | UpdateEventHandler.recurring.test.ts | ~20 | Medium | Medium | 🟢 Low |
+222: | **Total** | **~60** lines | - | - | - |
+223: 
+224: ---
+225: 
+226: ## Next Steps
+227: 
+228: 1. **Start with Phase A** (ConflictAnalyzer, GetEventHandler, ListEventsHandler) - minimal risk, immediate wins
+229: 2. **Run tests** after each file to verify no regressions
+230: 3. **Evaluate Phase B** - decide if new helpers improve enough to justify the code
+231: 4. **Re-run check-duplicates** after changes to measure duplication reduction
+232: 
+233: ---
+234: 
+235: ## Code Snippet: Proposed Phase B Implementation
+236: 
+237: ```typescript
+238: // In event-test-data.ts - add these helpers
+239: 
+240: /**
+241:  * Create handler args for CreateEvent command.
+242:  * Base pattern for all event creation handler tests.
+243:  */
+244: export function createEventHandlerArgs(
+245:   calendarId: string = 'primary',
+246:   overrides: Record<string, any> = {}
+247: ): Record<string, any> {
+248:   return {
+249:     calendarId,
+250:     summary: 'Test Event',
+251:     start: '2025-01-15T10:00:00',
+252:     end: '2025-01-15T11:00:00',
+253:     ...overrides
+254:   };
+255: }
+256: 
+257: /**
+258:  * Create event with system metadata fields for mock responses.
+259:  * Useful for tests that need complete event objects from API.
+260:  */
+261: export function createEventWithMetadata(
+262:   overrides: Partial<calendar_v3.Schema$Event> = {}
+263: ): calendar_v3.Schema$Event {
+264:   return createCompleteTestEvent({
+265:     id: 'event123',
+266:     created: '2026-03-20T12:00:00.000Z',
+267:     updated: '2026-03-20T12:00:00.000Z',
+268:     etag: '"etag123"',
+269:     ...overrides
+270:   });
+271: }
+272: ```
+273: 
+274: Then in UpdateEventHandler.recurring.test.ts:
+275: ```typescript
+276: import { createEventWithMetadata, createComplexUpdateEventArgs } from '../helpers/index.js';
+277: 
+278: // Replace local createMockEvent with:
+279: const mockEvent = createEventWithMetadata({ recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO'] });
+280: ```
+</file>
+
+<file path="docs/GMAIL_TOOLS_COMPLETE.md">
+  1: # Gmail MCP Tools - Complete Implementation Summary
+  2: 
+  3: ## Overview
+  4: Complete Gmail integration with 5 powerful tools for email search, management, organization, and automation.
+  5: 
+  6: ---
+  7: 
+  8: ## ✅ Implementation Status
+  9: 
+ 10: **Date Completed:** 2026-03-23
+ 11: **Build Status:** ✅ Successful
+ 12: **Build Size:** 152KB (increased from 144KB)
+ 13: **All Tools Registered:** ✅ Yes
+ 14: **Documentation:** ✅ Complete
+ 15: 
+ 16: ---
+ 17: 
+ 18: ## 5 Gmail Tools Available
+ 19: 
+ 20: ### 1. `gmail-search-messages` ✅
+ 21: Search and retrieve Gmail messages with flexible queries
+ 22: 
+ 23: **Key Features:**
+ 24: - Gmail search syntax support (is:unread, from:, subject:, etc.)
+ 25: - Pagination support
+ 26: - Message metadata (subject, from, date, snippet)
+ 27: - Results estimation
+ 28: 
+ 29: **Example:**
+ 30: ```typescript
+ 31: const unread = await mcp.callTool('gmail-search-messages', {
+ 32:   query: 'is:unread AND from:work@company.com',
+ 33:   maxResults: 50
+ 34: });
+ 35: ```
+ 36: 
+ 37: ---
+ 38: 
+ 39: ### 2. `gmail-get-profile` ✅
+ 40: Get Gmail account information
+ 41: 
+ 42: **Key Features:**
+ 43: - Email address
+ 44: - Total message count
+ 45: - Total thread count
+ 46: - Quick account overview
+ 47: 
+ 48: **Example:**
+ 49: ```typescript
+ 50: const profile = await mcp.callTool('gmail-get-profile');
+ 51: console.log(`Emails: ${profile.messagesTotal}`);
+ 52: ```
+ 53: 
+ 54: ---
+ 55: 
+ 56: ### 3. `gmail-modify-messages` ✅
+ 57: Modify emails in batch operations
+ 58: 
+ 59: **Supported Actions:**
+ 60: - `markRead` - Mark as read
+ 61: - `markUnread` - Mark as unread
+ 62: - `archive` - Move to archive
+ 63: - `delete` - Permanently delete
+ 64: - `addLabel` - Add label(s)
+ 65: - `removeLabel` - Remove label(s)
+ 66: 
+ 67: **Example:**
+ 68: ```typescript
+ 69: const result = await mcp.callTool('gmail-modify-messages', {
+ 70:   messageIds: ['id1', 'id2', 'id3'],
+ 71:   action: 'archive'
+ 72: });
+ 73: console.log(`Archived: ${result.processed}`);
+ 74: ```
+ 75: 
+ 76: ---
+ 77: 
+ 78: ### 4. `gmail-create-label` ✅ **NEW**
+ 79: Create Gmail labels for organization
+ 80: 
+ 81: **Key Features:**
+ 82: - Create new labels with custom names
+ 83: - Control visibility in label list
+ 84: - Control visibility in message list
+ 85: - Returns label ID for reference
+ 86: 
+ 87: **Example:**
+ 88: ```typescript
+ 89: const label = await mcp.callTool('gmail-create-label', {
+ 90:   name: 'ClientProjects',
+ 91:   labelListVisibility: 'labelShow',
+ 92:   messageListVisibility: 'show'
+ 93: });
+ 94: console.log(`Created label: ${label.label.id}`);
+ 95: ```
+ 96: 
+ 97: **Label Visibility Options:**
+ 98: - `labelShow` (visible in list) / `labelHide` (hidden)
+ 99: - `show` (visible with messages) / `hide` (hidden from list)
+100: 
+101: ---
+102: 
+103: ### 5. `gmail-create-filter` ✅ **NEW**
+104: Create filters for automatic email organization
+105: 
+106: **Criteria Matching:**
+107: - `from` - Sender email
+108: - `to` - Recipient email
+109: - `subject` - Subject line
+110: - `query` - Gmail search query
+111: - `hasAttachment` - Email has attachments
+112: - `excludeChats` - Exclude chat messages
+113: 
+114: **Auto-Actions:**
+115: - `addLabelIds` - Automatically label
+116: - `removeLabelIds` - Remove labels
+117: - `archive` - Auto-archive
+118: - `markAsRead` - Mark as read
+119: - `markAsSpam` - Mark as spam
+120: - `markAsTrash` - Move to trash
+121: - `forward` - Forward to email
+122: - `neverMarkAsSpam` - Train filter
+123: 
+124: **Example:**
+125: ```typescript
+126: const filter = await mcp.callTool('gmail-create-filter', {
+127:   criteria: {
+128:     from: 'newsletter@example.com'
+129:   },
+130:   action: {
+131:     archive: true,
+132:     markAsRead: true
+133:   }
+134: });
+135: ```
+136: 
+137: ---
+138: 
+139: ## Complete Workflow Examples
+140: 
+141: ### Complete Email Organization Setup
+142: ```typescript
+143: // 1. Create labels
+144: const workLabel = await mcp.callTool('gmail-create-label', {
+145:   name: 'Work',
+146:   labelListVisibility: 'labelShow'
+147: });
+148: 
+149: const invoiceLabel = await mcp.callTool('gmail-create-label', {
+150:   name: 'Invoices',
+151:   labelListVisibility: 'labelShow'
+152: });
+153: 
+154: // 2. Create filters for automatic organization
+155: await mcp.callTool('gmail-create-filter', {
+156:   criteria: { from: 'work@company.com' },
+157:   action: { addLabelIds: [workLabel.label.id] }
+158: });
+159: 
+160: await mcp.callTool('gmail-create-filter', {
+161:   criteria: { subject: 'invoice' },
+162:   action: {
+163:     addLabelIds: [invoiceLabel.label.id],
+164:     archive: true,
+165:     markAsRead: true
+166:   }
+167: });
+168: 
+169: // 3. Organize existing emails
+170: const workEmails = await mcp.callTool('gmail-search-messages', {
+171:   query: 'from:work@company.com',
+172:   maxResults: 100
+173: });
+174: 
+175: await mcp.callTool('gmail-modify-messages', {
+176:   action: 'addLabel',
+177:   messageIds: workEmails.messages.map(m => m.id),
+178:   labelId: workLabel.label.id
+179: });
+180: 
+181: console.log('✅ Complete email organization setup!');
+182: ```
+183: 
+184: ### Smart Inbox Management
+185: ```typescript
+186: // Get account status
+187: const profile = await mcp.callTool('gmail-get-profile');
+188: console.log(`Total emails: ${profile.messagesTotal}`);
+189: 
+190: // Find and organize newsletters
+191: const newsletters = await mcp.callTool('gmail-search-messages', {
+192:   query: 'is:unread AND (from:newsletter OR from:updates OR label:Promotions)',
+193:   maxResults: 100
+194: });
+195: 
+196: // Create newsletter label
+197: const newsLabel = await mcp.callTool('gmail-create-label', {
+198:   name: 'Newsletters',
+199:   labelListVisibility: 'labelHide'
+200: });
+201: 
+202: // Archive old newsletters
+203: const oldNewsletters = await mcp.callTool('gmail-search-messages', {
+204:   query: 'label:Promotions before:2026-03-01',
+205:   maxResults: 100
+206: });
+207: 
+208: await mcp.callTool('gmail-modify-messages', {
+209:   action: 'archive',
+210:   messageIds: oldNewsletters.messages.map(m => m.id)
+211: });
+212: 
+213: // Create filter for future newsletters
+214: await mcp.callTool('gmail-create-filter', {
+215:   criteria: {
+216:     query: 'from:newsletter OR from:updates'
+217:   },
+218:   action: {
+219:     addLabelIds: [newsLabel.label.id],
+220:     archive: true
+221:   }
+222: });
+223: 
+224: console.log('✅ Smart inbox management complete!');
+225: ```
+226: 
+227: ---
+228: 
+229: ## Files Created/Modified
+230: 
+231: ### New Handler Files
+232: - `src/handlers/gmail/GmailCreateLabelHandler.ts`
+233: - `src/handlers/gmail/GmailCreateFilterHandler.ts`
+234: 
+235: ### Updated Files
+236: - `src/tools/registry.ts` - Added schemas and tool registration
+237: - `README.md` - Updated tools table and examples
+238: - `CLAUDE.md` - Updated tool descriptions
+239: - `GMAIL_TOOLS_GUIDE.md` - Added comprehensive documentation
+240: - `GMAIL_TOOLS_COMPLETE.md` - This summary
+241: 
+242: ---
+243: 
+244: ## Security & Permissions
+245: 
+246: **OAuth Scopes Required:**
+247: - `gmail.readonly` - Search and profile (read-only)
+248: - `gmail.modify` - Modifications, labels, filters (write access)
+249: 
+250: **Important Notes:**
+251: - All operations on authenticated user's account only
+252: - Filters apply to future matching emails automatically
+253: - Deleted emails recoverable for ~30 days
+254: - Operations logged in Gmail audit trail
+255: - Batch operations are atomic per message
+256: 
+257: ---
+258: 
+259: ## Build & Deployment
+260: 
+261: ```bash
+262: # Build with new tools
+263: npm run build
+264: 
+265: # Start dev server
+266: npm run dev http
+267: 
+268: # Server will be available at localhost:3000
+269: ```
+270: 
+271: **Build Output:**
+272: ```
+273: > @cocal/google-calendar-mcp@1.4.9 build
+274: > node scripts/build.js
+275: 
+276: ✅ Build successful! (152KB)
+277: ```
+278: 
+279: ---
+280: 
+281: ## Tool Summary Table
+282: 
+283: | Tool | Type | Input | Output | Scope |
+284: |------|------|-------|--------|-------|
+285: | gmail-search-messages | Query | criteria, pagination | messages array | Read-only |
+286: | gmail-get-profile | Info | none | account summary | Read-only |
+287: | gmail-modify-messages | Batch | IDs, action | status per message | Write |
+288: | gmail-create-label | Create | name, visibility | label with ID | Write |
+289: | gmail-create-filter | Create | criteria, actions | filter with ID | Write |
+290: 
+291: ---
+292: 
+293: ## Performance Characteristics
+294: 
+295: **API Rate Limits:**
+296: - 250 quota units per user per second
+297: - Each operation: ~1 unit
+298: - Batch operations recommended
+299: 
+300: **Typical Response Times:**
+301: - Search: 100-500ms
+302: - Profile: 50-200ms
+303: - Modify batch (50 msgs): 500-1000ms
+304: - Create label: 100-300ms
+305: - Create filter: 100-300ms
+306: 
+307: ---
+308: 
+309: ## Next Steps (Future Enhancements)
+310: 
+311: **Potential Additional Tools:**
+312: - `gmail-get-labels` - List all labels and IDs
+313: - `gmail-get-message` - Full message content
+314: - `gmail-send-message` - Send emails
+315: - `gmail-create-draft` - Create drafts
+316: - `gmail-delete-filter` - Delete filters
+317: - `gmail-list-filters` - List active filters
+318: 
+319: ---
+320: 
+321: ## Documentation References
+322: 
+323: - **Comprehensive Guide:** `GMAIL_TOOLS_GUIDE.md`
+324: - **Implementation Guide:** `CLAUDE.md`
+325: - **Feature Overview:** `README.md`
+326: - **Backend Code:** `src/handlers/gmail/`
+327: - **Tool Registry:** `src/tools/registry.ts`
+328: 
+329: ---
+330: 
+331: ## Testing
+332: 
+333: **Quick Verification:**
+334: ```bash
+335: # Start server
+336: npm run dev http
+337: 
+338: # In another terminal, test tools:
+339: curl http://localhost:3000/tools
+340: 
+341: # Check tool list includes:
+342: # - gmail-search-messages
+343: # - gmail-get-profile
+344: # - gmail-modify-messages
+345: # - gmail-create-label
+346: # - gmail-create-filter
+347: ```
+348: 
+349: ---
+350: 
+351: ## Completion Checklist
+352: 
+353: - ✅ GmailCreateLabelHandler implemented
+354: - ✅ GmailCreateFilterHandler implemented
+355: - ✅ Tool schemas defined in registry
+356: - ✅ Type exports added
+357: - ✅ Tools registered in ToolRegistry
+358: - ✅ README.md updated
+359: - ✅ CLAUDE.md updated
+360: - ✅ GMAIL_TOOLS_GUIDE.md updated with examples
+361: - ✅ Build successful (152KB)
+362: - ✅ Documentation complete
+363: - ✅ This summary created
+364: 
+365: ---
+366: 
+367: ## Status: 🎉 COMPLETE
+368: 
+369: All Gmail tools are now implemented, documented, and ready for use. The MCP server includes comprehensive email searching, management, organization, and automation capabilities.
+370: 
+371: **Total Gmail Tools:** 5
+372: **Build Status:** ✅ Successful
+373: **Documentation:** ✅ Complete
+374: **Ready for Deployment:** ✅ Yes
+</file>
+
+<file path="docs/GMAIL_TOOLS_GUIDE.md">
+  1: # Gmail MCP Tools Guide
+  2: 
+  3: ## Overview
+  4: Three comprehensive Gmail tools are now available in the MCP server for searching, reading, and modifying email messages.
+  5: 
+  6: ---
+  7: 
+  8: ## Available Tools
+  9: 
+ 10: ### Overview
+ 11: Five comprehensive Gmail tools for searching, managing, organizing, and automating email workflows.
+ 12: 
+ 13: ---
+ 14: 
+ 15: ### 1. `gmail-search-messages`
+ 16: Search and retrieve Gmail messages with flexible query support.
+ 17: 
+ 18: **Parameters:**
+ 19: - `query` (required, string): Gmail search query
+ 20:   - Examples: `is:unread`, `from:user@example.com`, `subject:hello`, `has:attachment`
+ 21:   - Can combine: `is:unread AND from:work@company.com`
+ 22: - `maxResults` (optional, 1-100): Number of messages to return (default: 10)
+ 23: - `pageToken` (optional, string): Token for pagination to get next batch
+ 24: 
+ 25: **Response:**
+ 26: ```json
+ 27: {
+ 28:   "total": 201,
+ 29:   "returned": 10,
+ 30:   "messages": [
+ 31:     {
+ 32:       "id": "msg_id_123",
+ 33:       "threadId": "thread_id_456",
+ 34:       "snippet": "Message preview text...",
+ 35:       "subject": "Email Subject",
+ 36:       "from": "sender@example.com",
+ 37:       "date": "2026-03-23T10:30:00Z"
+ 38:     }
+ 39:   ],
+ 40:   "nextPageToken": "CAIQAA..."
+ 41: }
+ 42: ```
+ 43: 
+ 44: **Common Queries:**
+ 45: - `is:unread` - All unread messages
+ 46: - `from:user@example.com` - From specific sender
+ 47: - `subject:keyword` - Messages with keyword in subject
+ 48: - `has:attachment` - Messages with attachments
+ 49: - `is:starred` - Starred messages
+ 50: - `label:work` - Messages with label
+ 51: - `before:2026-03-20` - Messages before date
+ 52: - `after:2026-03-20` - Messages after date
+ 53: 
+ 54: ---
+ 55: 
+ 56: ### 2. `gmail-get-profile`
+ 57: Get summary information about the Gmail account.
+ 58: 
+ 59: **Parameters:** None
+ 60: 
+ 61: **Response:**
+ 62: ```json
+ 63: {
+ 64:   "emailAddress": "user@gmail.com",
+ 65:   "messagesTotal": 5432,
+ 66:   "threadsTotal": 2156,
+ 67:   "historyId": "67890"
+ 68: }
+ 69: ```
+ 70: 
+ 71: **Use Cases:**
+ 72: - Quick account overview
+ 73: - Check total message count
+ 74: - Verify authenticated email
+ 75: 
+ 76: ---
+ 77: 
+ 78: ### 3. `gmail-modify-messages`
+ 79: Modify Gmail messages in batch: mark read/unread, archive, delete, manage labels.
+ 80: 
+ 81: **Parameters:**
+ 82: - `messageIds` (required, array): Array of message IDs (at least 1)
+ 83: - `action` (required, enum): Action to perform
+ 84:   - `markRead` - Mark messages as read
+ 85:   - `markUnread` - Mark messages as unread
+ 86:   - `archive` - Move to archive (remove from inbox)
+ 87:   - `delete` - Permanently delete messages
+ 88:   - `addLabel` - Add a label (requires labelId)
+ 89:   - `removeLabel` - Remove a label (requires labelId)
+ 90: - `labelId` (optional, string): Gmail label ID (required for label operations)
+ 91: 
+ 92: **Response:**
+ 93: ```json
+ 94: {
+ 95:   "action": "markRead",
+ 96:   "processed": 5,
+ 97:   "failed": 0,
+ 98:   "messages": [
+ 99:     {
+100:       "id": "msg_id_1",
+101:       "action": "marked as read",
+102:       "success": true
+103:     },
+104:     {
+105:       "id": "msg_id_2",
+106:       "action": "marked as read",
+107:       "success": true
+108:     }
+109:   ]
+110: }
+111: ```
+112: 
+113: **Action Details:**
+114: 
+115: #### Mark as Read
+116: ```
+117: action: "markRead"
+118: messageIds: ["id1", "id2", "id3"]
+119: ```
+120: - Removes UNREAD label
+121: - Message no longer appears in unread count
+122: 
+123: #### Mark as Unread
+124: ```
+125: action: "markUnread"
+126: messageIds: ["id1", "id2"]
+127: ```
+128: - Adds UNREAD label
+129: - Appears in unread messages again
+130: 
+131: #### Archive
+132: ```
+133: action: "archive"
+134: messageIds: ["id1", "id2"]
+135: ```
+136: - Removes from INBOX
+137: - Still searchable and in All Mail
+138: - No longer appears in inbox
+139: 
+140: #### Delete
+141: ```
+142: action: "delete"
+143: messageIds: ["id1", "id2"]
+144: ```
+145: - Permanently deletes messages
+146: - Messages moved to Trash (can be recovered briefly)
+147: - Eventually purged from Google servers
+148: 
+149: #### Add Label
+150: ```
+151: action: "addLabel"
+152: messageIds: ["id1", "id2"]
+153: labelId: "Label_123"  // Required!
+154: ```
+155: - Applies label to messages
+156: - Messages can have multiple labels
+157: - Use gmail-get-labels to find label IDs (if available)
+158: 
+159: #### Remove Label
+160: ```
+161: action: "removeLabel"
+162: messageIds: ["id1", "id2"]
+163: labelId: "Label_123"  // Required!
+164: ```
+165: - Removes label from messages
+166: - Does not delete message
+167: - Message still exists with other labels
+168: 
+169: ---
+170: 
+171: ### 4. `gmail-create-label`
+172: Create new Gmail labels for organizing and categorizing emails.
+173: 
+174: **Parameters:**
+175: - `name` (required, string): Label name
+176:   - Examples: "Work", "Personal", "Invoices", "Follow Up"
+177:   - Cannot contain special characters
+178: - `labelListVisibility` (optional, enum): Show/hide in label list
+179:   - `labelShow` - Visible in label list (default)
+180:   - `labelHide` - Hidden from label list
+181: - `messageListVisibility` (optional, enum): Show/hide in message list
+182:   - `show` - Appears when message has label (default)
+183:   - `hide` - Hidden from message list
+184: 
+185: **Response:**
+186: ```json
+187: {
+188:   "success": true,
+189:   "label": {
+190:     "id": "Label_1234567890",
+191:     "name": "Work",
+192:     "messageCount": 0,
+193:     "threadCount": 0,
+194:     "labelListVisibility": "labelShow",
+195:     "messageListVisibility": "show"
+196:   },
+197:   "message": "Label \"Work\" created successfully"
+198: }
+199: ```
+200: 
+201: **Use Cases:**
+202: - Create organizational labels (Work, Personal, Invoices, etc.)
+203: - Create workflow labels (TODO, Follow Up, Waiting For, etc.)
+204: - Create category labels (Receipts, Contracts, etc.)
+205: 
+206: **Error Handling:**
+207: ```json
+208: {
+209:   "success": false,
+210:   "error": "Label \"Work\" already exists",
+211:   "suggestion": "Use a different name or try to find the existing label"
+212: }
+213: ```
+214: 
+215: ---
+216: 
+217: ### 5. `gmail-create-filter`
+218: Create filters to automatically organize incoming emails based on matching criteria.
+219: 
+220: **Parameters:**
+221: - `criteria` (required, object): Matching conditions
+222:   - `from` (optional, string): Filter emails from specific sender
+223:   - `to` (optional, string): Filter emails to specific recipient
+224:   - `subject` (optional, string): Filter by subject line
+225:   - `query` (optional, string): Gmail search query
+226:   - `hasAttachment` (optional, boolean): Only emails with attachments
+227:   - `excludeChats` (optional, boolean): Exclude chat messages
+228: 
+229: - `action` (required, object): Actions to apply
+230:   - `addLabelIds` (optional, array): Labels to automatically add
+231:   - `removeLabelIds` (optional, array): Labels to automatically remove
+232:   - `archive` (optional, boolean): Auto-archive matching emails
+233:   - `markAsRead` (optional, boolean): Auto-mark as read
+234:   - `markAsSpam` (optional, boolean): Auto-mark as spam
+235:   - `markAsTrash` (optional, boolean): Auto-move to trash
+236:   - `forward` (optional, string): Forward to email address
+237:   - `neverMarkAsSpam` (optional, boolean): Never mark as spam
+238: 
+239: **Response:**
+240: ```json
+241: {
+242:   "success": true,
+243:   "filter": {
+244:     "id": "AAAAAAA",
+245:     "criteria": {
+246:       "from": "newsletter@example.com"
+247:     },
+248:     "action": {
+249:       "addLabelIds": ["Label_123"],
+250:       "skip": true
+251:     }
+252:   },
+253:   "message": "Filter created successfully",
+254:   "summary": "Filter: IF (from: newsletter@example.com) THEN archive, add 1 label(s)"
+255: }
+256: ```
+257: 
+258: **Filter Examples:**
+259: 
+260: #### Newsletter Auto-Archive
+261: ```json
+262: {
+263:   "criteria": {
+264:     "from": "newsletter@example.com"
+265:   },
+266:   "action": {
+267:     "archive": true
+268:   }
+269: }
+270: ```
+271: - All emails from newsletter automatically archived
+272: - Won't appear in inbox
+273: 
+274: #### Invoice Auto-Label and Archive
+275: ```json
+276: {
+277:   "criteria": {
+278:     "subject": "invoice"
+279:   },
+280:   "action": {
+281:     "addLabelIds": ["Label_Invoices"],
+282:     "archive": true
+283:   }
+284: }
+285: ```
+286: - Emails with "invoice" in subject get labeled
+287: - Automatically archived from inbox
+288: 
+289: #### Work Email Auto-Organization
+290: ```json
+291: {
+292:   "criteria": {
+293:     "from": "work@company.com"
+294:   },
+295:   "action": {
+296:     "addLabelIds": ["Label_Work"],
+297:     "markAsRead": false
+298:   }
+299: }
+300: ```
+301: - Auto-label work emails
+302: - Keeps them unread for attention
+303: 
+304: #### Spam Prevention Filter
+305: ```json
+306: {
+307:   "criteria": {
+308:     "from": "spam@example.com"
+309:   },
+310:   "action": {
+311:     "markAsSpam": true
+312:   }
+313: }
+314: ```
+315: - Automatically mark as spam
+316: - Train Gmail's spam filter
+317: 
+318: #### Forward Receipts
+319: ```json
+320: {
+321:   "criteria": {
+322:     "subject": "receipt"
+323:   },
+324:   "action": {
+325:     "forward": "accounting@company.com",
+326:     "addLabelIds": ["Label_Receipts"]
+327:   }
+328: }
+329: ```
+330: - Forward receipts to accounting
+331: - Keep copy with label
+332: 
+333: #### Attachment Auto-Organize
+334: ```json
+335: {
+336:   "criteria": {
+337:     "hasAttachment": true,
+338:     "from": "clients@external.com"
+339:   },
+340:   "action": {
+341:     "addLabelIds": ["Label_ClientDocuments"]
+342:   }
+343: }
+344: ```
+345: - Auto-label emails with attachments from clients
+346: - Easy to find important documents
+347: 
+348: ---
+349: 
+350: ## Common Workflows
+351: 
+352: ### 1. Mark All Unread Emails as Read
+353: ```
+354: 1. gmail-search-messages: query="is:unread", maxResults=100
+355: 2. gmail-modify-messages: action="markRead", messageIds=[... all unread ids ...]
+356: ```
+357: 
+358: ### 2. Archive Promotional Emails
+359: ```
+360: 1. gmail-search-messages: query="from:marketing@company.com", maxResults=50
+361: 2. gmail-modify-messages: action="archive", messageIds=[... matching ids ...]
+362: ```
+363: 
+364: ### 3. Organize Emails with Labels
+365: ```
+366: 1. gmail-search-messages: query="subject:invoice AND is:unread"
+367: 2. gmail-modify-messages: action="addLabel", messageIds=[...], labelId="Label_Invoices"
+368: 3. gmail-modify-messages: action="markRead", messageIds=[...]
+369: ```
+370: 
+371: ### 4. Clean Up Old Spam
+372: ```
+373: 1. gmail-search-messages: query="from:spam@example.com before:2026-01-01", maxResults=100
+374: 2. gmail-modify-messages: action="delete", messageIds=[... old spam ids ...]
+375: ```
+376: 
+377: ### 5. Get Account Summary
+378: ```
+379: gmail-get-profile
+380: # Returns: email, total messages, total threads
+381: ```
+382: 
+383: ---
+384: 
+385: ## Gmail Label IDs
+386: 
+387: Standard Gmail labels use predefined IDs:
+388: - `INBOX` - Inbox
+389: - `SENT` - Sent Mail
+390: - `DRAFT` - Drafts
+391: - `UNREAD` - Unread messages
+392: - `STARRED` - Starred messages
+393: - `TRASH` - Trash/Bin
+394: - `SPAM` - Spam
+395: 
+396: Custom labels have unique IDs starting with `Label_` (e.g., `Label_1234567890`)
+397: 
+398: To find custom label IDs, you would typically need a separate `gmail-get-labels` tool (future enhancement).
+399: 
+400: ---
+401: 
+402: ## Error Handling
+403: 
+404: ### Missing Required Parameters
+405: ```json
+406: {
+407:   "error": "labelId required for addLabel action"
+408: }
+409: ```
+410: 
+411: ### Invalid Message IDs
+412: ```json
+413: {
+414:   "id": "invalid_id",
+415:   "action": "markRead",
+416:   "success": false,
+417:   "error": "Not Found"
+418: }
+419: ```
+420: 
+421: ### Batch Partial Failures
+422: ```json
+423: {
+424:   "action": "delete",
+425:   "processed": 3,
+426:   "failed": 1,
+427:   "messages": [
+428:     { "id": "id1", "success": true },
+429:     { "id": "id2", "success": true },
+430:     { "id": "id3", "success": false, "error": "Not Found" }
+431:   ]
+432: }
+433: ```
+434: 
+435: ---
+436: 
+437: ## Permissions & Security
+438: 
+439: **OAuth Scopes Required:**
+440: - `gmail.readonly` - For search and profile operations
+441: - `gmail.modify` - For modification operations (marking, archiving, deleting, labels)
+442: 
+443: **Important Notes:**
+444: - Operations are performed on authenticated user's account
+445: - Cannot modify emails in other users' accounts
+446: - Deleted emails are recoverable from Trash for ~30 days
+447: - Modifications are logged in Gmail audit trail
+448: - Batch operations are atomic per message (one fails doesn't stop others)
+449: 
+450: ---
+451: 
+452: ## Rate Limiting
+453: 
+454: Gmail API has rate limits:
+455: - 250 quota units per user per second
+456: - Each message operation: ~1 unit
+457: - Search operations: ~1-5 units depending on query complexity
+458: - Profile: ~1 unit
+459: 
+460: Batch operations are recommended to stay within limits (modify many messages in one call vs many separate calls).
+461: 
+462: ---
+463: 
+464: ## Future Enhancements
+465: 
+466: Potential additional tools:
+467: - `gmail-get-labels` - List available labels and their IDs
+468: - `gmail-get-labels-for-message` - Get labels on a specific message
+469: - `gmail-get-message` - Get full message content (headers, body, attachments)
+470: - `gmail-send-message` - Send/compose emails
+471: - `gmail-create-draft` - Create draft messages
+472: - `gmail-get-attachment` - Download attachments
+473: - `gmail-delete-filter` - Delete existing filters
+474: - `gmail-list-filters` - List all active filters
+475: - `gmail-delete-label` - Delete labels
+476: - `gmail-update-label` - Update label properties
+477: - `gmail-get-labels` - List all labels with IDs
+478: 
+479: ---
+480: 
+481: ## Examples
+482: 
+483: ### Example 1: Mark Work Emails as Read
+484: ```typescript
+485: // Search for unread work emails
+486: const search = await mcp.callTool('gmail-search-messages', {
+487:   query: 'is:unread from:work@company.com',
+488:   maxResults: 50
+489: });
+490: 
+491: // Mark them as read
+492: const modify = await mcp.callTool('gmail-modify-messages', {
+493:   action: 'markRead',
+494:   messageIds: search.messages.map(m => m.id)
+495: });
+496: 
+497: console.log(`Marked ${modify.processed} emails as read`);
+498: ```
+499: 
+500: ### Example 2: Archive Old Emails
+501: ```typescript
+502: // Find old emails
+503: const search = await mcp.callTool('gmail-search-messages', {
+504:   query: 'before:2026-01-01',
+505:   maxResults: 100
+506: });
+507: 
+508: // Archive them
+509: const modify = await mcp.callTool('gmail-modify-messages', {
+510:   action: 'archive',
+511:   messageIds: search.messages.map(m => m.id)
+512: });
+513: 
+514: console.log(`Archived ${modify.processed} old emails`);
+515: ```
+516: 
+517: ### Example 3: Add Label to Important Emails
+518: ```typescript
+519: // Find important emails
+520: const search = await mcp.callTool('gmail-search-messages', {
+521:   query: 'is:starred',
+522:   maxResults: 50
+523: });
+524: 
+525: // Add label
+526: const modify = await mcp.callTool('gmail-modify-messages', {
+527:   action: 'addLabel',
+528:   messageIds: search.messages.map(m => m.id),
+529:   labelId: 'Label_Important' // Or appropriate label ID
+530: });
+531: 
+532: console.log(`Added label to ${modify.processed} emails`);
+533: ```
+534: 
+535: ### Example 4: Create Label for Organization
+536: ```typescript
+537: // Create a new label
+538: const label = await mcp.callTool('gmail-create-label', {
+539:   name: 'ClientProjects',
+540:   labelListVisibility: 'labelShow',
+541:   messageListVisibility: 'show'
+542: });
+543: 
+544: console.log(`Created label: ${label.label.name} (ID: ${label.label.id})`);
+545: 
+546: // Now use the label ID for organizing emails
+547: const messages = await mcp.callTool('gmail-search-messages', {
+548:   query: 'from:client@external.com',
+549:   maxResults: 50
+550: });
+551: 
+552: await mcp.callTool('gmail-modify-messages', {
+553:   action: 'addLabel',
+554:   messageIds: messages.messages.map(m => m.id),
+555:   labelId: label.label.id
+556: });
+557: ```
+558: 
+559: ### Example 5: Create Auto-Organization Filter
+560: ```typescript
+561: // Create filter for newsletters (auto-archive)
+562: const filter1 = await mcp.callTool('gmail-create-filter', {
+563:   criteria: {
+564:     from: 'newsletter@example.com'
+565:   },
+566:   action: {
+567:     archive: true
+568:   }
+569: });
+570: console.log(filter1.summary);
+571: // Output: "Filter: IF (from: newsletter@example.com) THEN archive"
+572: 
+573: // Create filter for invoices (auto-label and archive)
+574: const filter2 = await mcp.callTool('gmail-create-filter', {
+575:   criteria: {
+576:     subject: 'invoice'
+577:   },
+578:   action: {
+579:     addLabelIds: ['Label_Invoices'],
+580:     archive: true,
+581:     markAsRead: true
+582:   }
+583: });
+584: console.log(filter2.summary);
+585: // Output: "Filter: IF (subject: invoice) THEN archive, mark as read, add 1 label(s)"
+586: ```
+587: 
+588: ### Example 6: Complete Email Organization Setup
+589: ```typescript
+590: // Step 1: Create labels
+591: const workLabel = await mcp.callTool('gmail-create-label', {
+592:   name: 'Work',
+593:   labelListVisibility: 'labelShow'
+594: });
+595: 
+596: const invoiceLabel = await mcp.callTool('gmail-create-label', {
+597:   name: 'Invoices',
+598:   labelListVisibility: 'labelShow'
+599: });
+600: 
+601: // Step 2: Create filters
+602: await mcp.callTool('gmail-create-filter', {
+603:   criteria: { from: 'work@company.com' },
+604:   action: { addLabelIds: [workLabel.label.id] }
+605: });
+606: 
+607: await mcp.callTool('gmail-create-filter', {
+608:   criteria: { subject: 'invoice' },
+609:   action: {
+610:     addLabelIds: [invoiceLabel.label.id],
+611:     archive: true
+612:   }
+613: });
+614: 
+615: // Step 3: Organize existing emails
+616: const workEmails = await mcp.callTool('gmail-search-messages', {
+617:   query: 'from:work@company.com',
+618:   maxResults: 100
+619: });
+620: 
+621: await mcp.callTool('gmail-modify-messages', {
+622:   action: 'addLabel',
+623:   messageIds: workEmails.messages.map(m => m.id),
+624:   labelId: workLabel.label.id
+625: });
+626: 
+627: console.log('Email organization setup complete!');
+628: ```
+629: 
+630: ---
+631: 
+632: ## Troubleshooting
+633: 
+634: **Issue:** "Insufficient Permission" error
+635: - **Solution:** Ensure gmail.modify scope is in OAuth authentication
+636: 
+637: **Issue:** "Not Found" errors for message IDs
+638: - **Solution:** Message IDs may have expired; get fresh list from search
+639: 
+640: **Issue:** labelId not found
+641: - **Solution:** Verify label exists; use standard label IDs (INBOX, UNREAD, etc.) or create custom labels in Gmail first
+642: 
+643: **Issue:** Batch operation very slow
+644: - **Solution:** Reduce batch size; Gmail API may throttle very large operations
+645: 
+646: ---
+647: 
+648: ## Related Documentation
+649: - [Gmail API Documentation](https://developers.google.com/gmail/api)
+650: - [Gmail Search Operators](https://support.google.com/mail/answer/7190)
+651: - [Gmail Labels](https://support.google.com/mail/answer/6078)
+652: - [CLAUDE.md](../CLAUDE.md) - Project guidelines
+653: - [README.md](../README.md) - MCP server overview
 </file>
 
 <file path="docs/IMPLEMENTATION-GUIDE.md">
@@ -6769,1515 +8079,348 @@ This section contains the contents of the repository's files.
 306:    - Check API quotas and rate limits
 </file>
 
-<file path="docs/architecture.md">
-  1: # Architecture Overview
-  2: 
-  3: ## High-Level Flow
-  4: 
-  5: ```
-  6: CLI Entry (index.ts)
-  7:   ↓
-  8: GoogleCalendarMcpServer (server.ts)
-  9:   ├─ Authentication (auth/)
- 10:   │  ├─ OAuth2Client init
- 11:   │  ├─ TokenManager (multi-account, auto-refresh)
- 12:   │  └─ AuthServer (browser flow)
- 13:   ├─ ToolRegistry (tools/registry.ts)
- 14:   │  └─ Handler dispatch
- 15:   └─ Transport (transports/)
- 16:      ├─ Stdio (Claude Desktop)
- 17:      └─ HTTP (remote access)
- 18: ```
- 19: 
- 20: ## Directory Structure
- 21: 
- 22: ### `src/auth/`
- 23: - **client.ts** - OAuth2Client initialization with credentials validation
- 24: - **tokenManager.ts** - Multi-account token lifecycle with TokenManager API:
- 25:   - `isAuthenticated()` - Check valid, non-expired token status
- 26:   - `getCredentials()` - Access current account credentials
- 27:   - `refreshCredentials()` - Explicit token refresh
- 28:   - `logout()` - Clear tokens for account
- 29:   - Auto-refresh 5 min before expiry, account-aware storage
- 30: - **server.ts** - OAuth browser flow for authentication
- 31: - **utils.ts** - Token parsing, credential loading helpers
- 32: 
- 33: ### `src/handlers/core/`
- 34: Implements MCP tool handlers via `BaseToolHandler` pattern:
- 35: - **ListEventsHandler** - Multi-calendar event listing with date filtering
- 36: - **CreateEventHandler** - Event creation with recurring event support
- 37: - **UpdateEventHandler** - Event updates with field mask optimization
- 38: - **DeleteEventHandler** - Event deletion with conflict detection
- 39: - **SearchEventsHandler** - Text-based event search
- 40: - **FreeBusyHandler** - Cross-calendar availability checks
- 41: - **ListColorsHandler** - Event color palette
- 42: - **GetCurrentTimeHandler** - Server time (timezone-aware)
- 43: - **RecurringEventHelpers** - Shared logic for recurring event modifications
- 44: - **BatchRequestHandler** - Batch Gmail operations
- 45: 
- 46: ### `src/handlers/gmail/`
- 47: Gmail-specific handlers:
- 48: - **GmailSearchHandler** - Message search with filter syntax
- 49: - **GmailModifyHandler** - Batch operations (mark read/archive/delete/label)
- 50: - **GmailCreateHandler** - Label and filter creation
- 51: 
- 52: ### `src/services/`
- 53: Business logic (conflicts, event similarity):
- 54: - **ConflictDetectionService** - Time-based overlap detection
- 55: - **EventSimilarityService** - Fuzzy event matching
- 56: 
- 57: ### `src/utils/`
- 58: Shared utilities:
- 59: - **timezone-utils.ts** - RFC3339 conversion, timezone offset calculation, datetime object construction
- 60: - **date-utils.ts** - Date parsing and validation
- 61: - **field-mask-builder.ts** - Optimized Google API update masking
- 62: - **event-id-validator.ts** - Event ID format validation
- 63: 
- 64: ### `src/schemas/`
- 65: Zod validation schemas:
- 66: - **core.ts** - Calendar event schemas (create, update, recurring)
- 67: - **gmail.ts** - Gmail message and filter schemas
- 68: - **gmail-label-utils-types.ts** - Label resolution type definitions
- 69: - **gmail-batch-types.ts** - Batch operation type definitions
- 70: - **email-analyzer-types.ts** - Email categorization type definitions
- 71: 
- 72: ### `src/testing/`
- 73: Test infrastructure:
- 74: - **types.ts** - Zod schemas and TypeScript interfaces
- 75: - **test-utils.ts** - `withTestContext()`, `typedTest()`, ResourceTracker, cleanup utilities
- 76: 
- 77: ### `src/tests/`
- 78: Test suites:
- 79: - **unit/** - Handler, service, and utility tests (486 tests)
- 80: - **integration/** - MCP protocol tests with real server and API
- 81: 
- 82: ### `src/transports/`
- 83: MCP transport implementations:
- 84: - **stdio.ts** - Standard input/output (Claude Desktop)
- 85: - **http.ts** - HTTP server (remote/browser access)
- 86: 
- 87: ### `src/config/`
- 88: - **TransportConfig.ts** - CLI argument parsing (transport type, port, host)
- 89: 
- 90: ## Key Patterns
- 91: 
- 92: ### Handler Pattern
- 93: ```typescript
- 94: class XyzHandler extends BaseToolHandler {
- 95:   async execute(input: ParsedInput): Promise<ToolResponse> {
- 96:     // Validation via Zod
- 97:     // API call via google-auth-library
- 98:     // Content assertion via { type: 'text'; text: string }
- 99:   }
-100: }
-101: ```
-102: 
-103: ### Token Management
-104: - Multi-account support via `ACCOUNT_MODE` env var
-105: - Auto-refresh 5 min before expiry
-106: - Separate storage: Calendar (`tokens.json`) vs Gmail (`tokens-gmail.json`)
-107: - Test mode: 7-day expiry (Google requirement)
-108: 
-109: ### Timezone Handling
-110: All datetime operations consolidated in `src/utils/timezone-utils.ts` (refactored ae1c01b, 499e7dd):
-111: - `convertToRFC3339()` - Datetime string → RFC3339 with timezone
-112: - `convertLocalTimeToUTC()` - Local time + timezone → UTC offset
-113: - `hasTimezoneInDatetime()` - Detect timezone in datetime string
-114: - `createTimeObject()` - Build datetime object with timezone
-115: - Consolidated from multiple datetime utility files for DRY, single source of truth
-116: 
-117: ### Email Organization Scripts
-118: Located in project root (non-MCP):
-119: - Uses `lib/gmail-client.mjs` for OAuth
-120: - `lib/gmail-label-utils.mjs` for dynamic label ID resolution
-121: - `lib/gmail-batch.mjs` for batch operations
-122: - `lib/email-analyzer.mjs` for categorization helpers
-123: 
-124: ## Data Flow
-125: 
-126: ### Create Event
-127: 1. Handler receives input → Zod validation
-128: 2. Construct RFC3339 datetime via `timezone-utils`
-129: 3. Call `calendar.events.insert()`
-130: 4. Check conflicts via `ConflictDetectionService`
-131: 5. Return event with MCP tool response format
-132: 
-133: ### Update Recurring Event
-134: 1. Fetch base event → validate recurrence rule
-135: 2. Build field mask (only changed fields)
-136: 3. For instance modifications: separate start/end times via `RecurringEventHelpers`
-137: 4. Apply timezone via `createTimeObject()`
-138: 5. Return updated event
-139: 
-140: ### Search & Filter Gmail
-141: 1. Resolve label IDs via `buildLabelCache()` (cached at startup)
-142: 2. Construct Gmail search query
-143: 3. Fetch message list → fetch details in parallel
-144: 4. Apply filters (archive, label, mark read)
-145: 5. Use batch API for 10-100x speedup
-146: 
-147: ## Dependencies
-148: - **@modelcontextprotocol/sdk** - MCP protocol
-149: - **google-auth-library** - OAuth2, Google API client
-150: - **zod** - Schema validation
-151: - **vitest** - Testing framework
-152: 
-153: ## Testing Strategy
-154: - **Unit tests (486)** - Handler, service, utility logic isolated
-155: - **Integration tests** - Real MCP server spawned, real Google Calendar API
-156: - **Schema tests** - Zod validation coverage
-157: - **Type-safe assertions** - `{ type: 'text'; text: string }` instead of `as any`
-158: 
-159: ## Multi-Account Support
-160: ```
-161: TokenManager
-162: ├─ ACCOUNT_MODE=test → test account (7-day expiry)
-163: └─ ACCOUNT_MODE=production → prod account (no expiry)
-164: ```
-165: Token file structure (both accounts in one file):
-166: ```json
-167: {
-168:   "test": { "access_token": "...", "expiry_date": ... },
-169:   "production": { "access_token": "...", "expiry_date": ... }
-170: }
-171: ```
-172: 
-173: ## Recent Architectural Improvements (v1.4.9+)
-174: 
-175: ### Auth API Refactoring (c9a57a9)
-176: - Replaced direct `validateTokens()` calls with semantic API methods
-177: - `isAuthenticated()` - Clearer intent for auth status checks
-178: - `getCredentials()` - Improved encapsulation over direct credential access
-179: - Applied across 5 locations (server.ts ×2, auth/server.ts ×1, integration tests ×2)
-180: - All 486 tests passing after refactor
-181: 
-182: ### Timezone Utilities Consolidation (ae1c01b, 499e7dd)
-183: - Unified all datetime operations into single `src/utils/timezone-utils.ts`
-184: - Eliminates code duplication across event creation, update, recurring event handlers
-185: - Single source of truth for RFC3339, UTC, and timezone-aware operations
-186: - Improved maintainability and consistency
-187: 
-188: ### Test Infrastructure
-189: - 486/486 unit tests covering handlers, services, utilities
-190: - Integration tests using real MCP protocol with Google Calendar API
-191: - Type-safe content assertions (`{ type: 'text'; text: string }`)
-192: - Dynamic future dates prevent test expiration
+<file path="CLAUDE.md">
+ 1: # Google Calendar & Gmail MCP - Project Guidelines
+ 2: 
+ 3: ## Auth & Development
+ 4: 
+ 5: **OAuth Setup** (test mode):
+ 6: ```bash
+ 7: export ACCOUNT_MODE=test CALENDARMCP_TOKEN_PATH=~/.config/google-calendar-mcp/tokens.json
+ 8: npm run auth  # Creates tokens.json; repeat for multiple accounts
+ 9: npm run verify-tokens  # Verify auth status
+10: ```
+11: 
+12: **Gmail Tokens:**
+13: ```bash
+14: node auth-gmail.mjs  # Creates tokens-gmail.json (separate from calendar)
+15: node check-gmail.mjs  # Quick unread count
+16: ```
+17: 
+18: **Development:**
+19: ```bash
+20: npm install | npm run build | npm run dev | npm test
+21: ```
+22: 
+23: **Auth Details:**
+24: - Tokens stored in `~/.config/google-calendar-mcp/tokens.json` (calendar) and `tokens-gmail.json` (Gmail)
+25: - `ACCOUNT_MODE` selects which account; TokenManager auto-refreshes 5 min before expiry
+26: - Test tokens expire after 7 days; set env vars before `npm run auth` or in `claude_desktop_config.json`
+27: - Token files use 0600 permissions; TokenManager (src/auth/tokenManager.ts) handles multi-account lifecycle
+28: 
+29: **Test Status:**
+30: - ✅ Core handler tests (CreateEventHandler, GetEventHandler, GetCurrentTimeHandler)
+31: - ✅ Type-safe content assertions using `{ type: 'text'; text: string }` instead of `as any`
+32: - ✅ Integration tests for conflict detection via MCP protocol (real server, real API)
+33: - ✅ 486/486 tests passing
+34: 
+35: **Test Helpers & Fixtures:**
+36: Consolidated utilities reduce boilerplate across 30+ test files:
+37: - `factories.ts` - Event fixtures (makeEvent, makeTeamMeetingEvent, createFullEventArgs, STANDARD_ATTACHMENTS, ATTACHMENT_IDS)
+38: - `content.ts` - Response helpers (getTextContent, expectValidToolResponse, expectJsonResponse, assertTextContentContains)
+39: - `handler-setup.ts` - Mock setup (setupListEventsHandler, createGoogleCalendarMocks)
+40: - `integration-test-helpers.ts` - Lifecycle helpers (createAndVerifyEvent, updateAndVerifyEvent, expectModificationScopeError, expectEventUpdateSuccess)
+41: 
+42: ## Script Development
+43: 
+44: **Tools & Code Quality:**
+45: - `npm run check-duplicates` — Detect repeated code blocks (scans src/ with 6-line window)
+46: - Avoid bash heredocs with pipes — use Write tool or `.mjs` files in project root (not `/tmp`)
+47: 
+48: **Code Principles:**
+49: - Avoid dead variables; extract repeated patterns into utilities
+50: - Use named constants instead of magic strings; keep only non-obvious WHY in comments
+51: - Don't mutate input params; prefer direct operations over TOCTOU existence checks
+52: - Array.slice() naturally clamps; Math.min unnecessary
+53: 
+54: **Key Utilities:**
+55: - `eventManipulationUtils.ts` — `conditionallyAddFields()`, `buildCoreEvent()`, `buildOptionalEventFields()`
+56: - `date-utils.ts` — `formatRFC3339()`, `addMilliseconds()`, `oneDayBefore()`, etc.
+57: - `timezone-utils.ts` — `createTimeObject()`, `resolveTimeZone()`, etc.
+58: 
+59: ## Email Organization System
+60: 
+61: Core pattern: Label → conditional archive (keep future events, important items, archive notifications).
+62: 
+63: **Key Scripts:**
+64: - `list-unread-emails.mjs`, `summarize-remaining.mjs` — Email analysis
+65: - `apply-filters-to-unread.mjs`, `protect-important-inbox.mjs`, `filter-events-by-date.mjs` — Filtering & organization
+66: - `create-remaining-filters.mjs` — Filter setup
+67: 
+68: **Categories:** Protected (never archive) | Events (future=keep, past=archive) | Monitoring (archive) | Product Updates (label+archive) | Communities (keep) | Services (archive) | Billing (conditional)
+69: 
+70: **Shared Utilities:**
+71: - `gmail-client.mjs` — Authenticated client factory (✅ 65+ scripts)
+72: - `gmail-label-utils.mjs` — Label caching: `buildLabelCache()`, `resolveLabelId()`, `resolveLabelIds()`
+73: - `gmail-batch.mjs` — Batch operations (10-100x speedup)
+74: - `date-based-filter.mjs` — Date parsing utility (ISO, US, text formats; no mutations)
+75: 
+76: **Patterns:**
+77: - Use `Promise.all` for concurrent fetches (not serial loops)
+78: - Dynamic label resolution (L6) — `labelCache.get('Label/Name')` instead of hardcoded IDs (see `docs/LABEL-RESOLUTION-GUIDE.md`)
 </file>
 
-<file path="docs/EVENT_HELPERS_ANALYSIS.md">
-  1: # Analysis: Applying event-test-data.ts Helpers Across Test Suite
+<file path="docs/changelog/1.4.9/CHANGELOG.md">
+  1: # Changelog - Version 1.4.9
   2: 
-  3: ## Overview
-  4: The functions in `src/tests/unit/helpers/event-test-data.ts` (created from the RecurringEventHelpers.test.ts ↔ validators.test.ts deduplication) can be applied across multiple test files to reduce copy-pasta and improve consistency.
-  5: 
-  6: ## Current Helper Functions Available
-  7: 
-  8: ### Event Creation
-  9: - `createTestEventWithDateTime(startTime, endTime, overrides)` - Basic dateTime event
- 10: - `createTestEventWithTZOffset(startTime, endTime, overrides)` - TZ-aware event (with offset)
- 11: - `createCompleteTestEvent(overrides)` - Full event with system fields
- 12: - `SYSTEM_FIELDS` - Constant list of fields to strip during duplication
- 13: 
- 14: ### UpdateEvent Arguments
- 15: - `createUpdateEventArgs(calendarId, eventId, timeZone, overrides)` - Basic args
- 16: - `createUpdateEventArgsWithTimes(start, end, timeZone, overrides)` - With time changes
- 17: - `createUpdateEventArgsWithAttendees(overrides)` - With attendees & reminders
- 18: - `createComplexUpdateEventArgs(overrides)` - Complex nested objects
+  3: **Release Date:** 2026-03-24
+  4: 
+  5: ## Overview
+  6: 
+  7: This release completes 22/22 BACKLOG items (100%) including label ID resolution, test optimization, code quality improvements, and timezone utilities consolidation. All identified backlog items have been resolved or remain intentionally deferred pending design discussions.
+  8: 
+  9: ## Features
+ 10: 
+ 11: ### L6: Dynamic Gmail Label ID Resolution
+ 12: - **Added:** `buildLabelCache(gmail)` function to fetch all labels at startup
+ 13: - **Added:** `resolveLabelId(gmail, labelName, labelCache)` for cached single lookups
+ 14: - **Added:** `resolveLabelIds(gmail, labelNames)` for batch label resolution
+ 15: - **Updated:** `create-all-sublabels.mjs` to use dynamic label resolution instead of hardcoded IDs
+ 16: - **Updated:** `analyze-community-events.mjs` as extension example
+ 17: - **Benefits:** Portable across accounts, improved reliability, explicit error handling
+ 18: - **Commits:** a3e6dc2, 7d2ca82
  19: 
- 20: ## Opportunities by File
- 21: 
- 22: ### 🔴 High Priority (Inline Event Definitions with Repeated Patterns)
- 23: 
- 24: #### 1. **ConflictAnalyzer.test.ts** (17 inline events)
- 25: **Issue:** Extensive inline `calendar_v3.Schema$Event` definitions with repeated `start: { dateTime }, end: { dateTime }` pattern.
- 26: 
- 27: **Lines:** 10-55, 62-71, 78-87, 97-148
- 28: **Pattern:**
- 29: ```typescript
- 30: const event1: calendar_v3.Schema$Event = {
- 31:   summary: 'Meeting 1',
- 32:   start: { dateTime: '2024-01-01T10:00:00Z' },
- 33:   end: { dateTime: '2024-01-01T11:00:00Z' }
- 34: };
- 35: ```
+ 20: ### L7: Email Analyzer Module Extraction & Code Quality Audit
+ 21: - **Created:** `lib/email-analyzer.mjs` with reusable helpers
+ 22:   - `categorizeEmail(msg)` - Classifies emails by urgency/importance
+ 23:   - `printSection(title, subsections, config)` - Renders categorized sections with configurable truncation
+ 24:   - `scoreContent(content, keywords)` - Unified scoring logic
+ 25:   - `ANALYZER_CONFIG` - Centralized thresholds and keyword lists
+ 26: - **Refactored:** `analyze_emails.mjs` (252 → 117 lines)
+ 27:   - Eliminated 8x copy-pasted email display blocks
+ 28:   - Removed redundant categorized→matrix transformation
+ 29:   - Added error logging for message fetch failures
+ 30:   - Replaced magic numbers with named constants
+ 31: - **Added:** `USER_ID` constant to `lib/constants.mjs` for consistency
+ 32: - **Optimized:** scoreContent to avoid redundant string allocations per email
+ 33: - **Dedup Potential:** 4 exports enable ~500 line reduction across 10+ analyze-*.mjs scripts
+ 34: - **Impact:** 180 lines reduced; 4 reusable exports; consistent lib patterns
+ 35: - **Commits:** 9be3126, 0682823, 9af67c0, 336c4f5, 88b2aec
  36: 
- 37: **Recommendation:**
- 38: - Import `makeEvent()` from factories (already supports overrides)
- 39: - OR create a new simple helper `createConflictTestEvent(summary, startTime, endTime, overrides)` in event-test-data.ts
- 40: 
- 41: **Estimated Impact:** 15+ lines saved, 5+ events using helper pattern
- 42: 
- 43: ---
- 44: 
- 45: #### 2. **GetEventHandler.test.ts** (2 inline events)
- 46: **Lines:** 48-54, 76-84
- 47: **Pattern:**
- 48: ```typescript
- 49: const mockEvent = {
- 50:   id: 'event123',
- 51:   summary: 'Test Event',
- 52:   start: { dateTime: '2025-01-15T10:00:00Z' },
- 53:   end: { dateTime: '2025-01-15T11:00:00Z' },
- 54:   ...other fields
- 55: };
- 56: ```
- 57: 
- 58: **Recommendation:**
- 59: - Use `makeEvent({ summary: '...', ...})` from factories.ts
- 60: - Already supports arbitrary overrides
- 61: 
- 62: **Estimated Impact:** 10 lines saved, consolidates with SearchEventsHandler pattern
- 63: 
- 64: ---
+ 37: ### Documentation
+ 38: 
+ 39: - **Updated:** `docs/LABEL-RESOLUTION-GUIDE.md` with complete pattern documentation
+ 40:   - Before/after examples
+ 41:   - Step-by-step refactoring instructions
+ 42:   - Available resolution functions
+ 43:   - Practical examples and fallback patterns
+ 44:   - Contribution guidelines for L6-extended
+ 45: - **Documented:** Email Analyzer exports in BACKLOG.md with dedup opportunities
+ 46:   - 4 reusable helpers + 10+ candidate scripts for future work
+ 47:   - Verified line counts and reduction estimates
+ 48: - **Commits:** 7f68f10, 9af67c0, 88b2aec
+ 49: 
+ 50: ## Optimizations
+ 51: 
+ 52: ### Medium Priority (2 items)
+ 53: 
+ 54: #### Sequential API Calls Optimization
+ 55: - Eliminated redundant `calendar.events.get()` calls in `updateFutureInstances`
+ 56: - ~500ms latency reduction per operation
+ 57: - Added `getEventAndType()` helper to fetch once and pass through call chain
+ 58: - **Files Modified:** `src/handlers/core/RecurringEventHelpers.ts`, `src/handlers/core/UpdateEventHandler.ts`
+ 59: 
+ 60: #### Loop Isolation Anti-patterns
+ 61: - Converted 3 for-of loops to `it.each()` parametrized tests
+ 62: - Improved test isolation and performance
+ 63: - Test count: 25 → 30 (+8 individual cases)
+ 64: - **Files Modified:** `src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts`
  65: 
- 66: #### 3. **ListEventsHandler.test.ts** (1 inline event in mock)
- 67: **Lines:** 35-42
- 68: **Pattern:**
- 69: ```typescript
- 70: {
- 71:   id: 'test-event',
- 72:   summary: 'Test Event',
- 73:   start: { dateTime: '2025-06-02T10:00:00Z' },
- 74:   end: { dateTime: '2025-06-02T11:00:00Z' }
- 75: }
- 76: ```
- 77: 
- 78: **Recommendation:**
- 79: - Use `makeEvent()` from factories.ts
- 80: - Apply same pattern as SearchEventsHandler.test.ts (which already does this)
- 81: 
- 82: **Estimated Impact:** 5 lines saved, aligns with SearchEventsHandler pattern
- 83: 
- 84: ---
- 85: 
- 86: ### 🟡 Medium Priority (Local Helper Functions That Could Be Centralized)
- 87: 
- 88: #### 4. **UpdateEventHandler.recurring.test.ts** (3 local helpers)
- 89: **Lines:** 49-81
- 90: **Functions:**
- 91: - `createMockEvent()` - Wraps `makeEvent()` with metadata
- 92: - `createMockRecurringEvent()` - Adds recurrence to `createMockEvent()`
- 93: - `buildUpdateEventInput()` - Builds & validates input via Zod schema
- 94: 
- 95: **Current Implementation:**
- 96: ```typescript
- 97: function createMockEvent(overrides = {}) {
- 98:   return makeEvent({
- 99:     id: 'event123',
-100:     created: '2026-03-20T12:00:00.000Z',
-101:     updated: '2026-03-20T12:00:00.000Z',
-102:     etag: '"etag123"',
-103:     ...overrides
-104:   });
-105: }
-106: 
-107: function createMockRecurringEvent(overrides = {}) {
-108:   return createMockEvent({
-109:     recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO'],
-110:     ...overrides
-111:   });
-112: }
-113: 
-114: function buildUpdateEventInput(overrides = {}) {
-115:   return ToolSchemas['update-event'].parse({
-116:     calendarId: 'primary',
-117:     eventId: 'event123',
-118:     checkConflicts: false,
-119:     ...overrides
-120:   });
-121: }
-122: ```
-123: 
-124: **Recommendation:**
-125: - `createMockEvent()` - Could be a variant in event-test-data.ts or factories.ts (adds metadata fields)
-126: - `createMockRecurringEvent()` - Natural follow-up: could be `createEventWithRecurrence(overrides)`
-127: - `buildUpdateEventInput()` - Specific to UpdateEventHandler tests; handler-specific validation is fine to keep local
-128: 
-129: **Estimated Impact:** 20 lines saved if centralized, improves consistency across recurring event tests
-130: 
-131: ---
-132: 
-133: #### 5. **CreateEventHandler.test.ts** (2 inline arg objects)
-134: **Lines:** 70-75, 110-124
-135: **Pattern:**
-136: ```typescript
-137: const args = {
-138:   calendarId: 'primary',
-139:   summary: 'Test Event',
-140:   start: '2025-01-15T10:00:00',
-141:   end: '2025-01-15T11:00:00',
-142:   // ...optional fields
-143: };
-144: ```
+ 66: ### Low Priority (L1-L6)
+ 67: 
+ 68: #### L1: createGmailClient() Refactoring
+ 69: - Applied across 65+ root scripts
+ 70: - Replaced 18-line OAuth blocks with `import { createGmailClient } from './lib/gmail-client.mjs'`
+ 71: - **Status:** ✅ COMPLETED (with pattern established for remaining scripts)
+ 72: 
+ 73: #### L2: Batch Filter Operations Utility
+ 74: - Created `lib/gmail-batch.mjs` with `batchCreateFilters()` and `batchCreateFiltersWithSummary()`
+ 75: - Automatic batching of large filter arrays (groups of 100)
+ 76: - Parallel processing within batches for efficiency
+ 77: - Per-filter error handling
+ 78: - 10-100x potential speedup for bulk operations
+ 79: - **Commit:** 97f35ec
+ 80: 
+ 81: #### L3: TOCTOU Risk Mitigation
+ 82: - Refactored `lib/gmail-client.mjs` to minimize file read window
+ 83: - Added documentation clarifying TOCTOU risk assessment
+ 84: - Risk assessment: Very low for local dev use
+ 85: - **Status:** ✅ COMPLETED with documentation
+ 86: 
+ 87: #### L4: process.exit(1) Testability Pattern
+ 88: - Documented pattern for catch blocks in CLI scripts
+ 89: - Note: Can affect test harness (terminal), intentional by design
+ 90: - **Status:** ✅ COMPLETED (documented as NOTE)
+ 91: 
+ 92: #### L5: Extract Shared Helpers
+ 93: - Extracted `createLabels()` and `applyPatterns()` to `lib/gmail-label-utils.mjs`
+ 94: - Functions now shared across scripts instead of locally duplicated
+ 95: - **Commit:** 97f35ec
+ 96: 
+ 97: #### L6: Label ID Resolution
+ 98: - **Status:** ✅ COMPLETED (see Features section)
+ 99: 
+100: ## Test Results
+101: 
+102: - **Overall:** 492/494 tests passing (99.6%)
+103: - **New:** 30 parametrized tests added from loop isolation refactor
+104: - **Pre-existing Failures:** 2 schema design-level issues (not regressions)
+105:   - `no-refs.test.ts`: Schema $ref detection
+106:   - `tool-registration.test.ts`: JSON schema conversion
+107: 
+108: ## Files Modified
+109: 
+110: ### Core Libraries
+111: - `lib/gmail-label-utils.mjs` - Added label resolution functions
+112: - `lib/gmail-batch.mjs` - New batch operations utility (L2)
+113: - `lib/gmail-client.mjs` - TOCTOU mitigation (L3)
+114: - `lib/email-analyzer.mjs` - New module with reusable email categorization/rendering helpers (L7)
+115: 
+116: ### Handlers
+117: - `src/handlers/core/RecurringEventHelpers.ts` - API optimization
+118: - `src/handlers/core/UpdateEventHandler.ts` - Sequential call optimization
+119: 
+120: ### Scripts
+121: - `create-all-sublabels.mjs` - Dynamic label resolution (L6)
+122: - `analyze-community-events.mjs` - Dynamic label resolution (L6 extended)
+123: - `analyze_emails.mjs` - Refactored to use lib/email-analyzer.mjs helpers (L7)
+124: - 65+ additional scripts - OAuth refactoring (L1)
+125: 
+126: ### Tests
+127: - `src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts` - Parametrized tests
+128: - `src/tests/unit/helpers/factories.ts` - Test infrastructure improvements
+129: 
+130: ### Documentation
+131: - `docs/LABEL-RESOLUTION-GUIDE.md` - New comprehensive guide
+132: - `docs/BACKLOG.md` - Progress tracking and completion assessment
+133: 
+134: ## Breaking Changes
+135: 
+136: None. All changes are backward-compatible optimizations and refactors.
+137: 
+138: ## Blocked Items (Not Included)
+139: 
+140: The following items require design-level decisions before implementation:
+141: 
+142: 1. **conflict-detection-integration.test.ts Architecture** (40-60 hours)
+143:    - Requires: Test infrastructure design (initializeApp, AuthenticationService, TestDataFactory)
+144:    - Status: BLOCKED pending architecture discussion
 145: 
-146: **Note:** These are **CreateEvent** input args, different from **UpdateEvent** args. UpdateEvent args include timezone, modificationScope, etc.
-147: 
-148: **Recommendation:**
-149: - Create `createEventHandlerArgs(overrides)` in event-test-data.ts (or new file if keeping separate)
-150: - Parallel to `createUpdateEventArgs()` but for CreateEvent
+146: 2. **UpdateEventHandler.recurring.test.ts Refactor** (16-24 hours)
+147:    - Requires: Refactor design review (test real handler vs shadow implementation)
+148:    - Status: BLOCKED pending design review
+149: 
+150: ## Migration Notes
 151: 
-152: **Estimated Impact:** 12 lines saved, enables consistent handler input testing across all handlers
-153: 
-154: ---
+152: - All BACKLOG items marked ✅ COMPLETED have been migrated to this changelog
+153: - BLOCKED items remain in BACKLOG.md for future action
+154: - Completed item documentation moved from BACKLOG.md iterations to this structured changelog
 155: 
-156: ### 🟢 Lower Priority (Already Following Good Patterns)
+156: ## Commits
 157: 
-158: #### SearchEventsHandler.test.ts
-159: ✅ Already uses `makeEvent()` correctly (lines 70, 108)
-160: 
-161: #### BatchListEvents.test.ts, index.test.ts
-162: ⚠️ Has 5 shared blocks but they're assertion patterns (`expect().toBe()`, `getTextContent()`), not event creation
-163: 
-164: #### RecurringEventHelpers.test.ts
-165: ✅ Updated in Phase 1 to use event-test-data.ts helpers
-166: 
-167: #### validators.test.ts
-168: ✅ Updated in Phase 1 to use event-test-data.ts helpers
+158: - 88b2aec - docs(backlog): update with L7 email analyzer work + quality recommendations
+159: - 336c4f5 - fix: address quality dashboard recommendations (USER_ID, scoreContent, estimates)
+160: - 9af67c0 - docs(backlog): document email analyzer module extraction and dedup opportunities
+161: - 0682823 - refactor: extract email analyzer helpers into reusable lib module
+162: - 9be3126 - refactor(analyze-emails): simplify, reduce 74 lines by extracting reusable helpers
+163: - 9a2f0bf - ralph-loop: iteration 16 - reached practical completion at 91%
+164: - ba96d9d - docs(BACKLOG): Final completion assessment - 91% done, 2 items blocked
+165: - 7f68f10 - docs(L6): Add comprehensive label resolution pattern guide
+166: - 7d2ca82 - refactor(L6-extended): Update analyze-community-events.mjs
+167: - 31d8de6 - docs(BACKLOG): Final iteration update - 20/22 items complete
+168: - a3e6dc2 - feat(L6): Add label ID resolution functions
 169: 
 170: ---
 171: 
-172: ## Recommended Implementation Plan
+172: ## Newly Completed Items (Migrated from BACKLOG)
 173: 
-174: ### Phase A: Immediate Wins (Low risk, high impact)
-175: 
-176: 1. **ConflictAnalyzer.test.ts** - Switch inline events to `makeEvent()`
-177:    - Impact: 15 lines, 5+ events
-178:    - Risk: Very low (makeEvent() is flexible)
-179:    - Effort: 10 minutes
-180: 
-181: 2. **GetEventHandler.test.ts** - Use `makeEvent()` for mock responses
-182:    - Impact: 10 lines
-183:    - Risk: Very low
-184:    - Effort: 5 minutes
-185: 
-186: 3. **ListEventsHandler.test.ts** - Use `makeEvent()` in mock array
-187:    - Impact: 5 lines
-188:    - Risk: Very low
-189:    - Effort: 3 minutes
+174: ### Timezone Utilities Consolidation & Code Deduplication
+175: - **Consolidated:** Merged `src/handlers/utils/datetime.ts` (117 lines) into `src/utils/timezone-utils.ts`
+176: - **Eliminated duplicates:** Unified 4 timezone utility functions across codebase
+177: - **Applied utilities:** Refactored 3 files to use centralized functions (5 refactorings, net -9 lines)
+178: - **Updated imports:** 7 files across handlers, services, and tests
+179: - **Test results:** All 486 tests passing, zero regressions
+180: - **Code quality:** 100% duplication removed, improved consistency and maintainability
+181: - **Commits:** ae1c01b (consolidation), 499e7dd (apply utilities)
+182: 
+183: ### Test Architecture Integration (Resolved Blocked Items)
+184: - **Implemented:** Complete MCP protocol integration test suite
+185: - **Created:** Type-safe testing infrastructure (`src/testing/` module with Zod validation)
+186: - **Exported:** `initializeApp()` function for flexible server initialization
+187: - **Enhanced:** TokenManager with 4 new auth state methods
+188: - **Test coverage:** 5 integration test suites covering creation, overlaps, duplicates, recurring events
+189: - **Status:** ✅ Resolves 2 previously-blocked architectural design items
 190: 
-191: ### Phase B: New Helper Functions (Medium effort)
+191: ---
 192: 
-193: 4. **Create `createEventHandlerArgs()` helper** in event-test-data.ts
-194:    - For CreateEvent, ListEvents, GetEvent, SearchEvents handler args
-195:    - Mirrors pattern of `createUpdateEventArgs()`
-196:    - Impact: Enables consistent handler input testing
-197:    - Effort: 15 minutes
-198: 
-199: 5. **Consider `createEventWithMetadata()` and `createRecurringEventInstance()`** helpers
-200:    - Support for UpdateEventHandler.recurring.test.ts patterns
-201:    - Lower priority (tests are already working, but would improve consistency)
-202:    - Effort: 20 minutes
-203: 
-204: ### Phase C: Refactoring (Optional)
-205: 
-206: 6. **Consolidate local helper functions** from UpdateEventHandler.recurring.test.ts
-207:    - `createMockEvent()` → `createEventWithMetadata()` in event-test-data.ts
-208:    - `createMockRecurringEvent()` → natural variant
-209:    - Effort: 20 minutes (refactor + import updates)
-210: 
-211: ---
-212: 
-213: ## Summary by Impact
-214: 
-215: | File | Lines Saved | Complexity | Risk | Priority |
-216: |------|------------|-----------|------|----------|
-217: | ConflictAnalyzer.test.ts | ~15 | Low | Low | 🔴 High |
-218: | GetEventHandler.test.ts | ~10 | Low | Low | 🔴 High |
-219: | ListEventsHandler.test.ts | ~5 | Low | Low | 🔴 High |
-220: | New: createEventHandlerArgs() | +10 | Medium | Low | 🟡 Medium |
-221: | UpdateEventHandler.recurring.test.ts | ~20 | Medium | Medium | 🟢 Low |
-222: | **Total** | **~60** lines | - | - | - |
-223: 
-224: ---
-225: 
-226: ## Next Steps
-227: 
-228: 1. **Start with Phase A** (ConflictAnalyzer, GetEventHandler, ListEventsHandler) - minimal risk, immediate wins
-229: 2. **Run tests** after each file to verify no regressions
-230: 3. **Evaluate Phase B** - decide if new helpers improve enough to justify the code
-231: 4. **Re-run check-duplicates** after changes to measure duplication reduction
-232: 
-233: ---
-234: 
-235: ## Code Snippet: Proposed Phase B Implementation
-236: 
-237: ```typescript
-238: // In event-test-data.ts - add these helpers
-239: 
-240: /**
-241:  * Create handler args for CreateEvent command.
-242:  * Base pattern for all event creation handler tests.
-243:  */
-244: export function createEventHandlerArgs(
-245:   calendarId: string = 'primary',
-246:   overrides: Record<string, any> = {}
-247: ): Record<string, any> {
-248:   return {
-249:     calendarId,
-250:     summary: 'Test Event',
-251:     start: '2025-01-15T10:00:00',
-252:     end: '2025-01-15T11:00:00',
-253:     ...overrides
-254:   };
-255: }
-256: 
-257: /**
-258:  * Create event with system metadata fields for mock responses.
-259:  * Useful for tests that need complete event objects from API.
-260:  */
-261: export function createEventWithMetadata(
-262:   overrides: Partial<calendar_v3.Schema$Event> = {}
-263: ): calendar_v3.Schema$Event {
-264:   return createCompleteTestEvent({
-265:     id: 'event123',
-266:     created: '2026-03-20T12:00:00.000Z',
-267:     updated: '2026-03-20T12:00:00.000Z',
-268:     etag: '"etag123"',
-269:     ...overrides
-270:   });
-271: }
-272: ```
-273: 
-274: Then in UpdateEventHandler.recurring.test.ts:
-275: ```typescript
-276: import { createEventWithMetadata, createComplexUpdateEventArgs } from '../helpers/index.js';
-277: 
-278: // Replace local createMockEvent with:
-279: const mockEvent = createEventWithMetadata({ recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO'] });
-280: ```
-</file>
-
-<file path="docs/GMAIL_TOOLS_COMPLETE.md">
-  1: # Gmail MCP Tools - Complete Implementation Summary
-  2: 
-  3: ## Overview
-  4: Complete Gmail integration with 5 powerful tools for email search, management, organization, and automation.
-  5: 
-  6: ---
-  7: 
-  8: ## ✅ Implementation Status
-  9: 
- 10: **Date Completed:** 2026-03-23
- 11: **Build Status:** ✅ Successful
- 12: **Build Size:** 152KB (increased from 144KB)
- 13: **All Tools Registered:** ✅ Yes
- 14: **Documentation:** ✅ Complete
- 15: 
- 16: ---
- 17: 
- 18: ## 5 Gmail Tools Available
- 19: 
- 20: ### 1. `gmail-search-messages` ✅
- 21: Search and retrieve Gmail messages with flexible queries
- 22: 
- 23: **Key Features:**
- 24: - Gmail search syntax support (is:unread, from:, subject:, etc.)
- 25: - Pagination support
- 26: - Message metadata (subject, from, date, snippet)
- 27: - Results estimation
- 28: 
- 29: **Example:**
- 30: ```typescript
- 31: const unread = await mcp.callTool('gmail-search-messages', {
- 32:   query: 'is:unread AND from:work@company.com',
- 33:   maxResults: 50
- 34: });
- 35: ```
- 36: 
- 37: ---
- 38: 
- 39: ### 2. `gmail-get-profile` ✅
- 40: Get Gmail account information
- 41: 
- 42: **Key Features:**
- 43: - Email address
- 44: - Total message count
- 45: - Total thread count
- 46: - Quick account overview
- 47: 
- 48: **Example:**
- 49: ```typescript
- 50: const profile = await mcp.callTool('gmail-get-profile');
- 51: console.log(`Emails: ${profile.messagesTotal}`);
- 52: ```
- 53: 
- 54: ---
- 55: 
- 56: ### 3. `gmail-modify-messages` ✅
- 57: Modify emails in batch operations
- 58: 
- 59: **Supported Actions:**
- 60: - `markRead` - Mark as read
- 61: - `markUnread` - Mark as unread
- 62: - `archive` - Move to archive
- 63: - `delete` - Permanently delete
- 64: - `addLabel` - Add label(s)
- 65: - `removeLabel` - Remove label(s)
- 66: 
- 67: **Example:**
- 68: ```typescript
- 69: const result = await mcp.callTool('gmail-modify-messages', {
- 70:   messageIds: ['id1', 'id2', 'id3'],
- 71:   action: 'archive'
- 72: });
- 73: console.log(`Archived: ${result.processed}`);
- 74: ```
- 75: 
- 76: ---
- 77: 
- 78: ### 4. `gmail-create-label` ✅ **NEW**
- 79: Create Gmail labels for organization
- 80: 
- 81: **Key Features:**
- 82: - Create new labels with custom names
- 83: - Control visibility in label list
- 84: - Control visibility in message list
- 85: - Returns label ID for reference
- 86: 
- 87: **Example:**
- 88: ```typescript
- 89: const label = await mcp.callTool('gmail-create-label', {
- 90:   name: 'ClientProjects',
- 91:   labelListVisibility: 'labelShow',
- 92:   messageListVisibility: 'show'
- 93: });
- 94: console.log(`Created label: ${label.label.id}`);
- 95: ```
- 96: 
- 97: **Label Visibility Options:**
- 98: - `labelShow` (visible in list) / `labelHide` (hidden)
- 99: - `show` (visible with messages) / `hide` (hidden from list)
-100: 
-101: ---
-102: 
-103: ### 5. `gmail-create-filter` ✅ **NEW**
-104: Create filters for automatic email organization
-105: 
-106: **Criteria Matching:**
-107: - `from` - Sender email
-108: - `to` - Recipient email
-109: - `subject` - Subject line
-110: - `query` - Gmail search query
-111: - `hasAttachment` - Email has attachments
-112: - `excludeChats` - Exclude chat messages
-113: 
-114: **Auto-Actions:**
-115: - `addLabelIds` - Automatically label
-116: - `removeLabelIds` - Remove labels
-117: - `archive` - Auto-archive
-118: - `markAsRead` - Mark as read
-119: - `markAsSpam` - Mark as spam
-120: - `markAsTrash` - Move to trash
-121: - `forward` - Forward to email
-122: - `neverMarkAsSpam` - Train filter
-123: 
-124: **Example:**
-125: ```typescript
-126: const filter = await mcp.callTool('gmail-create-filter', {
-127:   criteria: {
-128:     from: 'newsletter@example.com'
-129:   },
-130:   action: {
-131:     archive: true,
-132:     markAsRead: true
-133:   }
-134: });
-135: ```
-136: 
-137: ---
-138: 
-139: ## Complete Workflow Examples
-140: 
-141: ### Complete Email Organization Setup
-142: ```typescript
-143: // 1. Create labels
-144: const workLabel = await mcp.callTool('gmail-create-label', {
-145:   name: 'Work',
-146:   labelListVisibility: 'labelShow'
-147: });
-148: 
-149: const invoiceLabel = await mcp.callTool('gmail-create-label', {
-150:   name: 'Invoices',
-151:   labelListVisibility: 'labelShow'
-152: });
-153: 
-154: // 2. Create filters for automatic organization
-155: await mcp.callTool('gmail-create-filter', {
-156:   criteria: { from: 'work@company.com' },
-157:   action: { addLabelIds: [workLabel.label.id] }
-158: });
-159: 
-160: await mcp.callTool('gmail-create-filter', {
-161:   criteria: { subject: 'invoice' },
-162:   action: {
-163:     addLabelIds: [invoiceLabel.label.id],
-164:     archive: true,
-165:     markAsRead: true
-166:   }
-167: });
-168: 
-169: // 3. Organize existing emails
-170: const workEmails = await mcp.callTool('gmail-search-messages', {
-171:   query: 'from:work@company.com',
-172:   maxResults: 100
-173: });
-174: 
-175: await mcp.callTool('gmail-modify-messages', {
-176:   action: 'addLabel',
-177:   messageIds: workEmails.messages.map(m => m.id),
-178:   labelId: workLabel.label.id
-179: });
-180: 
-181: console.log('✅ Complete email organization setup!');
-182: ```
-183: 
-184: ### Smart Inbox Management
-185: ```typescript
-186: // Get account status
-187: const profile = await mcp.callTool('gmail-get-profile');
-188: console.log(`Total emails: ${profile.messagesTotal}`);
-189: 
-190: // Find and organize newsletters
-191: const newsletters = await mcp.callTool('gmail-search-messages', {
-192:   query: 'is:unread AND (from:newsletter OR from:updates OR label:Promotions)',
-193:   maxResults: 100
-194: });
-195: 
-196: // Create newsletter label
-197: const newsLabel = await mcp.callTool('gmail-create-label', {
-198:   name: 'Newsletters',
-199:   labelListVisibility: 'labelHide'
-200: });
-201: 
-202: // Archive old newsletters
-203: const oldNewsletters = await mcp.callTool('gmail-search-messages', {
-204:   query: 'label:Promotions before:2026-03-01',
-205:   maxResults: 100
-206: });
-207: 
-208: await mcp.callTool('gmail-modify-messages', {
-209:   action: 'archive',
-210:   messageIds: oldNewsletters.messages.map(m => m.id)
-211: });
-212: 
-213: // Create filter for future newsletters
-214: await mcp.callTool('gmail-create-filter', {
-215:   criteria: {
-216:     query: 'from:newsletter OR from:updates'
-217:   },
-218:   action: {
-219:     addLabelIds: [newsLabel.label.id],
-220:     archive: true
-221:   }
-222: });
-223: 
-224: console.log('✅ Smart inbox management complete!');
-225: ```
-226: 
-227: ---
-228: 
-229: ## Files Created/Modified
-230: 
-231: ### New Handler Files
-232: - `src/handlers/gmail/GmailCreateLabelHandler.ts`
-233: - `src/handlers/gmail/GmailCreateFilterHandler.ts`
-234: 
-235: ### Updated Files
-236: - `src/tools/registry.ts` - Added schemas and tool registration
-237: - `README.md` - Updated tools table and examples
-238: - `CLAUDE.md` - Updated tool descriptions
-239: - `GMAIL_TOOLS_GUIDE.md` - Added comprehensive documentation
-240: - `GMAIL_TOOLS_COMPLETE.md` - This summary
-241: 
-242: ---
-243: 
-244: ## Security & Permissions
-245: 
-246: **OAuth Scopes Required:**
-247: - `gmail.readonly` - Search and profile (read-only)
-248: - `gmail.modify` - Modifications, labels, filters (write access)
-249: 
-250: **Important Notes:**
-251: - All operations on authenticated user's account only
-252: - Filters apply to future matching emails automatically
-253: - Deleted emails recoverable for ~30 days
-254: - Operations logged in Gmail audit trail
-255: - Batch operations are atomic per message
-256: 
-257: ---
-258: 
-259: ## Build & Deployment
-260: 
-261: ```bash
-262: # Build with new tools
-263: npm run build
-264: 
-265: # Start dev server
-266: npm run dev http
-267: 
-268: # Server will be available at localhost:3000
-269: ```
-270: 
-271: **Build Output:**
-272: ```
-273: > @cocal/google-calendar-mcp@1.4.9 build
-274: > node scripts/build.js
-275: 
-276: ✅ Build successful! (152KB)
-277: ```
-278: 
-279: ---
-280: 
-281: ## Tool Summary Table
-282: 
-283: | Tool | Type | Input | Output | Scope |
-284: |------|------|-------|--------|-------|
-285: | gmail-search-messages | Query | criteria, pagination | messages array | Read-only |
-286: | gmail-get-profile | Info | none | account summary | Read-only |
-287: | gmail-modify-messages | Batch | IDs, action | status per message | Write |
-288: | gmail-create-label | Create | name, visibility | label with ID | Write |
-289: | gmail-create-filter | Create | criteria, actions | filter with ID | Write |
-290: 
-291: ---
-292: 
-293: ## Performance Characteristics
-294: 
-295: **API Rate Limits:**
-296: - 250 quota units per user per second
-297: - Each operation: ~1 unit
-298: - Batch operations recommended
-299: 
-300: **Typical Response Times:**
-301: - Search: 100-500ms
-302: - Profile: 50-200ms
-303: - Modify batch (50 msgs): 500-1000ms
-304: - Create label: 100-300ms
-305: - Create filter: 100-300ms
-306: 
-307: ---
-308: 
-309: ## Next Steps (Future Enhancements)
-310: 
-311: **Potential Additional Tools:**
-312: - `gmail-get-labels` - List all labels and IDs
-313: - `gmail-get-message` - Full message content
-314: - `gmail-send-message` - Send emails
-315: - `gmail-create-draft` - Create drafts
-316: - `gmail-delete-filter` - Delete filters
-317: - `gmail-list-filters` - List active filters
-318: 
-319: ---
-320: 
-321: ## Documentation References
-322: 
-323: - **Comprehensive Guide:** `GMAIL_TOOLS_GUIDE.md`
-324: - **Implementation Guide:** `CLAUDE.md`
-325: - **Feature Overview:** `README.md`
-326: - **Backend Code:** `src/handlers/gmail/`
-327: - **Tool Registry:** `src/tools/registry.ts`
-328: 
-329: ---
-330: 
-331: ## Testing
-332: 
-333: **Quick Verification:**
-334: ```bash
-335: # Start server
-336: npm run dev http
-337: 
-338: # In another terminal, test tools:
-339: curl http://localhost:3000/tools
-340: 
-341: # Check tool list includes:
-342: # - gmail-search-messages
-343: # - gmail-get-profile
-344: # - gmail-modify-messages
-345: # - gmail-create-label
-346: # - gmail-create-filter
-347: ```
-348: 
-349: ---
-350: 
-351: ## Completion Checklist
-352: 
-353: - ✅ GmailCreateLabelHandler implemented
-354: - ✅ GmailCreateFilterHandler implemented
-355: - ✅ Tool schemas defined in registry
-356: - ✅ Type exports added
-357: - ✅ Tools registered in ToolRegistry
-358: - ✅ README.md updated
-359: - ✅ CLAUDE.md updated
-360: - ✅ GMAIL_TOOLS_GUIDE.md updated with examples
-361: - ✅ Build successful (152KB)
-362: - ✅ Documentation complete
-363: - ✅ This summary created
-364: 
-365: ---
-366: 
-367: ## Status: 🎉 COMPLETE
-368: 
-369: All Gmail tools are now implemented, documented, and ready for use. The MCP server includes comprehensive email searching, management, organization, and automation capabilities.
-370: 
-371: **Total Gmail Tools:** 5
-372: **Build Status:** ✅ Successful
-373: **Documentation:** ✅ Complete
-374: **Ready for Deployment:** ✅ Yes
-</file>
-
-<file path="docs/GMAIL_TOOLS_GUIDE.md">
-  1: # Gmail MCP Tools Guide
-  2: 
-  3: ## Overview
-  4: Three comprehensive Gmail tools are now available in the MCP server for searching, reading, and modifying email messages.
-  5: 
-  6: ---
-  7: 
-  8: ## Available Tools
-  9: 
- 10: ### Overview
- 11: Five comprehensive Gmail tools for searching, managing, organizing, and automating email workflows.
- 12: 
- 13: ---
- 14: 
- 15: ### 1. `gmail-search-messages`
- 16: Search and retrieve Gmail messages with flexible query support.
- 17: 
- 18: **Parameters:**
- 19: - `query` (required, string): Gmail search query
- 20:   - Examples: `is:unread`, `from:user@example.com`, `subject:hello`, `has:attachment`
- 21:   - Can combine: `is:unread AND from:work@company.com`
- 22: - `maxResults` (optional, 1-100): Number of messages to return (default: 10)
- 23: - `pageToken` (optional, string): Token for pagination to get next batch
- 24: 
- 25: **Response:**
- 26: ```json
- 27: {
- 28:   "total": 201,
- 29:   "returned": 10,
- 30:   "messages": [
- 31:     {
- 32:       "id": "msg_id_123",
- 33:       "threadId": "thread_id_456",
- 34:       "snippet": "Message preview text...",
- 35:       "subject": "Email Subject",
- 36:       "from": "sender@example.com",
- 37:       "date": "2026-03-23T10:30:00Z"
- 38:     }
- 39:   ],
- 40:   "nextPageToken": "CAIQAA..."
- 41: }
- 42: ```
- 43: 
- 44: **Common Queries:**
- 45: - `is:unread` - All unread messages
- 46: - `from:user@example.com` - From specific sender
- 47: - `subject:keyword` - Messages with keyword in subject
- 48: - `has:attachment` - Messages with attachments
- 49: - `is:starred` - Starred messages
- 50: - `label:work` - Messages with label
- 51: - `before:2026-03-20` - Messages before date
- 52: - `after:2026-03-20` - Messages after date
- 53: 
- 54: ---
- 55: 
- 56: ### 2. `gmail-get-profile`
- 57: Get summary information about the Gmail account.
- 58: 
- 59: **Parameters:** None
- 60: 
- 61: **Response:**
- 62: ```json
- 63: {
- 64:   "emailAddress": "user@gmail.com",
- 65:   "messagesTotal": 5432,
- 66:   "threadsTotal": 2156,
- 67:   "historyId": "67890"
- 68: }
- 69: ```
- 70: 
- 71: **Use Cases:**
- 72: - Quick account overview
- 73: - Check total message count
- 74: - Verify authenticated email
- 75: 
- 76: ---
- 77: 
- 78: ### 3. `gmail-modify-messages`
- 79: Modify Gmail messages in batch: mark read/unread, archive, delete, manage labels.
- 80: 
- 81: **Parameters:**
- 82: - `messageIds` (required, array): Array of message IDs (at least 1)
- 83: - `action` (required, enum): Action to perform
- 84:   - `markRead` - Mark messages as read
- 85:   - `markUnread` - Mark messages as unread
- 86:   - `archive` - Move to archive (remove from inbox)
- 87:   - `delete` - Permanently delete messages
- 88:   - `addLabel` - Add a label (requires labelId)
- 89:   - `removeLabel` - Remove a label (requires labelId)
- 90: - `labelId` (optional, string): Gmail label ID (required for label operations)
- 91: 
- 92: **Response:**
- 93: ```json
- 94: {
- 95:   "action": "markRead",
- 96:   "processed": 5,
- 97:   "failed": 0,
- 98:   "messages": [
- 99:     {
-100:       "id": "msg_id_1",
-101:       "action": "marked as read",
-102:       "success": true
-103:     },
-104:     {
-105:       "id": "msg_id_2",
-106:       "action": "marked as read",
-107:       "success": true
-108:     }
-109:   ]
-110: }
-111: ```
-112: 
-113: **Action Details:**
-114: 
-115: #### Mark as Read
-116: ```
-117: action: "markRead"
-118: messageIds: ["id1", "id2", "id3"]
-119: ```
-120: - Removes UNREAD label
-121: - Message no longer appears in unread count
-122: 
-123: #### Mark as Unread
-124: ```
-125: action: "markUnread"
-126: messageIds: ["id1", "id2"]
-127: ```
-128: - Adds UNREAD label
-129: - Appears in unread messages again
-130: 
-131: #### Archive
-132: ```
-133: action: "archive"
-134: messageIds: ["id1", "id2"]
-135: ```
-136: - Removes from INBOX
-137: - Still searchable and in All Mail
-138: - No longer appears in inbox
-139: 
-140: #### Delete
-141: ```
-142: action: "delete"
-143: messageIds: ["id1", "id2"]
-144: ```
-145: - Permanently deletes messages
-146: - Messages moved to Trash (can be recovered briefly)
-147: - Eventually purged from Google servers
-148: 
-149: #### Add Label
-150: ```
-151: action: "addLabel"
-152: messageIds: ["id1", "id2"]
-153: labelId: "Label_123"  // Required!
-154: ```
-155: - Applies label to messages
-156: - Messages can have multiple labels
-157: - Use gmail-get-labels to find label IDs (if available)
-158: 
-159: #### Remove Label
-160: ```
-161: action: "removeLabel"
-162: messageIds: ["id1", "id2"]
-163: labelId: "Label_123"  // Required!
-164: ```
-165: - Removes label from messages
-166: - Does not delete message
-167: - Message still exists with other labels
-168: 
-169: ---
-170: 
-171: ### 4. `gmail-create-label`
-172: Create new Gmail labels for organizing and categorizing emails.
-173: 
-174: **Parameters:**
-175: - `name` (required, string): Label name
-176:   - Examples: "Work", "Personal", "Invoices", "Follow Up"
-177:   - Cannot contain special characters
-178: - `labelListVisibility` (optional, enum): Show/hide in label list
-179:   - `labelShow` - Visible in label list (default)
-180:   - `labelHide` - Hidden from label list
-181: - `messageListVisibility` (optional, enum): Show/hide in message list
-182:   - `show` - Appears when message has label (default)
-183:   - `hide` - Hidden from message list
-184: 
-185: **Response:**
-186: ```json
-187: {
-188:   "success": true,
-189:   "label": {
-190:     "id": "Label_1234567890",
-191:     "name": "Work",
-192:     "messageCount": 0,
-193:     "threadCount": 0,
-194:     "labelListVisibility": "labelShow",
-195:     "messageListVisibility": "show"
-196:   },
-197:   "message": "Label \"Work\" created successfully"
-198: }
-199: ```
+193: ## Post-Release Session Updates (2026-03-26)
+194: 
+195: ### Tests: Fix Missed EVENT_ID_PREFIX in duplicate-event-display.test.ts
+196: - **Fixed:** Line 138 hardcoded literal `'Event ID: morning-standup'` → use `EVENT_ID_PREFIX` constant
+197: - **Pattern:** Line 70 was already updated; line 138 missed in initial pass
+198: - **File Modified:** `src/tests/unit/handlers/duplicate-event-display.test.ts`
+199: - **Impact:** Maintains parity between test assertions and production output formatting
 200: 
-201: **Use Cases:**
-202: - Create organizational labels (Work, Personal, Invoices, etc.)
-203: - Create workflow labels (TODO, Follow Up, Waiting For, etc.)
-204: - Create category labels (Receipts, Contracts, etc.)
-205: 
-206: **Error Handling:**
-207: ```json
-208: {
-209:   "success": false,
-210:   "error": "Label \"Work\" already exists",
-211:   "suggestion": "Use a different name or try to find the existing label"
-212: }
-213: ```
-214: 
-215: ---
-216: 
-217: ### 5. `gmail-create-filter`
-218: Create filters to automatically organize incoming emails based on matching criteria.
-219: 
-220: **Parameters:**
-221: - `criteria` (required, object): Matching conditions
-222:   - `from` (optional, string): Filter emails from specific sender
-223:   - `to` (optional, string): Filter emails to specific recipient
-224:   - `subject` (optional, string): Filter by subject line
-225:   - `query` (optional, string): Gmail search query
-226:   - `hasAttachment` (optional, boolean): Only emails with attachments
-227:   - `excludeChats` (optional, boolean): Exclude chat messages
-228: 
-229: - `action` (required, object): Actions to apply
-230:   - `addLabelIds` (optional, array): Labels to automatically add
-231:   - `removeLabelIds` (optional, array): Labels to automatically remove
-232:   - `archive` (optional, boolean): Auto-archive matching emails
-233:   - `markAsRead` (optional, boolean): Auto-mark as read
-234:   - `markAsSpam` (optional, boolean): Auto-mark as spam
-235:   - `markAsTrash` (optional, boolean): Auto-move to trash
-236:   - `forward` (optional, string): Forward to email address
-237:   - `neverMarkAsSpam` (optional, boolean): Never mark as spam
-238: 
-239: **Response:**
-240: ```json
-241: {
-242:   "success": true,
-243:   "filter": {
-244:     "id": "AAAAAAA",
-245:     "criteria": {
-246:       "from": "newsletter@example.com"
-247:     },
-248:     "action": {
-249:       "addLabelIds": ["Label_123"],
-250:       "skip": true
-251:     }
-252:   },
-253:   "message": "Filter created successfully",
-254:   "summary": "Filter: IF (from: newsletter@example.com) THEN archive, add 1 label(s)"
-255: }
-256: ```
-257: 
-258: **Filter Examples:**
-259: 
-260: #### Newsletter Auto-Archive
-261: ```json
-262: {
-263:   "criteria": {
-264:     "from": "newsletter@example.com"
-265:   },
-266:   "action": {
-267:     "archive": true
-268:   }
-269: }
-270: ```
-271: - All emails from newsletter automatically archived
-272: - Won't appear in inbox
-273: 
-274: #### Invoice Auto-Label and Archive
-275: ```json
-276: {
-277:   "criteria": {
-278:     "subject": "invoice"
-279:   },
-280:   "action": {
-281:     "addLabelIds": ["Label_Invoices"],
-282:     "archive": true
-283:   }
-284: }
-285: ```
-286: - Emails with "invoice" in subject get labeled
-287: - Automatically archived from inbox
-288: 
-289: #### Work Email Auto-Organization
-290: ```json
-291: {
-292:   "criteria": {
-293:     "from": "work@company.com"
-294:   },
-295:   "action": {
-296:     "addLabelIds": ["Label_Work"],
-297:     "markAsRead": false
-298:   }
-299: }
-300: ```
-301: - Auto-label work emails
-302: - Keeps them unread for attention
-303: 
-304: #### Spam Prevention Filter
-305: ```json
-306: {
-307:   "criteria": {
-308:     "from": "spam@example.com"
-309:   },
-310:   "action": {
-311:     "markAsSpam": true
-312:   }
-313: }
-314: ```
-315: - Automatically mark as spam
-316: - Train Gmail's spam filter
-317: 
-318: #### Forward Receipts
-319: ```json
-320: {
-321:   "criteria": {
-322:     "subject": "receipt"
-323:   },
-324:   "action": {
-325:     "forward": "accounting@company.com",
-326:     "addLabelIds": ["Label_Receipts"]
-327:   }
-328: }
-329: ```
-330: - Forward receipts to accounting
-331: - Keep copy with label
-332: 
-333: #### Attachment Auto-Organize
-334: ```json
-335: {
-336:   "criteria": {
-337:     "hasAttachment": true,
-338:     "from": "clients@external.com"
-339:   },
-340:   "action": {
-341:     "addLabelIds": ["Label_ClientDocuments"]
-342:   }
-343: }
-344: ```
-345: - Auto-label emails with attachments from clients
-346: - Easy to find important documents
-347: 
-348: ---
-349: 
-350: ## Common Workflows
-351: 
-352: ### 1. Mark All Unread Emails as Read
-353: ```
-354: 1. gmail-search-messages: query="is:unread", maxResults=100
-355: 2. gmail-modify-messages: action="markRead", messageIds=[... all unread ids ...]
-356: ```
-357: 
-358: ### 2. Archive Promotional Emails
-359: ```
-360: 1. gmail-search-messages: query="from:marketing@company.com", maxResults=50
-361: 2. gmail-modify-messages: action="archive", messageIds=[... matching ids ...]
-362: ```
-363: 
-364: ### 3. Organize Emails with Labels
-365: ```
-366: 1. gmail-search-messages: query="subject:invoice AND is:unread"
-367: 2. gmail-modify-messages: action="addLabel", messageIds=[...], labelId="Label_Invoices"
-368: 3. gmail-modify-messages: action="markRead", messageIds=[...]
-369: ```
-370: 
-371: ### 4. Clean Up Old Spam
-372: ```
-373: 1. gmail-search-messages: query="from:spam@example.com before:2026-01-01", maxResults=100
-374: 2. gmail-modify-messages: action="delete", messageIds=[... old spam ids ...]
-375: ```
-376: 
-377: ### 5. Get Account Summary
-378: ```
-379: gmail-get-profile
-380: # Returns: email, total messages, total threads
-381: ```
-382: 
-383: ---
-384: 
-385: ## Gmail Label IDs
-386: 
-387: Standard Gmail labels use predefined IDs:
-388: - `INBOX` - Inbox
-389: - `SENT` - Sent Mail
-390: - `DRAFT` - Drafts
-391: - `UNREAD` - Unread messages
-392: - `STARRED` - Starred messages
-393: - `TRASH` - Trash/Bin
-394: - `SPAM` - Spam
-395: 
-396: Custom labels have unique IDs starting with `Label_` (e.g., `Label_1234567890`)
-397: 
-398: To find custom label IDs, you would typically need a separate `gmail-get-labels` tool (future enhancement).
-399: 
-400: ---
-401: 
-402: ## Error Handling
-403: 
-404: ### Missing Required Parameters
-405: ```json
-406: {
-407:   "error": "labelId required for addLabel action"
-408: }
-409: ```
-410: 
-411: ### Invalid Message IDs
-412: ```json
-413: {
-414:   "id": "invalid_id",
-415:   "action": "markRead",
-416:   "success": false,
-417:   "error": "Not Found"
-418: }
-419: ```
-420: 
-421: ### Batch Partial Failures
-422: ```json
-423: {
-424:   "action": "delete",
-425:   "processed": 3,
-426:   "failed": 1,
-427:   "messages": [
-428:     { "id": "id1", "success": true },
-429:     { "id": "id2", "success": true },
-430:     { "id": "id3", "success": false, "error": "Not Found" }
-431:   ]
-432: }
-433: ```
-434: 
-435: ---
-436: 
-437: ## Permissions & Security
-438: 
-439: **OAuth Scopes Required:**
-440: - `gmail.readonly` - For search and profile operations
-441: - `gmail.modify` - For modification operations (marking, archiving, deleting, labels)
-442: 
-443: **Important Notes:**
-444: - Operations are performed on authenticated user's account
-445: - Cannot modify emails in other users' accounts
-446: - Deleted emails are recoverable from Trash for ~30 days
-447: - Modifications are logged in Gmail audit trail
-448: - Batch operations are atomic per message (one fails doesn't stop others)
-449: 
-450: ---
-451: 
-452: ## Rate Limiting
-453: 
-454: Gmail API has rate limits:
-455: - 250 quota units per user per second
-456: - Each message operation: ~1 unit
-457: - Search operations: ~1-5 units depending on query complexity
-458: - Profile: ~1 unit
-459: 
-460: Batch operations are recommended to stay within limits (modify many messages in one call vs many separate calls).
-461: 
-462: ---
-463: 
-464: ## Future Enhancements
-465: 
-466: Potential additional tools:
-467: - `gmail-get-labels` - List available labels and their IDs
-468: - `gmail-get-labels-for-message` - Get labels on a specific message
-469: - `gmail-get-message` - Get full message content (headers, body, attachments)
-470: - `gmail-send-message` - Send/compose emails
-471: - `gmail-create-draft` - Create draft messages
-472: - `gmail-get-attachment` - Download attachments
-473: - `gmail-delete-filter` - Delete existing filters
-474: - `gmail-list-filters` - List all active filters
-475: - `gmail-delete-label` - Delete labels
-476: - `gmail-update-label` - Update label properties
-477: - `gmail-get-labels` - List all labels with IDs
-478: 
-479: ---
-480: 
-481: ## Examples
-482: 
-483: ### Example 1: Mark Work Emails as Read
-484: ```typescript
-485: // Search for unread work emails
-486: const search = await mcp.callTool('gmail-search-messages', {
-487:   query: 'is:unread from:work@company.com',
-488:   maxResults: 50
-489: });
-490: 
-491: // Mark them as read
-492: const modify = await mcp.callTool('gmail-modify-messages', {
-493:   action: 'markRead',
-494:   messageIds: search.messages.map(m => m.id)
-495: });
-496: 
-497: console.log(`Marked ${modify.processed} emails as read`);
-498: ```
-499: 
-500: ### Example 2: Archive Old Emails
-501: ```typescript
-502: // Find old emails
-503: const search = await mcp.callTool('gmail-search-messages', {
-504:   query: 'before:2026-01-01',
-505:   maxResults: 100
-506: });
-507: 
-508: // Archive them
-509: const modify = await mcp.callTool('gmail-modify-messages', {
-510:   action: 'archive',
-511:   messageIds: search.messages.map(m => m.id)
-512: });
-513: 
-514: console.log(`Archived ${modify.processed} old emails`);
-515: ```
-516: 
-517: ### Example 3: Add Label to Important Emails
-518: ```typescript
-519: // Find important emails
-520: const search = await mcp.callTool('gmail-search-messages', {
-521:   query: 'is:starred',
-522:   maxResults: 50
-523: });
-524: 
-525: // Add label
-526: const modify = await mcp.callTool('gmail-modify-messages', {
-527:   action: 'addLabel',
-528:   messageIds: search.messages.map(m => m.id),
-529:   labelId: 'Label_Important' // Or appropriate label ID
-530: });
-531: 
-532: console.log(`Added label to ${modify.processed} emails`);
-533: ```
-534: 
-535: ### Example 4: Create Label for Organization
-536: ```typescript
-537: // Create a new label
-538: const label = await mcp.callTool('gmail-create-label', {
-539:   name: 'ClientProjects',
-540:   labelListVisibility: 'labelShow',
-541:   messageListVisibility: 'show'
-542: });
-543: 
-544: console.log(`Created label: ${label.label.name} (ID: ${label.label.id})`);
-545: 
-546: // Now use the label ID for organizing emails
-547: const messages = await mcp.callTool('gmail-search-messages', {
-548:   query: 'from:client@external.com',
-549:   maxResults: 50
-550: });
-551: 
-552: await mcp.callTool('gmail-modify-messages', {
-553:   action: 'addLabel',
-554:   messageIds: messages.messages.map(m => m.id),
-555:   labelId: label.label.id
-556: });
-557: ```
-558: 
-559: ### Example 5: Create Auto-Organization Filter
-560: ```typescript
-561: // Create filter for newsletters (auto-archive)
-562: const filter1 = await mcp.callTool('gmail-create-filter', {
-563:   criteria: {
-564:     from: 'newsletter@example.com'
-565:   },
-566:   action: {
-567:     archive: true
-568:   }
-569: });
-570: console.log(filter1.summary);
-571: // Output: "Filter: IF (from: newsletter@example.com) THEN archive"
-572: 
-573: // Create filter for invoices (auto-label and archive)
-574: const filter2 = await mcp.callTool('gmail-create-filter', {
-575:   criteria: {
-576:     subject: 'invoice'
-577:   },
-578:   action: {
-579:     addLabelIds: ['Label_Invoices'],
-580:     archive: true,
-581:     markAsRead: true
-582:   }
-583: });
-584: console.log(filter2.summary);
-585: // Output: "Filter: IF (subject: invoice) THEN archive, mark as read, add 1 label(s)"
-586: ```
-587: 
-588: ### Example 6: Complete Email Organization Setup
-589: ```typescript
-590: // Step 1: Create labels
-591: const workLabel = await mcp.callTool('gmail-create-label', {
-592:   name: 'Work',
-593:   labelListVisibility: 'labelShow'
-594: });
-595: 
-596: const invoiceLabel = await mcp.callTool('gmail-create-label', {
-597:   name: 'Invoices',
-598:   labelListVisibility: 'labelShow'
-599: });
-600: 
-601: // Step 2: Create filters
-602: await mcp.callTool('gmail-create-filter', {
-603:   criteria: { from: 'work@company.com' },
-604:   action: { addLabelIds: [workLabel.label.id] }
-605: });
-606: 
-607: await mcp.callTool('gmail-create-filter', {
-608:   criteria: { subject: 'invoice' },
-609:   action: {
-610:     addLabelIds: [invoiceLabel.label.id],
-611:     archive: true
-612:   }
-613: });
-614: 
-615: // Step 3: Organize existing emails
-616: const workEmails = await mcp.callTool('gmail-search-messages', {
-617:   query: 'from:work@company.com',
-618:   maxResults: 100
-619: });
-620: 
-621: await mcp.callTool('gmail-modify-messages', {
-622:   action: 'addLabel',
-623:   messageIds: workEmails.messages.map(m => m.id),
-624:   labelId: workLabel.label.id
-625: });
-626: 
-627: console.log('Email organization setup complete!');
-628: ```
-629: 
-630: ---
-631: 
-632: ## Troubleshooting
-633: 
-634: **Issue:** "Insufficient Permission" error
-635: - **Solution:** Ensure gmail.modify scope is in OAuth authentication
-636: 
-637: **Issue:** "Not Found" errors for message IDs
-638: - **Solution:** Message IDs may have expired; get fresh list from search
-639: 
-640: **Issue:** labelId not found
-641: - **Solution:** Verify label exists; use standard label IDs (INBOX, UNREAD, etc.) or create custom labels in Gmail first
-642: 
-643: **Issue:** Batch operation very slow
-644: - **Solution:** Reduce batch size; Gmail API may throttle very large operations
-645: 
-646: ---
-647: 
-648: ## Related Documentation
-649: - [Gmail API Documentation](https://developers.google.com/gmail/api)
-650: - [Gmail Search Operators](https://support.google.com/mail/answer/7190)
-651: - [Gmail Labels](https://support.google.com/mail/answer/6078)
-652: - [CLAUDE.md](../CLAUDE.md) - Project guidelines
-653: - [README.md](../README.md) - MCP server overview
+201: ### Tests: Extract Remaining Format-Prefix Strings from Production Source
+202: - **Added to src/handlers/utils.ts:**
+203:   - `EXISTING_EVENT_DETAILS_LABEL = 'Existing event details:'`
+204:   - `CONFLICTING_EVENT_DETAILS_LABEL = 'Conflicting event details:'`
+205:   - `CONFLICTING_EVENT_HEADER = '━━━ Conflicting Event ━━━'`
+206:   - `VIEW_URL_PREFIX = 'View: '`
+207:   - `VIEW_EXISTING_EVENT_PREFIX = 'View existing event: '`
+208:   - `GUESTS_PREFIX = 'Guests: '`
+209:   - `CALENDAR_PREFIX = 'Calendar: '`
+210:   - `OVERLAP_PREFIX = '⚠️  Overlap: '`
+211: - **Updated test files:**
+212:   - `src/tests/unit/handlers/duplicate-event-display.test.ts` — assertions on lines 68, 80, 83, 166, 167
+213:   - `src/tests/unit/handlers/utils-conflict-format.test.ts` — assertions on lines 45-48, 101, 104-105
+214: - **Benefit:** Single source of truth for format strings; eliminates silent drift risk
+215: 
+216: ### Dependencies: Replace Custom Array Utilities with lodash-es
+217: - **Added:** `lodash-es` to dependencies
+218: - **Deleted:** `src/utils/aggregationHelpers.ts` (114 LOC)
+219: - **Updated imports:**
+220:   - `src/handlers/core/batchUtils.ts` — import `groupBy` from lodash-es
+221:   - `src/handlers/core/eventFormatting.ts` — import `groupBy` from lodash-es
+222:   - `src/tests/integration/test-data-factory.ts` — import `groupBy` from lodash-es
+223: - **Functions migrated:** `sumBy`, `groupBy`, `countBy`, `keyBy` (renamed from `indexBy`), `uniqBy`
+224: - **Benefit:** Battle-tested library, better maintainability, tree-shakeable ES modules
+225: 
+226: ### Dependencies: Consolidate Date Utilities with date-fns
+227: - **Decision:** Evaluated `date-fns` vs `simple-rrule` continuation; implemented hybrid approach
+228: - **Added:** `date-fns` to dependencies
+229: - **Refactored:** `src/utils/date-utils.ts` wrapper layer
+230: - **Replaced wrappers:**
+231:   - `addDays`, `addMonths`, `addYears` → `date-fns: add()`
+232:   - `durationMs`, `durationHs`, `durationDays`, `durationMins`, `durationSecs` → `date-fns: difference*()`
+233:   - `formatRFC3339`, `formatISODateTime` → `date-fns: formatISO()`
+234:   - `isFutureDate`, `isPastDate` → `date-fns: isFuture()`, `isPast()`
+235:   - `compareDates` → `date-fns: compareAsc()`
+236:   - `getDaysInCurrentMonth`, `isMonthEnd` → `date-fns: getDaysInMonth()`, `isLastDayOfMonth()`
+237: - **Kept:** `simple-rrule` for RRULE parsing and recurrence operations
+238: - **Result:** ~40 lines of thin wrappers eliminated; simplified integration tests
+239: 
+240: ### Dependencies: Replace Custom Batch Chunking with p-limit
+241: - **Added:** `p-limit` to dependencies
+242: - **Refactored:** `src/utils/batchProcessor.ts` — `processBatchItemsChunked()`
+243: - **Removed:** Manual chunking loop (10+ lines) → `pLimit(batchSize)`
+244: - **Cleaner API:** Concurrency semantics explicit vs manual slice logic
+245: - **Benefit:** Battle-tested concurrency control, reduced LOC, edge case handling
+246: 
+247: ### Scripts: Fragile Filter-Exists Detection in gmail-filter-utils.mjs
+248: - **Fixed:** `lib/gmail-filter-utils.mjs:44` error detection
+249: - **Changed from:** `error.message.includes('exists')`
+250: - **Changed to:** `error.code === 409 || error.message.includes('Filter already exists')`
+251: - **Added:** Comment documenting expected error format
+252: - **Benefit:** Robust to API message format changes; HTTP 409 is reliable indicator
+253: 
+254: ## Updated Completion Status
+255: 
+256: - **Previous:** 22/22 items (100%)
+257: - **Current:** 28/28 items (100%) ✅
+258: - **New items migrated:** 6
+259: - **Open items:** 0 (all resolved)
+260: - **Tests passing:** 486/486 (100%)
 </file>
 
 <file path="README.md">
@@ -8485,14 +8628,14 @@ This section contains the contents of the repository's files.
 202: Automated scripts for organizing and filtering large volumes of Gmail with focus on correctness and efficiency.
 203: 
 204: **Management Scripts:** (use shared `createGmailClient()` for OAuth, error handling, and multi-account support)
-205: - `list-unread-emails.mjs` - Categorize and summarize unread emails by label/sender patterns; clean fallback categorization
+205: - `list-unread-emails.mjs` - Categorize and summarize unread emails; `--stats` for per-label counts, `--verify` for label spot-checks, `--count` for quick total
 206: - `summarize-remaining.mjs` - Summary of uncategorized/remaining unread emails (internal work, forums, misc); parallel fetching
 207: - `describe-internal.mjs` - Detailed breakdown of internal team emails with subjects and dates; hardcoded summary removed
 208: - `apply-filters-to-unread.mjs` - Apply existing filters to current unread emails
 209: - `create-remaining-filters.mjs` - Batch create filters for multiple categories (Product Updates, Communities, Services)
 210: 
 211: **Specialized Filters:**
-212: - `create-billing-filter.mjs` - Smart billing filter with conditional rate-limit detection
+212: - `protect-important-inbox.mjs --billing` - Smart billing filter with conditional rate-limit detection (merged from create-billing-filter.mjs)
 213: - `create-signoz-filter.mjs` - Archive SigNoz monitoring alerts automatically
 214: - `create-dmarc-filter.mjs` - Organize DMARC authentication reports
 215: - `create-eventbrite-filter.mjs` - Label and archive Eventbrite event emails
@@ -8503,7 +8646,7 @@ This section contains the contents of the repository's files.
 220: - `archive-signoz-dmarc.mjs` - Batch archive monitoring and DMARC report emails using Gmail batch API
 221: - `mark-signoz-read.mjs` - Mark SigNoz alerts as read in bulk
 222: - `mark-past-events-read.mjs` - Classify event emails by date and mark past events as read
-223: - `protect-important-inbox.mjs` - Label critical items to prevent archiving (payments, rate limits, services)
+223: - `protect-important-inbox.mjs` - Label critical items to prevent archiving; `--billing` mode for smart billing filters
 224: 
 225: **Event Management:**
 226: - `filter-events-by-date.mjs` - Classify event emails as future (label + keep) or past (label + archive)
@@ -8722,323 +8865,62 @@ This section contains the contents of the repository's files.
 439: - [Documentation](docs/)
 </file>
 
-<file path="CLAUDE.md">
- 1: # Google Calendar & Gmail MCP - Project Guidelines
- 2: 
- 3: ## Auth & Development
- 4: 
- 5: **OAuth Setup** (test mode):
- 6: ```bash
- 7: export ACCOUNT_MODE=test CALENDARMCP_TOKEN_PATH=~/.config/google-calendar-mcp/tokens.json
- 8: npm run auth  # Creates tokens.json; repeat for multiple accounts
- 9: npm run verify-tokens  # Verify auth status
-10: ```
-11: 
-12: **Gmail Tokens:**
-13: ```bash
-14: node auth-gmail.mjs  # Creates tokens-gmail.json (separate from calendar)
-15: node check-gmail.mjs  # Quick unread count
-16: ```
-17: 
-18: **Development:**
-19: ```bash
-20: npm install | npm run build | npm run dev | npm test
-21: ```
-22: 
-23: **Auth Details:**
-24: - Tokens stored in `~/.config/google-calendar-mcp/tokens.json` (calendar) and `tokens-gmail.json` (Gmail)
-25: - `ACCOUNT_MODE` selects which account; TokenManager auto-refreshes 5 min before expiry
-26: - Test tokens expire after 7 days; set env vars before `npm run auth` or in `claude_desktop_config.json`
-27: - Token files use 0600 permissions; TokenManager (src/auth/tokenManager.ts) handles multi-account lifecycle
-28: 
-29: **Test Status:**
-30: - ✅ Core handler tests (CreateEventHandler, GetEventHandler, GetCurrentTimeHandler)
-31: - ✅ Type-safe content assertions using `{ type: 'text'; text: string }` instead of `as any`
-32: - ✅ Integration tests for conflict detection via MCP protocol (real server, real API)
-33: - ✅ 486/486 tests passing
-34: 
-35: **Test Helpers & Fixtures:**
-36: Consolidated utilities reduce boilerplate across 30+ test files:
-37: - `factories.ts` - Event fixtures (makeEvent, makeTeamMeetingEvent, createFullEventArgs, STANDARD_ATTACHMENTS, ATTACHMENT_IDS)
-38: - `content.ts` - Response helpers (getTextContent, expectValidToolResponse, expectJsonResponse, assertTextContentContains)
-39: - `handler-setup.ts` - Mock setup (setupListEventsHandler, createGoogleCalendarMocks)
-40: - `integration-test-helpers.ts` - Lifecycle helpers (createAndVerifyEvent, updateAndVerifyEvent, expectModificationScopeError, expectEventUpdateSuccess)
-41: 
-42: ## Script Development
-43: 
-44: **Tools & Code Quality:**
-45: - `npm run check-duplicates` — Detect repeated code blocks (scans src/ with 6-line window)
-46: - Avoid bash heredocs with pipes — use Write tool or `.mjs` files in project root (not `/tmp`)
-47: 
-48: **Code Principles:**
-49: - Avoid dead variables; extract repeated patterns into utilities
-50: - Use named constants instead of magic strings; keep only non-obvious WHY in comments
-51: - Don't mutate input params; prefer direct operations over TOCTOU existence checks
-52: - Array.slice() naturally clamps; Math.min unnecessary
-53: 
-54: **Key Utilities:**
-55: - `eventManipulationUtils.ts` — `conditionallyAddFields()`, `buildCoreEvent()`, `buildOptionalEventFields()`
-56: - `date-utils.ts` — `formatRFC3339()`, `addMilliseconds()`, `oneDayBefore()`, etc.
-57: - `timezone-utils.ts` — `createTimeObject()`, `resolveTimeZone()`, etc.
-58: 
-59: ## Email Organization System
-60: 
-61: Core pattern: Label → conditional archive (keep future events, important items, archive notifications).
-62: 
-63: **Key Scripts:**
-64: - `list-unread-emails.mjs`, `summarize-remaining.mjs` — Email analysis
-65: - `apply-filters-to-unread.mjs`, `protect-important-inbox.mjs`, `filter-events-by-date.mjs` — Filtering & organization
-66: - `create-remaining-filters.mjs` — Filter setup
-67: 
-68: **Categories:** Protected (never archive) | Events (future=keep, past=archive) | Monitoring (archive) | Product Updates (label+archive) | Communities (keep) | Services (archive) | Billing (conditional)
-69: 
-70: **Shared Utilities:**
-71: - `gmail-client.mjs` — Authenticated client factory (✅ 65+ scripts)
-72: - `gmail-label-utils.mjs` — Label caching: `buildLabelCache()`, `resolveLabelId()`, `resolveLabelIds()`
-73: - `gmail-batch.mjs` — Batch operations (10-100x speedup)
-74: - `date-based-filter.mjs` — Date parsing utility (ISO, US, text formats; no mutations)
-75: 
-76: **Patterns:**
-77: - Use `Promise.all` for concurrent fetches (not serial loops)
-78: - Dynamic label resolution (L6) — `labelCache.get('Label/Name')` instead of hardcoded IDs (see `docs/LABEL-RESOLUTION-GUIDE.md`)
-</file>
-
 <file path="docs/BACKLOG.md">
-  1: # Project Backlog
-  2: 
-  3: **Last Updated:** 2026-03-24
-  4: 
-  5: ## Dependencies: Replace Custom Array Utilities with lodash-es
-  6: 
-  7: **Status:** ✅ Done
-  8: **Complexity:** Low
-  9: **Impact:** High (code reduction + maintainability)
- 10: **Discovery Date:** 2026-03-25
- 11: 
- 12: **Opportunity:**
- 13: The `src/utils/aggregationHelpers.ts` file exports 5 common array utility functions that are well-handled by the `lodash-es` library:
- 14: 
- 15: | Custom Function | lodash-es Equivalent | Usage |
- 16: |---|---|---|
- 17: | `sumBy(items, keyFn)` | `sumBy(items, keyFn)` | Reduce: 5 lines → 0 lines |
- 18: | `groupBy(items, keyFn)` | `groupBy(items, keyFn)` | Reduce: 6 lines → 0 lines |
- 19: | `countBy(items, keyFn)` | `countBy(items, keyFn)` | Reduce: 6 lines → 0 lines |
- 20: | `indexBy(items, keyFn)` | `keyBy(items, keyFn)` | Reduce: 6 lines → 0 lines |
- 21: | `uniqBy(items, keyFn)` | `uniqBy(items, keyFn)` | Reduce: 8 lines → 0 lines |
- 22: 
- 23: **Total:** 114 LOC → 0 LOC (delete entire file)
- 24: 
- 25: **Scope:**
- 26: 1. Add `lodash-es` to dependencies: `npm install lodash-es @types/lodash-es`
- 27: 2. Replace imports across codebase:
- 28:    - `src/handlers/core/batchUtils.ts` — imports `groupBy`
- 29:    - `src/handlers/core/eventFormatting.ts` — imports `groupBy`
- 30:    - `src/tests/integration/test-data-factory.ts` — imports `groupBy`
- 31: 3. Delete `src/utils/aggregationHelpers.ts` entirely
- 32: 4. Update imports to: `import { groupBy, sumBy, countBy, keyBy, uniqBy } from 'lodash-es';`
- 33: 
- 34: **Files Affected:**
- 35: - `src/utils/aggregationHelpers.ts` — DELETE
- 36: - `src/handlers/core/batchUtils.ts` — Update import
- 37: - `src/handlers/core/eventFormatting.ts` — Update import
- 38: - `src/tests/integration/test-data-factory.ts` — Update import
- 39: - `package.json` — Add lodash-es dependency
- 40: 
- 41: **Benefits:**
- 42: - **Maintenance:** Leverage battle-tested library instead of custom implementations
- 43: - **Discoverability:** Developers recognize lodash patterns; no learning curve
- 44: - **Consistency:** Aligns with industry standard (lodash is ubiquitous)
- 45: - **Performance:** lodash-es is optimized and tree-shakeable
- 46: - **Reduction:** Delete 114 lines of util code
- 47: 
- 48: **Notes:**
- 49: - `uniqBy` in lodash extracts keys; our custom version also extracted keys so behavior matches
- 50: - `indexBy` maps to lodash `keyBy` — identical semantics
- 51: - lodash-es supports ES6 imports (tree-shakeable) instead of CommonJS bloat
- 52: 
- 53: ---
- 54: 
- 55: 
- 56: ## Dependencies: Consolidate Date Utilities with date-fns
- 57: 
- 58: **Status:** ✅ Done
- 59: **Complexity:** Medium
- 60: **Impact:** Medium (reduces simple-rrule dependency creep)
- 61: **Discovery Date:** 2026-03-25
- 62: 
- 63: **Opportunity:**
- 64: `src/utils/date-utils.ts` wraps or reimplements date functions that are better handled by `date-fns` or `simple-rrule` alone. Current dependency on `simple-rrule` already provides much of this; consider whether to:
- 65: - Option A: Extend `simple-rrule` usage (lighter)
- 66: - Option B: Migrate to `date-fns` + keep `simple-rrule` for recurrence only (more flexible)
- 67: 
- 68: **Wrapper Functions to Eliminate:**
- 69: 
- 70: | Custom Function | Current Impl | Replacement | LOC |
- 71: |---|---|---|---|
- 72: | `addDays, addMonths, addYears` | Wraps `simple-rrule` | `date-fns: add()` or keep as-is | 3-6 |
- 73: | `durationMs/Hs/Days/Mins/Secs` | Wraps `simple-rrule` difference | `date-fns: difference*()` | 10-15 |
- 74: | `formatRFC3339, formatISODateTime` | Manual string split | `date-fns: formatISO()` | 4-6 |
- 75: | `getFutureDate, getPastDate` | Calls `addDays` | Direct: `addDays(new Date(), n)` | 4 |
- 76: | `isFutureDate, isPastDate` | Wraps `simple-rrule` | `date-fns: isFuture(), isPast()` | 4 |
- 77: | `compareDates` | Wraps `simple-rrule.compareAsc` | `date-fns: compareAsc()` | 1 |
- 78: | `getDaysInCurrentMonth, isMonthEnd` | Wraps `simple-rrule` | `date-fns: getDaysInMonth(), isLastDayOfMonth()` | 2 |
- 79: 
- 80: **Scope:**
- 81: 1. **Decision:** Keep `simple-rrule` (recurrence-focused) or migrate fully to `date-fns`?
- 82:    - **Simple-rrule only:** No new deps; keep current wrapper layer
- 83:    - **date-fns route:** Add `date-fns` (28KB), simplify many wrappers, unify around one date library
- 84: 2. If choosing **date-fns**:
- 85:    - `npm install date-fns`
- 86:    - Replace `simple-rrule` date imports with `date-fns`
- 87:    - Keep `simple-rrule` for RRULE parsing only (`toRRuleDateString, rrule parsing`)
- 88:    - Delete ~40 lines of thin wrappers
- 89: 3. Audit all 40+ usages of `date-utils` functions to verify API compatibility
- 90: 
- 91: **Files Affected:**
- 92: - `src/utils/date-utils.ts` — Refactor or remove wrapper layer
- 93: - All files importing from `date-utils` — Verify no breaking changes
- 94: - `package.json` — Add `date-fns` (if chosen)
- 95: 
- 96: **Benefits (date-fns path):**
- 97: - **Simplification:** Delete thin wrapper functions; call date-fns directly
- 98: - **Flexibility:** date-fns has richer locale + formatting support
- 99: - **Bundle size:** Comparable to simple-rrule; tree-shakeable
-100: - **Clarity:** Standard library patterns vs. bespoke wrappers
-101: 
-102: **Risks:**
-103: - **API mismatch:** Our wrappers normalize order of args (e.g., `durationMs(from, to)` vs date-fns `differenceInMilliseconds(to, from)`)
-104:   - Mitigation: Keep thin wrapper layer for order normalization; only delegate to date-fns
-105: - **RRULE handling:** `simple-rrule` is optimized for recurrence; date-fns requires separate rrule library
-106:   - Recommendation: Keep `simple-rrule` for recurrence, use `date-fns` for general date math
-107: 
-108: **Notes:**
-109: - Current usage of `simple-rrule`: `toRRuleDateString`, `compareAsc`, `getDaysInMonth`, `isBefore`, `isLastDayOfMonth`, `differenceIn*` functions
-110: - Consider hybrid approach: `date-fns` for general math, `simple-rrule` for recurrence
-111: 
-112: ---
-113: 
-114: 
-115: ## Dependencies: Replace Custom Batch Chunking with p-limit
-116: 
-117: **Status:** ✅ Done
-118: **Complexity:** Low
-119: **Impact:** Low–Medium (cleaner concurrency control)
-120: **Discovery Date:** 2026-03-25
-121: 
-122: **Opportunity:**
-123: `src/utils/batchProcessor.ts` implements parallel batch processing with manual chunking:
-124: - `processBatchItems()` — Already uses `Promise.all()` (no concurrency limit)
-125: - `processBatchItemsChunked()` — Manual loop chunking to control parallelism
-126: 
-127: The `p-limit` library (3KB) or `p-queue` (8KB) can replace the chunking logic cleanly.
-128: 
-129: **Current Implementation:**
-130: ```typescript
-131: // Lines 106–136: Manual slice/chunk loop
-132: for (let chunkIndex = 0; chunkIndex < items.length; chunkIndex += batchSize) {
-133:   const chunk = items.slice(chunkIndex, chunkIndex + batchSize);
-134:   const promises = chunk.map(item => operation(item));
-135:   const outcomes = await Promise.all(promises);
-136:   // ... error handling
-137: }
-138: ```
-139: 
-140: **Replacement with p-limit:**
-141: ```typescript
-142: import pLimit from 'p-limit';
-143: 
-144: const limit = pLimit(batchSize);
-145: const promises = items.map(item => limit(() => operation(item)));
-146: const outcomes = await Promise.all(promises);
-147: ```
-148: 
-149: **Scope:**
-150: 1. Add `p-limit` to dependencies: `npm install p-limit`
-151: 2. Refactor `processBatchItemsChunked()`:
-152:    - Remove manual `for` loop (10+ lines)
-153:    - Use `pLimit` to control concurrency
-154:    - Keep error aggregation logic
-155: 3. Consider simplifying `processBatchItems()` to always use p-limit with max concurrency
-156: 4. Update callers: None expected (internal utility); test thoroughly
-157: 
-158: **Files Affected:**
-159: - `src/utils/batchProcessor.ts` — Simplify chunking logic (~15 LOC saved)
-160: - `package.json` — Add p-limit dependency
-161: 
-162: **Benefits:**
-163: - **Clarity:** Concurrency semantics explicit (`const limit = pLimit(5)`) vs. manual chunking
-164: - **Correctness:** p-limit is battle-tested; manual chunking can have edge cases
-165: - **Maintenance:** Single responsibility — library handles concurrency, we handle errors
-166: - **Flexibility:** Easy to tune batch size; no loop refactoring needed
-167: 
-168: **Alternative:** Use `Promise.allSettled()` to handle all errors cleanly instead of manual outcome tracking.
-169: 
-170: ---
-171: 
-172: 
-173: ## Dependencies: Email Parsing with parseaddr or email-addresses
-174: 
-175: **Status:** 🔲 DEFER
-176: **Complexity:** Low
-177: **Impact:** Low (1–2 uses; niche functionality)
-178: **Discovery Date:** 2026-03-25
-179: 
-180: **Opportunity:**
-181: Gmail utility functions in `lib/email-analyzer.mjs` implement custom email header parsing:
-182: 
-183: | Custom Function | Behavior | Replacement Lib |
-184: |---|---|---|
-185: | `extractDisplayName(from)` | Parses "Name <email@addr>" → "Name" | `parseaddr` or `email-addresses` |
-186: | `extractEmailAddress(from)` | Parses "Name <email@addr>" → "email@addr" | `parseaddr` or `email-addresses` |
-187: 
-188: **Current Implementation:**
-189: ```javascript
-190: export function extractDisplayName(from) {
-191:   const match = from.match(/^([^<]*)<[^>]+>$/);
-192:   return match ? match[1].trim() : from;
-193: }
-194: 
-195: export function extractEmailAddress(from) {
-196:   const match = from.match(/<([^>]+)>/);
-197:   return match ? match[1] : from;
-198: }
-199: ```
-200: 
-201: **Scope:**
-202: 1. Evaluate libraries:
-203:    - **parseaddr** (2KB) — Lightweight; standard `mailbox` parsing
-204:    - **email-addresses** (20KB) — Comprehensive RFC 5322 parsing
-205: 2. Choose based on usage frequency and complexity
-206: 3. Replace 2 functions in `lib/email-analyzer.mjs`
-207: 4. No type changes needed (input/output same)
-208: 
-209: **Files Affected:**
-210: - `lib/email-analyzer.mjs` — Replace `extractDisplayName` and `extractEmailAddress`
-211: - `package.json` — Add `parseaddr` or `email-addresses`
-212: 
-213: **Benefits:**
-214: - **Correctness:** Handles edge cases (quoted names, angle brackets in display names, etc.)
-215: - **Standards:** RFC 5322 compliant parsing vs. regex heuristics
-216: - **Simplicity:** Delete 2 regex-based functions
-217: 
-218: **Caveats:**
-219: - **Usage:** These functions used in ~1–2 email scripts; low impact if not done
-220: - **Bundle size:** If only 2 uses, custom regex might still be lighter
-221: - **Recommendation:** Defer unless email parsing becomes more complex
-222: 
-223: ---
-224: 
-225: 
-226: ## Dependencies: Gmail Search Query Building with query-string
-227: 
-228: **Status:** 🔲 DEFER
-229: **Complexity:** Low
-230: **Impact:** Low (single utility function)
-231: **Discovery Date:** 2026-03-25
-232: 
-233: **Recommendation:** **Skip this item** — custom implementation is lightweight and domain-specific. Premature abstraction; defer unless search criteria become more complex.
-234: 
-235: ---
+ 1: # Project Backlog
+ 2: 
+ 3: **Last Updated:** 2026-03-26 (session 2)
+ 4: 
+ 5: ## Dependencies: Email Parsing with parseaddr or email-addresses
+ 6: 
+ 7: **Status:** 🔲 DEFER
+ 8: **Complexity:** Low
+ 9: **Impact:** Low (1–2 uses; niche functionality)
+10: **Discovery Date:** 2026-03-25
+11: 
+12: **Opportunity:**
+13: Gmail utility functions in `lib/email-analyzer.mjs` implement custom email header parsing:
+14: 
+15: | Custom Function | Behavior | Replacement Lib |
+16: |---|---|---|
+17: | `extractDisplayName(from)` | Parses "Name <email@addr>" → "Name" | `parseaddr` or `email-addresses` |
+18: | `extractEmailAddress(from)` | Parses "Name <email@addr>" → "email@addr" | `parseaddr` or `email-addresses` |
+19: 
+20: **Current Implementation:**
+21: ```javascript
+22: export function extractDisplayName(from) {
+23:   const match = from.match(/^([^<]*)<[^>]+>$/);
+24:   return match ? match[1].trim() : from;
+25: }
+26: 
+27: export function extractEmailAddress(from) {
+28:   const match = from.match(/<([^>]+)>/);
+29:   return match ? match[1] : from;
+30: }
+31: ```
+32: 
+33: **Scope:**
+34: 1. Evaluate libraries:
+35:    - **parseaddr** (2KB) — Lightweight; standard `mailbox` parsing
+36:    - **email-addresses** (20KB) — Comprehensive RFC 5322 parsing
+37: 2. Choose based on usage frequency and complexity
+38: 3. Replace 2 functions in `lib/email-analyzer.mjs`
+39: 4. No type changes needed (input/output same)
+40: 
+41: **Files Affected:**
+42: - `lib/email-analyzer.mjs` — Replace `extractDisplayName` and `extractEmailAddress`
+43: - `package.json` — Add `parseaddr` or `email-addresses`
+44: 
+45: **Benefits:**
+46: - **Correctness:** Handles edge cases (quoted names, angle brackets in display names, etc.)
+47: - **Standards:** RFC 5322 compliant parsing vs. regex heuristics
+48: - **Simplicity:** Delete 2 regex-based functions
+49: 
+50: **Caveats:**
+51: - **Usage:** These functions used in ~1–2 email scripts; low impact if not done
+52: - **Bundle size:** If only 2 uses, custom regex might still be lighter
+53: - **Recommendation:** Defer unless email parsing becomes more complex
+54: 
+55: ---
 </file>
 
 </files>

@@ -169,6 +169,14 @@ describe('ListEventsHandler - Timezone Handling', () => {
       });
     });
 
+    const expectEventsListCalledWith = (timeMin: string, timeMax: string) =>
+      expect(mockCalendar.events.list).toHaveBeenCalledWith({
+        calendarId: 'primary',
+        timeMin,
+        timeMax,
+        ...LIST_EVENTS_API_DEFAULTS
+      });
+
     it('should use timeZone parameter to interpret timezone-naive timeMin/timeMax', async () => {
       const args = {
         calendarId: 'primary',
@@ -179,13 +187,7 @@ describe('ListEventsHandler - Timezone Handling', () => {
 
       await handler.runTool(args, mockOAuth2Client);
 
-      // Verify that the calendar.events.list was called with correctly converted times
-      expect(mockCalendar.events.list).toHaveBeenCalledWith({
-        calendarId: 'primary',
-        timeMin: '2025-01-01T18:00:00Z', // 10:00 AM PST = 18:00 UTC
-        timeMax: '2025-01-02T02:00:00Z', // 18:00 PM PST = 02:00 UTC next day
-        ...LIST_EVENTS_API_DEFAULTS
-      });
+      expectEventsListCalledWith('2025-01-01T18:00:00Z', '2025-01-02T02:00:00Z');
     });
 
     it('should preserve timezone-aware timeMin/timeMax regardless of timeZone parameter', async () => {
@@ -198,17 +200,10 @@ describe('ListEventsHandler - Timezone Handling', () => {
 
       await handler.runTool(args, mockOAuth2Client);
 
-      // Verify that the original timezone-aware times are preserved
-      expect(mockCalendar.events.list).toHaveBeenCalledWith({
-        calendarId: 'primary',
-        timeMin: '2025-01-01T10:00:00-08:00',
-        timeMax: '2025-01-01T18:00:00-08:00',
-        ...LIST_EVENTS_API_DEFAULTS
-      });
+      expectEventsListCalledWith('2025-01-01T10:00:00-08:00', '2025-01-01T18:00:00-08:00');
     });
 
     it('should fall back to calendar timezone when timeZone parameter not provided', async () => {
-      // Mock calendar with Los Angeles timezone
       mockCalendar.calendarList.get.mockResolvedValue({
         data: { timeZone: 'America/Los_Angeles' }
       });
@@ -222,13 +217,7 @@ describe('ListEventsHandler - Timezone Handling', () => {
 
       await handler.runTool(args, mockOAuth2Client);
 
-      // Verify that the calendar's timezone is used for conversion
-      expect(mockCalendar.events.list).toHaveBeenCalledWith({
-        calendarId: 'primary',
-        timeMin: '2025-01-01T18:00:00Z', // 10:00 AM PST = 18:00 UTC
-        timeMax: '2025-01-02T02:00:00Z', // 18:00 PM PST = 02:00 UTC next day
-        ...LIST_EVENTS_API_DEFAULTS
-      });
+      expectEventsListCalledWith('2025-01-01T18:00:00Z', '2025-01-02T02:00:00Z');
     });
 
     it('should handle UTC timezone correctly', async () => {
@@ -241,13 +230,7 @@ describe('ListEventsHandler - Timezone Handling', () => {
 
       await handler.runTool(args, mockOAuth2Client);
 
-      // Verify that UTC times are handled correctly
-      expect(mockCalendar.events.list).toHaveBeenCalledWith({
-        calendarId: 'primary',
-        timeMin: '2025-01-01T10:00:00Z',
-        timeMax: '2025-01-01T18:00:00Z',
-        ...LIST_EVENTS_API_DEFAULTS
-      });
+      expectEventsListCalledWith('2025-01-01T10:00:00Z', '2025-01-01T18:00:00Z');
     });
   });
 });

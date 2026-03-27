@@ -1,5 +1,23 @@
 export { getTextContent, tryGetTextContent, assertTextContentContains, expectValidToolResponse, expectJsonResponse } from './content.js';
-export { makeEvent, makeEventWithCalendarId, makeEvents, makeGaxiosError, makeCalendarMock, createFullEventArgs, ATTACHMENT_IDS, STANDARD_ATTACHMENTS } from './factories.js';
+export {
+  makeEvent,
+  makeEventWithCalendarId,
+  makeEvents,
+  makeGaxiosError,
+  makeCalendarMock,
+  createFullEventArgs,
+  ATTACHMENT_IDS,
+  STANDARD_ATTACHMENTS,
+  makeFutureDateString,
+  makePastDateString,
+  makeWeeklyRecurringEvent,
+  makeDailyRecurringEvent,
+  makeMonthlyRecurringEvent,
+  makeRecurringEventWithExceptions,
+  makeRecurringEventWithAdditionalDates,
+  makeRecurringEventInstance,
+  makeRecurringEventInstances,
+} from './factories.js';
 export { createBuilder } from './testBuilder.js';
 export {
   SYSTEM_FIELDS,

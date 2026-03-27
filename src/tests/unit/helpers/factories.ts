@@ -5,7 +5,6 @@ import { addHours, addMinutes } from 'date-fns';
 import {
   addDays,
   getFutureDate,
-  getPastDate,
   formatTZNaiveDateTime,
   formatRFC3339,
   formatBasicDateTime,
@@ -111,6 +110,13 @@ export function makePastDateString(yearsAgo: number = 1): string {
 
 // ============================================================================
 // RECURRENCE FACTORIES - Create recurring event patterns for testing
+//
+// Intended for tests that need full recurring event objects with realistic
+// future dates: conflict detection for recurring events, list/search results
+// that return expanded series, and freebusy scenarios spanning recurrences.
+//
+// Not a fit for RRULE string-manipulation tests (pass raw arrays directly)
+// or handler tests that need fixed dates for timezone assertions.
 // ============================================================================
 
 /**
@@ -391,6 +397,7 @@ export function makeCalendarMock(overrides: {
   patch?: ReturnType<typeof vi.fn>;
   insert?: ReturnType<typeof vi.fn>;
   list?: ReturnType<typeof vi.fn>;
+  delete?: ReturnType<typeof vi.fn>;
   calendarListGet?: ReturnType<typeof vi.fn>;
 } = {}): Pick<calendar_v3.Calendar, 'events'> & {
   events: {
@@ -398,6 +405,7 @@ export function makeCalendarMock(overrides: {
     patch: ReturnType<typeof vi.fn>;
     insert: ReturnType<typeof vi.fn>;
     list: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
   };
   calendarList: {
     get: ReturnType<typeof vi.fn>;
@@ -409,6 +417,7 @@ export function makeCalendarMock(overrides: {
       patch: overrides.patch ?? vi.fn(),
       insert: overrides.insert ?? vi.fn(),
       list: overrides.list ?? vi.fn(),
+      delete: overrides.delete ?? vi.fn(),
     } as any,
     calendarList: {
       get: overrides.calendarListGet ?? vi.fn(),

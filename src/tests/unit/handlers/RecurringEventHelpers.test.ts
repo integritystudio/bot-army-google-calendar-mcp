@@ -1,15 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { calendar_v3 } from 'googleapis';
 import { RecurringEventHelpers } from '../../../handlers/core/RecurringEventHelpers.js';
-import { makeCalendarMock, makeEvent } from '../helpers/factories.js';
 import {
+  makeCalendarMock,
+  makeEvent,
   SYSTEM_FIELDS,
   createTestEventWithTZOffset,
   createCompleteTestEvent,
   createUpdateEventArgsWithTimes,
   createUpdateEventArgsWithAttendees,
   createComplexUpdateEventArgs
-} from '../helpers/event-test-data.js';
+} from '../helpers/index.js';
 
 // Test constants
 const CALENDAR_ID = 'primary';

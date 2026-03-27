@@ -23,6 +23,8 @@ export {
 export { createBuilder } from './testBuilder.js';
 export {
   SYSTEM_FIELDS,
+  DEFAULT_CALENDAR_ID,
+  DEFAULT_EVENT_ID,
   createTestEventWithDateTime,
   createTestEventWithTZOffset,
   createCompleteTestEvent,

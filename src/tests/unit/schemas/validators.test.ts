@@ -1,14 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { ToolSchemas } from '../../../tools/registry.js';
-import { makePastDateString } from '../helpers/factories.js';
+import { makePastDateString, createUpdateEventArgs, createComplexUpdateEventArgs, DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID } from '../helpers/index.js';
 import { TIME_MIN, TIME_MAX } from '../helpers/test-configs.js';
 import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
-import {
-  createUpdateEventArgs,
-  createComplexUpdateEventArgs,
-  DEFAULT_CALENDAR_ID,
-  DEFAULT_EVENT_ID
-} from '../helpers/event-test-data.js';
 import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from '../../../testing/constants.js';
 
 const UpdateEventArgumentsSchema = ToolSchemas['update-event'];

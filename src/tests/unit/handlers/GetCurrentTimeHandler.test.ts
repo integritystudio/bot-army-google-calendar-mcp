@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { GetCurrentTimeHandler } from '../../../handlers/core/GetCurrentTimeHandler.js';
 import { OAuth2Client } from 'google-auth-library';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { getTextContent } from '../helpers/content.js';
+import { getTextContent } from '../helpers/index.js';
 
 describe('GetCurrentTimeHandler', () => {
   const mockOAuth2Client = {

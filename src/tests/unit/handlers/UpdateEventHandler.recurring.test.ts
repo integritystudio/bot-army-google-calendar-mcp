@@ -3,7 +3,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { calendar_v3, google } from 'googleapis';
 import { UpdateEventHandler } from '../../../handlers/core/UpdateEventHandler.js';
 import { UpdateEventInput, ToolSchemas } from '../../../tools/registry.js';
-import { makeEvent, makeCalendarMock } from '../helpers/factories.js';
+import { makeEvent, makeCalendarMock } from '../helpers/index.js';
 import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
 
 vi.mock('googleapis', async () => {

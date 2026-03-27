@@ -37,10 +37,17 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
       expect(result.timeZone).toBe(TEST_TIMEZONE);
     });
 
+    it('should accept omitted timeZone (optional field)', () => {
+      const args = { calendarId: DEFAULT_CALENDAR_ID, eventId: DEFAULT_EVENT_ID };
+
+      const result = UpdateEventArgumentsSchema.parse(args);
+      expect(result.timeZone).toBeUndefined();
+    });
+
     it('should reject missing required fields', () => {
       const invalidArgs = {
         calendarId: 'primary',
-        // missing eventId and timeZone
+        // missing eventId
       };
 
       expect(() => UpdateEventArgumentsSchema.parse(invalidArgs)).toThrow();

@@ -1,6 +1,7 @@
 import { calendar_v3 } from 'googleapis';
 import { GaxiosError } from 'gaxios';
 import { vi } from 'vitest';
+import type { CreateEventInput } from '../../../tools/registry.js';
 import { addHours, addMinutes } from 'date-fns';
 import {
   addDays,
@@ -252,6 +253,7 @@ export function makeCalendarMock(overrides: {
   list?: ReturnType<typeof vi.fn>;
   delete?: ReturnType<typeof vi.fn>;
   calendarListGet?: ReturnType<typeof vi.fn>;
+  calendarListList?: ReturnType<typeof vi.fn>;
 } = {}): Pick<calendar_v3.Calendar, 'events'> & {
   events: {
     get: ReturnType<typeof vi.fn>;
@@ -262,6 +264,7 @@ export function makeCalendarMock(overrides: {
   };
   calendarList: {
     get: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
   };
 } {
   return {
@@ -274,6 +277,7 @@ export function makeCalendarMock(overrides: {
     } as any,
     calendarList: {
       get: overrides.calendarListGet ?? vi.fn(),
+      list: overrides.calendarListList ?? vi.fn(),
     },
   };
 }
@@ -324,7 +328,7 @@ export const ATTACHMENT_IDS = {
 export function createFullEventArgs(
   overrides: Record<string, any> = {}
 ): Record<string, any> {
-  return {
+  const base: Partial<CreateEventInput> = {
     eventId: 'full-event',
     summary: 'Full Event',
     description: 'Event description',
@@ -335,8 +339,8 @@ export function createFullEventArgs(
       useDefault: false,
       overrides: [{ method: 'email', minutes: 30 }]
     },
-    ...overrides
   };
+  return { ...base, ...overrides };
 }
 
 export const STANDARD_ATTACHMENTS = [

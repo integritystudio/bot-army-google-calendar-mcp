@@ -1,5 +1,6 @@
 import { calendar_v3 } from 'googleapis';
 import { TEST_EVENT_DEFAULTS } from '../../../testing/constants.js';
+import type { UpdateEventInput, CreateEventInput } from '../../../tools/registry.js';
 
 /**
  * System-generated fields that should be removed during event duplication.
@@ -81,12 +82,12 @@ export function createUpdateEventArgs(
   timeZone: string = 'America/Los_Angeles',
   overrides: Record<string, any> = {}
 ): Record<string, any> {
-  return {
+  const base: Pick<UpdateEventInput, 'calendarId' | 'eventId' | 'timeZone'> = {
     calendarId,
     eventId,
     timeZone,
-    ...overrides
   };
+  return { ...base, ...overrides };
 }
 
 export function createUpdateEventArgsWithTimes(
@@ -158,13 +159,13 @@ export function createCreateEventArgs(
   calendarId: string = DEFAULT_CALENDAR_ID,
   overrides: Record<string, any> = {}
 ): Record<string, any> {
-  return {
+  const base: Pick<CreateEventInput, 'calendarId' | 'summary' | 'start' | 'end'> = {
     calendarId,
     summary: 'Test Event',
     start: '2025-01-15T10:00:00',
     end: '2025-01-15T11:00:00',
-    ...overrides
   };
+  return { ...base, ...overrides };
 }
 
 export function createConflictEventArgs(

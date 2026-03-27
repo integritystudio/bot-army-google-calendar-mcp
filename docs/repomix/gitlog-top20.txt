@@ -1,3 +1,9 @@
+de0cebd 2026-03-26 refactor(field-mask-builder): extract resolveFields helper and LIST_METADATA_FIELDS constant
+  docs/repomix/gitlog-top20.txt
+  docs/repomix/repo-compressed.xml
+  docs/repomix/repomix-git-ranked.xml
+  docs/repomix/repomix.xml
+
 a191c2f 2026-03-26 refactor(tests): consolidate helper imports through index barrel
   src/tests/unit/handlers/RecurringEventHelpers.test.ts
   src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts

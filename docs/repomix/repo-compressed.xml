@@ -1982,52 +1982,6 @@ export function expectValidToolResponse(result: unknown): void
 export function expectJsonResponse(result: unknown): Record<string, any>
 </file>
 
-<file path="src/tests/unit/helpers/event-test-data.ts">
-import { calendar_v3 } from 'googleapis';
-import { TEST_EVENT_DEFAULTS } from '../../../testing/constants.js';
-⋮----
-export function createTestEventWithDateTime(
-  startTime: string = '2024-06-15T10:00:00Z',
-  endTime: string = '2024-06-15T11:00:00Z',
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-export function createTestEventWithTZOffset(
-  startTime: string = '2024-06-15T10:00:00-07:00',
-  endTime: string = '2024-06-15T11:00:00-07:00',
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-export function createCompleteTestEvent(overrides: Partial<calendar_v3.Schema$Event> =
-export function createUpdateEventArgs(
-  calendarId: string = DEFAULT_CALENDAR_ID,
-  eventId: string = DEFAULT_EVENT_ID,
-  timeZone: string = 'America/Los_Angeles',
-  overrides: Record<string, any> = {}
-): Record<string, any>
-export function createUpdateEventArgsWithTimes(
-  start: string = '2024-06-15T10:00:00-07:00',
-  end: string = '2024-06-15T11:00:00-07:00',
-  timeZone: string = 'America/Los_Angeles',
-  overrides: Record<string, any> = {}
-): Record<string, any>
-export function createUpdateEventArgsWithAttendees(
-  overrides: Record<string, any> = {}
-): Record<string, any>
-export function createComplexUpdateEventArgs(
-  overrides: Record<string, any> = {}
-): Record<string, any>
-export function createCreateEventArgs(
-  calendarId: string = DEFAULT_CALENDAR_ID,
-  overrides: Record<string, any> = {}
-): Record<string, any>
-export function createConflictEventArgs(
-  eventId: string = 'existing-event',
-  overrides: Record<string, any> = {}
-): Record<string, any>
-export function createEventWithExtendedProperties(
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-</file>
-
 <file path="src/tests/unit/helpers/factories.test.ts">
 import { describe, it, expect } from 'vitest';
 import {
@@ -2297,24 +2251,6 @@ export function sanitizeEventId(input: string): string
 // Generate a base32hex timestamp
 ⋮----
 sanitized = `event${timestamp}`.substring(0, 26); // Match Google's 26-char format
-</file>
-
-<file path="src/utils/field-mask-builder.ts">
-export type AllowedEventField = typeof ALLOWED_EVENT_FIELDS[number];
-⋮----
-export function validateFields(fields: string[]): AllowedEventField[]
-export function buildEventFieldMask(
-  requestedFields?: string[],
-  includeDefaults: boolean = true
-): string | undefined
-export function buildSingleEventFieldMask(
-  requestedFields?: string[],
-  includeDefaults: boolean = true
-): string | undefined
-export function buildListFieldMask(
-  requestedFields?: string[],
-  includeDefaults: boolean = true
-): string | undefined
 </file>
 
 <file path="src/utils/timezone-utils.ts">
@@ -2832,17 +2768,55 @@ function setupMocks(
 ): void
 </file>
 
-<file path="src/tests/unit/helpers/test-configs.ts">
-
+<file path="src/tests/unit/helpers/event-test-data.ts">
+import { calendar_v3 } from 'googleapis';
+import { TEST_EVENT_DEFAULTS } from '../../../testing/constants.js';
+import type { UpdateEventInput, CreateEventInput } from '../../../tools/registry.js';
+⋮----
+export function createTestEventWithDateTime(
+  startTime: string = '2024-06-15T10:00:00Z',
+  endTime: string = '2024-06-15T11:00:00Z',
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event
+export function createTestEventWithTZOffset(
+  startTime: string = '2024-06-15T10:00:00-07:00',
+  endTime: string = '2024-06-15T11:00:00-07:00',
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event
+export function createCompleteTestEvent(overrides: Partial<calendar_v3.Schema$Event> =
+export function createUpdateEventArgs(
+  calendarId: string = DEFAULT_CALENDAR_ID,
+  eventId: string = DEFAULT_EVENT_ID,
+  timeZone: string = 'America/Los_Angeles',
+  overrides: Record<string, any> = {}
+): Record<string, any>
+export function createUpdateEventArgsWithTimes(
+  start: string = '2024-06-15T10:00:00-07:00',
+  end: string = '2024-06-15T11:00:00-07:00',
+  timeZone: string = 'America/Los_Angeles',
+  overrides: Record<string, any> = {}
+): Record<string, any>
+export function createUpdateEventArgsWithAttendees(
+  overrides: Record<string, any> = {}
+): Record<string, any>
+export function createComplexUpdateEventArgs(
+  overrides: Record<string, any> = {}
+): Record<string, any>
+export function createCreateEventArgs(
+  calendarId: string = DEFAULT_CALENDAR_ID,
+  overrides: Record<string, any> = {}
+): Record<string, any>
+export function createConflictEventArgs(
+  eventId: string = 'existing-event',
+  overrides: Record<string, any> = {}
+): Record<string, any>
+export function createEventWithExtendedProperties(
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event
 </file>
 
-<file path="src/tests/unit/schemas/validators.test.ts">
-import { describe, it, expect } from 'vitest';
-import { ToolSchemas } from '../../../tools/registry.js';
-import { makePastDateString, createUpdateEventArgs, createComplexUpdateEventArgs, DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID } from '../helpers/index.js';
-import { TIME_MIN, TIME_MAX } from '../helpers/test-configs.js';
-import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
-import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from '../../../testing/constants.js';
+<file path="src/tests/unit/helpers/test-configs.ts">
+
 </file>
 
 <file path="src/tests/unit/services/conflict-detection/ConflictAnalyzer.test.ts">
@@ -2920,6 +2894,25 @@ static async registerAll(
       args: any
     ) => Promise<{ content: Array<{ type: "text"; text: string }> }>
 )
+</file>
+
+<file path="src/utils/field-mask-builder.ts">
+export type AllowedEventField = typeof ALLOWED_EVENT_FIELDS[number];
+⋮----
+export function validateFields(fields: string[]): AllowedEventField[]
+function resolveFields(requestedFields: string[], includeDefaults: boolean): AllowedEventField[]
+export function buildEventFieldMask(
+  requestedFields?: string[],
+  includeDefaults: boolean = true
+): string | undefined
+export function buildSingleEventFieldMask(
+  requestedFields?: string[],
+  includeDefaults: boolean = true
+): string | undefined
+export function buildListFieldMask(
+  requestedFields?: string[],
+  includeDefaults: boolean = true
+): string | undefined
 </file>
 
 <file path="auth-gmail.mjs">
@@ -3098,16 +3091,6 @@ export function createEventResponseWithConflicts(
 
 </file>
 
-<file path="src/tests/unit/handlers/ListEventsHandler.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
-import { OAuth2Client } from 'google-auth-library';
-import { google } from 'googleapis';
-import { convertToRFC3339 } from '../../../utils/timezone-utils.js';
-import { getTextContent, makeEvent, makeCalendarMock } from '../helpers/index.js';
-import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
-</file>
-
 <file path="src/tests/unit/handlers/SearchEventsHandler.test.ts">
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SearchEventsHandler } from '../../../handlers/core/SearchEventsHandler.js';
@@ -3141,6 +3124,15 @@ export interface HandlerSetup {
   mockCalendarApi: ReturnType<typeof makeCalendarMock>;
 }
 export function setupListEventsHandler(): HandlerSetup
+</file>
+
+<file path="src/tests/unit/schemas/validators.test.ts">
+import { describe, it, expect } from 'vitest';
+import { ToolSchemas } from '../../../tools/registry.js';
+import { makePastDateString, createUpdateEventArgs, createComplexUpdateEventArgs, DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID } from '../helpers/index.js';
+import { TIME_MIN, TIME_MAX } from '../helpers/test-configs.js';
+import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
+import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from '../../../testing/constants.js';
 </file>
 
 <file path="src/tests/unit/index.test.ts">
@@ -3198,10 +3190,23 @@ import {
 } from '../../../handlers/utils.js';
 </file>
 
+<file path="src/tests/unit/handlers/ListEventsHandler.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
+import { OAuth2Client } from 'google-auth-library';
+import { google } from 'googleapis';
+import { convertToRFC3339 } from '../../../utils/timezone-utils.js';
+import { getTextContent, makeEvent, makeCalendarMock } from '../helpers/index.js';
+import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
+⋮----
+const expectEventsListCalledWith = (timeMin: string, timeMax: string)
+</file>
+
 <file path="src/tests/unit/helpers/factories.ts">
 import { calendar_v3 } from 'googleapis';
 import { GaxiosError } from 'gaxios';
 import { vi } from 'vitest';
+import type { CreateEventInput } from '../../../tools/registry.js';
 import { addHours, addMinutes } from 'date-fns';
 import {
   addDays,
@@ -3278,6 +3283,7 @@ export function makeCalendarMock(overrides: {
   list?: ReturnType<typeof vi.fn>;
   delete?: ReturnType<typeof vi.fn>;
   calendarListGet?: ReturnType<typeof vi.fn>;
+  calendarListList?: ReturnType<typeof vi.fn>;
 } =
 export function makeConflictingEvents(
   overrides1: Partial<calendar_v3.Schema$Event> = {},

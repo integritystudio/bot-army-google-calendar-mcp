@@ -1958,56 +1958,11 @@ import { describe, it, expect } from 'vitest';
 import { hasTimezoneInDatetime, convertToRFC3339, createTimeObject } from '../../../utils/timezone-utils.js';
 </file>
 
-<file path="src/tests/unit/handlers/GetCurrentTimeHandler.test.ts">
-import { describe, it, expect, vi } from 'vitest';
-import { GetCurrentTimeHandler } from '../../../handlers/core/GetCurrentTimeHandler.js';
-import { OAuth2Client } from 'google-auth-library';
-import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { getTextContent } from '../helpers/content.js';
-</file>
-
 <file path="src/tests/unit/handlers/GetEventHandler.test.ts">
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GetEventHandler } from '../../../handlers/core/GetEventHandler.js';
 import { OAuth2Client } from 'google-auth-library';
 import { getTextContent, makeEvent, makeCalendarMock } from '../helpers/index.js';
-</file>
-
-<file path="src/tests/unit/handlers/RecurringEventHelpers.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { calendar_v3 } from 'googleapis';
-import { RecurringEventHelpers } from '../../../handlers/core/RecurringEventHelpers.js';
-import { makeCalendarMock, makeEvent } from '../helpers/factories.js';
-import {
-  SYSTEM_FIELDS,
-  createTestEventWithTZOffset,
-  createCompleteTestEvent,
-  createUpdateEventArgsWithTimes,
-  createUpdateEventArgsWithAttendees,
-  createComplexUpdateEventArgs
-} from '../helpers/event-test-data.js';
-⋮----
-function resolveWith(overrides: Partial<calendar_v3.Schema$Event>)
-⋮----
-function expectSystemFieldsRemoved(result: calendar_v3.Schema$Event): void
-</file>
-
-<file path="src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts">
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { OAuth2Client } from 'google-auth-library';
-import { calendar_v3, google } from 'googleapis';
-import { UpdateEventHandler } from '../../../handlers/core/UpdateEventHandler.js';
-import { UpdateEventInput, ToolSchemas } from '../../../tools/registry.js';
-import { makeEvent, makeCalendarMock } from '../helpers/factories.js';
-import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
-⋮----
-function createMockEvent(overrides: Partial<calendar_v3.Schema$Event> =
-function createMockRecurringEvent(overrides: Partial<calendar_v3.Schema$Event> =
-function buildUpdateEventInput(overrides: Partial<UpdateEventInput> =
-function setupMocks(
-    eventData: calendar_v3.Schema$Event,
-    insertData?: calendar_v3.Schema$Event
-): void
 </file>
 
 <file path="src/tests/unit/handlers/utils.test.ts">
@@ -2123,33 +2078,6 @@ import { ToolRegistry } from '../../../tools/registry.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ToolRegistry, ToolSchemas } from '../../../tools/registry.js';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-</file>
-
-<file path="src/tests/unit/schemas/validators.test.ts">
-import { describe, it, expect } from 'vitest';
-import { ToolSchemas } from '../../../tools/registry.js';
-import { makePastDateString } from '../helpers/factories.js';
-import { TIME_MIN, TIME_MAX } from '../helpers/test-configs.js';
-import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
-import {
-  createUpdateEventArgs,
-  createComplexUpdateEventArgs,
-  DEFAULT_CALENDAR_ID,
-  DEFAULT_EVENT_ID
-} from '../helpers/event-test-data.js';
-import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from '../../../testing/constants.js';
-</file>
-
-<file path="src/tests/unit/services/conflict-detection/ConflictAnalyzer.test.ts">
-import { describe, it, expect } from 'vitest';
-import { ConflictAnalyzer } from '../../../../services/conflict-detection/ConflictAnalyzer.js';
-import { makeEvent, makeConflictingEvents } from '../../helpers/factories.js';
-</file>
-
-<file path="src/tests/unit/services/conflict-detection/EventSimilarityChecker.test.ts">
-import { describe, it, expect } from 'vitest';
-import { EventSimilarityChecker } from '../../../../services/conflict-detection/EventSimilarityChecker.js';
-import { makeEvent, makeTeamMeetingEvent } from '../../helpers/factories.js';
 </file>
 
 <file path="src/tests/unit/types/email-analyzer-types.test.ts">
@@ -2851,6 +2779,14 @@ function makeFreeBusyResponse(
 ): FreeBusyResponse
 </file>
 
+<file path="src/tests/unit/handlers/GetCurrentTimeHandler.test.ts">
+import { describe, it, expect, vi } from 'vitest';
+import { GetCurrentTimeHandler } from '../../../handlers/core/GetCurrentTimeHandler.js';
+import { OAuth2Client } from 'google-auth-library';
+import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { getTextContent } from '../helpers/index.js';
+</file>
+
 <file path="src/tests/unit/handlers/ListCalendarsHandler.test.ts">
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ListCalendarsHandler } from '../../../handlers/core/ListCalendarsHandler.js';
@@ -2858,101 +2794,67 @@ import { OAuth2Client } from 'google-auth-library';
 import { getTextContent } from '../helpers/index.js';
 </file>
 
-<file path="src/tests/unit/helpers/factories.ts">
+<file path="src/tests/unit/handlers/RecurringEventHelpers.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { calendar_v3 } from 'googleapis';
-import { GaxiosError } from 'gaxios';
-import { vi } from 'vitest';
-import { addHours, addMinutes } from 'date-fns';
+import { RecurringEventHelpers } from '../../../handlers/core/RecurringEventHelpers.js';
 import {
-  addDays,
-  getFutureDate,
-  formatTZNaiveDateTime,
-  formatRFC3339,
-  formatBasicDateTime,
-  oneDayBefore,
-} from '../../../utils/date-utils.js';
-import { createBuilder } from './testBuilder.js';
+  makeCalendarMock,
+  makeEvent,
+  SYSTEM_FIELDS,
+  createTestEventWithTZOffset,
+  createCompleteTestEvent,
+  createUpdateEventArgsWithTimes,
+  createUpdateEventArgsWithAttendees,
+  createComplexUpdateEventArgs
+} from '../helpers/index.js';
 ⋮----
-export function makeEvent(overrides: Partial<calendar_v3.Schema$Event> =
-export function makeEventWithCalendarId(
-  calendarId: string,
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event &
-export function makeGaxiosError(
-  status: number,
-  message: string,
-  data?: object
-): GaxiosError &
-export function makeEvents(
-  count: number,
-  baseOverrides: Partial<calendar_v3.Schema$Event> = {},
-  variantFn?: (index: number) => Partial<calendar_v3.Schema$Event>
-): calendar_v3.Schema$Event[]
-export function makeFutureDateString(daysFromNow: number = 365): string
-export function makePastDateString(yearsAgo: number = 1): string
-export function makeWeeklyRecurringEvent(
-  daysFromNow: number = 7,
-  weeklyPattern: string = 'MO',
-  untilDaysFromNow?: number,
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-export function makeDailyRecurringEvent(
-  daysFromNow: number = 1,
-  countOccurrences?: number,
-  untilDaysFromNow?: number,
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-export function makeMonthlyRecurringEvent(
-  daysFromNow: number = 30,
-  monthlyDay: number = 15,
-  untilDaysFromNow?: number,
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-export function makeRecurringEventWithExceptions(
-  daysFromNow: number = 7,
-  exceptionDates: Date[] = [],
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-export function makeRecurringEventWithAdditionalDates(
-  daysFromNow: number = 7,
-  additionalDates: Date[] = [],
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-export function makeRecurringEventInstance(
-  eventId: string,
-  instanceDate: Date,
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-export function makeRecurringEventInstances(
-  eventId: string,
-  startDate: Date,
-  count: number = 5,
-  intervalDays: number = 7
-): calendar_v3.Schema$Event[]
-export function makeConflictingEvents(
-  overrides1: Partial<calendar_v3.Schema$Event> = {},
-  overrides2: Partial<calendar_v3.Schema$Event> = {}
-): [calendar_v3.Schema$Event, calendar_v3.Schema$Event]
-export function makeTeamMeetingEvent(
-  location: string = 'Conference Room A',
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event
-export function makeCalendarMock(overrides: {
-  get?: ReturnType<typeof vi.fn>;
-  patch?: ReturnType<typeof vi.fn>;
-  insert?: ReturnType<typeof vi.fn>;
-  list?: ReturnType<typeof vi.fn>;
-  delete?: ReturnType<typeof vi.fn>;
-  calendarListGet?: ReturnType<typeof vi.fn>;
-} =
+function resolveWith(overrides: Partial<calendar_v3.Schema$Event>)
 ⋮----
-export function createFullEventArgs(
-  overrides: Record<string, any> = {}
-): Record<string, any>
+function expectSystemFieldsRemoved(result: calendar_v3.Schema$Event): void
+</file>
+
+<file path="src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts">
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { OAuth2Client } from 'google-auth-library';
+import { calendar_v3, google } from 'googleapis';
+import { UpdateEventHandler } from '../../../handlers/core/UpdateEventHandler.js';
+import { UpdateEventInput, ToolSchemas } from '../../../tools/registry.js';
+import { makeEvent, makeCalendarMock } from '../helpers/index.js';
+import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
+⋮----
+function createMockEvent(overrides: Partial<calendar_v3.Schema$Event> =
+function createMockRecurringEvent(overrides: Partial<calendar_v3.Schema$Event> =
+function buildUpdateEventInput(overrides: Partial<UpdateEventInput> =
+function setupMocks(
+    eventData: calendar_v3.Schema$Event,
+    insertData?: calendar_v3.Schema$Event
+): void
 </file>
 
 <file path="src/tests/unit/helpers/test-configs.ts">
 
+</file>
+
+<file path="src/tests/unit/schemas/validators.test.ts">
+import { describe, it, expect } from 'vitest';
+import { ToolSchemas } from '../../../tools/registry.js';
+import { makePastDateString, createUpdateEventArgs, createComplexUpdateEventArgs, DEFAULT_CALENDAR_ID, DEFAULT_EVENT_ID } from '../helpers/index.js';
+import { TIME_MIN, TIME_MAX } from '../helpers/test-configs.js';
+import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
+import { TEST_EVENT_DEFAULTS, TEST_TIMEZONE } from '../../../testing/constants.js';
+</file>
+
+<file path="src/tests/unit/services/conflict-detection/ConflictAnalyzer.test.ts">
+import { describe, it, expect } from 'vitest';
+import { ConflictAnalyzer } from '../../../../services/conflict-detection/ConflictAnalyzer.js';
+import { makeEvent, makeConflictingEvents } from '../../helpers/index.js';
+</file>
+
+<file path="src/tests/unit/services/conflict-detection/EventSimilarityChecker.test.ts">
+import { describe, it, expect } from 'vitest';
+import { EventSimilarityChecker } from '../../../../services/conflict-detection/EventSimilarityChecker.js';
+import { makeEvent, makeTeamMeetingEvent } from '../../helpers/index.js';
 </file>
 
 <file path="src/tools/registry.ts">
@@ -3241,10 +3143,6 @@ export interface HandlerSetup {
 export function setupListEventsHandler(): HandlerSetup
 </file>
 
-<file path="src/tests/unit/helpers/index.ts">
-
-</file>
-
 <file path="src/tests/unit/index.test.ts">
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -3298,6 +3196,105 @@ import {
   VIEW_URL_PREFIX,
   VIEW_EXISTING_EVENT_PREFIX,
 } from '../../../handlers/utils.js';
+</file>
+
+<file path="src/tests/unit/helpers/factories.ts">
+import { calendar_v3 } from 'googleapis';
+import { GaxiosError } from 'gaxios';
+import { vi } from 'vitest';
+import { addHours, addMinutes } from 'date-fns';
+import {
+  addDays,
+  getFutureDate,
+  formatTZNaiveDateTime,
+  formatRFC3339,
+  formatBasicDateTime,
+  oneDayBefore,
+} from '../../../utils/date-utils.js';
+import { createBuilder } from './testBuilder.js';
+⋮----
+export function makeEvent(overrides: Partial<calendar_v3.Schema$Event> =
+export function makeEventWithCalendarId(
+  calendarId: string,
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event &
+export function makeGaxiosError(
+  status: number,
+  message: string,
+  data?: object
+): GaxiosError &
+export function makeEvents(
+  count: number,
+  baseOverrides: Partial<calendar_v3.Schema$Event> = {},
+  variantFn?: (index: number) => Partial<calendar_v3.Schema$Event>
+): calendar_v3.Schema$Event[]
+export function makeFutureDateString(daysFromNow: number = 365): string
+export function makePastDateString(yearsAgo: number = 1): string
+function appendUntil(rrule: string, untilDaysFromNow: number): string
+function formatDateList(dates: Date[]): string
+export function makeWeeklyRecurringEvent(
+  daysFromNow: number = 7,
+  weeklyPattern: string = 'MO',
+  untilDaysFromNow?: number,
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event
+export function makeDailyRecurringEvent(
+  daysFromNow: number = 1,
+  countOccurrences?: number,
+  untilDaysFromNow?: number,
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event
+export function makeMonthlyRecurringEvent(
+  daysFromNow: number = 30,
+  monthlyDay: number = 15,
+  untilDaysFromNow?: number,
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event
+export function makeRecurringEventWithExceptions(
+  daysFromNow: number = 7,
+  exceptionDates: Date[] = [],
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event
+export function makeRecurringEventWithAdditionalDates(
+  daysFromNow: number = 7,
+  additionalDates: Date[] = [],
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event
+export function makeRecurringEventInstance(
+  eventId: string,
+  instanceDate: Date,
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event
+export function makeRecurringEventInstances(
+  eventId: string,
+  startDate: Date,
+  count: number = 5,
+  intervalDays: number = 7
+): calendar_v3.Schema$Event[]
+export function makeCalendarMock(overrides: {
+  get?: ReturnType<typeof vi.fn>;
+  patch?: ReturnType<typeof vi.fn>;
+  insert?: ReturnType<typeof vi.fn>;
+  list?: ReturnType<typeof vi.fn>;
+  delete?: ReturnType<typeof vi.fn>;
+  calendarListGet?: ReturnType<typeof vi.fn>;
+} =
+export function makeConflictingEvents(
+  overrides1: Partial<calendar_v3.Schema$Event> = {},
+  overrides2: Partial<calendar_v3.Schema$Event> = {}
+): [calendar_v3.Schema$Event, calendar_v3.Schema$Event]
+export function makeTeamMeetingEvent(
+  location: string = 'Conference Room A',
+  overrides: Partial<calendar_v3.Schema$Event> = {}
+): calendar_v3.Schema$Event
+⋮----
+export function createFullEventArgs(
+  overrides: Record<string, any> = {}
+): Record<string, any>
+</file>
+
+<file path="src/tests/unit/helpers/index.ts">
+
 </file>
 
 <file path="src/tests/unit/handlers/CreateEventHandler.test.ts">

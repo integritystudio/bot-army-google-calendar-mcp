@@ -8,18 +8,8 @@ import { processBatchResponses } from "./batchUtils.js";
 import { formatEventsList } from "./eventFormatting.js";
 import { ListEventsOptions, ExtendedEvent } from "./types.js";
 
-interface ListEventsArgs {
-  calendarId: string | string[];
-  timeMin?: string;
-  timeMax?: string;
-  timeZone?: string;
-  fields?: string[];
-  privateExtendedProperty?: string[];
-  sharedExtendedProperty?: string[];
-}
-
 export class ListEventsHandler extends BaseToolHandler {
-    async runTool(args: ListEventsArgs, oauth2Client: OAuth2Client): Promise<CallToolResult> {
+    async runTool(args: ListEventsOptions & { calendarId: string | string[] }, oauth2Client: OAuth2Client): Promise<CallToolResult> {
         const calendarIds = Array.isArray(args.calendarId)
             ? args.calendarId
             : [args.calendarId];

@@ -86,7 +86,7 @@ export class GoogleCalendarMcpServer {
 
   private async ensureAuthenticated(): Promise<void> {
     // Check if we already have valid tokens
-    if (await this.tokenManager.validateTokens()) {
+    if (await this.tokenManager.isAuthenticated()) {
       return;
     }
 

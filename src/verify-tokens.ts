@@ -44,7 +44,7 @@ async function verifyAndRefreshTokens() {
     console.log('\n⏱️  Checking token validity...');
 
     // Validate and refresh if needed
-    const isValid = await tokenManager.validateTokens();
+    const isValid = await tokenManager.isAuthenticated();
 
     if (isValid) {
       console.log('✓ Tokens are valid\n');

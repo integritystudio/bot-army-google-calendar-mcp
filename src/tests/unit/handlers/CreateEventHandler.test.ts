@@ -63,8 +63,6 @@ describe('CreateEventHandler', () => {
   });
 
   describe('Basic Event Creation', () => {
-    const FULL_EVENT = createFullEventArgs();
-
     it('should create an event without custom ID', async () => {
       const mockCreatedEvent = makeEvent({
         id: 'generated-id-123',
@@ -86,7 +84,6 @@ describe('CreateEventHandler', () => {
         })
       });
 
-      // Should not include id field when no custom ID provided
       expect(mockCalendar.events.insert.mock.calls[0][0].requestBody.id).toBeUndefined();
 
       expect(result.content[0].type).toBe('text');
@@ -96,11 +93,12 @@ describe('CreateEventHandler', () => {
     });
 
     it('should create event with all basic optional fields', async () => {
-      const mockCreatedEvent = makeEvent(FULL_EVENT);
+      const fullEvent = createFullEventArgs();
+      const mockCreatedEvent = makeEvent(fullEvent);
 
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
-      const args = createCreateEventArgs('primary', FULL_EVENT);
+      const args = createCreateEventArgs('primary', fullEvent);
 
       const result = await handler.runTool(args, mockOAuth2Client);
 
@@ -155,30 +153,17 @@ describe('CreateEventHandler', () => {
     });
 
     it('should validate event ID before making API call', async () => {
-      const args = {
-        calendarId: 'primary',
-        eventId: 'abc', // Too short (< 5 chars)
-        summary: 'Test Event',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00'
-      };
+      const args = createCreateEventArgs('primary', { eventId: 'abc' });
 
       await expect(handler.runTool(args, mockOAuth2Client)).rejects.toThrow(
         'Invalid event ID: length must be between 5 and 1024 characters'
       );
 
-      // Should not call the API if validation fails
       expect(mockCalendar.events.insert).not.toHaveBeenCalled();
     });
 
     it('should handle invalid custom event ID', async () => {
-      const args = {
-        calendarId: 'primary',
-        eventId: 'bad id', // Contains space
-        summary: 'Test Event',
-        start: '2025-01-15T10:00:00',
-        end: '2025-01-15T11:00:00'
-      };
+      const args = createCreateEventArgs('primary', { eventId: 'bad id' });
 
       await expect(handler.runTool(args, mockOAuth2Client)).rejects.toThrow(
         'Invalid event ID: can only contain letters, numbers, and hyphens'
@@ -223,7 +208,7 @@ describe('CreateEventHandler', () => {
 
       const args = createCreateEventArgs('primary', {
         summary: 'Focus Time',
-        transparency: 'transparent' as const
+        transparency: 'transparent'
       });
 
       await handler.runTool(args, mockOAuth2Client);
@@ -247,7 +232,7 @@ describe('CreateEventHandler', () => {
 
       const args = createCreateEventArgs('primary', {
         summary: 'Private Meeting',
-        visibility: 'private' as const
+        visibility: 'private'
       });
 
       await handler.runTool(args, mockOAuth2Client);
@@ -299,7 +284,7 @@ describe('CreateEventHandler', () => {
 
       const args = createCreateEventArgs('primary', {
         summary: 'Meeting',
-        sendUpdates: 'externalOnly' as const
+        sendUpdates: 'externalOnly'
       });
 
       await handler.runTool(args, mockOAuth2Client);
@@ -329,7 +314,7 @@ describe('CreateEventHandler', () => {
           createRequest: {
             requestId: 'unique-request-123',
             conferenceSolutionKey: {
-              type: 'hangoutsMeet' as const
+              type: 'hangoutsMeet'
             }
           }
         }
@@ -356,54 +341,37 @@ describe('CreateEventHandler', () => {
   });
 
   describe('Extended Properties', () => {
-    const EXTENDED_PROPS = {
-      private: {
-        'appId': '12345',
-        'customField': 'value1'
-      },
-      shared: {
-        'projectId': 'proj-789',
-        'category': 'meeting'
-      }
-    };
-
     it('should create event with extended properties', async () => {
-      const mockCreatedEvent = makeEvent({
-        summary: 'Custom Event'
-      });
-
+      const extendedProperties = {
+        private: { appId: '12345', customField: 'value1' },
+        shared: { projectId: 'proj-789', category: 'meeting' }
+      };
+      const mockCreatedEvent = makeEvent({ summary: 'Custom Event' });
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
       const args = createCreateEventArgs('primary', {
         summary: 'Custom Event',
-        extendedProperties: EXTENDED_PROPS
+        extendedProperties
       });
 
       await handler.runTool(args, mockOAuth2Client);
 
       expect(mockCalendar.events.insert).toHaveBeenCalledWith(
         expect.objectContaining({
-          requestBody: expect.objectContaining({
-            extendedProperties: EXTENDED_PROPS
-          })
+          requestBody: expect.objectContaining({ extendedProperties })
         })
       );
     });
   });
 
   describe('Attachments', () => {
-    const ATTACHMENTS = STANDARD_ATTACHMENTS;
-
     it('should create event with attachments', async () => {
-      const mockCreatedEvent = makeEvent({
-        summary: 'Meeting with Docs'
-      });
-
+      const mockCreatedEvent = makeEvent({ summary: 'Meeting with Docs' });
       mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
 
       const args = createCreateEventArgs('primary', {
         summary: 'Meeting with Docs',
-        attachments: ATTACHMENTS
+        attachments: STANDARD_ATTACHMENTS
       });
 
       await handler.runTool(args, mockOAuth2Client);
@@ -411,7 +379,7 @@ describe('CreateEventHandler', () => {
       expect(mockCalendar.events.insert).toHaveBeenCalledWith(
         expect.objectContaining({
           requestBody: expect.objectContaining({
-            attachments: ATTACHMENTS
+            attachments: STANDARD_ATTACHMENTS
           }),
           supportsAttachments: true
         })
@@ -434,13 +402,13 @@ describe('CreateEventHandler', () => {
             email: 'alice@example.com',
             displayName: 'Alice Smith',
             optional: false,
-            responseStatus: 'accepted' as const
+            responseStatus: 'accepted'
           },
           {
             email: 'bob@example.com',
             displayName: 'Bob Jones',
             optional: true,
-            responseStatus: 'needsAction' as const,
+            responseStatus: 'needsAction',
             comment: 'May join late',
             additionalGuests: 2
           }
@@ -545,15 +513,15 @@ describe('CreateEventHandler', () => {
         summary: 'Complex Event',
         description: 'An event with all features',
         location: 'Conference Room A',
-        transparency: 'opaque' as const,
-        visibility: 'public' as const,
+        transparency: 'opaque',
+        visibility: 'public',
         guestsCanInviteOthers: true,
         guestsCanModify: false,
         conferenceData: {
           createRequest: {
             requestId: 'conf-123',
             conferenceSolutionKey: {
-              type: 'hangoutsMeet' as const
+              type: 'hangoutsMeet'
             }
           }
         },
@@ -573,7 +541,7 @@ describe('CreateEventHandler', () => {
           url: 'https://example.com/source',
           title: 'Source System'
         },
-        sendUpdates: 'all' as const
+        sendUpdates: 'all'
       });
 
       await handler.runTool(args, mockOAuth2Client);

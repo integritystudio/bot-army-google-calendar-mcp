@@ -25,8 +25,9 @@ describe('DeleteEventHandler', () => {
         mockOAuth2Client
       );
 
-      expect(result.content[0].type).toBe('text');
-      expect(result.content[0].text).toBe('Event deleted successfully');
+      const content0 = result.content[0] as { type: 'text'; text: string };
+      expect(content0.type).toBe('text');
+      expect(content0.text).toBe('Event deleted successfully');
     });
 
     it('should pass calendarId, eventId, and sendUpdates to the API', async () => {

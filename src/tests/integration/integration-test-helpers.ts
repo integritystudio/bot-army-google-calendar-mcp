@@ -74,7 +74,7 @@ export async function updateAndVerifyEvent(
     }
   });
 
-  const text = getTextContent(result);
+  const text = getTextContent(result as { content: Array<{ type: string; text?: string }> });
   return { result, text };
 }
 
@@ -182,6 +182,6 @@ export async function expectEventUpdateSuccess(
   expectedContent: string | RegExp
 ): Promise<void> {
   expect(result).toBeDefined();
-  const text = getTextContent(result);
+  const text = getTextContent(result as { content: Array<{ type: string; text?: string }> });
   expect(text).toContain(expectedContent);
 }

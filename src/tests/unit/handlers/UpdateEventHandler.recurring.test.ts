@@ -7,7 +7,7 @@ import { makeEvent, makeCalendarMock } from '../helpers/index.js';
 import { getFutureDate, formatTZNaiveDateTime } from '../../../utils/date-utils.js';
 
 vi.mock('googleapis', async () => {
-  const actual = await vi.importActual('googleapis');
+  const actual = await vi.importActual<typeof import('googleapis')>('googleapis');
   return {
     ...actual,
     google: {
@@ -30,7 +30,7 @@ describe('UpdateEventHandler - Recurring Events', () => {
       calendarListGet: vi.fn().mockResolvedValue({ data: { timeZone: 'UTC' } })
     });
 
-    vi.mocked(google.calendar).mockReturnValue(mockCalendar as calendar_v3.Calendar);
+    vi.mocked(google.calendar).mockReturnValue(mockCalendar as unknown as calendar_v3.Calendar);
 
     handler = new UpdateEventHandler();
     mockOAuth2Client = {} as OAuth2Client;
@@ -451,8 +451,9 @@ describe('UpdateEventHandler - Recurring Events', () => {
 
       expect(Array.isArray(result.content)).toBe(true);
       expect(result.content).toHaveLength(1);
-      expect(result.content[0].type).toBe('text');
-      expect(typeof result.content[0].text).toBe('string');
+      const content0 = result.content[0] as { type: 'text'; text: string };
+      expect(content0.type).toBe('text');
+      expect(typeof content0.text).toBe('string');
     });
 
     it('should include "updated" in response text', async () => {
@@ -464,7 +465,7 @@ describe('UpdateEventHandler - Recurring Events', () => {
 
       const result = await handler.runTool(args, mockOAuth2Client);
 
-      expect(result.content[0].text).toContain('updated');
+      expect((result.content[0] as { type: 'text'; text: string }).text).toContain('updated');
     });
   });
 });

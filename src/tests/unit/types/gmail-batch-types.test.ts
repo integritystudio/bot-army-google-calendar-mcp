@@ -7,7 +7,7 @@ import {
   FilterResponseSchema,
   FilterResponsesSchema,
   BatchSummarySchema
-} from '../../../schemas/gmail-batch-types';
+} from '../../../schemas/gmail-batch-types.js';
 
 describe('gmail-batch types', () => {
   describe('FilterCriteriaSchema', () => {

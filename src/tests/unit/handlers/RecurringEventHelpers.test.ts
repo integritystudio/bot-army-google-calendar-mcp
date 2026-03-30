@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { calendar_v3 } from 'googleapis';
 import { RecurringEventHelpers } from '../../../handlers/core/RecurringEventHelpers.js';
+import type { UpdateEventInput } from '../../../tools/registry.js';
 import {
   makeCalendarMock,
   makeEvent,
@@ -336,7 +337,7 @@ describe('RecurringEventHelpers', () => {
         timeZone: 'America/Los_Angeles'
       };
 
-      const result = helpers.buildUpdateRequestBody(args);
+      const result = helpers.buildUpdateRequestBody(args as unknown as UpdateEventInput);
 
       expect(result).toEqual({
         summary: 'Updated Meeting',
@@ -356,7 +357,7 @@ describe('RecurringEventHelpers', () => {
         { summary: 'Meeting' }
       );
 
-      const result = helpers.buildUpdateRequestBody(args);
+      const result = helpers.buildUpdateRequestBody(args as unknown as UpdateEventInput);
 
       expect(result).toEqual({
         summary: 'Meeting',
@@ -378,7 +379,7 @@ describe('RecurringEventHelpers', () => {
         summary: 'Meeting'
       };
 
-      const result = helpers.buildUpdateRequestBody(args);
+      const result = helpers.buildUpdateRequestBody(args as unknown as UpdateEventInput);
 
       expect(result.start).toEqual({
         dateTime: '2024-06-15T10:00:00-07:00',
@@ -397,7 +398,7 @@ describe('RecurringEventHelpers', () => {
       };
 
       const defaultTimeZone = 'Europe/London';
-      const result = helpers.buildUpdateRequestBody(args, defaultTimeZone);
+      const result = helpers.buildUpdateRequestBody(args as unknown as UpdateEventInput, defaultTimeZone);
 
       expect(result).toEqual({
         summary: 'Meeting',
@@ -417,7 +418,7 @@ describe('RecurringEventHelpers', () => {
         timeZone: 'UTC'
       });
 
-      const result = helpers.buildUpdateRequestBody(args);
+      const result = helpers.buildUpdateRequestBody(args as unknown as UpdateEventInput);
 
       expect(result.attendees).toEqual(args.attendees);
       expect(result.reminders).toEqual(args.reminders);
@@ -431,7 +432,7 @@ describe('RecurringEventHelpers', () => {
         timeZone: 'UTC'
       };
 
-      const result = helpers.buildUpdateRequestBody(args);
+      const result = helpers.buildUpdateRequestBody(args as unknown as UpdateEventInput);
 
       expect(result.summary).toBe('Meeting');
       expect('description' in result).toBe(false);
@@ -441,7 +442,7 @@ describe('RecurringEventHelpers', () => {
     it('should handle complex nested objects', () => {
       const complexArgs = createComplexUpdateEventArgs();
 
-      const result = helpers.buildUpdateRequestBody(complexArgs);
+      const result = helpers.buildUpdateRequestBody(complexArgs as unknown as UpdateEventInput);
 
       expect(result.attendees).toEqual(complexArgs.attendees);
       expect(result.reminders).toEqual(complexArgs.reminders);
@@ -463,7 +464,7 @@ describe('RecurringEventHelpers', () => {
         timeZone: 'UTC'
       };
 
-      const result = helpers.buildUpdateRequestBody(mixedArgs);
+      const result = helpers.buildUpdateRequestBody(mixedArgs as unknown as UpdateEventInput);
 
       expect(result.summary).toBe('Valid Summary');
       expect('description' in result).toBe(false);

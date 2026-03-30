@@ -46,17 +46,20 @@ describe('UpdateEventHandler - Recurring Events (Real API Integration)', () => {
   });
 
   afterAll(async () => {
-    // Cleanup: Delete all created test events
-    for (const eventId of createdEventIds) {
-      try {
-        await calendar.events.delete({
+    const deleteResults = await Promise.allSettled(
+      createdEventIds.map((eventId) =>
+        calendar.events.delete({
           calendarId: TEST_CALENDAR_ID,
-          eventId: eventId
-        });
-      } catch (error) {
-        console.warn(`Failed to cleanup event ${eventId}:`, error);
+          eventId
+        })
+      )
+    );
+
+    deleteResults.forEach((result, idx) => {
+      if (result.status === 'rejected') {
+        console.warn(`Failed to cleanup event ${createdEventIds[idx]}:`, result.reason);
       }
-    }
+    });
   });
 
   async function createTestEvent(overrides: any = {}): Promise<string> {
@@ -109,9 +112,10 @@ describe('UpdateEventHandler - Recurring Events (Real API Integration)', () => {
       );
 
       // Verify response
-      expect(result.content[0].type).toBe('text');
-      expect(result.content[0].text).toContain('Updated Weekly Standup');
-      expect(result.content[0].text).toContain('updated');
+      const content0 = result.content[0] as { type: 'text'; text: string };
+      expect(content0.type).toBe('text');
+      expect(content0.text).toContain('Updated Weekly Standup');
+      expect(content0.text).toContain('updated');
     });
 
     it('should update all instances without specifying scope (defaults to "all")', async () => {
@@ -131,7 +135,7 @@ describe('UpdateEventHandler - Recurring Events (Real API Integration)', () => {
         oauth2Client
       );
 
-      expect(result.content[0].text).toContain('Updated Daily Sync');
+      expect((result.content[0] as { type: 'text'; text: string }).text).toContain('Updated Daily Sync');
     });
   });
 
@@ -158,7 +162,7 @@ describe('UpdateEventHandler - Recurring Events (Real API Integration)', () => {
         oauth2Client
       );
 
-      expect(result.content[0].text).toContain('Single Instance Updated');
+      expect((result.content[0] as { type: 'text'; text: string }).text).toContain('Single Instance Updated');
     });
 
     it('should throw error when thisEventOnly is used without originalStartTime', async () => {
@@ -207,7 +211,7 @@ describe('UpdateEventHandler - Recurring Events (Real API Integration)', () => {
         oauth2Client
       );
 
-      expect(result.content[0].text).toContain('Updated from future date');
+      expect((result.content[0] as { type: 'text'; text: string }).text).toContain('Updated from future date');
     });
 
     it('should throw error when thisAndFollowing is used without futureStartDate', async () => {
@@ -317,7 +321,7 @@ describe('UpdateEventHandler - Recurring Events (Real API Integration)', () => {
         oauth2Client
       );
 
-      expect(result.content[0].type).toBe('text');
+      expect((result.content[0] as { type: 'text'; text: string }).type).toBe('text');
       // Should either succeed or report conflicts (depending on conflict detection)
       expect(result.content).toBeDefined();
     });
@@ -341,7 +345,7 @@ describe('UpdateEventHandler - Recurring Events (Real API Integration)', () => {
         oauth2Client
       );
 
-      expect(result.content[0].text).toContain('Updated Daily');
+      expect((result.content[0] as { type: 'text'; text: string }).text).toContain('Updated Daily');
     });
 
     it('should handle weekly recurrence with BYDAY', async () => {
@@ -361,7 +365,7 @@ describe('UpdateEventHandler - Recurring Events (Real API Integration)', () => {
         oauth2Client
       );
 
-      expect(result.content[0].text).toContain('Updated Weekly');
+      expect((result.content[0] as { type: 'text'; text: string }).text).toContain('Updated Weekly');
     });
 
     it('should handle monthly recurrence', async () => {
@@ -381,7 +385,7 @@ describe('UpdateEventHandler - Recurring Events (Real API Integration)', () => {
         oauth2Client
       );
 
-      expect(result.content[0].text).toContain('Updated Monthly');
+      expect((result.content[0] as { type: 'text'; text: string }).text).toContain('Updated Monthly');
     });
   });
 });

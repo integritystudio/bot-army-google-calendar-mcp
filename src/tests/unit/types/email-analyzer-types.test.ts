@@ -5,12 +5,12 @@ import {
   PrintSectionConfigSchema,
   EmailSubsectionSchema,
   AnalyzerConfigSchema
-} from '../../../schemas/email-analyzer-types';
+} from '../../../schemas/email-analyzer-types.js';
 import {
   ANALYZER_CONFIG_COMPLETE,
   ANALYZER_CONFIG_INVALID_KEYWORDS,
   ANALYZER_CONFIG_WITH_EXTRA
-} from '../helpers/test-configs';
+} from '../helpers/test-configs.js';
 
 describe('email-analyzer types', () => {
   describe('EmailMessageSchema', () => {

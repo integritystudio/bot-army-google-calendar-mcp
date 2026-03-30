@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ListEventsHandler } from '../../../handlers/core/ListEventsHandler.js';
 import { OAuth2Client } from 'google-auth-library';
-import { google } from 'googleapis';
+import { google, calendar_v3 } from 'googleapis';
 import { convertToRFC3339 } from '../../../utils/timezone-utils.js';
 import { getTextContent, makeEvent, makeCalendarMock } from '../helpers/index.js';
 import { LIST_EVENTS_API_DEFAULTS } from '../helpers/test-configs.js';
@@ -23,7 +23,7 @@ describe('ListEventsHandler JSON String Handling', () => {
       }),
       calendarListGet: vi.fn().mockResolvedValue({ data: { timeZone: 'UTC' } }),
     });
-    vi.mocked(google.calendar).mockReturnValue(mockCalendar);
+    vi.mocked(google.calendar).mockReturnValue(mockCalendar as unknown as calendar_v3.Calendar);
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -94,7 +94,7 @@ describe('ListEventsHandler - Timezone Handling', () => {
     handler = new ListEventsHandler();
     mockOAuth2Client = {} as OAuth2Client;
     mockCalendar = makeCalendarMock();
-    vi.mocked(google.calendar).mockReturnValue(mockCalendar);
+    vi.mocked(google.calendar).mockReturnValue(mockCalendar as unknown as calendar_v3.Calendar);
   });
 
   describe('convertToRFC3339 timezone interpretation', () => {

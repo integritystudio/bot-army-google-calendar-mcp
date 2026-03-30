@@ -5,7 +5,7 @@ import {
   LabelIdMapSchema,
   LabelCreationResultSchema,
   PatternApplicationStatsSchema
-} from '../../../schemas/gmail-label-utils-types';
+} from '../../../schemas/gmail-label-utils-types.js';
 
 describe('gmail-label-utils types', () => {
   describe('LabelPatternSchema', () => {

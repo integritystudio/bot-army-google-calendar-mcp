@@ -9,7 +9,8 @@ import { exec } from 'child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Gmail scopes
+const DEFAULT_CREDENTIALS_PATH = 'gcp-oauth.keys.json';
+
 const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/gmail.modify',
@@ -18,7 +19,8 @@ const GMAIL_SCOPES = [
 
 async function authGmail() {
   try {
-    const credPath = path.join(__dirname, 'credentials.json');
+    const credPath = process.env.GOOGLE_OAUTH_CREDENTIALS
+      || path.join(__dirname, DEFAULT_CREDENTIALS_PATH);
     const credFile = JSON.parse(await fs.readFile(credPath, 'utf-8'));
     const cred = credFile.installed || credFile;
 

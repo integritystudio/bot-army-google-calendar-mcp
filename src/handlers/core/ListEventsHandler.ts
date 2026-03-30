@@ -6,7 +6,7 @@ import { resolveTimeRange } from "../../utils/timezone-utils.js";
 import { buildListFieldMask } from "../../utils/field-mask-builder.js";
 import { processBatchResponses } from "./batchUtils.js";
 import { formatEventsList } from "./eventFormatting.js";
-import { ListEventsOptions, ExtendedEvent } from "./types.js";
+import { ListEventsOptions, ExtendedEvent, extractListEventsOptions } from "./types.js";
 
 export class ListEventsHandler extends BaseToolHandler {
     async runTool(args: ListEventsOptions & { calendarId: string | string[] }, oauth2Client: OAuth2Client): Promise<CallToolResult> {
@@ -14,14 +14,7 @@ export class ListEventsHandler extends BaseToolHandler {
             ? args.calendarId
             : [args.calendarId];
 
-        const allEvents = await this.fetchEvents(oauth2Client, calendarIds, {
-            timeMin: args.timeMin,
-            timeMax: args.timeMax,
-            timeZone: args.timeZone,
-            fields: args.fields,
-            privateExtendedProperty: args.privateExtendedProperty,
-            sharedExtendedProperty: args.sharedExtendedProperty
-        });
+        const allEvents = await this.fetchEvents(oauth2Client, calendarIds, extractListEventsOptions(args));
 
         if (allEvents.length === 0) {
             return this.textResult(`No events found in ${calendarIds.length} calendar(s).`);

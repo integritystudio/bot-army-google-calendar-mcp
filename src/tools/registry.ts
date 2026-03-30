@@ -5,6 +5,7 @@ import { BaseToolHandler } from "../handlers/core/BaseToolHandler.js";
 import { ALLOWED_EVENT_FIELDS } from "../utils/field-mask-builder.js";
 import { isValidISODateTime } from "../utils/date-utils.js";
 import { formatErrorMessage } from "../handlers/core/errorFormatting.js";
+import { extractListEventsOptions } from "../handlers/core/types.js";
 
 // Import all handlers
 import { ListCalendarsHandler } from "../handlers/core/ListCalendarsHandler.js";
@@ -28,6 +29,22 @@ import { GmailApplyFiltersHandler } from "../handlers/gmail/GmailApplyFiltersHan
 
 const KEY_VALUE_REGEX = /^[^=]+=[^=]+$/;
 const KEY_VALUE_FORMAT_MSG = "Must be in key=value format";
+const MAX_CALENDARS_PER_REQUEST = 50;
+
+function validateCalendarIds(ids: string[]): void {
+  if (ids.length === 0) {
+    throw new Error("At least one calendar ID is required");
+  }
+  if (ids.length > MAX_CALENDARS_PER_REQUEST) {
+    throw new Error(`Maximum ${MAX_CALENDARS_PER_REQUEST} calendars allowed per request`);
+  }
+  if (!ids.every(id => typeof id === 'string' && id.length > 0)) {
+    throw new Error("All calendar IDs must be non-empty strings");
+  }
+  if (new Set(ids).size !== ids.length) {
+    throw new Error("Duplicate calendar IDs are not allowed");
+  }
+}
 
 const extendedPropertyFilters = {
   privateExtendedProperty: z
@@ -489,20 +506,11 @@ export class ToolRegistry {
         if (typeof args.calendarId === 'string' && args.calendarId.trim().startsWith('[') && args.calendarId.trim().endsWith(']')) {
           try {
             const parsed = JSON.parse(args.calendarId);
-            if (Array.isArray(parsed) && parsed.every(id => typeof id === 'string' && id.length > 0)) {
-              if (parsed.length === 0) {
-                throw new Error("At least one calendar ID is required");
-              }
-              if (parsed.length > 50) {
-                throw new Error("Maximum 50 calendars allowed per request");
-              }
-              if (new Set(parsed).size !== parsed.length) {
-                throw new Error("Duplicate calendar IDs are not allowed");
-              }
-              processedCalendarId = parsed;
-            } else {
+            if (!Array.isArray(parsed)) {
               throw new Error('JSON string must contain an array of non-empty strings');
             }
+            validateCalendarIds(parsed);
+            processedCalendarId = parsed;
           } catch (error) {
             throw new Error(
               `Invalid JSON format for calendarId: ${formatErrorMessage(error)}`
@@ -510,30 +518,13 @@ export class ToolRegistry {
           }
         }
         
-        // Additional validation for arrays
         if (Array.isArray(processedCalendarId)) {
-          if (processedCalendarId.length === 0) {
-            throw new Error("At least one calendar ID is required");
-          }
-          if (processedCalendarId.length > 50) {
-            throw new Error("Maximum 50 calendars allowed per request");
-          }
-          if (!processedCalendarId.every(id => typeof id === 'string' && id.length > 0)) {
-            throw new Error("All calendar IDs must be non-empty strings");
-          }
-          if (new Set(processedCalendarId).size !== processedCalendarId.length) {
-            throw new Error("Duplicate calendar IDs are not allowed");
-          }
+          validateCalendarIds(processedCalendarId);
         }
         
         return {
           calendarId: processedCalendarId,
-          timeMin: args.timeMin,
-          timeMax: args.timeMax,
-          timeZone: args.timeZone,
-          fields: args.fields,
-          privateExtendedProperty: args.privateExtendedProperty,
-          sharedExtendedProperty: args.sharedExtendedProperty
+          ...extractListEventsOptions(args)
         };
       }
     },

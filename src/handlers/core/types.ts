@@ -12,3 +12,9 @@ export interface ListEventsOptions {
   privateExtendedProperty?: string[];
   sharedExtendedProperty?: string[];
 }
+
+/** Pick only ListEventsOptions fields from a superset object (e.g. args with calendarId). */
+export function extractListEventsOptions(args: ListEventsOptions): ListEventsOptions {
+  const { timeMin, timeMax, timeZone, fields, privateExtendedProperty, sharedExtendedProperty } = args;
+  return { timeMin, timeMax, timeZone, fields, privateExtendedProperty, sharedExtendedProperty };
+}

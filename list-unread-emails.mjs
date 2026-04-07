@@ -6,11 +6,13 @@
  *   node list-unread-emails.mjs --count  # just print total unread count
  *   node list-unread-emails.mjs --stats  # per-label total/unread counts + mailbox profile
  *   node list-unread-emails.mjs --verify # spot-check label application on sample emails
+ *   node list-unread-emails.mjs --schema # detect schema.org JSON-LD in unread emails (Phase 1 audit)
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { BANNER, DIVIDER } from './lib/console-utils.mjs';
 import { extractDisplayName, getHeader } from './lib/email-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { extractSchemaMarkupFromGmailPayload, categorizeBySchema, extractHtmlFromPayload } from './lib/schema-extractor.mjs';
 import {
   USER_ID,
   LABEL_SENTRY,
@@ -26,6 +28,7 @@ import {
 const countOnly = process.argv.includes('--count');
 const statsMode = process.argv.includes('--stats');
 const verifyMode = process.argv.includes('--verify');
+const schemaMode = process.argv.includes('--schema');
 
 const CATEGORY_PRIORITY = [
   LABEL_KEEP_IMPORTANT, LABEL_EVENTS, LABEL_MONITORING,
@@ -172,10 +175,94 @@ async function verifyLabels(gmail) {
   }
 }
 
+const SCHEMA_SAMPLE_SIZE = 50;
+
+async function auditSchemaMarkup(gmail) {
+  console.log('SCHEMA.ORG JSON-LD AUDIT\n');
+  console.log(BANNER + '\n');
+
+  const searchResponse = await gmail.users.messages.list({
+    userId: USER_ID,
+    q: 'is:unread',
+    maxResults: SCHEMA_SAMPLE_SIZE,
+  });
+
+  const messageIds = searchResponse.data.messages || [];
+  console.log(`Scanning ${messageIds.length} unread emails for schema.org markup...\n`);
+
+  if (messageIds.length === 0) return;
+
+  const fullMsgs = await Promise.all(
+    messageIds.map(msg =>
+      gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'full' })
+    )
+  );
+
+  const typeCounts = {};
+  const categoryCounts = {};
+  const samples = [];
+
+  for (const fullMsg of fullMsgs) {
+    const headers = fullMsg.data.payload?.headers || [];
+    const subject = getHeader(headers, 'Subject', '(no subject)');
+    const from = getHeader(headers, 'From', '(unknown)');
+
+    const html = extractHtmlFromPayload(fullMsg.data.payload);
+    const schemaObjects = extractSchemaMarkupFromGmailPayload(html);
+    if (schemaObjects.length === 0) continue;
+
+    const { category, types, metadata } = categorizeBySchema(schemaObjects);
+
+    for (const type of types) {
+      typeCounts[type] = (typeCounts[type] || 0) + 1;
+    }
+    if (category) {
+      categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+    }
+
+    samples.push({ subject, from: extractDisplayName(from), types, category, metadata });
+  }
+
+  const withSchema = samples.length;
+  const withoutSchema = messageIds.length - withSchema;
+
+  console.log(`Emails with schema.org markup: ${withSchema}/${messageIds.length} (${Math.round(withSchema / messageIds.length * 100)}%)`);
+  console.log(`Emails without: ${withoutSchema}\n`);
+
+  if (Object.keys(typeCounts).length > 0) {
+    console.log('Type Distribution:');
+    for (const [type, count] of Object.entries(typeCounts).sort((a, b) => b[1] - a[1])) {
+      console.log(`  ${type}: ${count}`);
+    }
+  }
+
+  if (Object.keys(categoryCounts).length > 0) {
+    console.log('\nCategory Mapping:');
+    for (const [cat, count] of Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])) {
+      console.log(`  ${cat}: ${count}`);
+    }
+  }
+
+  if (samples.length > 0) {
+    console.log('\nSample Matches:\n');
+    for (const sample of samples.slice(0, 10)) {
+      console.log(`  • ${sample.subject.substring(0, SUBJECT_MAX_LENGTH)}`);
+      console.log(`    From: ${sample.from}`);
+      console.log(`    Types: ${sample.types.join(', ')} → ${sample.category || 'unmapped'}`);
+      if (Object.keys(sample.metadata).length > 0) {
+        console.log(`    Metadata: ${JSON.stringify(sample.metadata)}`);
+      }
+    }
+  }
+
+  console.log('\n' + BANNER + '\n');
+}
+
 async function run() {
   const gmail = createGmailClient();
   if (statsMode) return showStats(gmail);
   if (verifyMode) return verifyLabels(gmail);
+  if (schemaMode) return auditSchemaMarkup(gmail);
   return listUnreadEmails(gmail);
 }
 

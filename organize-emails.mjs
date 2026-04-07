@@ -6,21 +6,26 @@
  *   node organize-emails.mjs --type events
  *   node organize-emails.mjs --type newsletters
  *   node organize-emails.mjs --type event-sublabels
+ *   node organize-emails.mjs --type organization
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import {
   LABEL_EVENTS, LABEL_NEWSLETTERS,
   LABEL_EVENTS_MEETUP, LABEL_EVENTS_CALENDLY, LABEL_EVENTS_COMMUNITY,
   LABEL_EVENTS_WORKSHOPS, LABEL_EVENTS_INVITATIONS,
+  LABEL_ORG, LABEL_ORG_OPEN_SOURCE, LABEL_ORG_FINANCIAL,
+  LABEL_ORG_REAL_ESTATE, LABEL_ORG_ECOMMERCE,
+  LABEL_ORG_LOCAL_COMMUNITY, LABEL_ORG_PROFESSIONAL,
 } from './lib/constants.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 import { createGmailFilter } from './lib/gmail-filter-utils.mjs';
 import { BANNER } from './lib/console-utils.mjs';
 
+const VALID_TYPES = ['events', 'newsletters', 'event-sublabels', 'organization'];
 const typeArg = process.argv[process.argv.indexOf('--type') + 1];
-if (!typeArg || !['events', 'newsletters', 'event-sublabels'].includes(typeArg)) {
-  console.error('Usage: node organize-emails.mjs --type <events|newsletters|event-sublabels>');
+if (!typeArg || !VALID_TYPES.includes(typeArg)) {
+  console.error(`Usage: node organize-emails.mjs --type <${VALID_TYPES.join('|')}>`);
   process.exit(1);
 }
 
@@ -30,6 +35,15 @@ const EVENT_SUBLABEL_CATEGORIES = [
   { label: LABEL_EVENTS_COMMUNITY, searchQuery: 'subject:"📅 Just scheduled"', filterCriteria: { subject: '📅 Just scheduled' }, filterName: 'Community Event Announcements' },
   { label: LABEL_EVENTS_WORKSHOPS, searchQuery: 'subject:workshop OR subject:conference OR subject:summit OR subject:webinar', filterCriteria: { subject: 'workshop OR conference OR summit OR webinar' }, filterName: 'Workshop & Conference Events' },
   { label: LABEL_EVENTS_INVITATIONS, searchQuery: 'subject:invitation OR subject:invite OR subject:rsvp', filterCriteria: { subject: 'invitation OR invite OR rsvp' }, filterName: 'Event Invitations' },
+];
+
+const ORG_SUBLABEL_CATEGORIES = [
+  { label: LABEL_ORG_OPEN_SOURCE, searchQuery: 'from:notifications@github.com', filterCriteria: { from: 'notifications@github.com' }, filterName: 'GitHub Notifications' },
+  { label: LABEL_ORG_FINANCIAL, searchQuery: 'from:(no-reply@mail.coinbase.com OR noreply@robinhood.com OR info@e.equifax.com OR alerts@brex.com)', filterCriteria: { from: 'no-reply@mail.coinbase.com' }, filterName: 'Financial Services' },
+  { label: LABEL_ORG_REAL_ESTATE, searchQuery: 'from:(market-updates@mail.zillow.com OR my-saved-home@mail.zillow.com OR consumer@e.mail.realtor.com OR listings@redfin.com)', filterCriteria: { from: 'market-updates@mail.zillow.com' }, filterName: 'Real Estate Updates' },
+  { label: LABEL_ORG_ECOMMERCE, searchQuery: 'from:(order-update@amazon.com OR shipment-tracking@amazon.com OR auto-confirm@amazon.com)', filterCriteria: { from: 'order-update@amazon.com' }, filterName: 'Ecommerce Orders' },
+  { label: LABEL_ORG_LOCAL_COMMUNITY, searchQuery: 'from:(no-reply@rs.email.nextdoor.com OR reply@news.bizjournals.com)', filterCriteria: { from: 'no-reply@rs.email.nextdoor.com' }, filterName: 'Local Community' },
+  { label: LABEL_ORG_PROFESSIONAL, searchQuery: 'from:(jobalerts-noreply@linkedin.com OR groups-noreply@linkedin.com OR newsletters-noreply@linkedin.com OR careers-noreply@google.com)', filterCriteria: { from: 'jobalerts-noreply@linkedin.com' }, filterName: 'Professional Networks' },
 ];
 
 const CONFIGS = {
@@ -132,19 +146,28 @@ async function runSingleLabel(gmail, cfg) {
   console.log(`  Filters created: ${filtersCreated}`);
 }
 
-async function runEventSublabels(gmail) {
-  console.log('ORGANIZING EVENTS BY SUB-LABEL\n');
+async function runSublabels(gmail, categoryConfigs, title, parentLabel) {
+  console.log(`${title}\n`);
   console.log(BANNER);
   console.log('\n1. APPLYING SUB-LABELS TO EXISTING EMAILS\n');
 
   const labelCache = await buildLabelCache(gmail);
-  const categories = EVENT_SUBLABEL_CATEGORIES
-    .map(c => ({ ...c, labelId: labelCache.get(c.label) }))
-    .filter(c => c.labelId);
+  const parentLabelId = parentLabel ? labelCache.get(parentLabel) : null;
+
+  const categories = categoryConfigs
+    .map(c => {
+      const labelId = labelCache.get(c.label);
+      return {
+        ...c,
+        labelId,
+        labelIds: labelId && parentLabelId ? [labelId, parentLabelId] : labelId ? [labelId] : null,
+      };
+    })
+    .filter(c => c.labelIds);
 
   let totalLabeled = 0;
   for (const category of categories) {
-    const count = await searchAndModify(gmail, category.searchQuery, { addLabelIds: [category.labelId] }, 100).catch(error => {
+    const count = await searchAndModify(gmail, category.searchQuery, { addLabelIds: category.labelIds }, 100).catch(error => {
       console.log(`  Error with ${category.label}: ${error.message}`);
       return 0;
     });
@@ -159,7 +182,7 @@ async function runEventSublabels(gmail) {
 
   let filtersCreated = 0;
   for (const category of categories) {
-    const filterId = await createGmailFilter(gmail, category.filterCriteria, { addLabelIds: [category.labelId] });
+    const filterId = await createGmailFilter(gmail, category.filterCriteria, { addLabelIds: category.labelIds });
     if (filterId) {
       console.log(`  Filter created: ${category.filterName}`);
       filtersCreated++;
@@ -169,7 +192,7 @@ async function runEventSublabels(gmail) {
   }
 
   console.log(BANNER);
-  console.log('\nEVENT SUB-LABELS ORGANIZATION COMPLETE\n');
+  console.log(`\n${title} COMPLETE\n`);
   console.log(`  Emails labeled: ${totalLabeled}`);
   console.log(`  Filters created: ${filtersCreated}`);
 }
@@ -178,7 +201,12 @@ async function run() {
   const gmail = createGmailClient();
 
   if (typeArg === 'event-sublabels') {
-    await runEventSublabels(gmail);
+    await runSublabels(gmail, EVENT_SUBLABEL_CATEGORIES, 'ORGANIZING EVENTS BY SUB-LABEL');
+    return;
+  }
+
+  if (typeArg === 'organization') {
+    await runSublabels(gmail, ORG_SUBLABEL_CATEGORIES, 'ORGANIZING BY ORGANIZATION TYPE', LABEL_ORG);
     return;
   }
 

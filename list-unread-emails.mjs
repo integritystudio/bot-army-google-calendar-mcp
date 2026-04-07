@@ -128,8 +128,8 @@ async function showStats(gmail) {
       const labelId = labelMap.get(label);
       if (!labelId) return { label, total: 0, unread: 0, missing: true };
       const [totalRes, unreadRes] = await Promise.all([
-        gmail.users.messages.list({ userId: USER_ID, q: `label:${labelId}` }),
-        gmail.users.messages.list({ userId: USER_ID, q: `label:${labelId} is:unread` }),
+        gmail.users.messages.list({ userId: USER_ID, labelIds: [labelId] }),
+        gmail.users.messages.list({ userId: USER_ID, labelIds: [labelId], q: 'is:unread' }),
       ]);
       return {
         label,

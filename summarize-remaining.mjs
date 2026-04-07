@@ -12,7 +12,8 @@ const HEADER_FROM = 'From';
 
 const internalQueries = [
   { label: 'John Skelton (files)', q: 'from:john@integritystudio.ai' },
-  { label: 'Project discussions (misc)', q: 'from:chandra@integritystudio.ai OR from:alex@integritystudio.ai OR from:jordan' }
+  { label: 'Fellowship applications', q: 'subject:fellowship (subject:application OR subject:applications OR subject:deadline) newer_than:60d' },
+  { label: 'Project discussions (misc)', q: 'from:chandra@integritystudio.ai OR from:alex@integritystudio.ai' }
 ];
 
 const forumQueries = [

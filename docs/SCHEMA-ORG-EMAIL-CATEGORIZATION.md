@@ -1,0 +1,299 @@
+# Schema.org Email Categorization - Implementation Document
+
+**Date**: 2026-04-07
+**Status**: Draft
+**Context**: Leverage schema.org markup embedded in emails to improve automated categorization, replacing keyword/sender heuristics with structured data extraction.
+
+---
+
+## Problem
+
+Current email categorization (`organize-emails.mjs`) relies on sender addresses, subject keywords, and Gmail label heuristics. This breaks when:
+- Senders change addresses or domains
+- Subject lines don't match keyword patterns
+- Emails contain structured data (reservations, orders, shipments) that keywords miss
+- New email types require manual rule additions
+
+## Opportunity
+
+Many transactional emails already contain JSON-LD schema.org markup in their HTML `<head>`. Gmail and Outlook extract this for features like "Events from Gmail" and package tracking cards. We can parse the same markup to categorize emails with high precision.
+
+---
+
+## Schema.org Types Relevant to Email Categorization
+
+### Tier 1 - High Volume, Well-Supported
+
+| Schema Type | Category Label | Signals |
+|---|---|---|
+| `EventReservation` | Events | Ticketed events, concerts, conferences |
+| `FlightReservation` | Travel | Flight bookings with departure/arrival |
+| `LodgingReservation` | Travel | Hotel bookings |
+| `RentalCarReservation` | Travel | Car rental confirmations |
+| `Order` | Orders/Shopping | E-commerce purchase confirmations |
+| `ParcelDelivery` | Shipping | Package tracking, delivery updates |
+| `Invoice` | Billing | Payment requests, invoices |
+
+### Tier 2 - Moderate Volume
+
+| Schema Type | Category Label | Signals |
+|---|---|---|
+| `RestaurantReservation` | Events | Dining reservations |
+| `BusReservation` | Travel | Bus bookings |
+| `TrainReservation` | Travel | Train bookings |
+| `EmailMessage` + `Action` | Actionable | Emails with confirm/RSVP buttons |
+
+### Tier 3 - Low Volume, Future Use
+
+| Schema Type | Category Label | Signals |
+|---|---|---|
+| `MedicalAppointment` | Appointments | Healthcare scheduling |
+| `ServiceReservation` | Services | Generic service bookings |
+| `SubscriptionOffer` | Newsletters | Subscription/newsletter signup |
+
+---
+
+## JSON-LD Extraction Architecture
+
+### Where Markup Lives
+
+```html
+<html>
+  <head>
+    <script type="application/ld+json">
+    {
+      "@context": "http://schema.org",
+      "@type": "EventReservation",
+      "reservationNumber": "E123456789",
+      "reservationStatus": "http://schema.org/Confirmed",
+      "reservationFor": {
+        "@type": "Event",
+        "name": "Austin Tech Meetup",
+        "startDate": "2026-04-15T19:00:00-05:00",
+        "location": {
+          "@type": "Place",
+          "name": "Capital Factory"
+        }
+      }
+    }
+    </script>
+  </head>
+  <body>...</body>
+</html>
+```
+
+### Extraction Pipeline
+
+```
+Gmail API (message.get, format: full)
+  → payload.parts[] (find text/html part)
+  → parse HTML, extract <script type="application/ld+json">
+  → JSON.parse → validate @context + @type
+  → route to category based on @type
+  → apply Gmail label + optional archive
+```
+
+### Proposed Module: `lib/schema-extractor.mjs`
+
+```javascript
+// Core extraction from Gmail message HTML
+export function extractSchemaMarkup(htmlBody) {
+  // 1. Parse all <script type="application/ld+json"> blocks
+  // 2. JSON.parse each block (handle arrays: [{...}, {...}])
+  // 3. Filter for @context containing "schema.org"
+  // 4. Return array of typed schema objects
+}
+
+// Map schema @type to internal category
+export function categorizeBySchema(schemaObjects) {
+  // Returns { category: string, confidence: 'high', metadata: {...} }
+}
+```
+
+### Type-to-Category Mapping
+
+```javascript
+const SCHEMA_CATEGORY_MAP = {
+  // Events
+  'EventReservation': 'Events',
+  'Event': 'Events',
+  'MusicEvent': 'Events',
+  'RestaurantReservation': 'Events',
+
+  // Travel
+  'FlightReservation': 'Travel',
+  'LodgingReservation': 'Travel',
+  'RentalCarReservation': 'Travel',
+  'BusReservation': 'Travel',
+  'TrainReservation': 'Travel',
+
+  // Orders & Shipping
+  'Order': 'Orders',
+  'ParcelDelivery': 'Shipping',
+
+  // Billing
+  'Invoice': 'Billing',
+
+  // Actionable
+  'ConfirmAction': 'Actionable',
+  'RsvpAction': 'Events',
+};
+```
+
+---
+
+## Integration with Existing Email System
+
+### Current Flow (keyword-based)
+
+```
+list-unread-emails.mjs → categorize by sender/subject patterns → apply labels
+organize-emails.mjs    → batch label by Gmail search queries → create filters
+```
+
+### Enhanced Flow (schema-aware)
+
+```
+1. Fetch unread emails (existing)
+2. For each email with HTML body:
+   a. Extract schema.org JSON-LD (new)
+   b. If schema found → high-confidence categorization
+   c. If no schema → fall back to existing keyword/sender rules
+3. Apply labels (existing)
+4. Extract structured metadata for sub-labeling:
+   - Events: startDate → future/past sub-labels
+   - Travel: departureTime, arrivalTime → trip timeline
+   - Orders: orderStatus → confirmed/shipped/delivered
+   - Shipping: expectedArrivalFrom → delivery window
+```
+
+### Key Metadata Fields by Type
+
+#### EventReservation
+```javascript
+{
+  eventName: schema.reservationFor.name,
+  eventDate: schema.reservationFor.startDate,
+  venue: schema.reservationFor.location.name,
+  city: schema.reservationFor.location.address.addressLocality,
+  status: schema.reservationStatus,       // Confirmed, Cancelled
+  ticketNumber: schema.reservationNumber,
+}
+```
+
+#### Order
+```javascript
+{
+  merchant: schema.seller.name,
+  orderNumber: schema.orderNumber,
+  orderDate: schema.orderDate,
+  orderStatus: schema.orderStatus,        // Processing, Delivered
+  total: schema.totalPrice,
+  items: schema.orderedItem[].name,
+}
+```
+
+#### ParcelDelivery
+```javascript
+{
+  carrier: schema.deliveryAddress || schema.provider.name,
+  trackingNumber: schema.trackingNumber,
+  expectedDelivery: schema.expectedArrivalFrom,
+  status: schema.deliveryStatus,
+}
+```
+
+#### FlightReservation
+```javascript
+{
+  airline: schema.reservationFor.provider.name,
+  flightNumber: schema.reservationFor.flightNumber,
+  departure: schema.reservationFor.departureTime,
+  arrival: schema.reservationFor.arrivalTime,
+  origin: schema.reservationFor.departureAirport.iataCode,
+  destination: schema.reservationFor.arrivalAirport.iataCode,
+}
+```
+
+---
+
+## Implementation Phases
+
+### Phase 1: Read-Only Extraction (Low Risk)
+
+**Goal**: Parse schema.org from emails without modifying labels. Report what structured data exists.
+
+- Build `lib/schema-extractor.mjs` (HTML parsing, JSON-LD extraction)
+- Add `--schema` flag to `list-unread-emails.mjs` to show detected schema types
+- Output: count of emails with schema markup, type distribution, sample metadata
+- No label changes — observation only
+
+**Validates**: How many emails in the inbox actually contain schema.org markup, and which types.
+
+### Phase 2: Schema-Aware Categorization
+
+**Goal**: Use extracted schema types as a first-pass categorizer before keyword fallback.
+
+- Add schema extraction to `organize-emails.mjs` pipeline
+- Schema match = high confidence, skip keyword rules
+- No schema = existing keyword/sender rules (unchanged)
+- New sub-labels derived from schema metadata:
+  - `Events/Concerts`, `Events/Conferences`, `Events/Meetups`
+  - `Travel/Flights`, `Travel/Hotels`
+  - `Orders/Confirmed`, `Orders/Shipped`, `Orders/Delivered`
+
+### Phase 3: Temporal Organization
+
+**Goal**: Use date fields from schema to auto-archive past events and surface upcoming ones.
+
+- Parse `startDate`, `departureTime`, `expectedArrivalFrom` from schema
+- Auto-archive: events/flights/reservations in the past
+- Auto-star: upcoming events within 48 hours
+- Integrates with `filter-events-by-date.mjs` existing logic
+
+---
+
+## Technical Constraints
+
+### Gmail API Considerations
+- `messages.get` with `format: full` returns HTML parts for schema extraction
+- Rate limit: 250 quota units per user per second (batch requests help)
+- HTML part may be nested in `multipart/alternative` → recursive part traversal needed
+
+### Schema.org Parsing Edge Cases
+- Multiple `<script type="application/ld+json">` blocks per email
+- Array format: `[{...}, {...}]` (e.g., round-trip flight = 2 reservations)
+- `@context` may be `"http://schema.org"` or `"https://schema.org"`
+- Some senders use Microdata instead of JSON-LD (lower priority; JSON-LD covers most transactional email)
+- Invalid/malformed JSON blocks must be handled gracefully
+
+### Sender Coverage
+Major senders known to include schema.org JSON-LD:
+- Airlines (United, Delta, Southwest, American)
+- Hotels (Marriott, Hilton, Airbnb)
+- E-commerce (Amazon, eBay, Etsy, Target)
+- Food delivery (DoorDash, Uber Eats)
+- Ticketing (Eventbrite, Ticketmaster, StubHub)
+- Travel aggregators (Booking.com, Expedia, Kayak)
+- Google (Calendar invitations, Play Store orders)
+
+---
+
+## Relationship to Existing Schema.org Docs
+
+| Document | Focus |
+|---|---|
+| `SCHEMA-ORG-ALIGNMENT.md` | MCP calendar type mapping to schema.org vocabulary |
+| `SCHEMA-ORG-MCP-TOOLS.md` | MCP tool invocations using schema.org types |
+| **This document** | Parsing schema.org from incoming emails for categorization |
+
+The existing docs address *outbound* schema alignment (how our tools model data). This doc addresses *inbound* schema extraction (reading structured data from emails we receive).
+
+---
+
+## Success Metrics
+
+- **Coverage**: % of categorized emails where schema.org markup was the signal (vs keyword fallback)
+- **Accuracy**: False positive rate of schema-based categorization (expect < 1%)
+- **New categories**: Email types that become categorizable only through schema (orders, shipping, travel)
+- **Rule reduction**: Fewer keyword patterns needed in `organize-emails.mjs` matchers

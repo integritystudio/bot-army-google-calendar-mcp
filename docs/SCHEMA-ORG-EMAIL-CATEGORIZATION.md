@@ -86,27 +86,35 @@ Many transactional emails already contain JSON-LD schema.org markup in their HTM
 
 ```
 Gmail API (message.get, format: full)
-  → payload.parts[] (find text/html part)
-  → parse HTML, extract <script type="application/ld+json">
+  → extractHtmlFromPayload() — traverse multipart parts, base64url-decode text/html
+  → extractSchemaMarkupFromGmailPayload() — htmlparser2 streaming parser extracts JSON-LD
   → JSON.parse → validate @context + @type
-  → route to category based on @type
+  → categorizeBySchema() — route to category based on @type
   → apply Gmail label + optional archive
 ```
 
-### Proposed Module: `lib/schema-extractor.mjs`
+### Module: `lib/schema-extractor.mjs`
 
 ```javascript
-// Core extraction from Gmail message HTML
-export function extractSchemaMarkup(htmlBody) {
-  // 1. Parse all <script type="application/ld+json"> blocks
-  // 2. JSON.parse each block (handle arrays: [{...}, {...}])
-  // 3. Filter for @context containing "schema.org"
-  // 4. Return array of typed schema objects
+// Extract schema.org JSON-LD from Gmail's base64url-decoded HTML payload
+// Uses htmlparser2 streaming parser for robust HTML handling
+export function extractSchemaMarkupFromGmailPayload(html) {
+  // 1. Stream HTML through htmlparser2 Parser
+  // 2. Capture text inside <script type="application/ld+json"> tags
+  // 3. JSON.parse each block (handle arrays: [{...}, {...}])
+  // 4. Filter for @context containing "schema.org"
+  // 5. Return array of typed schema objects
+}
+
+// Extract HTML body from Gmail's pre-parsed multipart payload
+// Gmail returns body data as base64url-encoded strings
+export function extractHtmlFromPayload(payload) {
+  // Recursively traverses multipart parts to find text/html
 }
 
 // Map schema @type to internal category
 export function categorizeBySchema(schemaObjects) {
-  // Returns { category: string, confidence: 'high', metadata: {...} }
+  // Returns { category: string, types: string[], metadata: {...} }
 }
 ```
 
@@ -119,6 +127,7 @@ const SCHEMA_CATEGORY_MAP = {
   'Event': 'Events',
   'MusicEvent': 'Events',
   'RestaurantReservation': 'Events',
+  'RsvpAction': 'Events',
 
   // Travel
   'FlightReservation': 'Travel',
@@ -136,7 +145,6 @@ const SCHEMA_CATEGORY_MAP = {
 
   // Actionable
   'ConfirmAction': 'Actionable',
-  'RsvpAction': 'Events',
 };
 ```
 

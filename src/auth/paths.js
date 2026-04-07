@@ -6,7 +6,10 @@
  */
 
 import path from 'path';
+import { readFileSync } from 'fs';
 import { homedir } from 'os';
+
+const ACTIVE_ACCOUNT_FILE = path.join(homedir(), '.config/google-calendar-mcp', '.active-account');
 
 /**
  * Get the secure token storage path
@@ -30,21 +33,30 @@ export function getLegacyTokenPath() {
 }
 
 /**
- * Get current account mode from environment
- * Uses same logic as utils.ts but compatible with both JS and TS
+ * Get current account mode from environment or persisted selection.
+ *
+ * Resolution order:
+ * 1. GOOGLE_ACCOUNT_MODE env var (any string)
+ * 2. NODE_ENV === 'test' → 'test'
+ * 3. ~/.config/google-calendar-mcp/.active-account file (set by switch-account.mjs)
+ * 4. Default: 'normal'
  */
 export function getAccountMode() {
-  // If set explicitly via environment variable use that instead
   const explicitMode = process.env.GOOGLE_ACCOUNT_MODE?.toLowerCase();
-  if (explicitMode === 'test' || explicitMode === 'normal') {
+  if (explicitMode) {
     return explicitMode;
   }
-  
-  // Auto-detect test environment
+
   if (process.env.NODE_ENV === 'test') {
     return 'test';
   }
-  
-  // Default to normal for regular app usage
+
+  // Read persisted account selection from switch-account.mjs
+  try {
+    return readFileSync(ACTIVE_ACCOUNT_FILE, 'utf-8').trim();
+  } catch {
+    // File doesn't exist or unreadable
+  }
+
   return 'normal';
 }

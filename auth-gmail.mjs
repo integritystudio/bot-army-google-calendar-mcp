@@ -32,7 +32,8 @@ async function authGmail() {
 
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline',
-      scope: GMAIL_SCOPES
+      scope: GMAIL_SCOPES,
+      prompt: 'consent',
     });
 
     console.log('Opening browser for Gmail authentication...');

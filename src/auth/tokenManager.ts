@@ -6,8 +6,7 @@ import { mkdir } from 'fs/promises';
 import { dirname } from 'path';
 
 interface MultiAccountTokens {
-  normal?: Credentials;
-  test?: Credentials;
+  [accountMode: string]: Credentials | undefined;
 }
 
 const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
@@ -15,7 +14,7 @@ const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
 export class TokenManager {
   private oauth2Client: OAuth2Client;
   private tokenPath: string;
-  private accountMode: 'normal' | 'test';
+  private accountMode: string;
 
   constructor(oauth2Client: OAuth2Client) {
     this.oauth2Client = oauth2Client;
@@ -28,11 +27,11 @@ export class TokenManager {
     return this.tokenPath;
   }
 
-  public getAccountMode(): 'normal' | 'test' {
+  public getAccountMode(): string {
     return this.accountMode;
   }
 
-  public setAccountMode(mode: 'normal' | 'test'): void {
+  public setAccountMode(mode: string): void {
     this.accountMode = mode;
   }
 
@@ -195,7 +194,7 @@ export class TokenManager {
     return true;
   }
 
-  async validateTokens(accountMode?: 'normal' | 'test'): Promise<boolean> {
+  async validateTokens(accountMode?: string): Promise<boolean> {
     const modeToValidate = accountMode || this.accountMode;
 
     if (modeToValidate !== this.accountMode) {
@@ -263,7 +262,7 @@ export class TokenManager {
     }
   }
 
-  async switchAccount(newMode: 'normal' | 'test'): Promise<boolean> {
+  async switchAccount(newMode: string): Promise<boolean> {
     this.accountMode = newMode;
     return this.loadSavedTokens();
   }

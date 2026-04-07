@@ -6,8 +6,8 @@ const PROJECT_ROOT = path.resolve(
   path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
 );
 
-export function getAccountMode(): 'normal' | 'test' {
-  return getSharedAccountMode() as 'normal' | 'test';
+export function getAccountMode(): string {
+  return getSharedAccountMode();
 }
 
 export function getSecureTokenPath(): string {

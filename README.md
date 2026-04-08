@@ -17,34 +17,33 @@ A Model Context Protocol (MCP) server that provides Google Calendar and Gmail in
 - **Profile Management**: Get account information (message count, thread count, email address)
 - **Multi-Account Support**: Use multiple Gmail accounts with separate OAuth tokens
 
-## Recent Updates (v1.4.9)
+## Recent Updates
 
-**Code Quality & Maintainability:**
-- 🧹 **Test Fixture Consolidation** - Extracted 9+ duplicate fixtures into shared factories (70% reduction in test boilerplate)
-- 🛠️ **Test Helper Utilities** - Added assertion helpers (`expectValidToolResponse`, `expectJsonResponse`) and error pattern extractors
-- 🎯 **Runtime Optimization** - Refactored `buildOptionalEventFields()` to eliminate 13 repetitive if-checks with `conditionallyAddFields()` utility (85% reduction)
-- 🔄 **Mock Setup Consolidation** - Created `createGoogleCalendarMocks()` factory to eliminate vi.mock duplication across handler tests
+**Email Organization Pipeline:**
+- `organize-emails.mjs` — Full pipeline: label, filter, and conditionally archive emails with parallelized search/filter calls
+- `create-gmail-filters.mjs` — Batch create Gmail filters from category definitions
+- `switch-account.mjs` — File-based active account switching for multi-account workflows
 
-**Performance & Reliability:**
-- 🚀 Dynamic label ID resolution (L6) - Scripts now work across accounts with different label hierarchies
-- ⚡ Sequential API optimization - ~500ms latency reduction per operation
-- 📦 Batch filter operations - 10-100x speedup for bulk Gmail tasks
-- 🔧 Timezone utilities consolidation - Reduced codebase by 19 lines, eliminated duplicate datetime logic
+**Schema.org Email Categorization:**
+- `lib/schema-extractor.mjs` — Extract schema.org types from email HTML using htmlparser2
+- Organization label hierarchy and category-based email classification
+- Category map and serializer plan in `docs/SCHEMA_CATEGORY_MAP.md`
 
-**Tooling & Infrastructure:**
-- ✅ Comprehensive label resolution guide ([docs/LABEL-RESOLUTION-GUIDE.md](docs/LABEL-RESOLUTION-GUIDE.md))
-- 🧪 Parametrized test expansion (25 → 30+ test cases)
-- 📋 New changelog system ([docs/changelog/](docs/changelog/)) tracking all improvements
-- 🔐 Auth refactor: new `isAuthenticated()` and `getCredentials()` methods
+**Shared Library Expansion (`lib/`):**
+- `gmail-batch-utils.mjs`, `gmail-message-utils.mjs`, `gmail-filter-utils.mjs` — Extracted helpers for batch ops, message parsing, filter creation
+- `constants.mjs` — Shared constants (DEFAULT_MAX_RESULTS, category definitions)
+- `email-utils.mjs`, `console-utils.mjs` — Email helpers and formatted output
+
+**Auth & Account Management:**
+- `isAuthenticated()` replaced `validateTokens()`; widened `accountMode` type for dynamic account support
+- File-based active account resolution via `switch-account.mjs`
 
 **Testing:**
-- 486/486 tests passing (100%) ✅
+- 601 unit tests passing, 23 skipped (3 integration test files require live API)
 - Integration tests for conflict detection via MCP protocol (real server, real API)
-- Reduced technical debt with shared utilities in `lib/gmail-*.mjs`
 - Consolidated test helpers reduce maintenance burden across 30+ test files
-- CLAUDE.md updated with test utilities and patterns documentation
 
-See [CHANGELOG](docs/CHANGELOG.md) for complete v1.4.9 release notes.
+See [CHANGELOG](docs/CHANGELOG.md) for version history.
 
 ## Quick Start
 
@@ -202,29 +201,20 @@ node check-gmail.mjs
 Automated scripts for organizing and filtering large volumes of Gmail with focus on correctness and efficiency.
 
 **Management Scripts:** (use shared `createGmailClient()` for OAuth, error handling, and multi-account support)
+- `organize-emails.mjs` - Full pipeline: label, filter, and conditionally archive with parallelized calls
+- `create-gmail-filters.mjs` - Batch create Gmail filters from category definitions
 - `list-unread-emails.mjs` - Categorize and summarize unread emails; `--stats` for per-label counts, `--verify` for label spot-checks, `--count` for quick total
-- `summarize-remaining.mjs` - Summary of uncategorized/remaining unread emails (internal work, forums, misc); parallel fetching
-- `describe-internal.mjs` - Detailed breakdown of internal team emails with subjects and dates; hardcoded summary removed
+- `summarize-remaining.mjs` - Summary of uncategorized/remaining unread emails; parallel fetching
 - `apply-filters-to-unread.mjs` - Apply existing filters to current unread emails
-- `create-remaining-filters.mjs` - Batch create filters for multiple categories (Product Updates, Communities, Services)
+- `switch-account.mjs` - Switch active Google account (file-based resolution)
 
 **Specialized Filters:**
-- `protect-important-inbox.mjs --billing` - Smart billing filter with conditional rate-limit detection (merged from create-billing-filter.mjs)
-- `create-signoz-filter.mjs` - Archive SigNoz monitoring alerts automatically
-- `create-dmarc-filter.mjs` - Organize DMARC authentication reports
-- `create-eventbrite-filter.mjs` - Label and archive Eventbrite event emails
-- `create-meet-notes-filter.mjs` - Label Google Meet notes
-- `delete-sentry-filter.mjs` - Remove outdated filters
+- `protect-important-inbox.mjs --billing` - Smart billing filter with conditional rate-limit detection
+- `filter-events-by-date.mjs` - Classify event emails as future (label + keep) or past (label + archive)
 
 **Archive & Processing Scripts:**
-- `archive-signoz-dmarc.mjs` - Batch archive monitoring and DMARC report emails using Gmail batch API
-- `mark-signoz-read.mjs` - Mark SigNoz alerts as read in bulk
-- `mark-past-events-read.mjs` - Classify event emails by date and mark past events as read
-- `protect-important-inbox.mjs` - Label critical items to prevent archiving; `--billing` mode for smart billing filters
-
-**Event Management:**
-- `filter-events-by-date.mjs` - Classify event emails as future (label + keep) or past (label + archive)
-- `organize-international-house.mjs` - Label and organize International House event emails
+- `archive-old-emails.mjs` - Batch archive old emails using Gmail batch API
+- `mark-read.mjs` - Mark emails as read in bulk
 
 **Utilities:**
 - `lib/gmail-client.mjs` - Authenticated Gmail API client factory. Centralizes OAuth2 init, token validation, and multi-account support:
@@ -239,8 +229,14 @@ Automated scripts for organizing and filtering large volumes of Gmail with focus
   const labelId = labelCache.get('Events/Community'); // Dynamic instead of hardcoded Label_N
   ```
   See [`docs/LABEL-RESOLUTION-GUIDE.md`](docs/LABEL-RESOLUTION-GUIDE.md) for complete documentation.
-- `lib/gmail-batch.mjs` - Batch filter operations for bulk Gmail tasks (10-100x speedup)
-- `lib/date-based-filter.mjs` - Pure utility for date-based email classification: extracts dates (ISO, US format, text dates, weekday patterns), compares to today, classifies as past/future/unknown. Does not mutate input. Handles dates without year by inferring current or next year.
+- `lib/gmail-batch.mjs` / `lib/gmail-batch-utils.mjs` - Batch operations for bulk Gmail tasks (10-100x speedup)
+- `lib/gmail-message-utils.mjs` - Message header/body extraction, `decodeBase64Payload()`
+- `lib/gmail-filter-utils.mjs` - Filter creation helpers
+- `lib/schema-extractor.mjs` - Schema.org type extraction from email HTML (htmlparser2)
+- `lib/email-analyzer.mjs` / `lib/email-utils.mjs` - Email parsing and categorization helpers
+- `lib/constants.mjs` - Shared constants (DEFAULT_MAX_RESULTS, category definitions)
+- `lib/console-utils.mjs` - Formatted console output helpers
+- `lib/date-based-filter.mjs` - Pure utility for date-based email classification: extracts dates (ISO, US format, text dates, weekday patterns), compares to today, classifies as past/future/unknown. Does not mutate input.
 
 ## Example Usage
 
@@ -369,19 +365,18 @@ Type definitions are aligned with [schema.org](https://schema.org/) for calendar
 
 **Completed Roadmap:**
 - ✅ All 24 backlog items complete (v1.4.9)
-- ✅ Test architecture for conflict detection implemented (MCP protocol, real API)
-- ✅ Email parsing helpers extracted (email-analyzer.mjs with 4 reusable exports)
-- ✅ Timezone utilities consolidated (19 lines reduced)
+- ✅ Schema.org email categorization with `schema-extractor.mjs` (htmlparser2)
+- ✅ Shared lib expansion: 12 utility modules in `lib/`
+- ✅ Auth refactor: `isAuthenticated()`, dynamic account switching
 - See [`docs/BACKLOG.md`](docs/BACKLOG.md) for detailed implementation notes and [`docs/CHANGELOG.md`](docs/CHANGELOG.md) for version history
 
 ## Testing Status
 
-Run tests with `npm test`. Current test suite includes:
-- **Handler Tests**: Core functionality for create, get, list, search, update, and delete operations; content assertions use narrower `{ type: 'text'; text: string }` type instead of `as any`
+Run tests with `npm test`. 601 unit tests passing, 23 skipped, across 36 test files.
+- **Handler Tests**: Core functionality for create, get, list, search, update, and delete operations; type-safe content assertions
 - **Service Tests**: Conflict detection and event similarity analysis
 - **Schema Tests**: Tool schema validation and compatibility
-
-**Note**: Integration tests referencing non-existent `AuthenticationService` and `initializeApp` exports were removed. Re-implement when the authentication service architecture is finalized.
+- **Integration Tests**: 3 files require live Google API credentials (conflict detection, recurring events, MCP protocol)
 
 ## Configuration
 

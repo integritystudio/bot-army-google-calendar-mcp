@@ -30,7 +30,7 @@ npm install | npm run build | npm run dev | npm test
 - ✅ Core handler tests (CreateEventHandler, GetEventHandler, GetCurrentTimeHandler)
 - ✅ Type-safe content assertions using `{ type: 'text'; text: string }` instead of `as any`
 - ✅ Integration tests for conflict detection via MCP protocol (real server, real API)
-- ✅ 486/486 tests passing
+- ✅ 601 unit tests passing, 23 skipped (3 integration test files require live API)
 
 **Test Helpers & Fixtures:**
 Consolidated utilities reduce boilerplate across 30+ test files:
@@ -62,16 +62,24 @@ Core pattern: Label → conditional archive (keep future events, important items
 
 **Key Scripts:**
 - `list-unread-emails.mjs`, `summarize-remaining.mjs` — Email analysis
+- `organize-emails.mjs` — Full pipeline: label, filter, and conditionally archive emails
+- `create-gmail-filters.mjs` — Batch create Gmail filters from category definitions
 - `apply-filters-to-unread.mjs`, `protect-important-inbox.mjs`, `filter-events-by-date.mjs` — Filtering & organization
-- `create-remaining-filters.mjs` — Filter setup
+- `switch-account.mjs` — Switch active Google account (file-based resolution)
 
 **Categories:** Protected (never archive) | Events (future=keep, past=archive) | Monitoring (archive) | Product Updates (label+archive) | Communities (keep) | Services (archive) | Billing (conditional)
 
-**Shared Utilities:**
+**Shared Utilities (`lib/`):**
 - `gmail-client.mjs` — Authenticated client factory (✅ 65+ scripts)
 - `gmail-label-utils.mjs` — Label caching: `buildLabelCache()`, `resolveLabelId()`, `resolveLabelIds()`
-- `gmail-batch.mjs` — Batch operations (10-100x speedup)
+- `gmail-batch.mjs` / `gmail-batch-utils.mjs` — Batch operations (10-100x speedup)
+- `gmail-message-utils.mjs` — Message header/body extraction, `decodeBase64Payload()`
+- `gmail-filter-utils.mjs` — Filter creation helpers
 - `date-based-filter.mjs` — Date parsing utility (ISO, US, text formats; no mutations)
+- `schema-extractor.mjs` — Schema.org type extraction from email HTML (htmlparser2)
+- `email-analyzer.mjs` / `email-utils.mjs` — Email parsing, categorization helpers
+- `constants.mjs` — Shared constants (DEFAULT_MAX_RESULTS, category definitions)
+- `console-utils.mjs` — Formatted console output helpers
 
 **Patterns:**
 - Use `Promise.all` for concurrent fetches (not serial loops)

@@ -353,6 +353,7 @@ Type definitions are aligned with [schema.org](https://schema.org/) for calendar
 
 - [Schema Category Map](docs/SCHEMA_CATEGORY_MAP.md) -- type inventory, property mappings, GS1 overlap analysis
 - [Email Categorization](docs/EMAIL-CATEGORIZATION.md) -- inbound email schema extraction and GS1 enrichment
+- [Serializer Plan](docs/SCHEMA-ORG-SERIALIZER-PLAN.md) -- outbound JSON-LD serialization for calendar MCP responses
 
 ## Development
 

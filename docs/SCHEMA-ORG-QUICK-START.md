@@ -14,7 +14,7 @@
 Read in this order:
 1. This file (5 min)
 2. `docs/SCHEMA-ORG-QUICK-REFERENCE.md` (15 min)
-3. `docs/SCHEMA-ORG-ANALYSIS-SUMMARY.md` (10 min)
+3. `docs/SCHEMA_CATEGORY_MAP.md` (10 min)
 
 **What you'll know**: Why we're doing this, what types align with schema.org, and the 3-phase roadmap.
 
@@ -426,7 +426,7 @@ A: Debug locally, add test case, fix implementation, commit.
 | SCHEMA-ORG-QUICK-REFERENCE.md | Visual type mappings | 20 min |
 | SCHEMA_CATEGORY_MAP.md | Complete analysis | 60 min |
 | SCHEMA-ORG-MCP-TOOLS.md | MCP tool reference | 30 min |
-| SCHEMA-ORG-INDEX.md | Navigation guide | 10 min |
+| SCHEMA-ORG-SERIALIZER-PLAN.md | Outbound JSON-LD plan | 10 min |
 
 ---
 

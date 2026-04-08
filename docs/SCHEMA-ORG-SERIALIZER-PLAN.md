@@ -145,6 +145,5 @@ Search (SearchEventsHandler with `includeJsonLd: true`):
 ### Related Docs
 
 - [EMAIL-CATEGORIZATION.md](EMAIL-CATEGORIZATION.md) -- inbound extraction pipeline
-- [SCHEMA_CATEGORY_MAP.md](SCHEMA_CATEGORY_MAP.md) -- type inventory and property mapping reference
+- [SCHEMA_CATEGORY_MAP.md](SCHEMA_CATEGORY_MAP.md) -- type inventory, alignment scores, property mappings
 - [SCHEMA-ORG-MCP-TOOLS.md](SCHEMA-ORG-MCP-TOOLS.md) -- MCP tool invocations for type validation
-- [SCHEMA-ORG-INDEX.md](SCHEMA-ORG-INDEX.md) -- documentation index

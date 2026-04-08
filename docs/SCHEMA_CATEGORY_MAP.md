@@ -6,6 +6,27 @@ Authoritative reference for type definitions, schema.org alignment, and the `SCH
 
 ---
 
+## Type Alignment Overview
+
+```
+Core Calendar Types:         7 types (95% alignment)
+Conflict/Duplicate Types:    4 types (40% alignment)
+Email/Gmail Types:           7 types (70% alignment)
+Tool Input Types:           12 types (80% alignment)
+Configuration Types:         8 types (N/A - protocol specific)
+Transport/Protocol Types:    9 types (N/A - infrastructure)
+
+Aligned:      37/47 (78%)
+Out-of-Scope: 10/47 (22%)
+Overall Score: 72%
+```
+
+**Strengths**: Core calendar operations map naturally to Event/Person/Schedule; event properties align 1:1; search operations fit SearchAction.
+
+**Gaps**: Conflict/duplicate detection requires custom extensions; reminders lack a standard type; some Gmail operations (filters, labels) are non-standard; timezone handling needs careful mapping.
+
+---
+
 ## SCHEMA_CATEGORY_MAP
 
 Maps schema.org `@type` values extracted from email JSON-LD to internal Gmail label categories.
@@ -72,35 +93,78 @@ Gmail API (messages.get, format: full)
 
 ### Core Calendar (src/schemas/types.ts)
 
-| Codebase Type | Schema.org Equivalent | Notes |
-|---|---|---|
-| `CalendarEvent` | [Event](https://schema.org/Event) | Direct mapping; all core properties align |
-| `CalendarListEntry` | Calendar | Missing some calendar properties |
-| `CalendarEventAttendee` | [Person](https://schema.org/Person) | + Reservation for RSVP status |
-| `CalendarEventReminder` | (custom) | No standard schema.org reminder type |
-| `FreeBusyResponse` | [Schedule](https://schema.org/Schedule) | Maps to time slot definition |
+| Codebase Type | Schema.org Equivalent | Alignment | Notes |
+|---|---|---|---|
+| `CalendarEvent` | [Event](https://schema.org/Event) | 95% | Direct mapping; all core properties align |
+| `CalendarListEntry` | Calendar | -- | Missing some calendar properties |
+| `CalendarEventAttendee` | [Person](https://schema.org/Person) | 90% | + additionalProperty for RSVP status |
+| `CalendarEventReminder` | (custom) | -- | No standard schema.org reminder type |
+| `FreeBusyResponse` | [Schedule](https://schema.org/Schedule) | 85% | Maps to time slot definition |
 
 ### Conflict Detection (src/services/conflict-detection/types.ts)
 
-| Codebase Type | Schema.org Equivalent | Notes |
-|---|---|---|
-| `ConflictInfo` | Event (custom extension) | Requires conflict metadata properties |
-| `DuplicateInfo` | Event (custom extension) | Requires duplicate detection metadata |
-| `ConflictCheckResult` | (MCP-specific) | No schema.org equivalent |
-| `ConflictDetectionOptions` | (MCP-specific) | Configuration object |
+| Codebase Type | Schema.org Equivalent | Alignment | Notes |
+|---|---|---|---|
+| `ConflictInfo` | Event (custom extension) | 40% | Requires conflict metadata properties |
+| `DuplicateInfo` | Event (custom extension) | 40% | Requires duplicate detection metadata |
+| `ConflictCheckResult` | (MCP-specific) | -- | No schema.org equivalent |
+| `ConflictDetectionOptions` | (MCP-specific) | -- | Configuration object |
 
 ### Gmail/Email (src/schemas/)
 
-| Codebase Type | Schema.org Equivalent | Notes |
-|---|---|---|
-| `GmailSearchInput` | [SearchAction](https://schema.org/SearchAction) | Query-based; results are EmailMessages |
-| `GmailModifyInput` | ModifyAction | Covers message modification |
-| `GmailCreateFilterInput` | FilterAction (experimental) | Non-standard |
-| `OAuthCredentials` | N/A | Auth is out of schema.org scope |
+| Codebase Type | Schema.org Equivalent | Alignment | Notes |
+|---|---|---|---|
+| `GmailSearchInput` | [SearchAction](https://schema.org/SearchAction) | 85% | Query-based; results are EmailMessages |
+| `GmailModifyInput` | ModifyAction | -- | Covers message modification |
+| `GmailCreateFilterInput` | FilterAction (experimental) | -- | Non-standard |
+| `OAuthCredentials` | N/A | -- | Auth is out of schema.org scope |
 
 ### Transport & Tool Input Types
 
 MCP protocol-specific types (`TransportConfig`, `ServerConfig`, `BatchRequest`, `ListCalendarsInput`, `CreateEventInput`, etc.) have no schema.org equivalents. Their parameters align with corresponding schema.org types through the handlers that consume them.
+
+---
+
+## Type Alignment Examples
+
+### FreeBusyResponse -> Schedule
+
+```typescript
+interface FreeBusyResponse {
+  kind: "calendar#freeBusy";
+  timeMin: string;
+  timeMax: string;
+  calendars: { ... };
+}
+```
+
+```json
+{
+  "@type": "Schedule",
+  "startTime": "2026-03-24T00:00:00Z",
+  "endTime": "2026-03-24T23:59:59Z"
+}
+```
+
+### GmailSearchInput -> SearchAction
+
+```typescript
+interface GmailSearchInput {
+  query: string;
+  maxResults?: number;
+}
+```
+
+```json
+{
+  "@type": "SearchAction",
+  "query": "from:boss@company.com",
+  "result": {
+    "@type": "SearchResultsPage",
+    "mainEntity": [{ "@type": "EmailMessage" }]
+  }
+}
+```
 
 ---
 
@@ -119,6 +183,29 @@ MCP protocol-specific types (`TransportConfig`, `ServerConfig`, `BatchRequest`, 
 | `colorId` | `color` | Direct string |
 | `reminders` | (custom) | No standard equivalent |
 | `recurrence` | `eventSchedule` | RRULE strings |
+
+---
+
+## Implementation Notes
+
+### Timezone Handling
+
+Google Calendar stores timezone separately from the datetime value. Schema.org expects a single ISO 8601 string with offset.
+
+- **Google Calendar**: `{ dateTime: "2026-03-24T10:00:00", timeZone: "America/Los_Angeles" }`
+- **Schema.org Event**: `startDate: "2026-03-24T10:00:00-07:00"`
+
+Convert using existing `resolveTimeRange()`/`createTimeObject()` from `src/utils/timezone-utils.ts`.
+
+### RSVP Status
+
+Google Calendar `responseStatus` values: `accepted`, `declined`, `tentative`, `needsAction`.
+
+Use `Person` with `additionalProperty` for the RSVP value (see [SCHEMA-ORG-SERIALIZER-PLAN.md](SCHEMA-ORG-SERIALIZER-PLAN.md) for the full attendee mapping).
+
+### Custom Extensions
+
+Conflict detection types (`ConflictInfo`, `DuplicateInfo`) have no schema.org equivalents. Recommended approach: create custom `@type` extensions (e.g., `@type: "ConflictInfo"`) rather than overloading the Event type with non-standard properties.
 
 ---
 
@@ -159,6 +246,8 @@ Food/nutrition (`gs1:FoodBeverageTobaccoProduct`), textiles (`gs1:TextileMateria
 
 - [schema.org](https://schema.org/) -- primary vocabulary for events, email, actions
 - [GS1 Web Vocabulary](https://ref.gs1.org/voc/) -- complementary supply chain/product vocabulary
-- [Email Categorization](EMAIL-CATEGORIZATION.md) -- implementation doc for inbound email schema extraction
+- [Email Categorization](EMAIL-CATEGORIZATION.md) -- inbound email schema extraction
+- [Serializer Plan](SCHEMA-ORG-SERIALIZER-PLAN.md) -- outbound JSON-LD serialization for calendar responses
+- [MCP Tools](SCHEMA-ORG-MCP-TOOLS.md) -- schema-org-mcp tool invocations for type validation
 - `lib/schema-extractor.mjs` -- extraction module (htmlparser2, JSON-LD parsing, category mapping)
 - `src/schemas/types.ts` -- core TypeScript type definitions

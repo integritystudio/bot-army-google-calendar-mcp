@@ -16,6 +16,7 @@ import {
   LABEL_ORG, LABEL_ORG_OPEN_SOURCE, LABEL_ORG_FINANCIAL,
   LABEL_ORG_REAL_ESTATE, LABEL_ORG_ECOMMERCE,
   LABEL_ORG_LOCAL_COMMUNITY, LABEL_ORG_PROFESSIONAL,
+  DEFAULT_MAX_RESULTS,
 } from './lib/constants.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { searchAndModify } from './lib/gmail-batch-utils.mjs';
@@ -104,8 +105,7 @@ const CONFIGS = {
 
 const config = CONFIGS[typeArg];
 
-async function runSingleLabel(gmail, cfg) {
-  const labelCache = await buildLabelCache(gmail);
+async function runSingleLabel(gmail, labelCache, cfg) {
   const labelId = labelCache.get(cfg.label);
   if (!labelId) {
     console.error(`${cfg.label} label not found`);
@@ -114,30 +114,34 @@ async function runSingleLabel(gmail, cfg) {
   console.log(BANNER);
   console.log('\n1. APPLYING LABEL TO EXISTING EMAILS\n');
 
+  const searchResults = await Promise.all(
+    cfg.searchPatterns.map(query =>
+      searchAndModify(gmail, query, { addLabelIds: [labelId] }, DEFAULT_MAX_RESULTS)
+        .then(count => ({ query, count, error: null }))
+        .catch(error => ({ query, count: 0, error: error.message }))
+    )
+  );
   let totalLabeled = 0;
-  for (const query of cfg.searchPatterns) {
-    try {
-      const count = await searchAndModify(gmail, query, { addLabelIds: [labelId] }, 100);
-      if (count > 0) console.log(`  Applied to ${count} emails matching: "${query}"`);
-      totalLabeled += count;
-    } catch (error) {
-      console.log(`  Error processing "${query}": ${error.message}`);
-    }
+  for (const { query, count, error } of searchResults) {
+    if (error) console.log(`  Error processing "${query}": ${error}`);
+    else if (count > 0) console.log(`  Applied to ${count} emails matching: "${query}"`);
+    totalLabeled += count;
   }
 
   console.log(`\n  Total labeled: ${totalLabeled} emails\n`);
   console.log(BANNER);
   console.log('\n2. CREATING AUTO-LABEL FILTERS\n');
 
+  const filterResults = await Promise.all(
+    cfg.filterConfigs.map(fc =>
+      createGmailFilter(gmail, fc.criteria, { addLabelIds: [labelId] })
+        .then(filterId => ({ name: fc.name, created: !!filterId }))
+    )
+  );
   let filtersCreated = 0;
-  for (const filterConfig of cfg.filterConfigs) {
-    const filterId = await createGmailFilter(gmail, filterConfig.criteria, { addLabelIds: [labelId] });
-    if (filterId) {
-      console.log(`  Filter created: ${filterConfig.name}`);
-      filtersCreated++;
-    } else {
-      console.log(`  Filter already exists: ${filterConfig.name}`);
-    }
+  for (const { name, created } of filterResults) {
+    console.log(`  Filter ${created ? 'created' : 'already exists'}: ${name}`);
+    if (created) filtersCreated++;
   }
 
   console.log(BANNER);
@@ -146,12 +150,11 @@ async function runSingleLabel(gmail, cfg) {
   console.log(`  Filters created: ${filtersCreated}`);
 }
 
-async function runSublabels(gmail, categoryConfigs, title, parentLabel) {
+async function runSublabels(gmail, labelCache, categoryConfigs, title, parentLabel) {
   console.log(`${title}\n`);
   console.log(BANNER);
   console.log('\n1. APPLYING SUB-LABELS TO EXISTING EMAILS\n');
 
-  const labelCache = await buildLabelCache(gmail);
   const parentLabelId = parentLabel ? labelCache.get(parentLabel) : null;
 
   const categories = categoryConfigs
@@ -165,14 +168,18 @@ async function runSublabels(gmail, categoryConfigs, title, parentLabel) {
     })
     .filter(c => c.labelIds);
 
+  const searchResults = await Promise.all(
+    categories.map(category =>
+      searchAndModify(gmail, category.searchQuery, { addLabelIds: category.labelIds }, DEFAULT_MAX_RESULTS)
+        .then(count => ({ label: category.label, count, error: null }))
+        .catch(error => ({ label: category.label, count: 0, error: error.message }))
+    )
+  );
   let totalLabeled = 0;
-  for (const category of categories) {
-    const count = await searchAndModify(gmail, category.searchQuery, { addLabelIds: category.labelIds }, 100).catch(error => {
-      console.log(`  Error with ${category.label}: ${error.message}`);
-      return 0;
-    });
-    if (count === 0) console.log(`  No emails found for: ${category.label}`);
-    else console.log(`  ${category.label}: ${count} emails`);
+  for (const { label, count, error } of searchResults) {
+    if (error) console.log(`  Error with ${label}: ${error}`);
+    else if (count === 0) console.log(`  No emails found for: ${label}`);
+    else console.log(`  ${label}: ${count} emails`);
     totalLabeled += count;
   }
 
@@ -180,15 +187,16 @@ async function runSublabels(gmail, categoryConfigs, title, parentLabel) {
   console.log(BANNER);
   console.log('\n2. CREATING AUTO-LABEL FILTERS\n');
 
+  const filterResults = await Promise.all(
+    categories.map(category =>
+      createGmailFilter(gmail, category.filterCriteria, { addLabelIds: category.labelIds })
+        .then(filterId => ({ name: category.filterName, created: !!filterId }))
+    )
+  );
   let filtersCreated = 0;
-  for (const category of categories) {
-    const filterId = await createGmailFilter(gmail, category.filterCriteria, { addLabelIds: category.labelIds });
-    if (filterId) {
-      console.log(`  Filter created: ${category.filterName}`);
-      filtersCreated++;
-    } else {
-      console.log(`  Filter already exists: ${category.filterName}`);
-    }
+  for (const { name, created } of filterResults) {
+    console.log(`  Filter ${created ? 'created' : 'already exists'}: ${name}`);
+    if (created) filtersCreated++;
   }
 
   console.log(BANNER);
@@ -199,19 +207,20 @@ async function runSublabels(gmail, categoryConfigs, title, parentLabel) {
 
 async function run() {
   const gmail = createGmailClient();
+  const labelCache = await buildLabelCache(gmail);
 
   if (typeArg === 'event-sublabels') {
-    await runSublabels(gmail, EVENT_SUBLABEL_CATEGORIES, 'ORGANIZING EVENTS BY SUB-LABEL');
+    await runSublabels(gmail, labelCache, EVENT_SUBLABEL_CATEGORIES, 'ORGANIZING EVENTS BY SUB-LABEL');
     return;
   }
 
   if (typeArg === 'organization') {
-    await runSublabels(gmail, ORG_SUBLABEL_CATEGORIES, 'ORGANIZING BY ORGANIZATION TYPE', LABEL_ORG);
+    await runSublabels(gmail, labelCache, ORG_SUBLABEL_CATEGORIES, 'ORGANIZING BY ORGANIZATION TYPE', LABEL_ORG);
     return;
   }
 
   console.log(`${config.title}\n`);
-  await runSingleLabel(gmail, config);
+  await runSingleLabel(gmail, labelCache, config);
 }
 
 run().catch(error => {

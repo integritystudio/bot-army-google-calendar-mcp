@@ -36,6 +36,7 @@ coverage/
 # Auto-generated documentation
 repomix-output.xml
 README_ENHANCED.md
+docs/repomix/
 
 # Logs
 logs/

@@ -3,11 +3,10 @@ import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { BaseToolHandler } from "../handlers/core/BaseToolHandler.js";
 import { ALLOWED_EVENT_FIELDS } from "../utils/field-mask-builder.js";
-import { isValidISODateTime } from "../utils/date-utils.js";
+import { isValidISODate, isValidISODateTime } from "../utils/date-utils.js";
 import { formatErrorMessage } from "../handlers/core/errorFormatting.js";
 import { extractListEventsOptions } from "../handlers/core/types.js";
 
-// Import all handlers
 import { ListCalendarsHandler } from "../handlers/core/ListCalendarsHandler.js";
 import { ListEventsHandler } from "../handlers/core/ListEventsHandler.js";
 import { SearchEventsHandler } from "../handlers/core/SearchEventsHandler.js";
@@ -19,7 +18,6 @@ import { DeleteEventHandler } from "../handlers/core/DeleteEventHandler.js";
 import { FreeBusyEventHandler } from "../handlers/core/FreeBusyEventHandler.js";
 import { GetCurrentTimeHandler } from "../handlers/core/GetCurrentTimeHandler.js";
 
-// Import Gmail handlers
 import { GmailSearchHandler } from "../handlers/gmail/GmailSearchHandler.js";
 import { GmailGetProfileHandler } from "../handlers/gmail/GmailGetProfileHandler.js";
 import { GmailModifyHandler } from "../handlers/gmail/GmailModifyHandler.js";
@@ -38,7 +36,7 @@ function validateCalendarIds(ids: string[]): void {
   if (ids.length > MAX_CALENDARS_PER_REQUEST) {
     throw new Error(`Maximum ${MAX_CALENDARS_PER_REQUEST} calendars allowed per request`);
   }
-  if (!ids.every(id => typeof id === 'string' && id.length > 0)) {
+  if (!ids.every(id => id.length > 0)) {
     throw new Error("All calendar IDs must be non-empty strings");
   }
   if (new Set(ids).size !== ids.length) {
@@ -61,7 +59,6 @@ const extendedPropertyFilters = {
     )
 };
 
-// Define all tool schemas with TypeScript inference
 export const ToolSchemas = {
   'list-calendars': z.object({}),
   
@@ -122,20 +119,10 @@ export const ToolSchemas = {
     summary: z.string().describe("Title of the event"),
     description: z.string().optional().describe("Description/notes for the event"),
     start: z.string()
-      .refine((val) => {
-        const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(val); // All-day event format
-        const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
-        const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
-        return dateOnly || withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format: '2025-01-01T10:00:00' for timed events or '2025-01-01' for all-day events")
+      .refine((val) => isValidISODate(val) || isValidISODateTime(val), "Must be ISO 8601 format: '2025-01-01T10:00:00' for timed events or '2025-01-01' for all-day events")
       .describe("Event start time: '2025-01-01T10:00:00' for timed events or '2025-01-01' for all-day events"),
     end: z.string()
-      .refine((val) => {
-        const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(val); // All-day event format
-        const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
-        const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
-        return dateOnly || withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format: '2025-01-01T11:00:00' for timed events or '2025-01-02' for all-day events")
+      .refine((val) => isValidISODate(val) || isValidISODateTime(val), "Must be ISO 8601 format: '2025-01-01T11:00:00' for timed events or '2025-01-02' for all-day events")
       .describe("Event end time: '2025-01-01T11:00:00' for timed events or '2025-01-02' for all-day events (exclusive)"),
     timeZone: z.string().optional().describe(
       "Timezone as IANA Time Zone Database name (e.g., America/Los_Angeles). Takes priority over calendar's default timezone. Only used for timezone-naive datetime strings."
@@ -235,21 +222,11 @@ export const ToolSchemas = {
     summary: z.string().optional().describe("Updated title of the event"),
     description: z.string().optional().describe("Updated description/notes"),
     start: z.string()
-      .refine((val) => {
-        const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(val); // All-day event format
-        const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
-        const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
-        return dateOnly || withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format: '2024-01-01T10:00:00' for timed events or '2024-01-01' for all-day events")
+      .refine((val) => isValidISODate(val) || isValidISODateTime(val), "Must be ISO 8601 format: '2024-01-01T10:00:00' for timed events or '2024-01-01' for all-day events")
       .describe("Updated start time: '2024-01-01T10:00:00' for timed events or '2024-01-01' for all-day events")
       .optional(),
     end: z.string()
-      .refine((val) => {
-        const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(val); // All-day event format
-        const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
-        const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
-        return dateOnly || withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format: '2024-01-01T11:00:00' for timed events or '2024-01-02' for all-day events")
+      .refine((val) => isValidISODate(val) || isValidISODateTime(val), "Must be ISO 8601 format: '2024-01-01T11:00:00' for timed events or '2024-01-02' for all-day events")
       .describe("Updated end time: '2024-01-01T11:00:00' for timed events or '2024-01-02' for all-day events (exclusive)")
       .optional(),
     timeZone: z.string().optional().describe("Updated timezone as IANA Time Zone Database name. If not provided, uses the calendar's default timezone."),
@@ -296,7 +273,6 @@ export const ToolSchemas = {
     )
   }).refine(
     (data) => {
-      // Require originalStartTime when modificationScope is 'thisEventOnly'
       if (data.modificationScope === 'thisEventOnly' && !data.originalStartTime) {
         return false;
       }
@@ -308,7 +284,6 @@ export const ToolSchemas = {
     }
   ).refine(
     (data) => {
-      // Require futureStartDate when modificationScope is 'thisAndFollowing'
       if (data.modificationScope === 'thisAndFollowing' && !data.futureStartDate) {
         return false;
       }
@@ -320,7 +295,6 @@ export const ToolSchemas = {
     }
   ).refine(
     (data) => {
-      // Ensure futureStartDate is in the future when provided
       if (data.futureStartDate) {
         const futureDate = new Date(data.futureStartDate);
         const now = new Date();
@@ -431,12 +405,10 @@ export const ToolSchemas = {
   })
 } as const;
 
-// Generate TypeScript types from schemas
 export type ToolInputs = {
   [K in keyof typeof ToolSchemas]: z.infer<typeof ToolSchemas[K]>
 };
 
-// Export individual types for convenience
 export type ListCalendarsInput = ToolInputs['list-calendars'];
 export type ListEventsInput = ToolInputs['list-events'];
 export type SearchEventsInput = ToolInputs['search-events'];
@@ -464,26 +436,17 @@ interface ToolDefinition {
 
 
 export class ToolRegistry {
+  private static unwrapZodEffects(schema: z.ZodType<any>): any {
+    let s = schema as any;
+    while (s._def && s._def.typeName === 'ZodEffects') {
+      s = s._def.schema;
+    }
+    return s;
+  }
+
   private static extractSchemaShape(schema: z.ZodType<any>): any {
-    const schemaAny = schema as any;
-    
-    // Handle ZodEffects (schemas with .refine())
-    if (schemaAny._def && schemaAny._def.typeName === 'ZodEffects') {
-      return this.extractSchemaShape(schemaAny._def.schema);
-    }
-    
-    // Handle regular ZodObject
-    if ('shape' in schemaAny) {
-      return schemaAny.shape;
-    }
-    
-    // Handle other nested structures
-    if (schemaAny._def && schemaAny._def.schema) {
-      return this.extractSchemaShape(schemaAny._def.schema);
-    }
-    
-    // Fallback to the original approach
-    return schemaAny._def?.schema?.shape || schemaAny.shape;
+    const unwrapped = this.unwrapZodEffects(schema) as any;
+    return unwrapped.shape ?? unwrapped._def?.schema?.shape;
   }
 
   private static tools: ToolDefinition[] = [
@@ -499,10 +462,8 @@ export class ToolRegistry {
       schema: ToolSchemas['list-events'],
       handler: ListEventsHandler,
       handlerFunction: async (args: ListEventsInput & { calendarId: string | string[] }) => {
-        // Validate and preprocess calendarId input for multi-calendar support
         let processedCalendarId: string | string[] = args.calendarId;
-        
-        // Handle case where calendarId is passed as a JSON string
+
         if (typeof args.calendarId === 'string' && args.calendarId.trim().startsWith('[') && args.calendarId.trim().endsWith(']')) {
           try {
             const parsed = JSON.parse(args.calendarId);
@@ -615,31 +576,21 @@ export class ToolRegistry {
   ];
 
   static getToolsWithSchemas() {
-    return this.tools.map(tool => {
-      // Unwrap ZodEffects (schemas with .refine(), .superRefine(), etc.) to get the base schema
-      let schema = tool.schema as any;
-      while (schema._def && schema._def.typeName === 'ZodEffects') {
-        schema = schema._def.schema;
-      }
-
-      const jsonSchema = zodToJsonSchema(schema);
-      return {
-        name: tool.name,
-        description: tool.description,
-        inputSchema: jsonSchema
-      };
-    });
+    return this.tools.map(tool => ({
+      name: tool.name,
+      description: tool.description,
+      inputSchema: zodToJsonSchema(this.unwrapZodEffects(tool.schema))
+    }));
   }
 
   static async registerAll(
-    server: McpServer, 
+    server: McpServer,
     executeWithHandler: (
-      handler: any, 
+      handler: any,
       args: any
     ) => Promise<{ content: Array<{ type: "text"; text: string }> }>
   ) {
     for (const tool of this.tools) {
-      // Use the existing registerTool method which handles schema conversion properly
       server.registerTool(
         tool.name,
         {
@@ -647,13 +598,8 @@ export class ToolRegistry {
           inputSchema: this.extractSchemaShape(tool.schema)
         },
         async (args: any) => {
-          // Validate input using our Zod schema
           const validatedArgs = tool.schema.parse(args);
-          
-          // Apply any custom handler function preprocessing
           const processedArgs = tool.handlerFunction ? await tool.handlerFunction(validatedArgs) : validatedArgs;
-          
-          // Create handler instance and execute
           const handler = new tool.handler();
           return executeWithHandler(handler, processedArgs);
         }

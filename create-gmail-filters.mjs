@@ -22,6 +22,7 @@ import {
   LABEL_MONITORING,
   LABEL_COMMUNITIES,
   LABEL_SERVICES,
+  DEFAULT_MAX_RESULTS,
 } from './lib/constants.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
 import { searchAndModify } from './lib/gmail-batch-utils.mjs';
@@ -43,7 +44,7 @@ const FILTER_CONFIGS = [
   { label: LABEL_PRODUCT_UPDATES, filterQuery: 'from:(noreply@email.openai.com OR no-reply@email.claude.com OR googlecloud@google.com OR "AlphaSignal" OR lukak@storylane.io)' },
   { label: LABEL_CALENDLY_NOTIFICATIONS, filterQuery: 'from:teamcalendly@send.calendly.com' },
   { label: LABEL_LINKEDIN_UPDATES, filterQuery: 'from:updates-noreply@linkedin.com' },
-  { label: LABEL_DMARC_REPORTS, filterQuery: 'subject:DMARC', applyQuery: 'subject:DMARC', maxResults: 100 },
+  { label: LABEL_DMARC_REPORTS, filterQuery: 'subject:DMARC', applyQuery: 'subject:DMARC', maxResults: DEFAULT_MAX_RESULTS },
   { label: LABEL_EVENTS, filterQuery: 'from:noreply@reminder.eventbrite.com' },
   { label: LABEL_MEETING_NOTES, filterQuery: 'from:meetings-noreply@google.com subject:Notes' },
   { label: LABEL_MONITORING, filterQuery: 'from:alertmanager@signoz.cloud', applyQuery: 'from:alertmanager@signoz.cloud', maxResults: 200 },

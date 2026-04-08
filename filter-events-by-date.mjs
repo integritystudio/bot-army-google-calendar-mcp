@@ -1,5 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID, GMAIL_INBOX, LABEL_EVENTS, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
+import { USER_ID, GMAIL_INBOX, LABEL_EVENTS, LABEL_KEEP_IMPORTANT, DEFAULT_MAX_RESULTS } from './lib/constants.mjs';
 import { classifyEmail } from './lib/date-based-filter.mjs';
 import { getHeader } from './lib/email-utils.mjs';
 import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
@@ -26,7 +26,7 @@ async function filterEventsByDate() {
   }
 
   const searchQuery = `is:unread (subject:${EVENT_KEYWORDS} OR from:${EVENT_SENDERS}) ${keepImportantLabelId ? `-label:"${LABEL_KEEP_IMPORTANT}"` : ''}`;
-  const searchResponse = await gmail.users.messages.list({ userId: USER_ID, q: searchQuery, maxResults: 100 });
+  const searchResponse = await gmail.users.messages.list({ userId: USER_ID, q: searchQuery, maxResults: DEFAULT_MAX_RESULTS });
   const messageIds = searchResponse.data.messages || [];
   console.log(`Found ${messageIds.length} event-like emails\n`);
 

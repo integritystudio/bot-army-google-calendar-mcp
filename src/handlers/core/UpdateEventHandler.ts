@@ -24,7 +24,7 @@ export class UpdateEventHandler extends BaseToolHandler {
         const validArgs = args as UpdateEventInput;
 
         let conflicts = null;
-        let cachedTimezone: string | undefined;
+        const timezone = validArgs.timeZone || await this.getCalendarTimezone(oauth2Client, validArgs.calendarId);
         if (validArgs.checkConflicts !== false && (validArgs.start || validArgs.end)) {
             const calendar = this.getCalendar(oauth2Client);
             const existingEvent = await calendar.events.get({
@@ -36,8 +36,7 @@ export class UpdateEventHandler extends BaseToolHandler {
                 throw new Error('Event not found');
             }
 
-            cachedTimezone = validArgs.timeZone || await this.getCalendarTimezone(oauth2Client, validArgs.calendarId);
-            const eventToCheck = buildEventForConflictCheckUpdate(validArgs, existingEvent.data, cachedTimezone);
+            const eventToCheck = buildEventForConflictCheckUpdate(validArgs, existingEvent.data, timezone);
 
             conflicts = await performConflictCheck(
                 this.conflictDetectionService,
@@ -52,7 +51,7 @@ export class UpdateEventHandler extends BaseToolHandler {
             );
         }
 
-        const event = await this.updateEventWithScope(oauth2Client, validArgs, cachedTimezone);
+        const event = await this.updateEventWithScope(oauth2Client, validArgs, timezone);
         const text = createEventResponseWithConflicts(event, validArgs.calendarId, conflicts ?? undefined, "updated");
 
         return this.textResult(text);
@@ -61,13 +60,13 @@ export class UpdateEventHandler extends BaseToolHandler {
     private async updateEventWithScope(
         client: OAuth2Client,
         args: UpdateEventInput,
-        cachedTimezone?: string
+        timezone: string
     ): Promise<calendar_v3.Schema$Event> {
         try {
             const calendar = this.getCalendar(client);
             const helpers = new RecurringEventHelpers(calendar);
 
-            const defaultTimeZone = cachedTimezone || await this.getCalendarTimezone(client, args.calendarId);
+            const defaultTimeZone = timezone;
 
             // Fetch event and detect type in single API call
             const { event, type: eventType } = await helpers.getEventAndType(args.eventId, args.calendarId);
@@ -159,7 +158,6 @@ export class UpdateEventHandler extends BaseToolHandler {
         const calendar = helpers.getCalendar();
         const effectiveTimeZone = args.timeZone || defaultTimeZone;
 
-        // Use passed event or fetch if not provided (for backward compatibility)
         let eventData = originalEvent;
         if (!eventData) {
             const originalResponse = await calendar.events.get({

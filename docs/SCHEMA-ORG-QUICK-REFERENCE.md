@@ -284,7 +284,7 @@ Overall Alignment: ███████░░░ 72%
 
 | Need | Go To |
 |------|-------|
-| Full type documentation | `docs/SCHEMA-ORG-ALIGNMENT.md` |
+| Full type documentation | `docs/SCHEMA_CATEGORY_MAP.md` |
 | MCP tool reference | `docs/SCHEMA-ORG-MCP-TOOLS.md` |
 | Implementation guide | This file + ALIGNMENT.md |
 | Schema.org validator | https://validator.schema.org/ |
@@ -295,7 +295,7 @@ Overall Alignment: ███████░░░ 72%
 
 ## 🚀 Next Steps
 
-1. **Review** this quick reference and SCHEMA-ORG-ALIGNMENT.md
+1. **Review** this quick reference and SCHEMA_CATEGORY_MAP.md
 2. **Run** the MCP tools listed in SCHEMA-ORG-MCP-TOOLS.md
 3. **Map** each CalendarEvent property to Event
 4. **Generate** JSON-LD examples using `generate_example` tool

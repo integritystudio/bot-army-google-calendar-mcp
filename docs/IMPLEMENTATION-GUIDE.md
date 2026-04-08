@@ -88,7 +88,7 @@ Client
 ### Prerequisites Checklist
 
 - [x] Read SCHEMA-ORG-QUICK-REFERENCE.md (20 min)
-- [x] Read SCHEMA-ORG-ALIGNMENT.md sections 1-4 (40 min)
+- [x] Read SCHEMA_CATEGORY_MAP.md sections 1-4 (40 min)
 - [ ] Install schema.org validator: https://validator.schema.org/
 - [ ] Set up local environment:
   ```bash

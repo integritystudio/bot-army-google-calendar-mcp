@@ -43,13 +43,13 @@ Total Out-of-Scope:         10/47 = 22%
 
 Three comprehensive reference documents have been created:
 
-### 1. **SCHEMA-ORG-ALIGNMENT.md** (2500+ lines)
+### 1. **SCHEMA_CATEGORY_MAP.md** (2500+ lines)
    - Complete type mapping (47 types)
    - Property-by-property conversion guide
    - Schema.org type recommendations
    - Implementation phases (Phase 1-3)
    - Custom extension patterns
-   - **Location**: `docs/SCHEMA-ORG-ALIGNMENT.md`
+   - **Location**: `docs/SCHEMA_CATEGORY_MAP.md`
 
 ### 2. **SCHEMA-ORG-MCP-TOOLS.md** (300+ lines)
    - Exact MCP tool invocations
@@ -156,7 +156,7 @@ interface GmailSearchInput {
 
 ### For Implementers
 1. Start with **SCHEMA-ORG-QUICK-REFERENCE.md** (5-min overview)
-2. Review property mappings in **SCHEMA-ORG-ALIGNMENT.md** (30-min deep dive)
+2. Review property mappings in **SCHEMA_CATEGORY_MAP.md** (30-min deep dive)
 3. Implement Phase 1 types (CalendarEvent, Person, Schedule)
 4. Generate examples using **SCHEMA-ORG-MCP-TOOLS.md** reference
 
@@ -302,7 +302,7 @@ Conflict detection (ConflictInfo, DuplicateInfo) don't have schema.org equivalen
 # Open and review these documents in order:
 1. This file (SCHEMA-ORG-ANALYSIS-SUMMARY.md) - 10 min overview
 2. SCHEMA-ORG-QUICK-REFERENCE.md - 10 min visual guide
-3. SCHEMA-ORG-ALIGNMENT.md - 10 min deep dive
+3. SCHEMA_CATEGORY_MAP.md - 10 min deep dive
 ```
 
 ### Step 2: Run MCP Tools (1-2 hours)
@@ -325,7 +325,7 @@ npm start
 ### Step 3: Map Types (2-3 hours)
 ```bash
 # Use the tool outputs to verify mappings in:
-# - SCHEMA-ORG-ALIGNMENT.md (type mapping table)
+# - SCHEMA_CATEGORY_MAP.md (type mapping table)
 # - Create JSON-LD examples for each major type
 # - Update API documentation with @context
 ```
@@ -345,7 +345,7 @@ npm start
 A: No. Create JSON-LD serialization layer for API responses.
 
 **Q: What about timezone edge cases?**
-A: Use ISO 8601 with UTC offset. See SCHEMA-ORG-ALIGNMENT.md for examples.
+A: Use ISO 8601 with UTC offset. See SCHEMA_CATEGORY_MAP.md for examples.
 
 **Q: How do I handle recurring events?**
 A: Use schema.org Event type with `eventStatus` and repeat rules.

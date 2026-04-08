@@ -1,3 +1,22 @@
+a698810 2026-04-07 chore: update package-lock, package
+  package-lock.json
+
+7ff7421 2026-03-30 test: enforce type-safe content assertions and fix ESM import extensions
+  src/tests/unit/handlers/RecurringEventHelpers.test.ts
+  src/tests/unit/handlers/UpdateEventHandler.recurring.test.ts
+
+015bf24 2026-03-30 refactor(handlers): extract extractListEventsOptions and validateCalendarIds utilities
+  src/tools/registry.ts
+
+77e8b08 2026-03-30 refactor(tests): tighten CreateEventHandler test style
+  src/tests/unit/handlers/CreateEventHandler.test.ts
+
+17fe605 2026-03-27 chore(docs): update repomix snapshots and add ralph-loop local config
+  docs/repomix/gitlog-top20.txt
+  docs/repomix/repo-compressed.xml
+  docs/repomix/repomix-git-ranked.xml
+  docs/repomix/repomix.xml
+
 1e4638a 2026-03-27 refactor(email): generalize archive-old-meeting-responses into reusable archive-old-emails script
   docs/repomix/gitlog-top20.txt
   docs/repomix/repo-compressed.xml

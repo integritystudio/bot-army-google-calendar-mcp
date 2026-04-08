@@ -347,6 +347,13 @@ The email organization system uses intelligent date parsing (`lib/date-based-fil
 - [Development](docs/development.md) - Contributing and testing
 - [Backlog & Roadmap](docs/BACKLOG.md) - Future work, refactoring targets, design decisions
 
+### Schema & Vocabulary Alignment
+
+Type definitions are aligned with [schema.org](https://schema.org/) for calendar events, email categorization, and reservation types. The [GS1 Web Vocabulary](https://ref.gs1.org/voc/) complements schema.org with supply chain, product identification (`gs1:Product`, GTIN), and commercial transaction types (`gs1:Offer`, `gs1:PriceSpecification`, `gs1:Transaction`). The two vocabularies work together in JSON-LD.
+
+- [Schema Category Map](docs/SCHEMA_CATEGORY_MAP.md) -- type inventory, property mappings, GS1 overlap analysis
+- [Email Categorization](docs/EMAIL-CATEGORIZATION.md) -- inbound email schema extraction and GS1 enrichment
+
 ## Development
 
 **Project Guidelines:**

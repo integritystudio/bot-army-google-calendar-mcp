@@ -436,7 +436,7 @@ Beyond the core 8 tools above, use `search_schemas` and `get_schema_type` for th
 
 - [ ] Run Core Schema Tools (1-5) to retrieve type definitions
 - [ ] Run Metadata Tools (6-8) to document server capabilities
-- [ ] Review SCHEMA-ORG-ALIGNMENT.md mapping table
+- [ ] Review SCHEMA_CATEGORY_MAP.md mapping table
 - [ ] Run Performance Tools (9+) to measure impact
 - [ ] Map CalendarEvent fields to Event properties
 - [ ] Update API documentation with JSON-LD examples

@@ -1,8 +1,7 @@
-# Schema.org Email Categorization - Implementation Document
+# Email Categorization
 
-**Date**: 2026-04-07
 **Status**: Draft
-**Context**: Leverage schema.org markup embedded in emails to improve automated categorization, replacing keyword/sender heuristics with structured data extraction.
+**Context**: Leverage schema.org and GS1 vocabulary markup embedded in emails to improve automated categorization, replacing keyword/sender heuristics with structured data extraction.
 
 ---
 
@@ -287,15 +286,38 @@ Major senders known to include schema.org JSON-LD:
 
 ---
 
-## Relationship to Existing Schema.org Docs
+## GS1 Web Vocabulary
+
+The [GS1 Web Vocabulary](https://ref.gs1.org/voc/) complements schema.org with supply chain and commercial transaction types. GS1 classes use `owl:Thing` and can appear alongside schema.org types in the same JSON-LD block.
+
+### Where GS1 adds value to email categorization
+
+Schema.org covers the `@type` routing (EventReservation, Order, ParcelDelivery, Invoice), but the metadata extracted from those objects can be enriched with GS1-aligned fields when senders include them.
+
+| Category | schema.org fields (current) | GS1 enrichment (future) |
+|---|---|---|
+| Orders | `seller.name`, `orderNumber`, `totalPrice` | `gs1:Product` (GTIN), `gs1:PriceSpecification` (currency code, payment method) |
+| Shipping | `provider.name`, `trackingNumber`, `expectedArrivalFrom` | `gs1:PostalAddress` (structured delivery address: locality, region, country) |
+| Billing | maps to "Billing" with no detail extracted | `gs1:Transaction` (transaction ID, type), `gs1:Discount` (discount structures) |
+| Events | `eventName`, `eventDate`, `venue` | `gs1:Place` + `gs1:GeoCoordinates` (structured venue location) |
+
+### GS1 types for sender/organization classification
+
+The Organization label hierarchy (`lib/constants.mjs`) currently uses flat string labels. `gs1:Organization` provides GLN-based identification with `gs1:OrganizationID_Details` for government/trade body identifiers and `gs1:OrganizationStatusHistory` for active/inactive tracking. This could improve sender classification for commercial senders who embed GS1 identifiers in their markup.
+
+### Not applicable to email categorization
+
+GS1 food/nutrition (`gs1:FoodBeverageTobaccoProduct`, `gs1:AllergenDetails`, `gs1:NutritionMeasurementType`), textiles (`gs1:TextileMaterialDetails`), packaging (`gs1:PackagingDetails`), and certification (`gs1:CertificationDetails`) types are supply chain-specific and unlikely to appear in email JSON-LD.
+
+---
+
+## Related Docs
 
 | Document | Focus |
 |---|---|
-| `SCHEMA-ORG-ALIGNMENT.md` | MCP calendar type mapping to schema.org vocabulary |
-| `SCHEMA-ORG-MCP-TOOLS.md` | MCP tool invocations using schema.org types |
-| **This document** | Parsing schema.org from incoming emails for categorization |
-
-The existing docs address *outbound* schema alignment (how our tools model data). This doc addresses *inbound* schema extraction (reading structured data from emails we receive).
+| [SCHEMA_CATEGORY_MAP.md](SCHEMA_CATEGORY_MAP.md) | Type definitions, schema.org alignment, and category mapping |
+| [GS1 Web Vocabulary](https://ref.gs1.org/voc/) | Complementary supply chain/product vocabulary |
+| **This document** | Inbound email schema extraction and categorization |
 
 ---
 

@@ -424,7 +424,7 @@ A: Debug locally, add test case, fix implementation, commit.
 |----------|---------|-----------|
 | IMPLEMENTATION-GUIDE.md | Detailed day-by-day guide | 60 min |
 | SCHEMA-ORG-QUICK-REFERENCE.md | Visual type mappings | 20 min |
-| SCHEMA-ORG-ALIGNMENT.md | Complete analysis | 60 min |
+| SCHEMA_CATEGORY_MAP.md | Complete analysis | 60 min |
 | SCHEMA-ORG-MCP-TOOLS.md | MCP tool reference | 30 min |
 | SCHEMA-ORG-INDEX.md | Navigation guide | 10 min |
 

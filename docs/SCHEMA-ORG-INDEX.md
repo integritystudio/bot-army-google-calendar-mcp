@@ -16,7 +16,7 @@ This folder contains a complete analysis of how Google Calendar MCP types align 
 |----------|---------|----------|-----------|
 | **[SCHEMA-ORG-ANALYSIS-SUMMARY.md](SCHEMA-ORG-ANALYSIS-SUMMARY.md)** | Executive overview & roadmap | Everyone | 15 min |
 | **[SCHEMA-ORG-QUICK-REFERENCE.md](SCHEMA-ORG-QUICK-REFERENCE.md)** | Visual mapping & examples | Implementers | 20 min |
-| **[SCHEMA-ORG-ALIGNMENT.md](SCHEMA-ORG-ALIGNMENT.md)** | Detailed type-by-type analysis | Architects | 60 min |
+| **[SCHEMA_CATEGORY_MAP.md](SCHEMA_CATEGORY_MAP.md)** | Type definitions, schema.org alignment, and category mapping | Developers | 15 min |
 | **[SCHEMA-ORG-MCP-TOOLS.md](SCHEMA-ORG-MCP-TOOLS.md)** | MCP tool reference & invocations | Developers | 30 min |
 
 ---
@@ -44,7 +44,7 @@ This folder contains a complete analysis of how Google Calendar MCP types align 
    - Implementation checklist
    - Type alignment matrix
 
-2. **Then read**: [SCHEMA-ORG-ALIGNMENT.md](SCHEMA-ORG-ALIGNMENT.md) sections:
+2. **Then read**: [SCHEMA_CATEGORY_MAP.md](SCHEMA_CATEGORY_MAP.md) sections:
    - "Type Mapping Table" (quick lookup)
    - "Example: CalendarEvent → Event Conversion"
    - "Implementation Recommendations" (Phase 1-3)
@@ -57,7 +57,7 @@ This folder contains a complete analysis of how Google Calendar MCP types align 
 ---
 
 ### 🏗️ For Architects / Technical Leads
-1. **Start here**: [SCHEMA-ORG-ALIGNMENT.md](SCHEMA-ORG-ALIGNMENT.md)
+1. **Start here**: [SCHEMA_CATEGORY_MAP.md](SCHEMA_CATEGORY_MAP.md)
    - Complete type inventory (47 types)
    - Property mapping details
    - Custom extension patterns
@@ -123,23 +123,14 @@ This folder contains a complete analysis of how Google Calendar MCP types align 
 
 ---
 
-### SCHEMA-ORG-ALIGNMENT.md (1200+ lines)
-**Comprehensive Technical Reference**
+### SCHEMA_CATEGORY_MAP.md
+**Type Definitions, Schema.org Alignment, and Category Mapping**
 
-- Codebase type inventory (47 types)
-- Schema.org type recommendations
-- Type mapping table (with alignment scores)
-- Custom extensions guide
-- Example: CalendarEvent → Event conversion
-- Phase 1-3 implementation recommendations
-
-**Sections**:
-1. Overview & findings
-2. Type inventory (7 core, 4 conflict, 7 email, 12 tool, 8 config, 9 transport)
-3. Schema.org recommendations (8 types)
-4. Type mapping table
-5. Implementation roadmap
-6. Frequently asked questions
+- `SCHEMA_CATEGORY_MAP` reference (email JSON-LD @type -> Gmail label category)
+- Extraction pipeline and metadata fields per type
+- Codebase type inventory (Core Calendar, Conflict Detection, Gmail/Email)
+- Property mapping: CalendarEvent -> schema.org Event
+- GS1 Web Vocabulary complementary types
 
 ---
 

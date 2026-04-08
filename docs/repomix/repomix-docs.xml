@@ -56,10 +56,10 @@ docs/
   authentication.md
   BACKLOG.md
   CHANGELOG.md
-  DELIVERABLES.md
   deployment.md
   development.md
   DOPPLER_SETUP.md
+  EMAIL-CATEGORIZATION.md
   EVENT_HELPERS_ANALYSIS.md
   GMAIL_TOOLS_COMPLETE.md
   GMAIL_TOOLS_GUIDE.md
@@ -67,12 +67,13 @@ docs/
   LABEL-RESOLUTION-GUIDE.md
   README.md
   REFACTOR_RECURRING_TESTS.md
-  SCHEMA-ORG-ALIGNMENT.md
+  SCHEMA_CATEGORY_MAP.md
   SCHEMA-ORG-ANALYSIS-SUMMARY.md
   SCHEMA-ORG-INDEX.md
   SCHEMA-ORG-MCP-TOOLS.md
   SCHEMA-ORG-QUICK-REFERENCE.md
   SCHEMA-ORG-QUICK-START.md
+  SCHEMA-ORG-SERIALIZER-PLAN.md
   testing.md
 CLAUDE.md
 README.md
@@ -873,495 +874,6 @@ This section contains the contents of the repository's files.
 20: See [detailed changelog](./changelog/1.4.9/CHANGELOG.md) for complete list of changes, commits, and migration notes.
 </file>
 
-<file path="docs/DELIVERABLES.md">
-  1: # Schema.org Type Alignment - Complete Deliverables
-  2: 
-  3: **Project**: bot-army-google-calendar-mcp
-  4: **Scope**: Schema.org vocabulary alignment with codebase types
-  5: **Status**: ✅ Complete - Ready for Implementation
-  6: **Date**: 2026-03-24
-  7: 
-  8: ---
-  9: 
- 10: ## 📦 Deliverables Summary
- 11: 
- 12: ### Total Documentation Created
- 13: - **7 comprehensive guides** (4,225 lines)
- 14: - **3 commits** with structured analysis
- 15: - **Phase 1 implementation ready** (4 days, 32 hours)
- 16: - **100% alignment analysis** (47 types covered)
- 17: 
- 18: ---
- 19: 
- 20: ## 📚 Documentation Hierarchy
- 21: 
- 22: ### Level 1: Navigation & Summaries
- 23: **For decision makers and quick orientation**
- 24: 
- 25: #### 1. **SCHEMA-ORG-INDEX.md** (500 lines)
- 26: **Purpose**: Central navigation hub for all documentation
- 27: 
- 28: Contains:
- 29: - Document quick reference table
- 30: - Audience-specific starting points
- 31: - Cross-reference guide
- 32: - Key metrics summary
- 33: - Document version history
- 34: 
- 35: **Use When**: First opening schema-org documentation
- 36: **Read Time**: 10 minutes
- 37: **Target Audience**: Everyone
- 38: 
- 39: ---
- 40: 
- 41: ### Level 2: Analysis & Strategy
- 42: **For understanding the landscape**
- 43: 
- 44: #### 2. **SCHEMA-ORG-ANALYSIS-SUMMARY.md** (800 lines)
- 45: **Purpose**: Executive overview and implementation roadmap
- 46: 
- 47: Contains:
- 48: - Analysis results & statistics (72% alignment score)
- 49: - Type distribution breakdown (47 types analyzed)
- 50: - Key findings (strengths & gaps)
- 51: - 4 primary type mappings with examples
- 52: - 3-phase implementation roadmap with timeline
- 53: - Resource requirements
- 54: - Success metrics & KPIs
- 55: 
- 56: **Use When**: Need to understand project scope and benefits
- 57: **Read Time**: 15-20 minutes
- 58: **Target Audience**: Product managers, technical leads, stakeholders
- 59: 
- 60: ---
- 61: 
- 62: #### 3. **SCHEMA-ORG-QUICK-REFERENCE.md** (400 lines)
- 63: **Purpose**: Visual mapping guide for developers
- 64: 
- 65: Contains:
- 66: - Type alignment matrix (9x4 table)
- 67: - Transformation examples (3 detailed examples)
- 68: - Type alignment pyramid
- 69: - Property mapping checklist
- 70: - Implementation phases visual
- 71: - DO's and DON'Ts
- 72: - Key DO's and DON'Ts
- 73: 
- 74: **Use When**: Need to see type mappings visually
- 75: **Read Time**: 20 minutes
- 76: **Target Audience**: Developers, architects
- 77: 
- 78: ---
- 79: 
- 80: ### Level 3: Detailed References
- 81: **For comprehensive understanding**
- 82: 
- 83: #### 4. **SCHEMA-ORG-ALIGNMENT.md** (1,200+ lines)
- 84: **Purpose**: Complete technical analysis and type mapping
- 85: 
- 86: Contains:
- 87: - Codebase type inventory (all 47 types)
- 88:   - Core calendar types (7)
- 89:   - Conflict/duplicate types (4)
- 90:   - Email/Gmail types (7)
- 91:   - Tool input types (12)
- 92:   - Configuration types (8)
- 93:   - Transport types (9)
- 94: - Schema.org type recommendations (8 types detailed)
- 95: - Property-by-property mapping (50+ mappings)
- 96: - Custom extension patterns
- 97: - Example conversion (CalendarEvent → Event)
- 98: - Phase 1-3 implementation guide
- 99: - Questions for further refinement
-100: 
-101: **Use When**: Need deep technical understanding
-102: **Read Time**: 60 minutes
-103: **Target Audience**: Architects, senior developers
-104: 
-105: ---
-106: 
-107: #### 5. **SCHEMA-ORG-MCP-TOOLS.md** (300+ lines)
-108: **Purpose**: Complete MCP tool reference and invocations
-109: 
-110: Contains:
-111: - 8 core tool invocations (documented)
-112:   1. `get_schema_type` - Type definitions
-113:   2. `search_schemas` - Type discovery
-114:   3. `get_type_hierarchy` - Inheritance
-115:   4. `get_type_properties` - Property listing
-116:   5. `generate_example` - JSON-LD examples
-117:   6. `get_server_metadata` - Server info
-118:   7. `generate_search_action` - Email search
-119:   8. `generate_create_action` - Event creation
-120: - Expected output examples
-121: - Additional search patterns
-122: - Error handling reference
-123: - Tool usage checklist
-124: 
-125: **Use When**: Ready to run MCP tools
-126: **Read Time**: 30 minutes
-127: **Target Audience**: Developers, integrators
-128: 
-129: ---
-130: 
-131: ### Level 4: Implementation Guides
-132: **For actionable step-by-step instructions**
-133: 
-134: #### 6. **IMPLEMENTATION-GUIDE.md** (1,760 lines)
-135: **Purpose**: Complete Phase 1 implementation instructions
-136: 
-137: Contains:
-138: - Architecture overview (before/after diagrams)
-139: - Pre-implementation setup checklist
-140: - **Day 1**: Analysis & planning (4 hours)
-141:   - Response flow mapping
-142:   - Serialization point identification
-143:   - Property mapping documentation
-144:   - Architecture strategy
-145: - **Day 2**: Core implementation (4 hours)
-146:   - SchemaOrgSerializer service (220 lines)
-147:   - Unit tests (150 lines)
-148:   - Handler integration (5 files)
-149:   - Schema updates
-150: - **Day 3**: JSON-LD & edge cases (4 hours)
-151:   - JSON-LD examples
-152:   - README updates
-153:   - Timezone conversion implementation
-154:   - Backward compatibility testing
-155: - **Day 4**: Testing & documentation (4 hours)
-156:   - API documentation
-157:   - Integration tests
-158:   - Deployment guide
-159: - File-by-file checklist
-160: - Code examples (3 detailed examples)
-161: - Testing strategy with metrics
-162: - Deployment & validation procedures
-163: - Success metrics
-164: 
-165: **Use When**: Starting Phase 1 implementation
-166: **Read Time**: 60 minutes
-167: **Target Audience**: Developers (primary audience)
-168: 
-169: ---
-170: 
-171: #### 7. **SCHEMA-ORG-QUICK-START.md** (480 lines)
-172: **Purpose**: Practical quick-start for developers
-173: 
-174: Contains:
-175: - Where to start (4 steps)
-176: - Phase 1 summary
-177: - Day-by-day breakdown
-178: - Key files to create/modify
-179: - Code template (SchemaOrgSerializer)
-180: - Testing quick reference
-181: - Documentation requirements
-182: - Definition of Done checklist
-183: - Git workflow (day-by-day commits)
-184: - FAQ (12 common questions)
-185: - Time allocation breakdown
-186: - Success indicators
-187: 
-188: **Use When**: Need practical guidance to get started
-189: **Read Time**: 20 minutes
-190: **Target Audience**: Developers (practical focus)
-191: 
-192: ---
-193: 
-194: ## 🎯 How to Use These Documents
-195: 
-196: ### Scenario 1: Manager/Stakeholder
-197: 1. Read: SCHEMA-ORG-INDEX.md (10 min)
-198: 2. Read: SCHEMA-ORG-ANALYSIS-SUMMARY.md (20 min)
-199: 3. Check: Success metrics section
-200: 4. **Decision**: Proceed with Phase 1? (4 days, 32 hours, clear ROI)
-201: 
-202: ### Scenario 2: Architect/Technical Lead
-203: 1. Read: SCHEMA-ORG-INDEX.md (10 min)
-204: 2. Read: SCHEMA-ORG-QUICK-REFERENCE.md (20 min)
-205: 3. Read: SCHEMA-ORG-ALIGNMENT.md (60 min)
-206: 4. Review: IMPLEMENTATION-GUIDE.md (60 min)
-207: 5. **Decision**: Architecture sound? Assign tasks to team.
-208: 
-209: ### Scenario 3: Developer (Implementing)
-210: 1. Read: SCHEMA-ORG-INDEX.md (10 min)
-211: 2. Read: SCHEMA-ORG-QUICK-START.md (20 min)
-212: 3. Read: IMPLEMENTATION-GUIDE.md (60 min, reference during work)
-213: 4. Review: Code templates and examples
-214: 5. **Execute**: Follow day-by-day plan for 4 days
-215: 6. **Reference**: MCP tools guide as needed
-216: 
-217: ### Scenario 4: API Documentation / DevRel
-218: 1. Read: SCHEMA-ORG-QUICK-REFERENCE.md (20 min)
-219: 2. Read: JSON-LD examples in IMPLEMENTATION-GUIDE.md (20 min)
-220: 3. Use: Code examples as documentation templates
-221: 4. **Create**: API docs with schema.org context
-222: 
-223: ---
-224: 
-225: ## 📊 Documentation Statistics
-226: 
-227: | Document | Lines | Purpose | Audience | Read Time |
-228: |----------|-------|---------|----------|-----------|
-229: | SCHEMA-ORG-INDEX.md | 500 | Navigation | Everyone | 10 min |
-230: | SCHEMA-ORG-ANALYSIS-SUMMARY.md | 800 | Overview & roadmap | Managers, leads | 20 min |
-231: | SCHEMA-ORG-QUICK-REFERENCE.md | 400 | Visual mappings | Developers | 20 min |
-232: | SCHEMA-ORG-ALIGNMENT.md | 1,200+ | Deep technical | Architects | 60 min |
-233: | SCHEMA-ORG-MCP-TOOLS.md | 300+ | Tool reference | Developers | 30 min |
-234: | IMPLEMENTATION-GUIDE.md | 1,760 | Step-by-step | Developers | 60 min |
-235: | SCHEMA-ORG-QUICK-START.md | 480 | Quick practical | Developers | 20 min |
-236: | **Total** | **4,225+** | **Complete guide** | **All roles** | **~220 min** |
-237: 
-238: ---
-239: 
-240: ## 🎓 Learning Path
-241: 
-242: ### Minimum (Quick Overview)
-243: - SCHEMA-ORG-INDEX.md (10 min)
-244: - SCHEMA-ORG-ANALYSIS-SUMMARY.md (20 min)
-245: - **Total**: 30 minutes
-246: 
-247: ### Standard (Ready to Implement)
-248: - SCHEMA-ORG-INDEX.md (10 min)
-249: - SCHEMA-ORG-QUICK-REFERENCE.md (20 min)
-250: - SCHEMA-ORG-QUICK-START.md (20 min)
-251: - IMPLEMENTATION-GUIDE.md (60 min)
-252: - **Total**: 110 minutes
-253: 
-254: ### Comprehensive (Full Mastery)
-255: - All documents above
-256: - SCHEMA-ORG-ALIGNMENT.md (60 min)
-257: - SCHEMA-ORG-MCP-TOOLS.md (30 min)
-258: - **Total**: 220 minutes
-259: 
-260: ---
-261: 
-262: ## ✅ Quality Metrics
-263: 
-264: | Metric | Value |
-265: |--------|-------|
-266: | Total Lines of Documentation | 4,225+ |
-267: | Number of Documents | 7 |
-268: | Code Examples Provided | 10+ |
-269: | Type Mappings Documented | 47 (100%) |
-270: | Alignment Score | 72% |
-271: | Phase 1 Alignment | 95% (CalendarEvent) |
-272: | Implementation Timeline | 4 days |
-273: | Estimated Development Hours | 32 hours |
-274: | Test Coverage Target | >80% |
-275: | Backward Compatibility | 100% preserved |
-276: | Documentation Quality | A+ (comprehensive, clear, actionable) |
-277: 
-278: ---
-279: 
-280: ## 🚀 Implementation Timeline
-281: 
-282: ### Pre-Implementation (Day 0)
-283: - [ ] Review documentation (2-3 hours)
-284: - [ ] Set up environment (30 min)
-285: - [ ] Create feature branch (5 min)
-286: 
-287: ### Phase 1 Execution (Days 1-4, 16 hours of coding)
-288: - [ ] Day 1: Analysis & planning (4 hours)
-289: - [ ] Day 2: Core implementation (4 hours)
-290: - [ ] Day 3: JSON-LD & edge cases (4 hours)
-291: - [ ] Day 4: Testing & documentation (4 hours)
-292: 
-293: ### Post-Implementation (Day 5+)
-294: - [ ] Code review & iteration (4 hours)
-295: - [ ] Deployment & validation (4 hours)
-296: - [ ] Documentation finalization (2 hours)
-297: 
-298: **Total Project Duration**: 1 week
-299: **Total Effort**: 32 hours
-300: 
-301: ---
-302: 
-303: ## 📋 File Creation Checklist
-304: 
-305: ### Documentation Files (7)
-306: - [x] SCHEMA-ORG-INDEX.md
-307: - [x] SCHEMA-ORG-ANALYSIS-SUMMARY.md
-308: - [x] SCHEMA-ORG-QUICK-REFERENCE.md
-309: - [x] SCHEMA-ORG-ALIGNMENT.md
-310: - [x] SCHEMA-ORG-MCP-TOOLS.md
-311: - [x] IMPLEMENTATION-GUIDE.md
-312: - [x] SCHEMA-ORG-QUICK-START.md
-313: 
-314: ### To Be Created During Implementation (10)
-315: - [ ] RESPONSE-FLOW-MAP.md (Day 1)
-316: - [ ] SERIALIZATION-POINTS.md (Day 1)
-317: - [ ] PROPERTY-MAPPING.md (Day 1)
-318: - [ ] SERIALIZATION-STRATEGY.md (Day 1)
-319: - [ ] JSON-LD-EXAMPLES.md (Day 3)
-320: - [ ] API-SCHEMA-ORG.md (Day 4)
-321: - [ ] DEPLOYMENT-CHECKLIST.md (Day 4)
-322: - [ ] src/services/SchemaOrgSerializer.ts
-323: - [ ] src/tests/unit/services/SchemaOrgSerializer.test.ts
-324: - [ ] src/tests/integration/schema-org.test.ts
-325: 
-326: ---
-327: 
-328: ## 🎯 Key Deliverables
-329: 
-330: ### Analysis & Strategy
-331: ✅ Complete type inventory (47 types analyzed)
-332: ✅ Alignment score (72% with 95% on core types)
-333: ✅ 3-phase implementation roadmap
-334: ✅ Risk assessment and mitigation
-335: ✅ ROI projections
-336: 
-337: ### Technical Documentation
-338: ✅ Property-by-property mapping (50+ mappings)
-339: ✅ Code examples (10+ examples)
-340: ✅ Architecture diagrams (before/after)
-341: ✅ Implementation patterns
-342: ✅ Edge case handling
-343: 
-344: ### Implementation Guidance
-345: ✅ 4-day implementation plan
-346: ✅ Day-by-day breakdown
-347: ✅ Code templates
-348: ✅ Testing strategy
-349: ✅ Deployment procedures
-350: 
-351: ### Developer Resources
-352: ✅ Quick-start guide
-353: ✅ FAQ with 12 answers
-354: ✅ Code examples ready to use
-355: ✅ Commit messages prepared
-356: ✅ Testing references
-357: 
-358: ---
-359: 
-360: ## 🏆 Success Criteria Met
-361: 
-362: ### Documentation
-363: - ✅ Comprehensive (all 47 types covered)
-364: - ✅ Actionable (step-by-step instructions)
-365: - ✅ Well-organized (7 documents, clear hierarchy)
-366: - ✅ Examples-driven (10+ code examples)
-367: - ✅ Role-appropriate (guides for different audiences)
-368: 
-369: ### Implementation Readiness
-370: - ✅ Clear 4-day timeline with hourly breakdown
-371: - ✅ File-by-file checklist
-372: - ✅ Code templates provided
-373: - ✅ Testing strategy defined
-374: - ✅ Deployment procedures documented
-375: 
-376: ### Quality
-377: - ✅ Backward compatibility preserved (100%)
-378: - ✅ Testing coverage >80% targeted
-379: - ✅ Zero breaking changes
-380: - ✅ Migration path clear
-381: - ✅ Rollback procedures documented
-382: 
-383: ---
-384: 
-385: ## 🔗 Cross-References
-386: 
-387: ### For Understanding Why
-388: → SCHEMA-ORG-ANALYSIS-SUMMARY.md (Key findings & benefits)
-389: 
-390: ### For Understanding What
-391: → SCHEMA-ORG-ALIGNMENT.md (Complete type inventory)
-392: → SCHEMA-ORG-QUICK-REFERENCE.md (Visual mappings)
-393: 
-394: ### For Understanding How
-395: → IMPLEMENTATION-GUIDE.md (Step-by-step)
-396: → SCHEMA-ORG-QUICK-START.md (Practical guidance)
-397: 
-398: ### For Getting Started
-399: → SCHEMA-ORG-QUICK-START.md (First document to read)
-400: 
-401: ### For Deep Dive
-402: → SCHEMA-ORG-ALIGNMENT.md (Comprehensive analysis)
-403: → IMPLEMENTATION-GUIDE.md (Complete implementation details)
-404: 
-405: ### For Tool Usage
-406: → SCHEMA-ORG-MCP-TOOLS.md (MCP tool reference)
-407: 
-408: ---
-409: 
-410: ## 📞 Questions & Answers
-411: 
-412: **Q: Which document should I read first?**
-413: A: SCHEMA-ORG-INDEX.md - it guides you to the right documents for your role.
-414: 
-415: **Q: How long will implementation take?**
-416: A: 4 days (32 hours) for Phase 1, documented in IMPLEMENTATION-GUIDE.md
-417: 
-418: **Q: Is there a quick overview?**
-419: A: Yes - SCHEMA-ORG-ANALYSIS-SUMMARY.md (20 min read)
-420: 
-421: **Q: Where are the code examples?**
-422: A: IMPLEMENTATION-GUIDE.md has 3+ detailed examples + code templates
-423: 
-424: **Q: How do I know if I'm done?**
-425: A: Check "Definition of Done" in SCHEMA-ORG-QUICK-START.md
-426: 
-427: **Q: What if I hit a problem?**
-428: A: Check FAQ in SCHEMA-ORG-QUICK-START.md or IMPLEMENTATION-GUIDE.md sections
-429: 
-430: ---
-431: 
-432: ## 🎓 Training & Onboarding
-433: 
-434: These documents enable:
-435: 
-436: 1. **Self-onboarding**: New team member can understand project in 2 hours
-437: 2. **Implementation training**: Developer has all needed guidance to execute
-438: 3. **Architectural review**: Technical lead can review approach and approve
-439: 4. **Stakeholder communication**: Manager understands ROI and timeline
-440: 5. **Documentation**: API docs can be generated from examples
-441: 
-442: ---
-443: 
-444: ## 📈 Success Metrics
-445: 
-446: ### After Implementation
-447: - ✅ 72% of types aligned with schema.org
-448: - ✅ 95% of core calendar types aligned
-449: - ✅ 70+ tests passing
-450: - ✅ 0 breaking changes
-451: - ✅ +15% SEO traffic (projected)
-452: - ✅ Improved LLM understanding (measured)
-453: 
-454: ---
-455: 
-456: ## 🔄 Next Steps
-457: 
-458: 1. **Review** this deliverables summary (10 min)
-459: 2. **Decide** to proceed with Phase 1
-460: 3. **Assign** developer to implementation
-461: 4. **Read** SCHEMA-ORG-QUICK-START.md (20 min)
-462: 5. **Execute** 4-day implementation plan
-463: 6. **Validate** with schema.org validator
-464: 7. **Deploy** to production
-465: 8. **Measure** impact and benefits
-466: 
-467: ---
-468: 
-469: ## 📞 Support
-470: 
-471: **For Questions About**:
-472: - Project scope → SCHEMA-ORG-INDEX.md or ANALYSIS-SUMMARY.md
-473: - Type mappings → SCHEMA-ORG-ALIGNMENT.md or QUICK-REFERENCE.md
-474: - Implementation → IMPLEMENTATION-GUIDE.md or QUICK-START.md
-475: - Tools & APIs → SCHEMA-ORG-MCP-TOOLS.md
-476: - Specific code → IMPLEMENTATION-GUIDE.md code examples
-477: 
-478: ---
-479: 
-480: **Deliverables Version**: 1.0
-481: **Status**: ✅ Complete & Ready
-482: **Total Lines**: 4,225+
-483: **Total Documents**: 7
-484: **Quality**: Production-ready
-485: **Date**: 2026-03-24
-486: **Next Phase**: Phase 2 (after Phase 1 completion)
-</file>
-
 <file path="docs/deployment.md">
   1: # Deployment Guide
   2: 
@@ -1707,6 +1219,338 @@ This section contains the contents of the repository's files.
 112: 
 113: - [Doppler Docs](https://docs.doppler.com)
 114: - [UpdateEventHandler.recurring.test.ts Refactor Plan](../CLAUDE.md#blocked-items)
+</file>
+
+<file path="docs/EMAIL-CATEGORIZATION.md">
+  1: # Email Categorization
+  2: 
+  3: **Status**: Draft
+  4: **Context**: Leverage schema.org and GS1 vocabulary markup embedded in emails to improve automated categorization, replacing keyword/sender heuristics with structured data extraction.
+  5: 
+  6: ---
+  7: 
+  8: ## Problem
+  9: 
+ 10: Current email categorization (`organize-emails.mjs`) relies on sender addresses, subject keywords, and Gmail label heuristics. This breaks when:
+ 11: - Senders change addresses or domains
+ 12: - Subject lines don't match keyword patterns
+ 13: - Emails contain structured data (reservations, orders, shipments) that keywords miss
+ 14: - New email types require manual rule additions
+ 15: 
+ 16: ## Opportunity
+ 17: 
+ 18: Many transactional emails already contain JSON-LD schema.org markup in their HTML `<head>`. Gmail and Outlook extract this for features like "Events from Gmail" and package tracking cards. We can parse the same markup to categorize emails with high precision.
+ 19: 
+ 20: ---
+ 21: 
+ 22: ## Schema.org Types Relevant to Email Categorization
+ 23: 
+ 24: ### Tier 1 - High Volume, Well-Supported
+ 25: 
+ 26: | Schema Type | Category Label | Signals |
+ 27: |---|---|---|
+ 28: | `EventReservation` | Events | Ticketed events, concerts, conferences |
+ 29: | `FlightReservation` | Travel | Flight bookings with departure/arrival |
+ 30: | `LodgingReservation` | Travel | Hotel bookings |
+ 31: | `RentalCarReservation` | Travel | Car rental confirmations |
+ 32: | `Order` | Orders/Shopping | E-commerce purchase confirmations |
+ 33: | `ParcelDelivery` | Shipping | Package tracking, delivery updates |
+ 34: | `Invoice` | Billing | Payment requests, invoices |
+ 35: 
+ 36: ### Tier 2 - Moderate Volume
+ 37: 
+ 38: | Schema Type | Category Label | Signals |
+ 39: |---|---|---|
+ 40: | `RestaurantReservation` | Events | Dining reservations |
+ 41: | `BusReservation` | Travel | Bus bookings |
+ 42: | `TrainReservation` | Travel | Train bookings |
+ 43: | `EmailMessage` + `Action` | Actionable | Emails with confirm/RSVP buttons |
+ 44: 
+ 45: ### Tier 3 - Low Volume, Future Use
+ 46: 
+ 47: | Schema Type | Category Label | Signals |
+ 48: |---|---|---|
+ 49: | `MedicalAppointment` | Appointments | Healthcare scheduling |
+ 50: | `ServiceReservation` | Services | Generic service bookings |
+ 51: | `SubscriptionOffer` | Newsletters | Subscription/newsletter signup |
+ 52: 
+ 53: ---
+ 54: 
+ 55: ## JSON-LD Extraction Architecture
+ 56: 
+ 57: ### Where Markup Lives
+ 58: 
+ 59: ```html
+ 60: <html>
+ 61:   <head>
+ 62:     <script type="application/ld+json">
+ 63:     {
+ 64:       "@context": "http://schema.org",
+ 65:       "@type": "EventReservation",
+ 66:       "reservationNumber": "E123456789",
+ 67:       "reservationStatus": "http://schema.org/Confirmed",
+ 68:       "reservationFor": {
+ 69:         "@type": "Event",
+ 70:         "name": "Austin Tech Meetup",
+ 71:         "startDate": "2026-04-15T19:00:00-05:00",
+ 72:         "location": {
+ 73:           "@type": "Place",
+ 74:           "name": "Capital Factory"
+ 75:         }
+ 76:       }
+ 77:     }
+ 78:     </script>
+ 79:   </head>
+ 80:   <body>...</body>
+ 81: </html>
+ 82: ```
+ 83: 
+ 84: ### Extraction Pipeline
+ 85: 
+ 86: ```
+ 87: Gmail API (message.get, format: full)
+ 88:   → extractHtmlFromPayload() — traverse multipart parts, base64url-decode text/html
+ 89:   → extractSchemaMarkupFromGmailPayload() — htmlparser2 streaming parser extracts JSON-LD
+ 90:   → JSON.parse → validate @context + @type
+ 91:   → categorizeBySchema() — route to category based on @type
+ 92:   → apply Gmail label + optional archive
+ 93: ```
+ 94: 
+ 95: ### Module: `lib/schema-extractor.mjs`
+ 96: 
+ 97: ```javascript
+ 98: // Extract schema.org JSON-LD from Gmail's base64url-decoded HTML payload
+ 99: // Uses htmlparser2 streaming parser for robust HTML handling
+100: export function extractSchemaMarkupFromGmailPayload(html) {
+101:   // 1. Stream HTML through htmlparser2 Parser
+102:   // 2. Capture text inside <script type="application/ld+json"> tags
+103:   // 3. JSON.parse each block (handle arrays: [{...}, {...}])
+104:   // 4. Filter for @context containing "schema.org"
+105:   // 5. Return array of typed schema objects
+106: }
+107: 
+108: // Extract HTML body from Gmail's pre-parsed multipart payload
+109: // Gmail returns body data as base64url-encoded strings
+110: export function extractHtmlFromPayload(payload) {
+111:   // Recursively traverses multipart parts to find text/html
+112: }
+113: 
+114: // Map schema @type to internal category
+115: export function categorizeBySchema(schemaObjects) {
+116:   // Returns { category: string, types: string[], metadata: {...} }
+117: }
+118: ```
+119: 
+120: ### Type-to-Category Mapping
+121: 
+122: ```javascript
+123: const SCHEMA_CATEGORY_MAP = {
+124:   // Events
+125:   'EventReservation': 'Events',
+126:   'Event': 'Events',
+127:   'MusicEvent': 'Events',
+128:   'RestaurantReservation': 'Events',
+129:   'RsvpAction': 'Events',
+130: 
+131:   // Travel
+132:   'FlightReservation': 'Travel',
+133:   'LodgingReservation': 'Travel',
+134:   'RentalCarReservation': 'Travel',
+135:   'BusReservation': 'Travel',
+136:   'TrainReservation': 'Travel',
+137: 
+138:   // Orders & Shipping
+139:   'Order': 'Orders',
+140:   'ParcelDelivery': 'Shipping',
+141: 
+142:   // Billing
+143:   'Invoice': 'Billing',
+144: 
+145:   // Actionable
+146:   'ConfirmAction': 'Actionable',
+147: };
+148: ```
+149: 
+150: ---
+151: 
+152: ## Integration with Existing Email System
+153: 
+154: ### Current Flow (keyword-based)
+155: 
+156: ```
+157: list-unread-emails.mjs → categorize by sender/subject patterns → apply labels
+158: organize-emails.mjs    → batch label by Gmail search queries → create filters
+159: ```
+160: 
+161: ### Enhanced Flow (schema-aware)
+162: 
+163: ```
+164: 1. Fetch unread emails (existing)
+165: 2. For each email with HTML body:
+166:    a. Extract schema.org JSON-LD (new)
+167:    b. If schema found → high-confidence categorization
+168:    c. If no schema → fall back to existing keyword/sender rules
+169: 3. Apply labels (existing)
+170: 4. Extract structured metadata for sub-labeling:
+171:    - Events: startDate → future/past sub-labels
+172:    - Travel: departureTime, arrivalTime → trip timeline
+173:    - Orders: orderStatus → confirmed/shipped/delivered
+174:    - Shipping: expectedArrivalFrom → delivery window
+175: ```
+176: 
+177: ### Key Metadata Fields by Type
+178: 
+179: #### EventReservation
+180: ```javascript
+181: {
+182:   eventName: schema.reservationFor.name,
+183:   eventDate: schema.reservationFor.startDate,
+184:   venue: schema.reservationFor.location.name,
+185:   city: schema.reservationFor.location.address.addressLocality,
+186:   status: schema.reservationStatus,       // Confirmed, Cancelled
+187:   ticketNumber: schema.reservationNumber,
+188: }
+189: ```
+190: 
+191: #### Order
+192: ```javascript
+193: {
+194:   merchant: schema.seller.name,
+195:   orderNumber: schema.orderNumber,
+196:   orderDate: schema.orderDate,
+197:   orderStatus: schema.orderStatus,        // Processing, Delivered
+198:   total: schema.totalPrice,
+199:   items: schema.orderedItem[].name,
+200: }
+201: ```
+202: 
+203: #### ParcelDelivery
+204: ```javascript
+205: {
+206:   carrier: schema.deliveryAddress || schema.provider.name,
+207:   trackingNumber: schema.trackingNumber,
+208:   expectedDelivery: schema.expectedArrivalFrom,
+209:   status: schema.deliveryStatus,
+210: }
+211: ```
+212: 
+213: #### FlightReservation
+214: ```javascript
+215: {
+216:   airline: schema.reservationFor.provider.name,
+217:   flightNumber: schema.reservationFor.flightNumber,
+218:   departure: schema.reservationFor.departureTime,
+219:   arrival: schema.reservationFor.arrivalTime,
+220:   origin: schema.reservationFor.departureAirport.iataCode,
+221:   destination: schema.reservationFor.arrivalAirport.iataCode,
+222: }
+223: ```
+224: 
+225: ---
+226: 
+227: ## Implementation Phases
+228: 
+229: ### Phase 1: Read-Only Extraction (Low Risk)
+230: 
+231: **Goal**: Parse schema.org from emails without modifying labels. Report what structured data exists.
+232: 
+233: - Build `lib/schema-extractor.mjs` (HTML parsing, JSON-LD extraction)
+234: - Add `--schema` flag to `list-unread-emails.mjs` to show detected schema types
+235: - Output: count of emails with schema markup, type distribution, sample metadata
+236: - No label changes — observation only
+237: 
+238: **Validates**: How many emails in the inbox actually contain schema.org markup, and which types.
+239: 
+240: ### Phase 2: Schema-Aware Categorization
+241: 
+242: **Goal**: Use extracted schema types as a first-pass categorizer before keyword fallback.
+243: 
+244: - Add schema extraction to `organize-emails.mjs` pipeline
+245: - Schema match = high confidence, skip keyword rules
+246: - No schema = existing keyword/sender rules (unchanged)
+247: - New sub-labels derived from schema metadata:
+248:   - `Events/Concerts`, `Events/Conferences`, `Events/Meetups`
+249:   - `Travel/Flights`, `Travel/Hotels`
+250:   - `Orders/Confirmed`, `Orders/Shipped`, `Orders/Delivered`
+251: 
+252: ### Phase 3: Temporal Organization
+253: 
+254: **Goal**: Use date fields from schema to auto-archive past events and surface upcoming ones.
+255: 
+256: - Parse `startDate`, `departureTime`, `expectedArrivalFrom` from schema
+257: - Auto-archive: events/flights/reservations in the past
+258: - Auto-star: upcoming events within 48 hours
+259: - Integrates with `filter-events-by-date.mjs` existing logic
+260: 
+261: ---
+262: 
+263: ## Technical Constraints
+264: 
+265: ### Gmail API Considerations
+266: - `messages.get` with `format: full` returns HTML parts for schema extraction
+267: - Rate limit: 250 quota units per user per second (batch requests help)
+268: - HTML part may be nested in `multipart/alternative` → recursive part traversal needed
+269: 
+270: ### Schema.org Parsing Edge Cases
+271: - Multiple `<script type="application/ld+json">` blocks per email
+272: - Array format: `[{...}, {...}]` (e.g., round-trip flight = 2 reservations)
+273: - `@context` may be `"http://schema.org"` or `"https://schema.org"`
+274: - Some senders use Microdata instead of JSON-LD (lower priority; JSON-LD covers most transactional email)
+275: - Invalid/malformed JSON blocks must be handled gracefully
+276: 
+277: ### Sender Coverage
+278: Major senders known to include schema.org JSON-LD:
+279: - Airlines (United, Delta, Southwest, American)
+280: - Hotels (Marriott, Hilton, Airbnb)
+281: - E-commerce (Amazon, eBay, Etsy, Target)
+282: - Food delivery (DoorDash, Uber Eats)
+283: - Ticketing (Eventbrite, Ticketmaster, StubHub)
+284: - Travel aggregators (Booking.com, Expedia, Kayak)
+285: - Google (Calendar invitations, Play Store orders)
+286: 
+287: ---
+288: 
+289: ## GS1 Web Vocabulary
+290: 
+291: The [GS1 Web Vocabulary](https://ref.gs1.org/voc/) complements schema.org with supply chain and commercial transaction types. GS1 classes use `owl:Thing` and can appear alongside schema.org types in the same JSON-LD block.
+292: 
+293: ### Where GS1 adds value to email categorization
+294: 
+295: Schema.org covers the `@type` routing (EventReservation, Order, ParcelDelivery, Invoice), but the metadata extracted from those objects can be enriched with GS1-aligned fields when senders include them.
+296: 
+297: | Category | schema.org fields (current) | GS1 enrichment (future) |
+298: |---|---|---|
+299: | Orders | `seller.name`, `orderNumber`, `totalPrice` | `gs1:Product` (GTIN), `gs1:PriceSpecification` (currency code, payment method) |
+300: | Shipping | `provider.name`, `trackingNumber`, `expectedArrivalFrom` | `gs1:PostalAddress` (structured delivery address: locality, region, country) |
+301: | Billing | maps to "Billing" with no detail extracted | `gs1:Transaction` (transaction ID, type), `gs1:Discount` (discount structures) |
+302: | Events | `eventName`, `eventDate`, `venue` | `gs1:Place` + `gs1:GeoCoordinates` (structured venue location) |
+303: 
+304: ### GS1 types for sender/organization classification
+305: 
+306: The Organization label hierarchy (`lib/constants.mjs`) currently uses flat string labels. `gs1:Organization` provides GLN-based identification with `gs1:OrganizationID_Details` for government/trade body identifiers and `gs1:OrganizationStatusHistory` for active/inactive tracking. This could improve sender classification for commercial senders who embed GS1 identifiers in their markup.
+307: 
+308: ### Not applicable to email categorization
+309: 
+310: GS1 food/nutrition (`gs1:FoodBeverageTobaccoProduct`, `gs1:AllergenDetails`, `gs1:NutritionMeasurementType`), textiles (`gs1:TextileMaterialDetails`), packaging (`gs1:PackagingDetails`), and certification (`gs1:CertificationDetails`) types are supply chain-specific and unlikely to appear in email JSON-LD.
+311: 
+312: ---
+313: 
+314: ## Related Docs
+315: 
+316: | Document | Focus |
+317: |---|---|
+318: | [SCHEMA_CATEGORY_MAP.md](SCHEMA_CATEGORY_MAP.md) | Type definitions, schema.org alignment, and category mapping |
+319: | [GS1 Web Vocabulary](https://ref.gs1.org/voc/) | Complementary supply chain/product vocabulary |
+320: | **This document** | Inbound email schema extraction and categorization |
+321: 
+322: ---
+323: 
+324: ## Success Metrics
+325: 
+326: - **Coverage**: % of categorized emails where schema.org markup was the signal (vs keyword fallback)
+327: - **Accuracy**: False positive rate of schema-based categorization (expect < 1%)
+328: - **New categories**: Email types that become categorizable only through schema (orders, shipping, travel)
+329: - **Rule reduction**: Fewer keyword patterns needed in `organize-emails.mjs` matchers
 </file>
 
 <file path="docs/EVENT_HELPERS_ANALYSIS.md">
@@ -3116,7 +2960,7 @@ This section contains the contents of the repository's files.
   88: ### Prerequisites Checklist
   89: 
   90: - [x] Read SCHEMA-ORG-QUICK-REFERENCE.md (20 min)
-  91: - [x] Read SCHEMA-ORG-ALIGNMENT.md sections 1-4 (40 min)
+  91: - [x] Read SCHEMA_CATEGORY_MAP.md sections 1-4 (40 min)
   92: - [ ] Install schema.org validator: https://validator.schema.org/
   93: - [ ] Set up local environment:
   94:   ```bash
@@ -5287,467 +5131,171 @@ This section contains the contents of the repository's files.
 278: - `src/handlers/core/UpdateEventHandler.ts` - Handler to test
 </file>
 
-<file path="docs/SCHEMA-ORG-ALIGNMENT.md">
-  1: # Schema.org Type Alignment Analysis
-  2: ## Google Calendar MCP Codebase Type Definitions
-  3: 
-  4: **Generated**: 2026-03-24
-  5: **Purpose**: Align Google Calendar MCP type definitions with schema.org vocabulary for semantic web compatibility and metadata standardization.
+<file path="docs/SCHEMA_CATEGORY_MAP.md">
+  1: # Schema Category Map
+  2: 
+  3: Authoritative reference for type definitions, schema.org alignment, and the `SCHEMA_CATEGORY_MAP` used by the email categorization pipeline.
+  4: 
+  5: **Source of truth**: `lib/schema-extractor.mjs`
   6: 
   7: ---
   8: 
-  9: ## Executive Summary
+  9: ## SCHEMA_CATEGORY_MAP
  10: 
- 11: The Google Calendar MCP codebase defines **47 TypeScript types and interfaces** across calendar, email/Gmail, conflict detection, and transport management. This document maps these types to **schema.org vocabulary** for:
+ 11: Maps schema.org `@type` values extracted from email JSON-LD to internal Gmail label categories.
  12: 
- 13: - **Semantic interoperability**: Align internal types with globally-recognized schema standards
- 14: - **Structured data compatibility**: Enable rich metadata and knowledge graph integration
- 15: - **API documentation**: Use schema.org descriptions to enhance API reference
- 16: - **SEO/LLM benefits**: Improve content discoverability and AI understanding
- 17: 
- 18: **Key Finding**: The codebase aligns well with schema.org's **Event**, **EmailMessage**, **Action**, and **Schedule** types, with opportunities to enhance conflict/duplicate detection with custom extensions.
- 19: 
- 20: ---
+ 13: ```javascript
+ 14: const SCHEMA_CATEGORY_MAP = {
+ 15:   // Events
+ 16:   'EventReservation': 'Events',
+ 17:   'Event': 'Events',
+ 18:   'MusicEvent': 'Events',
+ 19:   'RestaurantReservation': 'Events',
+ 20:   'RsvpAction': 'Events',
  21: 
- 22: ## Codebase Type Inventory
- 23: 
- 24: ### Core Calendar Types (7 types)
- 25: 
- 26: | Codebase Type | Purpose | Schema.org Equivalent |
- 27: |---|---|---|
- 28: | **CalendarEvent** | Main event entity with start/end times, attendees, reminders | [`Event`](https://schema.org/Event) |
- 29: | **CalendarListEntry** | Calendar metadata in calendar list | [`Calendar`](https://schema.org/Calendar) or `Collection` |
- 30: | **CalendarEventAttendee** | Event participant with RSVP status | [`Person`](https://schema.org/Person) + [`Reservation`](https://schema.org/Reservation) |
- 31: | **CalendarEventReminder** | Notification settings (email/popup, minutes) | [`InteractionCounter`](https://schema.org/InteractionCounter) or custom reminder action |
- 32: | **FreeBusyResponse** | Free/busy time slots | [`ScheduleAction`](https://schema.org/ScheduleAction) + time range |
- 33: | **EventTimeRange** | Start/end time for events | [`OpeningHoursSpecification`](https://schema.org/OpeningHoursSpecification) |
- 34: | **DateTimeComponents** | Year, month, day, hour breakdown | Utility type (no direct schema equivalent) |
+ 22:   // Travel
+ 23:   'FlightReservation': 'Travel',
+ 24:   'LodgingReservation': 'Travel',
+ 25:   'RentalCarReservation': 'Travel',
+ 26:   'BusReservation': 'Travel',
+ 27:   'TrainReservation': 'Travel',
+ 28: 
+ 29:   // Orders & Shipping
+ 30:   'Order': 'Orders',
+ 31:   'ParcelDelivery': 'Shipping',
+ 32: 
+ 33:   // Billing
+ 34:   'Invoice': 'Billing',
  35: 
- 36: ### Conflict Detection Types (4 types)
- 37: 
- 38: | Codebase Type | Purpose | Schema.org Alignment |
- 39: |---|---|---|
- 40: | **ConflictInfo** | Overlap or duplicate event record | Custom extension of [`Event`](https://schema.org/Event) with conflict metadata |
- 41: | **DuplicateInfo** | Duplicate event detected | Custom extension; could use [`Thing`](https://schema.org/Thing) with identical properties |
- 42: | **ConflictCheckResult** | Result of conflict detection | Custom `ConflictCheckResult` type (MCP-specific) |
- 43: | **ConflictDetectionOptions** | Configuration for conflict checking | Custom configuration object |
- 44: 
- 45: ### Gmail/Email Types (7 types)
- 46: 
- 47: | Codebase Type | Purpose | Schema.org Equivalent |
- 48: |---|---|---|
- 49: | **GmailSearchInput** | Email search query parameters | Custom MCP input type; uses [`SearchAction`](https://schema.org/SearchAction) pattern |
- 50: | **GmailModifyInput** | Message modification (mark read, archive, delete) | [`ModifyAction`](https://schema.org/ModifyAction) or custom action |
- 51: | **GmailCreateFilterInput** | Email filter criteria | Custom filter configuration |
- 52: | **GmailApplyFiltersInput** | Apply filters to messages | Custom action; relates to [`FilterAction`](https://schema.org/FilterAction) (experimental) |
- 53: | **GmailCreateLabelInput** | Gmail label creation | Custom label/tag type; could extend [`Thing`](https://schema.org/Thing) with name + visibility |
- 54: | **OAuthCredentials** | Authentication tokens | No schema.org equivalent (authentication is out of scope) |
- 55: | **PerformanceMetric** | Operation timing metadata | [`PerformanceMetric`](https://schema.org/PerformanceMetric) |
- 56: 
- 57: ### Transport & Configuration Types (8 types)
- 58: 
- 59: | Codebase Type | Purpose | Schema.org Alignment |
- 60: |---|---|---|
- 61: | **TransportConfig** | Transport layer configuration (stdio/http) | MCP-specific, no schema.org equivalent |
- 62: | **ServerConfig** | Server configuration | MCP-specific, no schema.org equivalent |
- 63: | **BatchRequest** / **BatchResponse** | Batch operation handling | [`BuyAction`](https://schema.org/BuyAction) pattern or custom batch action |
- 64: | **BatchError** | Batch operation error | Error handling pattern (no standard schema.org error type) |
- 65: | **HttpTransportConfig** | HTTP-specific transport config | MCP-specific, no schema.org equivalent |
- 66: | **ConflictDetectionConfig** | Conflict detection settings | Custom configuration type |
- 67: | **ConflictCheckOptions** | Runtime conflict check options | Custom options type |
+ 36:   // Actionable
+ 37:   'ConfirmAction': 'Actionable',
+ 38: };
+ 39: ```
+ 40: 
+ 41: ### Extraction pipeline
+ 42: 
+ 43: ```
+ 44: Gmail API (messages.get, format: full)
+ 45:   -> extractHtmlFromPayload()        -- traverse multipart, base64url-decode text/html
+ 46:   -> extractSchemaMarkupFromGmailPayload()  -- htmlparser2 streaming, capture <script type="application/ld+json">
+ 47:   -> JSON.parse -> validate @context + @type
+ 48:   -> categorizeBySchema()            -- route @type through SCHEMA_CATEGORY_MAP
+ 49:   -> apply Gmail label + optional archive
+ 50: ```
+ 51: 
+ 52: ### Metadata extracted per type
+ 53: 
+ 54: | @type | Fields extracted |
+ 55: |---|---|
+ 56: | EventReservation / Event / MusicEvent | `eventName`, `eventDate`, `venue` |
+ 57: | Order | `merchant`, `orderNumber`, `orderStatus`, `total` |
+ 58: | ParcelDelivery | `carrier`, `trackingNumber`, `expectedDelivery` |
+ 59: | FlightReservation (and travel types) | `reservationNumber`, `status`, `provider`, `departure`, `arrival` |
+ 60: 
+ 61: ### Unmapped types (future candidates)
+ 62: 
+ 63: | Schema.org Type | Potential Category | Volume |
+ 64: |---|---|---|
+ 65: | `MedicalAppointment` | Appointments | Low |
+ 66: | `ServiceReservation` | Services | Low |
+ 67: | `SubscriptionOffer` | Newsletters | Low |
  68: 
- 69: ### Tool Input Types (12 types)
+ 69: ---
  70: 
- 71: All tool input types (`ListCalendarsInput`, `CreateEventInput`, `UpdateEventInput`, `SearchEventsInput`, etc.) are **MCP protocol-specific** and map to tool operation schemas rather than schema.org types directly. However, their parameters align with corresponding schema.org types:
+ 71: ## Codebase Type Inventory
  72: 
- 73: - **Event operations** → [`Event`](https://schema.org/Event) + [`Action`](https://schema.org/Action) subtypes
- 74: - **Search operations** → [`SearchAction`](https://schema.org/SearchAction)
- 75: - **Batch operations** → Custom MCP batch action pattern
- 76: 
- 77: ---
- 78: 
- 79: ## Schema.org Type Recommendations
- 80: 
- 81: ### Core Recommendations (High Priority)
+ 73: ### Core Calendar (src/schemas/types.ts)
+ 74: 
+ 75: | Codebase Type | Schema.org Equivalent | Notes |
+ 76: |---|---|---|
+ 77: | `CalendarEvent` | [Event](https://schema.org/Event) | Direct mapping; all core properties align |
+ 78: | `CalendarListEntry` | Calendar | Missing some calendar properties |
+ 79: | `CalendarEventAttendee` | [Person](https://schema.org/Person) | + Reservation for RSVP status |
+ 80: | `CalendarEventReminder` | (custom) | No standard schema.org reminder type |
+ 81: | `FreeBusyResponse` | [Schedule](https://schema.org/Schedule) | Maps to time slot definition |
  82: 
- 83: #### 1. **Event** (for CalendarEvent)
- 84: - **URL**: https://schema.org/Event
- 85: - **Usage**: Primary mapping for `CalendarEvent` interface
- 86: - **Key Properties**:
- 87:   - `name` → `CalendarEvent.summary`
- 88:   - `startDate` / `startTime` → `CalendarEvent.start`
- 89:   - `endDate` / `endTime` → `CalendarEvent.end`
- 90:   - `location` → `CalendarEvent.location`
- 91:   - `attendee` → `CalendarEvent.attendees[]`
- 92:   - `organizer` → Calendar owner
- 93:   - `reminder` → Event reminders (custom extension)
- 94: 
- 95: **Example Schema.org Event Context**:
- 96: ```json
- 97: {
- 98:   "@context": "https://schema.org",
- 99:   "@type": "Event",
-100:   "name": "Team Standup",
-101:   "startDate": "2026-03-24T10:00:00",
-102:   "endDate": "2026-03-24T10:30:00",
-103:   "location": "Conference Room A",
-104:   "attendee": [
-105:     {
-106:       "@type": "Person",
-107:       "name": "John Doe",
-108:       "email": "john@example.com"
-109:     }
-110:   ],
-111:   "organizer": {
-112:     "@type": "Person",
-113:     "name": "Alice Smith"
-114:   }
-115: }
-116: ```
-117: 
-118: #### 2. **Person** (for CalendarEventAttendee)
-119: - **URL**: https://schema.org/Person
-120: - **Usage**: Represents calendar attendees
-121: - **Key Properties**:
-122:   - `name` → Attendee name
-123:   - `email` → Attendee email
-124:   - `url` → Calendar profile URL (if available)
-125: 
-126: #### 3. **Schedule** (for FreeBusyResponse / EventTimeRange)
-127: - **URL**: https://schema.org/Schedule
-128: - **Usage**: Represents availability and time slots
-129: - **Key Properties**:
-130:   - `byDay` → Days of availability
-131:   - `startTime` → Time availability start
-132:   - `endTime` → Time availability end
-133: 
-134: #### 4. **SearchAction** (for Gmail search operations)
-135: - **URL**: https://schema.org/SearchAction
-136: - **Usage**: Represents email search operations
-137: - **Key Properties**:
-138:   - `query` → Search query string
-139:   - `result` → Search results (EmailMessage objects)
+ 83: ### Conflict Detection (src/services/conflict-detection/types.ts)
+ 84: 
+ 85: | Codebase Type | Schema.org Equivalent | Notes |
+ 86: |---|---|---|
+ 87: | `ConflictInfo` | Event (custom extension) | Requires conflict metadata properties |
+ 88: | `DuplicateInfo` | Event (custom extension) | Requires duplicate detection metadata |
+ 89: | `ConflictCheckResult` | (MCP-specific) | No schema.org equivalent |
+ 90: | `ConflictDetectionOptions` | (MCP-specific) | Configuration object |
+ 91: 
+ 92: ### Gmail/Email (src/schemas/)
+ 93: 
+ 94: | Codebase Type | Schema.org Equivalent | Notes |
+ 95: |---|---|---|
+ 96: | `GmailSearchInput` | [SearchAction](https://schema.org/SearchAction) | Query-based; results are EmailMessages |
+ 97: | `GmailModifyInput` | ModifyAction | Covers message modification |
+ 98: | `GmailCreateFilterInput` | FilterAction (experimental) | Non-standard |
+ 99: | `OAuthCredentials` | N/A | Auth is out of schema.org scope |
+100: 
+101: ### Transport & Tool Input Types
+102: 
+103: MCP protocol-specific types (`TransportConfig`, `ServerConfig`, `BatchRequest`, `ListCalendarsInput`, `CreateEventInput`, etc.) have no schema.org equivalents. Their parameters align with corresponding schema.org types through the handlers that consume them.
+104: 
+105: ---
+106: 
+107: ## Property Mapping: CalendarEvent -> Event
+108: 
+109: | CalendarEvent field | schema.org Event property | Conversion |
+110: |---|---|---|
+111: | `id` | `identifier` | 1:1 |
+112: | `summary` | `name` | 1:1 |
+113: | `start.dateTime` + `start.timeZone` | `startDate` | ISO 8601 with timezone offset |
+114: | `start.date` | `startDate` | All-day event (date only) |
+115: | `end.dateTime` + `end.timeZone` | `endDate` | ISO 8601 with timezone offset |
+116: | `end.date` | `endDate` | All-day event (date only) |
+117: | `location` | `location` | String or wrap in Place object |
+118: | `attendees[]` | `attendee[]` | Each attendee -> Person object |
+119: | `colorId` | `color` | Direct string |
+120: | `reminders` | (custom) | No standard equivalent |
+121: | `recurrence` | `eventSchedule` | RRULE strings |
+122: 
+123: ---
+124: 
+125: ## GS1 Web Vocabulary (Complementary)
+126: 
+127: The [GS1 Web Vocabulary](https://ref.gs1.org/voc/) extends schema.org for supply chain, product identification, and commercial transactions. GS1 classes (`owl:Thing`) can be used alongside schema.org types in JSON-LD.
+128: 
+129: ### Relevant GS1 types
+130: 
+131: | GS1 Class | Complements | Relevance |
+132: |---|---|---|
+133: | `gs1:Offer` + `gs1:PriceSpecification` | schema.org `Order` | Structured pricing/payment in order emails |
+134: | `gs1:Organization` | Organization label hierarchy | GLN-based sender identification |
+135: | `gs1:Place` + `gs1:PostalAddress` | `CalendarEvent.location` | Structured address (locality, region, country) |
+136: | `gs1:Transaction` | schema.org `Invoice` | Business transaction identifiers for billing |
+137: | `gs1:Product` | `ParcelDelivery` metadata | GTIN-based product identification in shipping/order emails |
+138: 
+139: ### GS1 types not applicable
 140: 
-141: ### Secondary Recommendations (Medium Priority)
+141: Food/nutrition (`gs1:FoodBeverageTobaccoProduct`), textiles (`gs1:TextileMaterialDetails`), packaging (`gs1:PackagingDetails`), allergens (`gs1:AllergenDetails`), and certification (`gs1:CertificationDetails`) are supply chain-specific and out of scope for this project.
 142: 
-143: #### 5. **Reservation** (for CalendarEventAttendee + RSVP status)
-144: - **URL**: https://schema.org/Reservation
-145: - **Usage**: Enhanced representation of event attendance with RSVP status
-146: - **Key Properties**:
-147:   - `reservationFor` → Calendar Event
-148:   - `underName` → Person (attendee)
-149:   - `reservationStatus` → RSVP status (Confirmed/Tentative/Declined)
-150: 
-151: #### 6. **EmailMessage** (for Gmail operations)
-152: - **URL**: https://schema.org/EmailMessage
-153: - **Usage**: Represents email messages from Gmail
-154: - **Key Properties**:
-155:   - `sender` → Email sender
-156:   - `toRecipient` → Recipients
-157:   - `subject` → Email subject
-158:   - `dateReceived` → Received timestamp
+143: ### GS1 vs schema.org coverage
+144: 
+145: | Domain | schema.org | GS1 |
+146: |---|---|---|
+147: | Events, Reservations, Actions | Yes | No |
+148: | Calendar, Schedule | Yes | No |
+149: | Email, Communication | Yes | No |
+150: | Product identification (GTIN) | Partial | Yes |
+151: | Structured pricing/currency | Partial | Yes |
+152: | Organization (GLN) | Partial | Yes |
+153: | Structured postal address | Partial | Yes |
+154: | Supply chain, logistics | No | Yes |
+155: 
+156: ---
+157: 
+158: ## References
 159: 
-160: #### 7. **PerformanceMetric** (for monitoring/observability)
-161: - **URL**: https://schema.org/PerformanceMetric
-162: - **Usage**: Operation performance tracking
-163: - **Key Properties**:
-164:   - `name` → Metric name (e.g., "create_event_duration")
-165:   - `value` → Metric value (ms)
-166:   - `unitText` → "milliseconds"
-167: 
-168: #### 8. **SoftwareApplication** (for MCP server metadata)
-169: - **URL**: https://schema.org/SoftwareApplication
-170: - **Usage**: Server metadata (`get_server_metadata` tool)
-171: - **Key Properties**:
-172:   - `name` → "bot-army-google-calendar-mcp"
-173:   - `version` → Semantic version
-174:   - `applicationCategory` → "DeveloperApplication"
-175:   - `featureList` → Array of tool names
-176: 
-177: ### Custom Extensions (Not in Schema.org)
-178: 
-179: The following types are MCP or domain-specific and don't have schema.org equivalents:
-180: 
-181: 1. **ConflictInfo** → Custom extension
-182:    ```json
-183:    {
-184:      "@type": "ConflictInfo",
-185:      "conflictType": "overlap|duplicate",
-186:      "conflictingEvent": { "@type": "Event", ... },
-187:      "overlapPercentage": 0.75,
-188:      "relatedCalendar": "calendar-id"
-189:    }
-190:    ```
-191: 
-192: 2. **GmailCreateFilterInput** → Custom extension
-193:    ```json
-194:    {
-195:      "@type": "EmailFilter",
-196:      "criteria": { "from": "...", "subject": "..." },
-197:      "action": "archive|delete|addLabel"
-198:    }
-199:    ```
-200: 
-201: 3. **FilterAction** (Experimental schema.org)
-202:    - URL: https://schema.org/FilterAction
-203:    - Status: Proposed/experimental in schema.org
-204: 
-205: ---
-206: 
-207: ## How to Retrieve Schema.org Definitions
-208: 
-209: ### Using Schema.org MCP Tools
-210: 
-211: The following MCP tool calls retrieve complete schema.org type definitions:
-212: 
-213: #### Core Schema Tools
-214: 
-215: ```bash
-216: # 1. Get Event type definition
-217: get_schema_type
-218:   typeName: "Event"
-219: 
-220: # 2. Get Person type definition
-221: get_schema_type
-222:   typeName: "Person"
-223: 
-224: # 3. Get Schedule type definition
-225: get_schema_type
-226:   typeName: "Schedule"
-227: 
-228: # 4. Get Reservation type definition
-229: get_schema_type
-230:   typeName: "Reservation"
-231: 
-232: # 5. Search for calendar-related types
-233: search_schemas
-234:   query: "calendar"
-235:   limit: 10
-236: 
-237: # 6. Search for email/message types
-238: search_schemas
-239:   query: "email message"
-240:   limit: 10
-241: 
-242: # 7. Get type hierarchy for Event
-243: get_type_hierarchy
-244:   typeName: "Event"
-245: 
-246: # 8. Get all properties for Event type
-247: get_type_properties
-248:   typeName: "Event"
-249:   includeInherited: true
-250: 
-251: # 9. Generate JSON-LD example for Event
-252: generate_example
-253:   typeName: "Event"
-254: ```
-255: 
-256: #### Metadata Tools
-257: 
-258: ```bash
-259: # 10. Get server metadata as SoftwareApplication
-260: get_server_metadata
-261:   metadataType: "softwareApplication"
-262: 
-263: # 11. Generate SearchAction example (for Gmail search)
-264: generate_search_action
-265:   query: "email search"
-266: 
-267: # 12. Generate CreateAction example (for event creation)
-268: generate_create_action
-269:   typeName: "Event"
-270: ```
-271: 
-272: ---
-273: 
-274: ## Type Mapping Table
-275: 
-276: ### Quick Reference: Codebase → Schema.org
-277: 
-278: | Google Calendar MCP Type | Schema.org Type | Alignment Score | Notes |
-279: |---|---|---|---|
-280: | CalendarEvent | Event | ★★★★★ (95%) | Direct mapping; all properties align |
-281: | CalendarEventAttendee | Person | ★★★★★ (90%) | +Reservation for RSVP status |
-282: | CalendarListEntry | Calendar | ★★★★ (80%) | Missing some calendar properties |
-283: | CalendarEventReminder | Reminder (custom) | ★★★ (60%) | No standard schema.org reminder type |
-284: | FreeBusyResponse | Schedule | ★★★★ (85%) | Maps well to time slot definition |
-285: | EventTimeRange | OpeningHoursSpecification | ★★★ (70%) | Close match; designed for business hours |
-286: | ConflictInfo | Event (custom) | ★★ (40%) | Requires custom extension properties |
-287: | DuplicateInfo | Event (custom) | ★★ (40%) | Requires custom metadata |
-288: | GmailSearchInput | SearchAction | ★★★★ (85%) | Query-based; results are EmailMessages |
-289: | GmailModifyInput | ModifyAction | ★★★ (70%) | Covers message modification |
-290: | GmailCreateFilterInput | FilterAction | ★★ (50%) | Experimental in schema.org |
-291: | PerformanceMetric | PerformanceMetric | ★★★★ (90%) | Direct alignment |
-292: | OAuthCredentials | (N/A) | N/A | Security/auth scope; not in schema.org |
-293: | TransportConfig | (N/A) | N/A | Protocol-specific; not in schema.org |
-294: | DateTimeComponents | (N/A) | N/A | Utility type; implementation detail |
-295: 
-296: ---
-297: 
-298: ## Implementation Recommendations
-299: 
-300: ### Phase 1: Immediate Alignment (Priority 1)
-301: 
-302: 1. **Enhance CalendarEvent documentation** with schema.org Event properties
-303:    - Add `@context: https://schema.org` to API response examples
-304:    - Map all CalendarEvent fields to Event properties
-305:    - Document timezone handling (schema.org uses ISO 8601)
-306: 
-307: 2. **Create Person type mapping** for attendees
-308:    - Document how CalendarEventAttendee aligns with Person
-309:    - Consider adding Reservation type for RSVP status
-310: 
-311: 3. **Generate API examples** using `generate_example` tool
-312:    - Create sample JSON-LD for Event objects
-313:    - Include in API documentation
-314: 
-315: ### Phase 2: Enhanced Metadata (Priority 2)
-316: 
-317: 4. **Add schema.org markup** to server responses
-318:    - Include `@context`, `@type` in API payloads (optional)
-319:    - Use SearchAction for search endpoints
-320:    - Use PerformanceMetric for performance data
-321: 
-322: 5. **Document custom extensions**
-323:    - Create ConflictInfo schema extension
-324:    - Document custom properties for conflict detection
-325: 
-326: 6. **Implement Schema Impact Analysis**
-327:    - Use `analyze_schema_impact` tool to measure SEO/LLM benefits
-328:    - Benchmark before/after implementation
-329: 
-330: ### Phase 3: Advanced Integration (Priority 3)
-331: 
-332: 7. **Rich snippet generation** for events
-333:    - Use `generate_example` for structured data
-334:    - Integrate with knowledge graph tools
-335: 
-336: 8. **Gmail integration** with EmailMessage type
-337:    - Enhance GmailSearchInput documentation
-338:    - Map GmailModifyInput to ModifyAction
-339: 
-340: 9. **Performance monitoring** with schema.org PerformanceMetric
-341:    - Track operation performance
-342:    - Generate performance reports using `generate_performance_report`
-343: 
-344: ---
-345: 
-346: ## Example: CalendarEvent → Event Conversion
-347: 
-348: ### Current Type (CalendarEvent)
-349: ```typescript
-350: interface CalendarEvent {
-351:   id?: string | null;
-352:   summary?: string | null;
-353:   start?: {
-354:     dateTime?: string | null;
-355:     date?: string | null;
-356:     timeZone?: string | null;
-357:   };
-358:   end?: {
-359:     dateTime?: string | null;
-360:     date?: string | null;
-361:     timeZone?: string | null;
-362:   };
-363:   location?: string | null;
-364:   attendees?: CalendarEventAttendee[] | null;
-365:   colorId?: string | null;
-366:   reminders?: CalendarEventReminder[] | null;
-367: }
-368: ```
-369: 
-370: ### Schema.org Equivalent (Event)
-371: ```json
-372: {
-373:   "@context": "https://schema.org",
-374:   "@type": "Event",
-375:   "identifier": "event-id-123",
-376:   "name": "Team Standup",
-377:   "startDate": "2026-03-24T10:00:00-07:00",
-378:   "endDate": "2026-03-24T10:30:00-07:00",
-379:   "location": {
-380:     "@type": "Place",
-381:     "name": "Conference Room A"
-382:   },
-383:   "attendee": [
-384:     {
-385:       "@type": "Person",
-386:       "name": "John Doe",
-387:       "email": "john@example.com"
-388:     }
-389:   ],
-390:   "color": "blue",
-391:   "reminder": {
-392:     "@type": "Reminder",
-393:     "method": "email",
-394:     "minutes": 15
-395:   }
-396: }
-397: ```
-398: 
-399: ### Mapping Details
-400: 
-401: | CalendarEvent Field | Event Property | Conversion Notes |
-402: |---|---|---|
-403: | `id` | `identifier` | 1:1 mapping |
-404: | `summary` | `name` | 1:1 mapping |
-405: | `start.dateTime` | `startDate` | Convert to ISO 8601 with timezone |
-406: | `start.date` | `startDate` | All-day event (no time component) |
-407: | `start.timeZone` | Timezone suffix in `startDate` | e.g., `2026-03-24T10:00:00-07:00` |
-408: | `end.dateTime` | `endDate` | Convert to ISO 8601 with timezone |
-409: | `end.date` | `endDate` | All-day event |
-410: | `end.timeZone` | Timezone suffix in `endDate` | e.g., `2026-03-24T10:30:00-07:00` |
-411: | `location` | `location` | Wrap string in Place object if needed |
-412: | `attendees[]` | `attendee[]` | Each attendee → Person object |
-413: | `colorId` | `color` | Direct string mapping |
-414: | `reminders[]` | `reminder` | Create custom Reminder objects (or use Action) |
-415: 
-416: ---
-417: 
-418: ## Questions for Further Refinement
-419: 
-420: 1. **Timezone handling**: How should CalendarEvent timezone be represented in Event.startDate?
-421:    - Option A: ISO 8601 with timezone offset (preferred by schema.org)
-422:    - Option B: Separate timeZone property (Google Calendar approach)
-423: 
-424: 2. **Attendee RSVP status**: Should we use Reservation type for detailed RSVP tracking?
-425:    - Pros: More semantic, supports reservationStatus
-426:    - Cons: More complex object structure
-427: 
-428: 3. **Conflict detection**: Should ConflictInfo be a custom extension or separate payload?
-429:    - Option A: Include in Event object as extension property
-430:    - Option B: Return separately with conflict metadata
-431: 
-432: 4. **Performance tracking**: Is PerformanceMetric the right choice for operation timing?
-433:    - Alternative: Custom `OperationMetric` with more detailed breakdown
-434: 
-435: ---
-436: 
-437: ## Related Resources
-438: 
-439: - **Schema.org Documentation**: https://schema.org/
-440: - **Schema.org Event Type**: https://schema.org/Event
-441: - **JSON-LD Specification**: https://json-ld.org/
-442: - **ISO 8601 Standard**: Date and time format reference
-443: - **Google Calendar API**: https://developers.google.com/calendar/api
-444: 
-445: ---
-446: 
-447: ## Next Steps
-448: 
-449: 1. ✅ Generate schema.org type definitions using MCP tools
-450: 2. ⬜ Create JSON-LD examples for each major type
-451: 3. ⬜ Update API documentation with schema.org context
-452: 4. ⬜ Implement example generation in API responses
-453: 5. ⬜ Validate against schema.org validator tools
-454: 6. ⬜ Benchmark SEO/LLM impact with `analyze_schema_impact`
-455: 
-456: ---
-457: 
-458: **Document Version**: 1.0
-459: **Last Updated**: 2026-03-24
-460: **Maintained By**: MCP Development Team
+160: - [schema.org](https://schema.org/) -- primary vocabulary for events, email, actions
+161: - [GS1 Web Vocabulary](https://ref.gs1.org/voc/) -- complementary supply chain/product vocabulary
+162: - [Email Categorization](EMAIL-CATEGORIZATION.md) -- implementation doc for inbound email schema extraction
+163: - `lib/schema-extractor.mjs` -- extraction module (htmlparser2, JSON-LD parsing, category mapping)
+164: - `src/schemas/types.ts` -- core TypeScript type definitions
 </file>
 
 <file path="docs/SCHEMA-ORG-ANALYSIS-SUMMARY.md">
@@ -5796,13 +5344,13 @@ This section contains the contents of the repository's files.
  43: 
  44: Three comprehensive reference documents have been created:
  45: 
- 46: ### 1. **SCHEMA-ORG-ALIGNMENT.md** (2500+ lines)
+ 46: ### 1. **SCHEMA_CATEGORY_MAP.md** (2500+ lines)
  47:    - Complete type mapping (47 types)
  48:    - Property-by-property conversion guide
  49:    - Schema.org type recommendations
  50:    - Implementation phases (Phase 1-3)
  51:    - Custom extension patterns
- 52:    - **Location**: `docs/SCHEMA-ORG-ALIGNMENT.md`
+ 52:    - **Location**: `docs/SCHEMA_CATEGORY_MAP.md`
  53: 
  54: ### 2. **SCHEMA-ORG-MCP-TOOLS.md** (300+ lines)
  55:    - Exact MCP tool invocations
@@ -5909,7 +5457,7 @@ This section contains the contents of the repository's files.
 156: 
 157: ### For Implementers
 158: 1. Start with **SCHEMA-ORG-QUICK-REFERENCE.md** (5-min overview)
-159: 2. Review property mappings in **SCHEMA-ORG-ALIGNMENT.md** (30-min deep dive)
+159: 2. Review property mappings in **SCHEMA_CATEGORY_MAP.md** (30-min deep dive)
 160: 3. Implement Phase 1 types (CalendarEvent, Person, Schedule)
 161: 4. Generate examples using **SCHEMA-ORG-MCP-TOOLS.md** reference
 162: 
@@ -6055,7 +5603,7 @@ This section contains the contents of the repository's files.
 302: # Open and review these documents in order:
 303: 1. This file (SCHEMA-ORG-ANALYSIS-SUMMARY.md) - 10 min overview
 304: 2. SCHEMA-ORG-QUICK-REFERENCE.md - 10 min visual guide
-305: 3. SCHEMA-ORG-ALIGNMENT.md - 10 min deep dive
+305: 3. SCHEMA_CATEGORY_MAP.md - 10 min deep dive
 306: ```
 307: 
 308: ### Step 2: Run MCP Tools (1-2 hours)
@@ -6078,7 +5626,7 @@ This section contains the contents of the repository's files.
 325: ### Step 3: Map Types (2-3 hours)
 326: ```bash
 327: # Use the tool outputs to verify mappings in:
-328: # - SCHEMA-ORG-ALIGNMENT.md (type mapping table)
+328: # - SCHEMA_CATEGORY_MAP.md (type mapping table)
 329: # - Create JSON-LD examples for each major type
 330: # - Update API documentation with @context
 331: ```
@@ -6098,7 +5646,7 @@ This section contains the contents of the repository's files.
 345: A: No. Create JSON-LD serialization layer for API responses.
 346: 
 347: **Q: What about timezone edge cases?**
-348: A: Use ISO 8601 with UTC offset. See SCHEMA-ORG-ALIGNMENT.md for examples.
+348: A: Use ISO 8601 with UTC offset. See SCHEMA_CATEGORY_MAP.md for examples.
 349: 
 350: **Q: How do I handle recurring events?**
 351: A: Use schema.org Event type with `eventStatus` and repeat rules.
@@ -6158,7 +5706,7 @@ This section contains the contents of the repository's files.
  16: |----------|---------|----------|-----------|
  17: | **[SCHEMA-ORG-ANALYSIS-SUMMARY.md](SCHEMA-ORG-ANALYSIS-SUMMARY.md)** | Executive overview & roadmap | Everyone | 15 min |
  18: | **[SCHEMA-ORG-QUICK-REFERENCE.md](SCHEMA-ORG-QUICK-REFERENCE.md)** | Visual mapping & examples | Implementers | 20 min |
- 19: | **[SCHEMA-ORG-ALIGNMENT.md](SCHEMA-ORG-ALIGNMENT.md)** | Detailed type-by-type analysis | Architects | 60 min |
+ 19: | **[SCHEMA_CATEGORY_MAP.md](SCHEMA_CATEGORY_MAP.md)** | Type definitions, schema.org alignment, and category mapping | Developers | 15 min |
  20: | **[SCHEMA-ORG-MCP-TOOLS.md](SCHEMA-ORG-MCP-TOOLS.md)** | MCP tool reference & invocations | Developers | 30 min |
  21: 
  22: ---
@@ -6186,7 +5734,7 @@ This section contains the contents of the repository's files.
  44:    - Implementation checklist
  45:    - Type alignment matrix
  46: 
- 47: 2. **Then read**: [SCHEMA-ORG-ALIGNMENT.md](SCHEMA-ORG-ALIGNMENT.md) sections:
+ 47: 2. **Then read**: [SCHEMA_CATEGORY_MAP.md](SCHEMA_CATEGORY_MAP.md) sections:
  48:    - "Type Mapping Table" (quick lookup)
  49:    - "Example: CalendarEvent → Event Conversion"
  50:    - "Implementation Recommendations" (Phase 1-3)
@@ -6199,7 +5747,7 @@ This section contains the contents of the repository's files.
  57: ---
  58: 
  59: ### 🏗️ For Architects / Technical Leads
- 60: 1. **Start here**: [SCHEMA-ORG-ALIGNMENT.md](SCHEMA-ORG-ALIGNMENT.md)
+ 60: 1. **Start here**: [SCHEMA_CATEGORY_MAP.md](SCHEMA_CATEGORY_MAP.md)
  61:    - Complete type inventory (47 types)
  62:    - Property mapping details
  63:    - Custom extension patterns
@@ -6265,222 +5813,213 @@ This section contains the contents of the repository's files.
 123: 
 124: ---
 125: 
-126: ### SCHEMA-ORG-ALIGNMENT.md (1200+ lines)
-127: **Comprehensive Technical Reference**
+126: ### SCHEMA_CATEGORY_MAP.md
+127: **Type Definitions, Schema.org Alignment, and Category Mapping**
 128: 
-129: - Codebase type inventory (47 types)
-130: - Schema.org type recommendations
-131: - Type mapping table (with alignment scores)
-132: - Custom extensions guide
-133: - Example: CalendarEvent → Event conversion
-134: - Phase 1-3 implementation recommendations
-135: 
-136: **Sections**:
-137: 1. Overview & findings
-138: 2. Type inventory (7 core, 4 conflict, 7 email, 12 tool, 8 config, 9 transport)
-139: 3. Schema.org recommendations (8 types)
-140: 4. Type mapping table
-141: 5. Implementation roadmap
-142: 6. Frequently asked questions
-143: 
-144: ---
-145: 
-146: ### SCHEMA-ORG-MCP-TOOLS.md (300+ lines)
-147: **MCP Tool Reference & Invocations**
-148: 
-149: - Quick start: Run all tools
-150: - Core Schema Tools (5 tools, with examples)
-151: - Metadata Tools (3 tools)
-152: - Performance Tools (5 tools)
-153: - Additional type searches
-154: - Implementation checklist
-155: - Error handling reference
-156: 
-157: **Tools Documented**:
-158: 1. `get_schema_type` - Retrieve type definitions
-159: 2. `search_schemas` - Find related types
-160: 3. `get_type_hierarchy` - Explore inheritance
-161: 4. `get_type_properties` - List properties
-162: 5. `generate_example` - Create JSON-LD
-163: 6. `get_server_metadata` - Document server
-164: 7. `generate_search_action` - Email search
-165: 8. `generate_create_action` - Event creation
-166: 9. `analyze_schema_impact` - Measure impact
-167: 
-168: ---
-169: 
-170: ## 🔗 Cross-References
-171: 
-172: ### CalendarEvent Type
-173: - Quick-ref: Type transformation example #1
-174: - Alignment: "CalendarEvent" → "Event" section
-175: - Implementation: Phase 1 priority
-176: - MCP tool: `generate_example("Event")`
-177: 
-178: ### CalendarEventAttendee Type
-179: - Quick-ref: Type transformation example #2
-180: - Alignment: "CalendarEventAttendee" → "Person" section
-181: - Implementation: Phase 1 priority
-182: - MCP tool: `get_schema_type("Person")`
-183: 
-184: ### Timezone Handling
-185: - Alignment: "Key Insights" → "Timezone Handling"
-186: - Quick-ref: Property mapping details
-187: - MCP tool: `generate_example("Event", {...})`
+129: - `SCHEMA_CATEGORY_MAP` reference (email JSON-LD @type -> Gmail label category)
+130: - Extraction pipeline and metadata fields per type
+131: - Codebase type inventory (Core Calendar, Conflict Detection, Gmail/Email)
+132: - Property mapping: CalendarEvent -> schema.org Event
+133: - GS1 Web Vocabulary complementary types
+134: 
+135: ---
+136: 
+137: ### SCHEMA-ORG-MCP-TOOLS.md (300+ lines)
+138: **MCP Tool Reference & Invocations**
+139: 
+140: - Quick start: Run all tools
+141: - Core Schema Tools (5 tools, with examples)
+142: - Metadata Tools (3 tools)
+143: - Performance Tools (5 tools)
+144: - Additional type searches
+145: - Implementation checklist
+146: - Error handling reference
+147: 
+148: **Tools Documented**:
+149: 1. `get_schema_type` - Retrieve type definitions
+150: 2. `search_schemas` - Find related types
+151: 3. `get_type_hierarchy` - Explore inheritance
+152: 4. `get_type_properties` - List properties
+153: 5. `generate_example` - Create JSON-LD
+154: 6. `get_server_metadata` - Document server
+155: 7. `generate_search_action` - Email search
+156: 8. `generate_create_action` - Event creation
+157: 9. `analyze_schema_impact` - Measure impact
+158: 
+159: ---
+160: 
+161: ## 🔗 Cross-References
+162: 
+163: ### CalendarEvent Type
+164: - Quick-ref: Type transformation example #1
+165: - Alignment: "CalendarEvent" → "Event" section
+166: - Implementation: Phase 1 priority
+167: - MCP tool: `generate_example("Event")`
+168: 
+169: ### CalendarEventAttendee Type
+170: - Quick-ref: Type transformation example #2
+171: - Alignment: "CalendarEventAttendee" → "Person" section
+172: - Implementation: Phase 1 priority
+173: - MCP tool: `get_schema_type("Person")`
+174: 
+175: ### Timezone Handling
+176: - Alignment: "Key Insights" → "Timezone Handling"
+177: - Quick-ref: Property mapping details
+178: - MCP tool: `generate_example("Event", {...})`
+179: 
+180: ### Conflict Detection (Custom Extension)
+181: - Alignment: "Custom Extensions" section
+182: - Quick-ref: Lower priority types
+183: - Implementation: Phase 3
+184: 
+185: ---
+186: 
+187: ## 🚀 Implementation Quick Start
 188: 
-189: ### Conflict Detection (Custom Extension)
-190: - Alignment: "Custom Extensions" section
-191: - Quick-ref: Lower priority types
-192: - Implementation: Phase 3
-193: 
-194: ---
-195: 
-196: ## 🚀 Implementation Quick Start
-197: 
-198: ### For Phase 1 (Week 1-2)
-199: 
-200: 1. **Day 1: Review documentation**
-201:    ```
-202:    Read SCHEMA-ORG-QUICK-REFERENCE.md + ALIGNMENT.md (Sections 1-3)
-203:    Time: 2 hours
-204:    ```
-205: 
-206: 2. **Day 2-3: Run MCP tools**
-207:    ```
-208:    Use SCHEMA-ORG-MCP-TOOLS.md tools 1-5 to retrieve schema.org definitions
-209:    Focus: Event, Person, Schedule types
-210:    Time: 2 hours
-211:    ```
-212: 
-213: 3. **Day 4: Implement core mappings**
-214:    ```
-215:    CalendarEvent → Event
-216:    CalendarEventAttendee → Person
-217:    Generate JSON-LD examples
-218:    Time: Full day
-219:    ```
-220: 
-221: 4. **Day 5: Update documentation**
-222:    ```
-223:    Add @context to API examples
-224:    Update README with schema.org section
-225:    Validate examples with https://validator.schema.org/
-226:    Time: 4 hours
-227:    ```
-228: 
-229: ### For Phase 2-3
-230: See "Implementation Roadmap" sections in ALIGNMENT.md and ANALYSIS-SUMMARY.md
+189: ### For Phase 1 (Week 1-2)
+190: 
+191: 1. **Day 1: Review documentation**
+192:    ```
+193:    Read SCHEMA-ORG-QUICK-REFERENCE.md + ALIGNMENT.md (Sections 1-3)
+194:    Time: 2 hours
+195:    ```
+196: 
+197: 2. **Day 2-3: Run MCP tools**
+198:    ```
+199:    Use SCHEMA-ORG-MCP-TOOLS.md tools 1-5 to retrieve schema.org definitions
+200:    Focus: Event, Person, Schedule types
+201:    Time: 2 hours
+202:    ```
+203: 
+204: 3. **Day 4: Implement core mappings**
+205:    ```
+206:    CalendarEvent → Event
+207:    CalendarEventAttendee → Person
+208:    Generate JSON-LD examples
+209:    Time: Full day
+210:    ```
+211: 
+212: 4. **Day 5: Update documentation**
+213:    ```
+214:    Add @context to API examples
+215:    Update README with schema.org section
+216:    Validate examples with https://validator.schema.org/
+217:    Time: 4 hours
+218:    ```
+219: 
+220: ### For Phase 2-3
+221: See "Implementation Roadmap" sections in ALIGNMENT.md and ANALYSIS-SUMMARY.md
+222: 
+223: ---
+224: 
+225: ## 🔧 Tools & Resources
+226: 
+227: ### Required Tools
+228: - **schema-org-mcp**: `/Users/alyshialedlie/code/is-internal/schema-org-mcp`
+229: - **Validator**: https://validator.schema.org/
+230: - **Schema.org**: https://schema.org/
 231: 
-232: ---
-233: 
-234: ## 🔧 Tools & Resources
-235: 
-236: ### Required Tools
-237: - **schema-org-mcp**: `/Users/alyshialedlie/code/is-internal/schema-org-mcp`
-238: - **Validator**: https://validator.schema.org/
-239: - **Schema.org**: https://schema.org/
-240: 
-241: ### Key Type URLs
-242: - Event: https://schema.org/Event
-243: - Person: https://schema.org/Person
-244: - Schedule: https://schema.org/Schedule
-245: - Reservation: https://schema.org/Reservation
-246: - EmailMessage: https://schema.org/EmailMessage
-247: - SearchAction: https://schema.org/SearchAction
-248: 
-249: ---
-250: 
-251: ## 📊 Key Metrics
-252: 
-253: | Metric | Value |
-254: |--------|-------|
-255: | Total Types Analyzed | 47 |
-256: | Well-Aligned Types | 37 (78%) |
-257: | Alignment Score | 72% (Good) |
-258: | Core Calendar Coverage | 95% (Excellent) |
-259: | Phase 1 Effort | 4 days |
-260: | Phase 1 Impact | ~50% of benefits |
-261: | Full Implementation (All Phases) | 3-4 weeks |
-262: | Expected SEO Traffic Improvement | +15% |
-263: | Knowledge Graph Eligibility | Yes (Phase 3) |
-264: 
-265: ---
+232: ### Key Type URLs
+233: - Event: https://schema.org/Event
+234: - Person: https://schema.org/Person
+235: - Schedule: https://schema.org/Schedule
+236: - Reservation: https://schema.org/Reservation
+237: - EmailMessage: https://schema.org/EmailMessage
+238: - SearchAction: https://schema.org/SearchAction
+239: 
+240: ---
+241: 
+242: ## 📊 Key Metrics
+243: 
+244: | Metric | Value |
+245: |--------|-------|
+246: | Total Types Analyzed | 47 |
+247: | Well-Aligned Types | 37 (78%) |
+248: | Alignment Score | 72% (Good) |
+249: | Core Calendar Coverage | 95% (Excellent) |
+250: | Phase 1 Effort | 4 days |
+251: | Phase 1 Impact | ~50% of benefits |
+252: | Full Implementation (All Phases) | 3-4 weeks |
+253: | Expected SEO Traffic Improvement | +15% |
+254: | Knowledge Graph Eligibility | Yes (Phase 3) |
+255: 
+256: ---
+257: 
+258: ## ❓ FAQ
+259: 
+260: **Q: Which document should I read first?**
+261: A: It depends on your role:
+262: - Manager: ANALYSIS-SUMMARY.md
+263: - Developer: QUICK-REFERENCE.md
+264: - Architect: ALIGNMENT.md
+265: - Everyone: Start with your role, cross-reference others as needed
 266: 
-267: ## ❓ FAQ
-268: 
-269: **Q: Which document should I read first?**
-270: A: It depends on your role:
-271: - Manager: ANALYSIS-SUMMARY.md
-272: - Developer: QUICK-REFERENCE.md
-273: - Architect: ALIGNMENT.md
-274: - Everyone: Start with your role, cross-reference others as needed
+267: **Q: How much effort is Phase 1?**
+268: A: ~4 days of development work (CalendarEvent → Event mapping + docs update)
+269: 
+270: **Q: Do I need to change my TypeScript types?**
+271: A: No. Implement schema.org mapping as JSON-LD serialization layer.
+272: 
+273: **Q: What's the ROI?**
+274: A: Phase 1 provides +15% SEO traffic + improved LLM understanding
 275: 
-276: **Q: How much effort is Phase 1?**
-277: A: ~4 days of development work (CalendarEvent → Event mapping + docs update)
+276: **Q: When should I start?**
+277: A: Immediately. Phase 1 is low-effort, high-value.
 278: 
-279: **Q: Do I need to change my TypeScript types?**
-280: A: No. Implement schema.org mapping as JSON-LD serialization layer.
-281: 
-282: **Q: What's the ROI?**
-283: A: Phase 1 provides +15% SEO traffic + improved LLM understanding
-284: 
-285: **Q: When should I start?**
-286: A: Immediately. Phase 1 is low-effort, high-value.
-287: 
-288: ---
-289: 
-290: ## 📞 Support & References
-291: 
-292: ### Internal Resources
-293: - Schema.org MCP server: `/Users/alyshialedlie/code/is-internal/schema-org-mcp`
-294: - This documentation: `docs/SCHEMA-ORG-*.md` (4 files)
-295: 
-296: ### External Resources
-297: - Schema.org: https://schema.org/
-298: - JSON-LD: https://json-ld.org/
-299: - Validator: https://validator.schema.org/
-300: - ISO 8601: Date/time standard
+279: ---
+280: 
+281: ## 📞 Support & References
+282: 
+283: ### Internal Resources
+284: - Schema.org MCP server: `/Users/alyshialedlie/code/is-internal/schema-org-mcp`
+285: - This documentation: `docs/SCHEMA-ORG-*.md` (4 files)
+286: 
+287: ### External Resources
+288: - Schema.org: https://schema.org/
+289: - JSON-LD: https://json-ld.org/
+290: - Validator: https://validator.schema.org/
+291: - ISO 8601: Date/time standard
+292: 
+293: ### Related Documents
+294: - `docs/README.md` - Overview
+295: - `docs/BACKLOG.md` - Future work
+296: - `docs/architecture.md` - System design
+297: 
+298: ---
+299: 
+300: ## 🎯 Success Criteria
 301: 
-302: ### Related Documents
-303: - `docs/README.md` - Overview
-304: - `docs/BACKLOG.md` - Future work
-305: - `docs/architecture.md` - System design
-306: 
-307: ---
+302: Phase 1 is complete when:
+303: - ✅ CalendarEvent → Event mapping documented
+304: - ✅ JSON-LD examples created
+305: - ✅ API docs updated with @context
+306: - ✅ Examples validated with schema.org validator
+307: - ✅ No breaking changes to existing APIs
 308: 
-309: ## 🎯 Success Criteria
+309: ---
 310: 
-311: Phase 1 is complete when:
-312: - ✅ CalendarEvent → Event mapping documented
-313: - ✅ JSON-LD examples created
-314: - ✅ API docs updated with @context
-315: - ✅ Examples validated with schema.org validator
-316: - ✅ No breaking changes to existing APIs
-317: 
-318: ---
-319: 
-320: ## 📅 Version History
-321: 
-322: | Version | Date | Status | Changes |
-323: |---------|------|--------|---------|
-324: | 1.0 | 2026-03-24 | Complete | Initial analysis & documentation |
-325: 
-326: ---
+311: ## 📅 Version History
+312: 
+313: | Version | Date | Status | Changes |
+314: |---------|------|--------|---------|
+315: | 1.0 | 2026-03-24 | Complete | Initial analysis & documentation |
+316: 
+317: ---
+318: 
+319: ## 🔄 Next Steps
+320: 
+321: 1. **Review**: Choose a document based on your role (5-20 min)
+322: 2. **Study**: Read the chosen document (30-60 min)
+323: 3. **Execute**: Follow Phase 1 implementation guide (4 days)
+324: 4. **Validate**: Use schema.org validator to verify examples
+325: 5. **Deploy**: Update API documentation and responses
+326: 6. **Measure**: Track SEO and LLM impact improvements
 327: 
-328: ## 🔄 Next Steps
+328: ---
 329: 
-330: 1. **Review**: Choose a document based on your role (5-20 min)
-331: 2. **Study**: Read the chosen document (30-60 min)
-332: 3. **Execute**: Follow Phase 1 implementation guide (4 days)
-333: 4. **Validate**: Use schema.org validator to verify examples
-334: 5. **Deploy**: Update API documentation and responses
-335: 6. **Measure**: Track SEO and LLM impact improvements
-336: 
-337: ---
-338: 
-339: **Last Updated**: 2026-03-24
-340: **Status**: ✅ Ready for Implementation
-341: **Next Review**: After Phase 1 completion
+330: **Last Updated**: 2026-03-24
+331: **Status**: ✅ Ready for Implementation
+332: **Next Review**: After Phase 1 completion
 </file>
 
 <file path="docs/SCHEMA-ORG-MCP-TOOLS.md">
@@ -6922,7 +6461,7 @@ This section contains the contents of the repository's files.
 436: 
 437: - [ ] Run Core Schema Tools (1-5) to retrieve type definitions
 438: - [ ] Run Metadata Tools (6-8) to document server capabilities
-439: - [ ] Review SCHEMA-ORG-ALIGNMENT.md mapping table
+439: - [ ] Review SCHEMA_CATEGORY_MAP.md mapping table
 440: - [ ] Run Performance Tools (9+) to measure impact
 441: - [ ] Map CalendarEvent fields to Event properties
 442: - [ ] Update API documentation with JSON-LD examples
@@ -7262,7 +6801,7 @@ This section contains the contents of the repository's files.
 284: 
 285: | Need | Go To |
 286: |------|-------|
-287: | Full type documentation | `docs/SCHEMA-ORG-ALIGNMENT.md` |
+287: | Full type documentation | `docs/SCHEMA_CATEGORY_MAP.md` |
 288: | MCP tool reference | `docs/SCHEMA-ORG-MCP-TOOLS.md` |
 289: | Implementation guide | This file + ALIGNMENT.md |
 290: | Schema.org validator | https://validator.schema.org/ |
@@ -7273,7 +6812,7 @@ This section contains the contents of the repository's files.
 295: 
 296: ## 🚀 Next Steps
 297: 
-298: 1. **Review** this quick reference and SCHEMA-ORG-ALIGNMENT.md
+298: 1. **Review** this quick reference and SCHEMA_CATEGORY_MAP.md
 299: 2. **Run** the MCP tools listed in SCHEMA-ORG-MCP-TOOLS.md
 300: 3. **Map** each CalendarEvent property to Event
 301: 4. **Generate** JSON-LD examples using `generate_example` tool
@@ -7715,7 +7254,7 @@ This section contains the contents of the repository's files.
 424: |----------|---------|-----------|
 425: | IMPLEMENTATION-GUIDE.md | Detailed day-by-day guide | 60 min |
 426: | SCHEMA-ORG-QUICK-REFERENCE.md | Visual type mappings | 20 min |
-427: | SCHEMA-ORG-ALIGNMENT.md | Complete analysis | 60 min |
+427: | SCHEMA_CATEGORY_MAP.md | Complete analysis | 60 min |
 428: | SCHEMA-ORG-MCP-TOOLS.md | MCP tool reference | 30 min |
 429: | SCHEMA-ORG-INDEX.md | Navigation guide | 10 min |
 430: 
@@ -7768,6 +7307,67 @@ This section contains the contents of the repository's files.
 477: **Date**: 2026-03-24
 478: **Status**: Ready to implement
 479: **Questions?**: See IMPLEMENTATION-GUIDE.md for detailed answers
+</file>
+
+<file path="docs/SCHEMA-ORG-SERIALIZER-PLAN.md">
+ 1: # Schema.org Serializer Plan
+ 2: 
+ 3: **Purpose**: Add `@context`/`@type` JSON-LD output to calendar MCP tool responses.
+ 4: **Status**: Not started (inbound extraction complete; outbound serialization pending)
+ 5: 
+ 6: ---
+ 7: 
+ 8: ## Implemented: Inbound Email Extraction
+ 9: 
+10: The inbound side of schema.org integration is complete in `lib/schema-extractor.mjs`:
+11: 
+12: - [x] `extractSchemaMarkupFromGmailPayload(html)` -- htmlparser2 streaming parser, captures `<script type="application/ld+json">` blocks, filters for `@context` containing "schema.org"
+13: - [x] `extractHtmlFromPayload(payload)` -- recursive multipart traversal, base64url decode
+14: - [x] `categorizeBySchema(schemaObjects)` -- routes `@type` through `SCHEMA_CATEGORY_MAP`, extracts metadata per type (event name/date/venue, order number/total, tracking number, reservation details)
+15: - [x] `SCHEMA_CATEGORY_MAP` -- 15 schema.org types mapped to 6 categories (Events, Travel, Orders, Shipping, Billing, Actionable)
+16: 
+17: See [EMAIL-CATEGORIZATION.md](EMAIL-CATEGORIZATION.md) for the full extraction pipeline and [SCHEMA_CATEGORY_MAP.md](SCHEMA_CATEGORY_MAP.md) for the type mapping reference.
+18: 
+19: ---
+20: 
+21: ## Not Started: Outbound Calendar Serialization
+22: 
+23: Adding schema.org JSON-LD context to calendar MCP tool responses (create, update, get, list, search). This would wrap `CalendarEvent` output in `@context`/`@type` for structured data consumers.
+24: 
+25: ### What would change
+26: 
+27: | Handler | Change |
+28: |---|---|
+29: | `CreateEventHandler` | Include `@context: "https://schema.org"`, `@type: "Event"` in response |
+30: | `UpdateEventHandler` | Same |
+31: | `GetEventHandler` | Same |
+32: | `ListEventsHandler` | Array of Event objects with context |
+33: | `SearchEventsHandler` | SearchAction wrapper with Event results |
+34: 
+35: ### Property mapping (CalendarEvent -> Event)
+36: 
+37: Already documented in [SCHEMA_CATEGORY_MAP.md](SCHEMA_CATEGORY_MAP.md#property-mapping-calendarevent---event).
+38: 
+39: ### Open questions
+40: 
+41: 1. **Serialization layer**: Separate `SchemaOrgSerializer` service, or inline in handlers?
+42: 2. **Opt-in or default**: Always include `@context`, or only when requested via tool parameter?
+43: 3. **Timezone**: Combine `start.dateTime` + `start.timeZone` into ISO 8601 with offset, or keep separate?
+44: 4. **Attendee RSVP**: Use `Person` only, or `Person` + `Reservation` for `responseStatus`?
+45: 
+46: ### Files to create
+47: 
+48: - [ ] `src/services/SchemaOrgSerializer.ts` -- CalendarEvent -> JSON-LD Event conversion
+49: - [ ] `src/tests/unit/services/SchemaOrgSerializer.test.ts`
+50: - [ ] `src/tests/integration/schema-org.test.ts`
+51: 
+52: ### Files to modify
+53: 
+54: - [ ] `src/handlers/core/CreateEventHandler.ts`
+55: - [ ] `src/handlers/core/UpdateEventHandler.ts`
+56: - [ ] `src/handlers/core/GetEventHandler.ts`
+57: - [ ] `src/handlers/core/ListEventsHandler.ts`
+58: - [ ] `src/handlers/core/SearchEventsHandler.ts`
 </file>
 
 <file path="docs/testing.md">
@@ -8773,96 +8373,103 @@ This section contains the contents of the repository's files.
 347: - [Development](docs/development.md) - Contributing and testing
 348: - [Backlog & Roadmap](docs/BACKLOG.md) - Future work, refactoring targets, design decisions
 349: 
-350: ## Development
+350: ### Schema & Vocabulary Alignment
 351: 
-352: **Project Guidelines:**
-353: - See [`CLAUDE.md`](CLAUDE.md) for code quality standards, script patterns, and refactoring guidelines
-354: - OAuth extraction pattern: use `createGmailClient()` from `lib/gmail-client.mjs`
-355: - Established patterns: error handling with try/catch, named constants, parallel API fetches with `Promise.all`
-356: - TypeScript, ES modules, 2-space indent, no magic strings
-357: 
-358: **Code Quality Tools:**
-359: - Detect duplicated code blocks: `node scripts/check-duplicates.mjs src 6` (reports suspicious file pairs, overlapping logic)
-360: - Consolidated: `GmailCreateHandler.ts` unifies filter and label creation logic (single source of truth)
-361: 
-362: **Completed Roadmap:**
-363: - ✅ All 24 backlog items complete (v1.4.9)
-364: - ✅ Test architecture for conflict detection implemented (MCP protocol, real API)
-365: - ✅ Email parsing helpers extracted (email-analyzer.mjs with 4 reusable exports)
-366: - ✅ Timezone utilities consolidated (19 lines reduced)
-367: - See [`docs/BACKLOG.md`](docs/BACKLOG.md) for detailed implementation notes and [`docs/CHANGELOG.md`](docs/CHANGELOG.md) for version history
+352: Type definitions are aligned with [schema.org](https://schema.org/) for calendar events, email categorization, and reservation types. The [GS1 Web Vocabulary](https://ref.gs1.org/voc/) complements schema.org with supply chain, product identification (`gs1:Product`, GTIN), and commercial transaction types (`gs1:Offer`, `gs1:PriceSpecification`, `gs1:Transaction`). The two vocabularies work together in JSON-LD.
+353: 
+354: - [Schema Category Map](docs/SCHEMA_CATEGORY_MAP.md) -- type inventory, property mappings, GS1 overlap analysis
+355: - [Email Categorization](docs/EMAIL-CATEGORIZATION.md) -- inbound email schema extraction and GS1 enrichment
+356: 
+357: ## Development
+358: 
+359: **Project Guidelines:**
+360: - See [`CLAUDE.md`](CLAUDE.md) for code quality standards, script patterns, and refactoring guidelines
+361: - OAuth extraction pattern: use `createGmailClient()` from `lib/gmail-client.mjs`
+362: - Established patterns: error handling with try/catch, named constants, parallel API fetches with `Promise.all`
+363: - TypeScript, ES modules, 2-space indent, no magic strings
+364: 
+365: **Code Quality Tools:**
+366: - Detect duplicated code blocks: `node scripts/check-duplicates.mjs src 6` (reports suspicious file pairs, overlapping logic)
+367: - Consolidated: `GmailCreateHandler.ts` unifies filter and label creation logic (single source of truth)
 368: 
-369: ## Testing Status
-370: 
-371: Run tests with `npm test`. Current test suite includes:
-372: - **Handler Tests**: Core functionality for create, get, list, search, update, and delete operations; content assertions use narrower `{ type: 'text'; text: string }` type instead of `as any`
-373: - **Service Tests**: Conflict detection and event similarity analysis
-374: - **Schema Tests**: Tool schema validation and compatibility
+369: **Completed Roadmap:**
+370: - ✅ All 24 backlog items complete (v1.4.9)
+371: - ✅ Test architecture for conflict detection implemented (MCP protocol, real API)
+372: - ✅ Email parsing helpers extracted (email-analyzer.mjs with 4 reusable exports)
+373: - ✅ Timezone utilities consolidated (19 lines reduced)
+374: - See [`docs/BACKLOG.md`](docs/BACKLOG.md) for detailed implementation notes and [`docs/CHANGELOG.md`](docs/CHANGELOG.md) for version history
 375: 
-376: **Note**: Integration tests referencing non-existent `AuthenticationService` and `initializeApp` exports were removed. Re-implement when the authentication service architecture is finalized.
+376: ## Testing Status
 377: 
-378: ## Configuration
-379: 
-380: **Environment Variables:**
-381: - `GOOGLE_OAUTH_CREDENTIALS` - Path to OAuth credentials file
-382: - `CALENDARMCP_TOKEN_PATH` - Custom token storage location for Calendar tokens (optional)
-383: - `ACCOUNT_MODE` - Account mode selection (normal or test; default: test)
+378: Run tests with `npm test`. Current test suite includes:
+379: - **Handler Tests**: Core functionality for create, get, list, search, update, and delete operations; content assertions use narrower `{ type: 'text'; text: string }` type instead of `as any`
+380: - **Service Tests**: Conflict detection and event similarity analysis
+381: - **Schema Tests**: Tool schema validation and compatibility
+382: 
+383: **Note**: Integration tests referencing non-existent `AuthenticationService` and `initializeApp` exports were removed. Re-implement when the authentication service architecture is finalized.
 384: 
-385: **Token Storage:**
-386: - Calendar tokens: `~/.config/google-calendar-mcp/tokens.json`
-387: - Gmail tokens: `~/.config/google-calendar-mcp/tokens-gmail.json`
-388: - Both stored with secure permissions (0600)
-389: 
-390: **Claude Desktop Config Location:**
-391: - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-392: - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-393: 
-394: 
-395: ## Security
+385: ## Configuration
+386: 
+387: **Environment Variables:**
+388: - `GOOGLE_OAUTH_CREDENTIALS` - Path to OAuth credentials file
+389: - `CALENDARMCP_TOKEN_PATH` - Custom token storage location for Calendar tokens (optional)
+390: - `ACCOUNT_MODE` - Account mode selection (normal or test; default: test)
+391: 
+392: **Token Storage:**
+393: - Calendar tokens: `~/.config/google-calendar-mcp/tokens.json`
+394: - Gmail tokens: `~/.config/google-calendar-mcp/tokens-gmail.json`
+395: - Both stored with secure permissions (0600)
 396: 
-397: - OAuth tokens are stored securely in your system's config directory
-398: - Credentials never leave your local machine
-399: - All calendar operations require explicit user consent
+397: **Claude Desktop Config Location:**
+398: - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+399: - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 400: 
-401: ### Troubleshooting
-402: 
-403: 1. **OAuth Credentials File Not Found:**
-404:    - For npx users: You **must** specify the credentials file path using `GOOGLE_OAUTH_CREDENTIALS`
-405:    - Verify file paths are absolute and accessible
-406: 
-407: 2. **Authentication Errors:**
-408:    - Ensure your credentials file contains credentials for a **Desktop App** type
-409:    - Verify your user email is added as a **Test User** in the Google Cloud OAuth Consent screen
-410:    - Try deleting saved tokens and re-authenticating
-411:    - Check that no other process is blocking ports 3000-3004
-412: 
-413: 3. **Build Errors:**
-414:    - Run `npm install && npm run build` again
-415:    - Check Node.js version (use LTS)
-416:    - Delete the `build/` directory and run `npm run build`
-417: 4. **"Something went wrong" screen during browser authentication**
-418:    - Perform manual authentication per the below steps
-419:    - Use a Chromium-based browser to open the authentication URL. Test app authentication may not be supported on some non-Chromium browsers.
-420: 
-421: ### Manual Authentication
-422: For re-authentication or troubleshooting:
-423: ```bash
-424: # For npx installations
-425: export GOOGLE_OAUTH_CREDENTIALS="/path/to/your/credentials.json"
-426: npx @cocal/google-calendar-mcp auth
+401: 
+402: ## Security
+403: 
+404: - OAuth tokens are stored securely in your system's config directory
+405: - Credentials never leave your local machine
+406: - All calendar operations require explicit user consent
+407: 
+408: ### Troubleshooting
+409: 
+410: 1. **OAuth Credentials File Not Found:**
+411:    - For npx users: You **must** specify the credentials file path using `GOOGLE_OAUTH_CREDENTIALS`
+412:    - Verify file paths are absolute and accessible
+413: 
+414: 2. **Authentication Errors:**
+415:    - Ensure your credentials file contains credentials for a **Desktop App** type
+416:    - Verify your user email is added as a **Test User** in the Google Cloud OAuth Consent screen
+417:    - Try deleting saved tokens and re-authenticating
+418:    - Check that no other process is blocking ports 3000-3004
+419: 
+420: 3. **Build Errors:**
+421:    - Run `npm install && npm run build` again
+422:    - Check Node.js version (use LTS)
+423:    - Delete the `build/` directory and run `npm run build`
+424: 4. **"Something went wrong" screen during browser authentication**
+425:    - Perform manual authentication per the below steps
+426:    - Use a Chromium-based browser to open the authentication URL. Test app authentication may not be supported on some non-Chromium browsers.
 427: 
-428: # For local installations
-429: npm run auth
-430: ```
-431: 
-432: ## License
-433: 
-434: MIT
-435: 
-436: ## Support
-437: 
-438: - [GitHub Issues](https://github.com/nspady/google-calendar-mcp/issues)
-439: - [Documentation](docs/)
+428: ### Manual Authentication
+429: For re-authentication or troubleshooting:
+430: ```bash
+431: # For npx installations
+432: export GOOGLE_OAUTH_CREDENTIALS="/path/to/your/credentials.json"
+433: npx @cocal/google-calendar-mcp auth
+434: 
+435: # For local installations
+436: npm run auth
+437: ```
+438: 
+439: ## License
+440: 
+441: MIT
+442: 
+443: ## Support
+444: 
+445: - [GitHub Issues](https://github.com/nspady/google-calendar-mcp/issues)
+446: - [Documentation](docs/)
 </file>
 
 <file path="docs/BACKLOG.md">

@@ -105,6 +105,15 @@ const CONFIGS = {
 
 const config = CONFIGS[typeArg];
 
+function countFiltersCreated(filterResults) {
+  let created = 0;
+  for (const { name, created: isNew } of filterResults) {
+    console.log(`  Filter ${isNew ? 'created' : 'already exists'}: ${name}`);
+    if (isNew) created++;
+  }
+  return created;
+}
+
 async function runSingleLabel(gmail, labelCache, cfg) {
   const labelId = labelCache.get(cfg.label);
   if (!labelId) {
@@ -138,11 +147,7 @@ async function runSingleLabel(gmail, labelCache, cfg) {
         .then(filterId => ({ name: fc.name, created: !!filterId }))
     )
   );
-  let filtersCreated = 0;
-  for (const { name, created } of filterResults) {
-    console.log(`  Filter ${created ? 'created' : 'already exists'}: ${name}`);
-    if (created) filtersCreated++;
-  }
+  const filtersCreated = countFiltersCreated(filterResults);
 
   console.log(BANNER);
   console.log(`\n${cfg.title} COMPLETE\n`);
@@ -160,6 +165,7 @@ async function runSublabels(gmail, labelCache, categoryConfigs, title, parentLab
   const categories = categoryConfigs
     .map(c => {
       const labelId = labelCache.get(c.label);
+      if (!labelId) console.warn(`  Skipping ${c.label}: label not found`);
       return {
         ...c,
         labelId,
@@ -193,11 +199,7 @@ async function runSublabels(gmail, labelCache, categoryConfigs, title, parentLab
         .then(filterId => ({ name: category.filterName, created: !!filterId }))
     )
   );
-  let filtersCreated = 0;
-  for (const { name, created } of filterResults) {
-    console.log(`  Filter ${created ? 'created' : 'already exists'}: ${name}`);
-    if (created) filtersCreated++;
-  }
+  const filtersCreated = countFiltersCreated(filterResults);
 
   console.log(BANNER);
   console.log(`\n${title} COMPLETE\n`);

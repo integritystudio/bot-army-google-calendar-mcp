@@ -1,9 +1,10 @@
 import { gmail_v1 } from 'googleapis';
 import { formatErrorMessage } from '../core/errorFormatting.js';
 
-const GMAIL_LABEL_INBOX = 'INBOX';
-const GMAIL_LABEL_SPAM = 'SPAM';
-const GMAIL_LABEL_TRASH = 'TRASH';
+export const GMAIL_LABEL_INBOX = 'INBOX';
+export const GMAIL_LABEL_SPAM = 'SPAM';
+export const GMAIL_LABEL_TRASH = 'TRASH';
+export const GMAIL_LABEL_UNREAD = 'UNREAD';
 
 export function getErrorMessage(error: unknown): string {
   return formatErrorMessage(error);
@@ -53,19 +54,25 @@ export function buildGmailModifyRequest(
 
   if (action.archive) {
     const ids = request.removeLabelIds || [];
-    if (!ids.includes(GMAIL_LABEL_INBOX)) ids.push(GMAIL_LABEL_INBOX);
+    if (!ids.includes(GMAIL_LABEL_INBOX)) {
+      ids.push(GMAIL_LABEL_INBOX);
+    }
     request.removeLabelIds = ids;
   }
 
   if (action.markAsSpam) {
     const ids = request.addLabelIds || [];
-    if (!ids.includes(GMAIL_LABEL_SPAM)) ids.push(GMAIL_LABEL_SPAM);
+    if (!ids.includes(GMAIL_LABEL_SPAM)) {
+      ids.push(GMAIL_LABEL_SPAM);
+    }
     request.addLabelIds = ids;
   }
 
   if (action.markAsTrash) {
     const ids = request.addLabelIds || [];
-    if (!ids.includes(GMAIL_LABEL_TRASH)) ids.push(GMAIL_LABEL_TRASH);
+    if (!ids.includes(GMAIL_LABEL_TRASH)) {
+      ids.push(GMAIL_LABEL_TRASH);
+    }
     request.addLabelIds = ids;
   }
 

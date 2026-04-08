@@ -60,7 +60,7 @@ export class CreateEventHandler extends BaseToolHandler {
             return this.textResult(`⚠️ DUPLICATE EVENT DETECTED (${similarityPercentage}% similar)!\n\n${cleanedDetails}\n\nThis event appears to be a duplicate. To create anyway, set allowDuplicates to true.`);
         }
 
-        const event = await this.createEvent(oauth2Client, validArgs);
+        const event = await this.createEvent(oauth2Client, validArgs, timezone);
         const text = createEventResponseWithConflicts(event, validArgs.calendarId, conflicts, "created");
 
         return this.textResult(text);
@@ -68,14 +68,14 @@ export class CreateEventHandler extends BaseToolHandler {
 
     private async createEvent(
         client: OAuth2Client,
-        args: CreateEventInput
+        args: CreateEventInput,
+        timezone: string
     ): Promise<calendar_v3.Schema$Event> {
         try {
             if (args.eventId) {
                 validateEventId(args.eventId);
             }
 
-            const timezone = args.timeZone || await this.getCalendarTimezone(client, args.calendarId);
             const requestBody = buildEventRequestBodyCreate(args, timezone);
 
             if (args.eventId) {

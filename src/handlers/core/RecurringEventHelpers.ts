@@ -119,8 +119,6 @@ export class RecurringEventHelpers {
    */
   cleanEventForDuplication(event: calendar_v3.Schema$Event): calendar_v3.Schema$Event {
     const cleanedEvent = { ...event };
-    
-    // Remove fields that shouldn't be duplicated
     delete cleanedEvent.id;
     delete cleanedEvent.etag;
     delete cleanedEvent.iCalUID;
@@ -145,14 +143,12 @@ export class RecurringEventHelpers {
       ...optionalFields,
     };
 
-    // Remove undefined and null values, but keep empty strings/arrays
     Object.keys(requestBody).forEach(key => {
       if ((requestBody as any)[key] === undefined || (requestBody as any)[key] === null) {
         delete (requestBody as any)[key];
       }
     });
 
-    // Apply timezone if provided, ensures start/end objects exist with timezone set
     if (effectiveTimeZone) {
       const { start, end } = applyTimezone(
         requestBody.start as any,

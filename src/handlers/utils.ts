@@ -48,10 +48,7 @@ function formatDateTime(dateTime?: string | null, date?: string | null, timeZone
         const dt = dateTime || date;
         if (!dt) return "unspecified";
         
-        // If it's a date-only event (all-day), handle it specially
         if (date && !dateTime) {
-            // For all-day events, just format the date string directly
-            // Date-only strings like "2025-03-15" should be displayed as-is
             const [year, month, day] = date.split('-').map(Number);
             
             // Create a date string without any timezone conversion
@@ -74,7 +71,6 @@ function formatDateTime(dateTime?: string | null, date?: string | null, timeZone
         const parsedDate = new Date(dt);
         if (isNaN(parsedDate.getTime())) return dt;
         
-        // For timed events, include timezone
         const options: Intl.DateTimeFormatOptions = {
             weekday: 'short',
             year: 'numeric',
@@ -129,18 +125,15 @@ export function formatEventWithDetails(event: calendar_v3.Schema$Event, calendar
     const location = event.location ? `\nLocation: ${event.location}` : "";
     const colorId = event.colorId ? `\nColor ID: ${event.colorId}` : "";
 
-    // Format start and end times with timezone
     const startTime = formatDateTime(event.start?.dateTime, event.start?.date, event.start?.timeZone || undefined);
     const endTime = formatDateTime(event.end?.dateTime, event.end?.date, event.end?.timeZone || undefined);
     
     let timeInfo: string;
     if (event.start?.date) {
-        // All-day event
         if (event.start.date === event.end?.date) {
-            // Single day all-day event
             timeInfo = `\nDate: ${startTime}`;
         } else {
-            // Multi-day all-day event - end date is exclusive, so subtract 1 day for display
+            // Google Calendar all-day end dates are exclusive; subtract 1 for display
             if (event.end?.date) {
                 const endDate = new Date(event.end.date);
                 const adjustedEndDate = oneDayBefore(endDate);
@@ -151,7 +144,6 @@ export function formatEventWithDetails(event: calendar_v3.Schema$Event, calendar
             }
         }
     } else {
-        // Timed event
         timeInfo = `\n${TIME_START_PREFIX}${startTime}\n${TIME_END_PREFIX}${endTime}`;
     }
     
@@ -171,19 +163,16 @@ export function formatConflictWarnings(conflicts: ConflictCheckResult): string {
     
     let warnings = "";
     
-    // Format duplicate warnings
     if (conflicts.duplicates.length > 0) {
         warnings += `\n\n${DUPLICATE_DETECTED_HEADER}`;
         for (const dup of conflicts.duplicates) {
             warnings += `\n\n━━━ Duplicate Event (${Math.round(dup.event.similarity * 100)}% similar) ━━━`;
             warnings += `\n${dup.suggestion}`;
             
-            // Show full event details if available
             if (dup.fullEvent) {
                 warnings += `\n\n${EXISTING_EVENT_DETAILS_LABEL}`;
                 warnings += `\n${formatEventWithDetails(dup.fullEvent, dup.calendarId)}`;
             } else {
-                // Fallback to basic info
                 warnings += `\n• "${dup.event.title}"`;
                 if (dup.event.url) {
                     warnings += `\n  ${VIEW_EXISTING_EVENT_PREFIX}${dup.event.url}`;
@@ -192,7 +181,6 @@ export function formatConflictWarnings(conflicts: ConflictCheckResult): string {
         }
     }
     
-    // Format conflict warnings
     if (conflicts.conflicts.length > 0) {
         warnings += `\n\n${CONFLICT_DETECTED_HEADER}`;
         const conflictsByCalendar = groupBy(conflicts.conflicts, (conflict) => conflict.calendar);
@@ -205,12 +193,10 @@ export function formatConflictWarnings(conflicts: ConflictCheckResult): string {
                     warnings += `\n${OVERLAP_PREFIX}${conflict.overlap.duration} (${conflict.overlap.percentage}% of your event)`;
                 }
 
-                // Show full event details if available
                 if (conflict.fullEvent) {
                     warnings += `\n\n${CONFLICTING_EVENT_DETAILS_LABEL}`;
                     warnings += `\n${formatEventWithDetails(conflict.fullEvent, calendar)}`;
                 } else {
-                    // Fallback to basic info
                     warnings += `\n• Conflicts with "${conflict.event.title}"`;
                     if (conflict.event.start && conflict.event.end) {
                         const start = formatDateTime(conflict.event.start);

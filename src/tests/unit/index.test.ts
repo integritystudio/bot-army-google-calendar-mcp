@@ -18,7 +18,7 @@ vi.mock('google-auth-library', () => ({
     setCredentials: vi.fn(),
     refreshAccessToken: vi.fn().mockResolvedValue({ credentials: { access_token: 'mock_access_token' } }),
     on: vi.fn(),
-  }))
+  })),
 }));
 
 // Mock googleapis
@@ -59,7 +59,11 @@ describe('Google Calendar MCP Server', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockOAuth2Client = new OAuth2Client();
+    mockOAuth2Client = {
+      setCredentials: vi.fn(),
+      refreshAccessToken: vi.fn().mockResolvedValue({ credentials: { access_token: 'mock_access_token' } }),
+      on: vi.fn(),
+    } as unknown as OAuth2Client;
   });
 
   describe('McpServer Configuration', () => {

@@ -9,6 +9,8 @@ npm run auth  # Creates tokens.json; repeat for multiple accounts
 npm run verify-tokens  # Verify auth status (calendar; uses ./credentials.json)
 ```
 
+**Dependency gotcha:** `package.json` overrides pin `googleapis-common@8.0.1` — 8.0.3 exact-pins a nested `google-auth-library@10.5.0` that duplicates the root copy and breaks `npm run lint` with `OAuth2Client` type mismatches. Recheck the override when bumping `googleapis` past 171.
+
 **Env var split (gotcha):** TypeScript calendar code (`src/auth/paths.js`) reads `GOOGLE_ACCOUNT_MODE`; the root `.mjs` Gmail scripts (`lib/gmail-client.mjs`) read `ACCOUNT_MODE`. Setting only one leaves the other side on its default account.
 
 **Gmail Tokens:**

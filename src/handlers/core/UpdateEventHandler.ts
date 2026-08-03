@@ -6,7 +6,8 @@ import { calendar_v3 } from 'googleapis';
 import { RecurringEventHelpers, RecurringEventError, RECURRING_EVENT_ERRORS } from './RecurringEventHelpers.js';
 import { createEventResponseWithConflicts } from "../utils.js";
 import { ConflictDetectionService } from "../../services/conflict-detection/index.js";
-import { createTimeObject } from "../../utils/timezone-utils.js";
+import { applyTimezone, createTimeObject } from "../../utils/timezone-utils.js";
+import { stripSubseconds } from "../../utils/date-utils.js";
 import {
   buildEventForConflictCheckUpdate,
   performConflictCheck,
@@ -181,15 +182,28 @@ export class UpdateEventHandler extends BaseToolHandler {
             requestBody: { recurrence: updatedRecurrence }
         });
 
-        // 2. Create new recurring event starting from future date
-        const newStartTime = args.start || args.futureStartDate;
-        const newEndTime = args.end || helpers.calculateEndTime(newStartTime, eventData);
+        // 2. Create new recurring event starting from future date.
+        // Strip subsecond precision: formatRFC3339 (via calculateEndTime) truncates
+        // milliseconds, and Google 400s a recurring event whose start/end disagree
+        // on fractional seconds (non-whole-second duration)
+        const newStartTime = stripSubseconds(args.start || args.futureStartDate);
+        const newEndTime = args.end
+            ? stripSubseconds(args.end)
+            : helpers.calculateEndTime(newStartTime, eventData);
+
+        // Google requires an explicit timeZone on start/end for recurring events,
+        // even when the dateTime string already carries a UTC offset
+        const { start, end } = applyTimezone(
+            createTimeObject(newStartTime, effectiveTimeZone),
+            createTimeObject(newEndTime, effectiveTimeZone),
+            effectiveTimeZone
+        );
 
         const newEvent = {
             ...helpers.cleanEventForDuplication(eventData),
             ...helpers.buildUpdateRequestBody(args, defaultTimeZone),
-            start: createTimeObject(newStartTime, effectiveTimeZone),
-            end: createTimeObject(newEndTime, effectiveTimeZone)
+            start,
+            end
         };
 
         const response = await calendar.events.insert({

@@ -51,6 +51,15 @@ export function formatRFC3339(date: Date): string {
   return date.toISOString().slice(0, 19) + 'Z';
 }
 
+/**
+ * Remove fractional seconds from a datetime string, preserving any timezone suffix.
+ * Google rejects recurring events whose duration is not a whole number of seconds,
+ * so paired start/end values must agree on subsecond precision.
+ */
+export function stripSubseconds(datetime: string): string {
+  return datetime.replace(/\.\d+(?=Z|[+-]\d{2}:?\d{2}|$)/, '');
+}
+
 export function getFutureDate(daysFromNow: number): Date {
   return addDays(new Date(), daysFromNow);
 }

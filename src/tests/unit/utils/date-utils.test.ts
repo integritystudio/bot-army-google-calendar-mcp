@@ -7,6 +7,7 @@ import {
   formatBasicDateTime,
   formatTZNaiveDateTime,
   formatRFC3339,
+  stripSubseconds,
   getFutureDate,
   getPastDate,
   isFutureDate,
@@ -140,6 +141,27 @@ describe('date-utils', () => {
       const result = formatRFC3339(BASE_DATE);
 
       expect(result.endsWith('Z')).toBe(true);
+    });
+  });
+
+  describe('stripSubseconds', () => {
+    it('should remove fractional seconds from a UTC datetime', () => {
+      expect(stripSubseconds('2026-08-04T07:45:18.519Z')).toBe('2026-08-04T07:45:18Z');
+    });
+
+    it('should remove fractional seconds before a numeric offset', () => {
+      expect(stripSubseconds('2026-08-04T07:45:18.519-05:00')).toBe('2026-08-04T07:45:18-05:00');
+      expect(stripSubseconds('2026-08-04T07:45:18.519+0530')).toBe('2026-08-04T07:45:18+0530');
+    });
+
+    it('should remove fractional seconds from a timezone-naive datetime', () => {
+      expect(stripSubseconds('2026-08-04T07:45:18.519')).toBe('2026-08-04T07:45:18');
+    });
+
+    it('should return datetimes without fractional seconds unchanged', () => {
+      expect(stripSubseconds('2026-08-04T07:45:18Z')).toBe('2026-08-04T07:45:18Z');
+      expect(stripSubseconds('2026-08-04T07:45:18')).toBe('2026-08-04T07:45:18');
+      expect(stripSubseconds('2026-08-04')).toBe('2026-08-04');
     });
   });
 

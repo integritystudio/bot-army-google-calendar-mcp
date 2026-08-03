@@ -193,10 +193,16 @@ describe('UpdateEventHandler - Recurring Events (Real API Integration)', () => {
       const eventStart = new Date(now.getTime() + 86400000);
       const futureDate = new Date(now.getTime() + 5 * 86400000);
 
+      // Derive end from the same base as start: Google rejects recurring events
+      // whose duration is not a whole number of seconds, so a start override
+      // paired with the helper's default end (computed from a separate Date.now())
+      // intermittently produces a 400 from a 1ms duration skew
+      const eventEnd = new Date(eventStart.getTime() + 3600000);
       const eventId = await createTestEvent({
         summary: 'Bi-weekly Review',
         recurrence: ['RRULE:FREQ=WEEKLY;COUNT=10'],
-        start: { dateTime: eventStart.toISOString(), timeZone: 'UTC' }
+        start: { dateTime: eventStart.toISOString(), timeZone: 'UTC' },
+        end: { dateTime: eventEnd.toISOString(), timeZone: 'UTC' }
       });
 
       const result = await handler.runTool(

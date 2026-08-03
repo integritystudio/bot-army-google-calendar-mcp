@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import type { Vitest } from 'vitest';
 
 /**
  * Vitest test context type for async functions

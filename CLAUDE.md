@@ -23,8 +23,8 @@ node verify-tokens.mjs   # Verify Gmail token status
 ```bash
 npm install | npm run build | npm run dev | npm test
 npm run lint              # tsc --noEmit (tsconfig.lint.json)
-npm run test:integration  # Live-API integration tests (or test:all for both)
-npm run test:doppler      # Doppler-injected creds (integrity-studio/dev); also test:integration:doppler, test:all:doppler
+npm run test:all          # Unit + integration with doppler-injected creds (integrity-studio/dev)
+npm run test:integration  # Integration tests with doppler creds (test:doppler for unit)
 npm run repomix           # Regenerate docs/repomix/ artifacts (token tree, compressed/full/docs/git-ranked XML)
 ```
 

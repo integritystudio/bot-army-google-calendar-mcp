@@ -194,9 +194,11 @@ async function runSublabels(gmail, labelCache, categoryConfigs, title, parentLab
   console.log('\n2. CREATING AUTO-LABEL FILTERS\n');
 
   const filterResults = await Promise.all(
-    categories.map(category =>
-      createGmailFilter(gmail, category.filterCriteria, { addLabelIds: category.labelIds })
-        .then(filterId => ({ name: category.filterName, created: !!filterId }))
+    categories.flatMap(category =>
+      category.labelIds.map(labelId =>
+        createGmailFilter(gmail, category.filterCriteria, { addLabelIds: [labelId] })
+          .then(filterId => ({ name: category.filterName, created: !!filterId }))
+      )
     )
   );
   const filtersCreated = countFiltersCreated(filterResults);

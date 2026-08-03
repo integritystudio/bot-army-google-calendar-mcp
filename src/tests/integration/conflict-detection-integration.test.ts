@@ -155,7 +155,7 @@ describe('Conflict Detection Integration (MCP Protocol)', () => {
   describe('Conflict Detection: Non-Overlapping Times', () => {
     it('should not detect conflicts for truly non-overlapping events', async () => {
       const now = new Date();
-      const { event1Id, event2Id } = await createNonOverlappingEventPair(
+      const { event1Id, event2Id, event2Summary } = await createNonOverlappingEventPair(
         mcpClient,
         TEST_CALENDAR_ID,
         now,
@@ -178,7 +178,7 @@ describe('Conflict Detection Integration (MCP Protocol)', () => {
         true
       );
 
-      expect(text).toContain('No-Conflict Event 2');
+      expect(text).toContain(event2Summary);
     });
   });
 

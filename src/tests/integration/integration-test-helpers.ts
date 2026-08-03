@@ -96,16 +96,19 @@ export async function createNonOverlappingEventPair(
   calendarId: string,
   baseTime: Date,
   createdEventIds: string[]
-): Promise<{ event1Id: string; event2Id: string }> {
+): Promise<{ event1Id: string; event2Id: string; event1Summary: string; event2Summary: string }> {
   const start1 = new Date(baseTime.getTime() + 2 * ONE_HOUR_MS);
   const end1 = new Date(start1.getTime() + ONE_HOUR_MS);
   const start2 = new Date(start1.getTime() + 2 * ONE_HOUR_MS);
   const end2 = new Date(start2.getTime() + ONE_HOUR_MS);
 
+  const event1Summary = 'Non-Overlapping Event 1';
+  const event2Summary = 'Non-Overlapping Event 2';
+
   const { eventId: event1Id } = await createAndVerifyEvent(
     mcpClient,
     calendarId,
-    'Non-Overlapping Event 1',
+    event1Summary,
     start1,
     end1,
     createdEventIds
@@ -114,13 +117,13 @@ export async function createNonOverlappingEventPair(
   const { eventId: event2Id } = await createAndVerifyEvent(
     mcpClient,
     calendarId,
-    'Non-Overlapping Event 2',
+    event2Summary,
     start2,
     end2,
     createdEventIds
   );
 
-  return { event1Id, event2Id };
+  return { event1Id, event2Id, event1Summary, event2Summary };
 }
 
 /**

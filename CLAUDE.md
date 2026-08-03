@@ -4,36 +4,40 @@
 
 **OAuth Setup** (test mode):
 ```bash
-export ACCOUNT_MODE=test CALENDARMCP_TOKEN_PATH=~/.config/google-calendar-mcp/tokens.json
+export GOOGLE_ACCOUNT_MODE=test CALENDARMCP_TOKEN_PATH=~/.config/google-calendar-mcp/tokens.json
 npm run auth  # Creates tokens.json; repeat for multiple accounts
-npm run verify-tokens  # Verify auth status
+npm run verify-tokens  # Verify auth status (calendar; uses ./credentials.json)
 ```
+
+**Env var split (gotcha):** TypeScript calendar code (`src/auth/paths.js`) reads `GOOGLE_ACCOUNT_MODE`; the root `.mjs` Gmail scripts (`lib/gmail-client.mjs`) read `ACCOUNT_MODE`. Setting only one leaves the other side on its default account.
 
 **Gmail Tokens:**
 ```bash
-node auth-gmail.mjs  # Creates tokens-gmail.json (separate from calendar)
-node check-gmail.mjs  # Quick unread count
+node auth-gmail.mjs      # Creates tokens-gmail.json (separate from calendar; ACCOUNT_MODE selects account)
+node verify-tokens.mjs   # Verify Gmail token status
 ```
 
 **Development:**
 ```bash
 npm install | npm run build | npm run dev | npm test
+npm run lint              # tsc --noEmit (tsconfig.lint.json)
+npm run test:integration  # Live-API integration tests (or test:all for both)
+npm run test:doppler      # Doppler-injected creds (integrity-studio/dev); also test:integration:doppler, test:all:doppler
+npm run repomix           # Regenerate docs/repomix/ artifacts (token tree, compressed/full/docs/git-ranked XML)
 ```
 
 **Auth Details:**
 - Tokens stored in `~/.config/google-calendar-mcp/tokens.json` (calendar) and `tokens-gmail.json` (Gmail)
-- `ACCOUNT_MODE` selects which account; TokenManager auto-refreshes 5 min before expiry
+- `GOOGLE_ACCOUNT_MODE` (calendar) / `ACCOUNT_MODE` (Gmail .mjs) selects account; TokenManager auto-refreshes 5 min before expiry
 - Test tokens expire after 7 days; set env vars before `npm run auth` or in `claude_desktop_config.json`
 - Token files use 0600 permissions; TokenManager (src/auth/tokenManager.ts) handles multi-account lifecycle
 
-**Test Status:**
-- ✅ Core handler tests (CreateEventHandler, GetEventHandler, GetCurrentTimeHandler)
-- ✅ Type-safe content assertions using `{ type: 'text'; text: string }` instead of `as any`
-- ✅ Integration tests for conflict detection via MCP protocol (real server, real API)
-- ✅ 601 unit tests passing, 23 skipped (3 integration test files require live API)
+**Testing:**
+- `npm test` runs unit tests (all passing); `npm run test:integration` requires live API
+- Use `{ type: 'text'; text: string }` content assertions, never `as any`
+- Test history and milestones: `docs/changelog/` ([CHANGELOG.md](docs/CHANGELOG.md))
 
-**Test Helpers & Fixtures:**
-Consolidated utilities reduce boilerplate across 30+ test files:
+**Test Helpers & Fixtures** (`src/tests/unit/helpers/`, `src/tests/integration/`):
 - `factories.ts` - Event fixtures (makeEvent, makeTeamMeetingEvent, createFullEventArgs, STANDARD_ATTACHMENTS, ATTACHMENT_IDS)
 - `content.ts` - Response helpers (getTextContent, expectValidToolResponse, expectJsonResponse, assertTextContentContains)
 - `handler-setup.ts` - Mock setup (setupListEventsHandler, createGoogleCalendarMocks)
@@ -61,16 +65,18 @@ Consolidated utilities reduce boilerplate across 30+ test files:
 Core pattern: Label → conditional archive (keep future events, important items, archive notifications).
 
 **Key Scripts:**
-- `list-unread-emails.mjs`, `summarize-remaining.mjs` — Email analysis
+- `list-unread-emails.mjs`, `list-inbox.mjs`, `summarize-remaining.mjs` — Email analysis
 - `organize-emails.mjs` — Full pipeline: label, filter, and conditionally archive emails
 - `create-gmail-filters.mjs` — Batch create Gmail filters from category definitions
-- `apply-filters-to-unread.mjs`, `protect-important-inbox.mjs`, `filter-events-by-date.mjs` — Filtering & organization
+- `create-other-filters.mjs` — Filters for uncategorized "Other" emails (GitHub, finance, travel, newsletters, etc.)
+- `protect-important-inbox.mjs`, `filter-events-by-date.mjs` — Filtering & organization
+- `mark-read.mjs` (label/past-event based, `--archived-only`/`--past-events` flags), `mark-forums-read.mjs`, `archive-old-emails.mjs --label "X"` — Read/archive maintenance
 - `switch-account.mjs` — Switch active Google account (file-based resolution)
 
 **Categories:** Protected (never archive) | Events (future=keep, past=archive) | Monitoring (archive) | Product Updates (label+archive) | Communities (keep) | Services (archive) | Billing (conditional)
 
 **Shared Utilities (`lib/`):**
-- `gmail-client.mjs` — Authenticated client factory (✅ 65+ scripts)
+- `gmail-client.mjs` — Authenticated client factory (used by all root .mjs scripts)
 - `gmail-label-utils.mjs` — Label caching: `buildLabelCache()`, `resolveLabelId()`, `resolveLabelIds()`
 - `gmail-batch.mjs` / `gmail-batch-utils.mjs` — Batch operations (10-100x speedup)
 - `gmail-message-utils.mjs` — Message header/body extraction, `decodeBase64Payload()`

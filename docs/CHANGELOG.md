@@ -6,6 +6,7 @@ All notable changes to this project are documented here. See individual version 
 
 | Version | Release Date | Items | Status |
 |---------|--------------|-------|--------|
+| [1.5.0](./changelog/1.5.0/CHANGELOG.md) | Unreleased | Testing milestones | 🚧 In progress |
 | [1.4.9](./changelog/1.4.9/CHANGELOG.md) | 2026-03-24 | 22/22 BACKLOG (100%) | ✅ Complete |
 
 ### Version 1.4.9 Highlights

@@ -74,8 +74,13 @@ Core pattern: Label → conditional archive (keep future events, important items
 - `organize-emails.mjs` — Full pipeline: label, filter, and conditionally archive emails
 - `create-gmail-filters.mjs` — Batch create Gmail filters from category definitions
 - `create-other-filters.mjs` — Filters for uncategorized "Other" emails (GitHub, finance, travel, newsletters, etc.)
+- `sublabel-services.mjs` — Sub-categorize Services & Alerts into Real Estate/Health/Utilities sublabels + auto-label filters (`--all` includes read mail)
 - `protect-important-inbox.mjs`, `filter-events-by-date.mjs` — Filtering & organization
 - `mark-read.mjs` (label/past-event based, `--archived-only`/`--past-events` flags), `mark-forums-read.mjs`, `archive-old-emails.mjs --label "X"` — Read/archive maintenance
+- `mark-old-label-read.mjs --label "X" [--before YYYY/MM/DD]` — Mark a label's unread emails older than a cutoff (default 30 days) as read
+- `mark-past-events-read.mjs [--label "Events"] [--dry-run]` — Date-classify a label's unread mail (subject/body via `classifyEmail`, HTML fallback); mark past events read, keep future/undatable unread
+- `extract-event-details.mjs [--max N] [--full] "<gmail-query>" [query...]` — Print subject + body fragments around date/time/location keywords for each query's matches (calendar-entry prep without opening emails)
+- `bulk-archive-unread.mjs` — Archive all unread inbox mail except "Keep Important" (stays unread; resumable; retry + batch-split on FAILED_PRECONDITION)
 - `switch-account.mjs` — Switch active Google account (file-based resolution)
 
 **Categories:** Protected (never archive) | Events (future=keep, past=archive) | Monitoring (archive) | Product Updates (label+archive) | Communities (keep) | Services (archive) | Billing (conditional)

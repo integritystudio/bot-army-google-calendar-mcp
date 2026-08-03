@@ -9,9 +9,11 @@ npm run auth  # Creates tokens.json; repeat for multiple accounts
 npm run verify-tokens  # Verify auth status (calendar; uses ./credentials.json)
 ```
 
-**Dependency gotcha:** `package.json` overrides pin `googleapis-common@8.0.1` — 8.0.3 exact-pins a nested `google-auth-library@10.5.0` that duplicates the root copy and breaks `npm run lint` with `OAuth2Client` type mismatches. Recheck the override when bumping `googleapis` past 171.
+**Dependency gotcha:** `package.json` overrides pin `googleapis-common@8.0.1` — 8.0.3 exact-pins a nested `google-auth-library@10.5.0` that duplicates the root copy and breaks `npm run lint` with `OAuth2Client` type mismatches. Verified still required at googleapis 173; recheck on future bumps.
 
 **Env var split (gotcha):** TypeScript calendar code (`src/auth/paths.js`) reads `GOOGLE_ACCOUNT_MODE`; the root `.mjs` Gmail scripts (`lib/gmail-client.mjs`) read `ACCOUNT_MODE`. Setting only one leaves the other side on its default account.
+
+**Google Calendar API gotchas (recurring events):** inserts require an explicit `timeZone` on start/end even when dateTime carries a UTC offset (else 400 "Missing time zone definition"); durations must be whole seconds — a 1ms start/end skew gets a bare 400. Use `stripSubseconds()` (date-utils) on paired values.
 
 **Gmail Tokens:**
 ```bash
@@ -38,6 +40,7 @@ npm run repomix           # Regenerate docs/repomix/ artifacts (token tree, comp
 - `npm test` runs unit tests (all passing); `npm run test:integration` requires live API
 - Use `{ type: 'text'; text: string }` content assertions, never `as any`
 - Test history and milestones: `docs/changelog/` ([CHANGELOG.md](docs/CHANGELOG.md))
+- Known gap: `claude-mcp-integration.test.ts` fails at beforeAll under `test:all` — CLAUDE_API_KEY is not in doppler integrity-studio/dev; its 6 tests skip. Not a code failure.
 
 **Test Helpers & Fixtures** (`src/tests/unit/helpers/`, `src/tests/integration/`):
 - `factories.ts` - Event fixtures (makeEvent, makeTeamMeetingEvent, createFullEventArgs, STANDARD_ATTACHMENTS, ATTACHMENT_IDS)

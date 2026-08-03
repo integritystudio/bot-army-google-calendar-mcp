@@ -18,11 +18,41 @@ import {
   LABEL_SENTRY,
   LABEL_KEEP_IMPORTANT,
   LABEL_EVENTS,
+  LABEL_EVENTS_MEETUP,
+  LABEL_EVENTS_APA,
+  LABEL_EVENTS_LUMA,
+  LABEL_EVENTS_PERSONAL,
+  LABEL_EVENTS_EVENTBRITE,
+  LABEL_EVENTS_IMPORTANT,
   LABEL_MONITORING,
   LABEL_PRODUCT_UPDATES,
+  LABEL_PRODUCT_UPDATES_CHATGPT,
   LABEL_COMMUNITIES,
   LABEL_SERVICES,
+  LABEL_SERVICES_REAL_ESTATE,
+  LABEL_SERVICES_HEALTH,
+  LABEL_SERVICES_UTILITIES,
   LABEL_BILLING,
+  LABEL_BILLING_CREDIT_MONITORING,
+  LABEL_BILLING_MARKET_ALERTS,
+  LABEL_BILLING_ACCOUNT_SECURITY,
+  LABEL_FORUMS,
+  LABEL_FORUMS_LINKEDIN_SOCIAL,
+  LABEL_FORUMS_GLASSDOOR,
+  LABEL_NEWSLETTERS,
+  LABEL_NEWSLETTERS_LINKEDIN,
+  LABEL_JOB_SEARCH,
+  LABEL_JOB_SEARCH_LINKEDIN,
+  LABEL_JOB_SEARCH_GLASSDOOR,
+  LABEL_JOB_SEARCH_BACKSTAGE,
+  LABEL_JOB_SEARCH_INDEED,
+  LABEL_JOB_SEARCH_OTHER,
+  LABEL_TRAVEL,
+  LABEL_TRAVEL_AIRBNB_RESERVATIONS,
+  LABEL_TRAVEL_AIRBNB_SUPPORT,
+  LABEL_PROMOTIONS_TRAVEL,
+  LABEL_PROMOTIONS_TRAVEL_DISCOUNTS,
+  LABEL_ADVOCACY,
 } from './lib/constants.mjs';
 
 const countOnly = process.argv.includes('--count');
@@ -35,19 +65,65 @@ const CATEGORY_PRIORITY = [
   LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING,
 ];
 
-const TRACKED_LABELS = [LABEL_SENTRY, ...CATEGORY_PRIORITY];
+const OTHER_CATEGORY_LABELS = [
+  LABEL_FORUMS, LABEL_NEWSLETTERS, LABEL_JOB_SEARCH, LABEL_TRAVEL, LABEL_ADVOCACY,
+];
+
+const PRODUCT_UPDATES_SUBLABELS = [LABEL_PRODUCT_UPDATES_CHATGPT];
+
+const EVENTS_SUBLABELS = [
+  LABEL_EVENTS_MEETUP, LABEL_EVENTS_APA, LABEL_EVENTS_LUMA,
+  LABEL_EVENTS_PERSONAL, LABEL_EVENTS_EVENTBRITE, LABEL_EVENTS_IMPORTANT,
+];
+
+const SERVICES_SUBLABELS = [
+  LABEL_SERVICES_REAL_ESTATE, LABEL_SERVICES_HEALTH, LABEL_SERVICES_UTILITIES,
+];
+
+const BILLING_SUBLABELS = [
+  LABEL_BILLING_CREDIT_MONITORING, LABEL_BILLING_MARKET_ALERTS, LABEL_BILLING_ACCOUNT_SECURITY,
+];
+
+const FORUMS_SUBLABELS = [LABEL_FORUMS_LINKEDIN_SOCIAL, LABEL_FORUMS_GLASSDOOR];
+
+const NEWSLETTERS_SUBLABELS = [LABEL_NEWSLETTERS_LINKEDIN];
+
+const JOB_SEARCH_SUBLABELS = [
+  LABEL_JOB_SEARCH_LINKEDIN, LABEL_JOB_SEARCH_GLASSDOOR, LABEL_JOB_SEARCH_BACKSTAGE,
+  LABEL_JOB_SEARCH_INDEED, LABEL_JOB_SEARCH_OTHER,
+];
+
+const TRAVEL_SUBLABELS = [LABEL_TRAVEL_AIRBNB_RESERVATIONS, LABEL_TRAVEL_AIRBNB_SUPPORT];
+
+const PROMOTIONS_LABELS = [LABEL_PROMOTIONS_TRAVEL, LABEL_PROMOTIONS_TRAVEL_DISCOUNTS];
+
+const TRACKED_LABELS = [
+  LABEL_SENTRY, ...CATEGORY_PRIORITY, ...PRODUCT_UPDATES_SUBLABELS, ...EVENTS_SUBLABELS, ...SERVICES_SUBLABELS, ...BILLING_SUBLABELS,
+  ...OTHER_CATEGORY_LABELS, ...FORUMS_SUBLABELS, ...NEWSLETTERS_SUBLABELS, ...JOB_SEARCH_SUBLABELS,
+  ...TRAVEL_SUBLABELS, ...PROMOTIONS_LABELS,
+];
 
 const PREVIEW_LIMIT = 5;
 const SUBJECT_MAX_LENGTH = 60;
 
-async function listUnreadEmails(gmail) {
-  const searchResponse = await gmail.users.messages.list({ userId: USER_ID, q: 'is:unread', maxResults: countOnly ? 1 : 500 });
-  const unreadCount = searchResponse.data.resultSizeEstimate || 0;
+const SYSTEM_LABEL_UNREAD = 'UNREAD';
+const SYSTEM_LABEL_INBOX = 'INBOX';
 
+// labels.get returns authoritative messagesTotal/messagesUnread; messages.list's
+// resultSizeEstimate is an estimate Gmail caps at ~201 and cannot be trusted.
+async function getLabelCounts(gmail, labelId) {
+  const res = await gmail.users.labels.get({ userId: USER_ID, id: labelId });
+  return { total: res.data.messagesTotal || 0, unread: res.data.messagesUnread || 0 };
+}
+
+async function listUnreadEmails(gmail) {
   if (countOnly) {
-    console.log(`\nUnread messages: ${unreadCount}`);
+    const { total } = await getLabelCounts(gmail, SYSTEM_LABEL_UNREAD);
+    console.log(`\nUnread messages: ${total}`);
     return;
   }
+
+  const searchResponse = await gmail.users.messages.list({ userId: USER_ID, q: 'is:unread', maxResults: 500 });
 
   const messageIds = searchResponse.data.messages || [];
 
@@ -118,27 +194,20 @@ async function showStats(gmail) {
   console.log(`Total messages: ${profile.data.messagesTotal}`);
   console.log(`Total threads: ${profile.data.threadsTotal}`);
 
-  const [unreadResult, inboxResult] = await Promise.all([
-    gmail.users.messages.list({ userId: USER_ID, q: 'is:unread' }),
-    gmail.users.messages.list({ userId: USER_ID, q: 'is:unread in:inbox' }),
+  const [unreadCounts, inboxCounts] = await Promise.all([
+    getLabelCounts(gmail, SYSTEM_LABEL_UNREAD),
+    getLabelCounts(gmail, SYSTEM_LABEL_INBOX),
   ]);
-  console.log(`Unread (is:unread): ${unreadResult.data.resultSizeEstimate}`);
-  console.log(`Unread in inbox: ${inboxResult.data.resultSizeEstimate}`);
+  console.log(`Unread: ${unreadCounts.total}`);
+  console.log(`Unread in inbox: ${inboxCounts.unread}`);
 
   console.log('\nBy Label (total / unread):');
   const labelStats = await Promise.all(
     TRACKED_LABELS.map(async label => {
       const labelId = labelMap.get(label);
       if (!labelId) return { label, total: 0, unread: 0, missing: true };
-      const [totalRes, unreadRes] = await Promise.all([
-        gmail.users.messages.list({ userId: USER_ID, labelIds: [labelId] }),
-        gmail.users.messages.list({ userId: USER_ID, labelIds: [labelId], q: 'is:unread' }),
-      ]);
-      return {
-        label,
-        total: totalRes.data.resultSizeEstimate || 0,
-        unread: unreadRes.data.resultSizeEstimate || 0,
-      };
+      const { total, unread } = await getLabelCounts(gmail, labelId);
+      return { label, total, unread };
     })
   );
 

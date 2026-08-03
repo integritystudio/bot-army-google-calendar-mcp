@@ -1,0 +1,90 @@
+#!/usr/bin/env node
+/**
+ * extract-event-details.mjs — Surface date/time/location details from emails.
+ *
+ * For each Gmail search query given, fetches matching messages and prints the
+ * subject plus body fragments around date/time/location keywords, so event
+ * details (when, where) can be read without opening each email.
+ *
+ * Usage:
+ *   node extract-event-details.mjs 'subject:"Registration confirmed"' [query...]
+ *   node extract-event-details.mjs --max 3 'label:Events is:unread from:luma-mail.com'
+ *   node extract-event-details.mjs --full 'subject:"Austin Women Rising"'
+ *
+ * Options:
+ *   --max N   Messages to fetch per query (default 1)
+ *   --full    Print the full extracted body text instead of keyword windows
+ */
+import { pathToFileURL } from 'node:url';
+import { createGmailClient } from './lib/gmail-client.mjs';
+import { getHeader } from './lib/email-utils.mjs';
+import { extractBodyText } from './lib/gmail-message-utils.mjs';
+import { USER_ID } from './lib/constants.mjs';
+
+const DEFAULT_MESSAGES_PER_QUERY = 1;
+const WINDOW_BEFORE_CHARS = 80;
+const WINDOW_AFTER_CHARS = 100;
+const MAX_WINDOWS_PER_MESSAGE = 25;
+const OUTPUT_CAP_CHARS = 2600;
+const WINDOW_DEDUP_BUCKET_CHARS = 120;
+const WINDOW_SEPARATOR = '\n  ---\n';
+
+const EVENT_DETAIL_KEYWORDS =
+  /(when|where|date|time|location|address|venue|am|pm|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept?|oct|nov|dec|[ECMP][SD]T|CT)\b/gi;
+
+/**
+ * Collects deduplicated text fragments around event-detail keywords.
+ *
+ * @param {string} text - Whitespace-normalized body text
+ * @returns {string[]}
+ */
+export function extractDetailWindows(text) {
+  const windows = [];
+  const seenBuckets = new Set();
+  let match;
+  EVENT_DETAIL_KEYWORDS.lastIndex = 0;
+  while ((match = EVENT_DETAIL_KEYWORDS.exec(text)) && windows.length < MAX_WINDOWS_PER_MESSAGE) {
+    const start = Math.max(0, match.index - WINDOW_BEFORE_CHARS);
+    const bucket = Math.floor(start / WINDOW_DEDUP_BUCKET_CHARS);
+    if (seenBuckets.has(bucket)) continue;
+    seenBuckets.add(bucket);
+    windows.push(text.substring(start, match.index + WINDOW_AFTER_CHARS));
+  }
+  return windows;
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  const fullMode = args.includes('--full');
+  const maxIdx = args.indexOf('--max');
+  const messagesPerQuery = maxIdx !== -1 ? Number(args[maxIdx + 1]) : DEFAULT_MESSAGES_PER_QUERY;
+  const queries = args.filter((a, i) => a !== '--full' && a !== '--max' && !(maxIdx !== -1 && i === maxIdx + 1));
+
+  if (queries.length === 0 || (maxIdx !== -1 && !Number.isInteger(messagesPerQuery))) {
+    console.error('Usage: node extract-event-details.mjs [--max N] [--full] <gmail-query> [query...]');
+    process.exit(1);
+  }
+
+  const gmail = await createGmailClient();
+  for (const q of queries) {
+    const res = await gmail.users.messages.list({ userId: USER_ID, q, maxResults: messagesPerQuery });
+    const found = res.data.messages || [];
+    if (found.length === 0) {
+      console.log(`=== NOT FOUND: ${q}\n`);
+      continue;
+    }
+    for (const { id } of found) {
+      const msg = await gmail.users.messages.get({ userId: USER_ID, id, format: 'full' });
+      const headers = msg.data.payload?.headers || [];
+      console.log(`=== ${getHeader(headers, 'Subject', '(no subject)')}`);
+      const text = extractBodyText(msg.data.payload).replace(/\s+/g, ' ');
+      const output = fullMode ? text : extractDetailWindows(text).join(WINDOW_SEPARATOR);
+      console.log(output.substring(0, OUTPUT_CAP_CHARS));
+      console.log('\n');
+    }
+  }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main();
+}

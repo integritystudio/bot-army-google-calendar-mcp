@@ -2,6 +2,7 @@
 // a sender's mail may route to Billing, Promotions, or Purchases, but always carries
 // the same Organization label. Filters here are label-only — never archive/mark-read.
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { argAfter } from './lib/cli-utils.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
 import {
   LABEL_ORG_OPEN_SOURCE,
@@ -29,7 +30,8 @@ async function withRetry(fn) {
     try {
       return await fn();
     } catch (error) {
-      const transient = error.message?.includes('Precondition') || error.code === 429 || error.code === 500 || error.code === 503;
+      const transient = (error instanceof Error && error.message.includes('Precondition'))
+        || (typeof error?.code === 'number' && [429, 500, 503].includes(error.code));
       if (!transient || attempt >= MAX_RETRIES) throw error;
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempt));
     }
@@ -321,11 +323,6 @@ const ORG_TAGS = [
 ];
 
 const skipBackfill = process.argv.includes('--filters-only');
-
-const argAfter = flag => {
-  const i = process.argv.indexOf(flag);
-  return i !== -1 ? process.argv[i + 1] : null;
-};
 const onlyLabel = argAfter('--only');
 const onlyOrgs = argAfter('--orgs')?.split(',').map(s => s.trim().toLowerCase());
 

@@ -12,6 +12,7 @@ import { createGmailClient } from './lib/gmail-client.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
 import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 import { BANNER } from './lib/console-utils.mjs';
+import { argAfter } from './lib/cli-utils.mjs';
 import {
   GMAIL_INBOX,
   GMAIL_UNREAD,
@@ -675,11 +676,6 @@ const CATEGORIES = [
     ],
   },
 ];
-
-const argAfter = flag => {
-  const i = process.argv.indexOf(flag);
-  return i !== -1 ? process.argv[i + 1] : null;
-};
 
 async function run() {
   const onlyPrefix = argAfter('--only');

@@ -70,6 +70,7 @@ import {
  *   markRead      — also strip UNREAD when applying (default false)
  *   applyQuery    — override the backfill query (default: join all filter queries with OR + is:unread)
  */
+// Exported so backfill/drain scripts can import the definitions without executing run()
 export const CATEGORIES = [
   {
     labelName: LABEL_FORUMS,
@@ -196,7 +197,7 @@ export const CATEGORIES = [
       { name: 'Trip.com', query: 'from:newsletter.trip.com' },
       { name: 'Under30 Experiences', query: 'from:under30experiences.com' },
       { name: 'Couchsurfing', query: 'from:marketing.couchsurfing.com' },
-      { name: 'Lyft', query: 'from:lyftmail.com' },
+      { name: 'Lyft', query: 'from:(lyft.com OR lyftmail.com)' },
       { name: 'United Notifications', query: 'from:(notifications@united.com OR insights.united.com)' },
       { name: 'American Airlines Trips', query: 'from:(connect.email.aa.com OR info.ms.aa.com OR info.email.aa.com)' },
       { name: 'Southwest Trips', query: 'from:ifly.southwest.com' },

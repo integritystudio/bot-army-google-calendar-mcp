@@ -27,6 +27,7 @@ import {
   LABEL_PROMOTIONS_RETAIL,
   LABEL_PROMOTIONS_BEAUTY,
   LABEL_PROMOTIONS_FOOD,
+  LABEL_PROMOTIONS_FINANCIAL,
   LABEL_AUTOMOTIVE_SHOPPING,
   LABEL_AUTOMOTIVE_INSURANCE,
 } from './lib/constants.mjs';
@@ -212,6 +213,20 @@ const CATEGORIES = [
       // Shared marketing-platform domains — pin the full address so other merchants on the platform don't match
       { name: 'Driftwood Spa', query: 'from:Driftwood@demandforced3.com' },
       { name: 'Dolce Blu', query: 'from:noreply@hirefrederick.com' },
+    ],
+  },
+  {
+    // Marketing-only sender domains — statements/alerts use separate domains
+    // (o.sofi.org, notify.wellsfargo.com, transactional.vanguard.com) and must stay in inbox
+    labelName: LABEL_PROMOTIONS_FINANCIAL,
+    archive: true,
+    filters: [
+      { name: 'NerdWallet', query: 'from:mail.nerdwallet.com' },
+      { name: 'SoFi Marketing', query: 'from:(m.sofi.org OR r.sofi.com)' },
+      { name: 'USAA Offers', query: 'from:(Perks@mem.usaa.com OR USAABank@exmac.usaa.com)' },
+      { name: 'Wells Fargo Offers', query: 'from:mail1.wellsfargo.com' },
+      { name: 'Vanguard Digital Advisor', query: 'from:e-vanguard.com' },
+      { name: 'CNN Subscriptions', query: 'from:email.cnn.com' },
     ],
   },
   {

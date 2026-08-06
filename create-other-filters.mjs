@@ -24,6 +24,8 @@ import {
   LABEL_JOB_SEARCH,
   LABEL_TRAVEL,
   LABEL_ADVOCACY,
+  LABEL_ADVOCACY_POLITICAL,
+  LABEL_ADVOCACY_NONPROFIT,
   LABEL_PROMOTIONS_RETAIL,
   LABEL_PROMOTIONS_BEAUTY,
   LABEL_PROMOTIONS_FOOD,
@@ -155,6 +157,7 @@ const CATEGORIES = [
       { name: 'United News & Deals', query: 'from:enews.united.com' },
       { name: 'Copa Airlines', query: 'from:email.copa.com' },
       { name: 'Vrbo Marketing', query: 'from:eg.vrbo.com' },
+      { name: 'American Airlines Loyalty', query: 'from:loyalty.ms.aa.com' },
       { name: 'Rappi', query: 'from:hello.rappi.com.co' },
     ],
   },
@@ -211,6 +214,26 @@ const CATEGORIES = [
     ],
   },
   {
+    // Campaign/electoral/legislative senders
+    labelName: LABEL_ADVOCACY_POLITICAL,
+    archive: true,
+    markRead: true,
+    // Single combined filter: Gmail dedupes filters on criteria alone, so these must
+    // differ from the parent Advocacy category's per-sender criteria
+    filters: [
+      { name: 'Political senders', query: 'from:(dlcc.org OR mail.house.gov)' },
+    ],
+  },
+  {
+    // Charitable/501(c)(3) organizations
+    labelName: LABEL_ADVOCACY_NONPROFIT,
+    archive: true,
+    markRead: true,
+    filters: [
+      { name: 'Non-profit senders', query: 'from:(insidebooksproject.org OR email.obama.org)' },
+    ],
+  },
+  {
     labelName: LABEL_EVENTS,
     archive: false,
     filters: [
@@ -236,6 +259,7 @@ const CATEGORIES = [
     archive: false,
     filters: [
       { name: 'Tiny Minotaur Tavern', query: 'from:tinyminotaur.com' },
+      { name: 'The Unbuzzed Club', query: 'from:theunbuzzedclub.com' },
       { name: 'Fallout Theater', query: 'from:fallouttheater.com' },
       { name: 'Museum of Human Achievement', query: 'from:themuseumofhumanachievement.com' },
       { name: 'Austin Westie Academy', query: 'from:austinwestieacademy' },
@@ -289,6 +313,7 @@ const CATEGORIES = [
       { name: 'Gaston & Sheehan Auctions', query: 'from:txauction.com' },
       { name: 'Nextdoor', query: 'from:email.nextdoor.com' },
       { name: 'CoStar Listings', query: 'from:c.costarmail.com' },
+      { name: 'Magic Helpers', query: 'from:themagichelpers.com' },
     ],
   },
   {
@@ -318,6 +343,7 @@ const CATEGORIES = [
     filters: [
       { name: 'City of Austin', query: 'from:austintexas.gov' },
       { name: 'Austin Neighborhoods Council', query: 'from:ancweb.org' },
+      { name: 'Austin Habitat for Humanity', query: 'from:ahfh.org' },
     ],
   },
   {
@@ -425,6 +451,7 @@ const CATEGORIES = [
     archive: true,
     filters: [
       { name: 'LaserAway', query: 'from:laseraway.com' },
+      { name: 'Saving Face Austin', query: 'from:savingfaceaustin.com' },
       { name: 'milk + honey', query: 'from:milkandhoney.com' },
       // Shared marketing-platform domains — pin the full address so other merchants on the platform don't match
       { name: 'Driftwood Spa', query: 'from:Driftwood@demandforced3.com' },
@@ -439,7 +466,8 @@ const CATEGORIES = [
     filters: [
       { name: 'NerdWallet', query: 'from:mail.nerdwallet.com' },
       { name: 'SoFi Marketing', query: 'from:(m.sofi.org OR r.sofi.com)' },
-      { name: 'USAA Offers', query: 'from:(Perks@mem.usaa.com OR USAABank@exmac.usaa.com)' },
+      { name: 'USAA Offers', query: 'from:(Perks@mem.usaa.com OR exmac.usaa.com)' },
+      { name: 'Boston Globe Offers', query: 'from:email.globe.com' },
       { name: 'Wells Fargo Offers', query: 'from:mail1.wellsfargo.com' },
       { name: 'Vanguard Digital Advisor', query: 'from:e-vanguard.com' },
       { name: 'CNN Subscriptions', query: 'from:email.cnn.com' },

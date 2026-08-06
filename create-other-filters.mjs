@@ -36,6 +36,7 @@ import {
   LABEL_COMMUNITIES,
   LABEL_PERSONAL_CORRESPONDENCE,
   LABEL_PERSONAL_SELF_CORRESPONDENCE,
+  LABEL_LEGAL,
   LABEL_PROMOTIONS_RETAIL,
   LABEL_PROMOTIONS_BEAUTY,
   LABEL_PROMOTIONS_FOOD,
@@ -150,6 +151,14 @@ const CATEGORIES = [
       { name: 'Global Sources', query: 'from:(globalsources.com)' },
       { name: 'Pottery Barn', query: 'from:e.potterybarn.com' },
       { name: 'Render Outreach', query: 'from:anurag.goel@render.com' },
+      { name: 'Read AI', query: 'from:(read.ai OR e.read.ai)' },
+      { name: 'Otter.ai', query: 'from:otter.ai' },
+      { name: 'Microsoft', query: 'from:(microsoft.com OR notificationmail.microsoft.com)' },
+      { name: 'Meta Devices', query: 'from:email.meta.com' },
+      { name: 'Splitwise', query: 'from:splitwise.com' },
+      { name: 'Wikiloc', query: 'from:wikiloc.com' },
+      { name: 'Apple', query: 'from:email.apple.com' },
+      { name: 'WordPress.com', query: 'from:wordpress.com' },
     ],
   },
   {
@@ -173,6 +182,8 @@ const CATEGORIES = [
       { name: 'Google Flights Alerts', query: 'from:google.com subject:"tracked route"' },
       { name: 'Trip.com', query: 'from:newsletter.trip.com' },
       { name: 'Under30 Experiences', query: 'from:under30experiences.com' },
+      { name: 'Couchsurfing', query: 'from:marketing.couchsurfing.com' },
+      { name: 'Lyft', query: 'from:lyftmail.com' },
     ],
   },
   {
@@ -187,6 +198,8 @@ const CATEGORIES = [
       { name: 'Vrbo Marketing', query: 'from:eg.vrbo.com' },
       { name: 'American Airlines Loyalty', query: 'from:loyalty.ms.aa.com' },
       { name: 'Rappi', query: 'from:hello.rappi.com.co' },
+      { name: 'AirAsia Rewards', query: 'from:rewards.airasia.com' },
+      { name: 'GOL', query: 'from:news.voegol.com.br' },
     ],
   },
   {
@@ -205,6 +218,8 @@ const CATEGORIES = [
       { name: 'EstateJobs', query: 'from:estatejobs.com' },
       { name: 'Lensa', query: 'from:lensa.com' },
       { name: 'A.Team', query: 'from:a.team' },
+      { name: 'Recruiter cold-email (Steneral)', query: 'from:steneral.com' },
+      { name: 'College Contact', query: 'from:yourcollegecontact.com' },
     ],
   },
   {
@@ -233,6 +248,15 @@ const CATEGORIES = [
       { name: 'Axios Partners', query: 'from:partners@axios.com' },
       { name: 'The Publish Press', query: 'from:mail.thepublishpress.com' },
       { name: 'Google Scholar Alerts', query: 'from:scholaralerts-noreply@google.com' },
+      { name: 'Cherub', query: 'from:investwithcherub.com' },
+      { name: 'Wilbe', query: 'from:wilbe.com' },
+      { name: 'Advisory Board Centre', query: 'from:advisoryboardcentre.com' },
+      { name: 'Unbuilt Lab', query: 'from:unbuiltlab.com' },
+      { name: 'Law.com', query: 'from:law.com' },
+      { name: 'Dr. Hyman', query: 'from:drhyman.com' },
+      { name: 'Sound Sight Tarot', query: 'from:soundsighttarot.com' },
+      { name: 'Heart Centered Being', query: 'from:theheartcenteredbeing.com' },
+      { name: 'UT Austin Newsletters', query: 'from:(utexas.edu OR mccombs.utexas.edu) subject:newsletter' },
     ],
   },
   {
@@ -263,6 +287,8 @@ const CATEGORIES = [
     archive: false,
     filters: [
       { name: 'Austin Less Wrong', query: 'from:(austinlesswrong@gmail.com OR sbarta@gmail.com OR chanj137036@gmail.com)' },
+      { name: 'Fiesta Community', query: 'from:fiesta.community' },
+      { name: 'VIDA Coworking', query: 'from:vidacoworking.com' },
     ],
   },
   {
@@ -282,6 +308,16 @@ const CATEGORIES = [
     ],
   },
   {
+    // Legal correspondence, signed documents, court-ordered course records — stay in inbox
+    labelName: LABEL_LEGAL,
+    archive: false,
+    filters: [
+      { name: 'SAFE Austin', query: 'from:safeaustin.org' },
+      { name: 'signNow', query: 'from:signnow.com' },
+      { name: 'LRS Systems', query: 'from:lrssystems.com' },
+    ],
+  },
+  {
     // Mail from my own accounts (self-notes, cross-account forwards) — stay in inbox
     labelName: LABEL_PERSONAL_SELF_CORRESPONDENCE,
     archive: false,
@@ -296,6 +332,10 @@ const CATEGORIES = [
     markRead: true,
     filters: [
       { name: 'Non-profit senders', query: 'from:(insidebooksproject.org OR email.obama.org)' },
+      { name: 'Equality Texas', query: 'from:equalitytexas.org' },
+      { name: 'Eat Real', query: 'from:eatreal.org' },
+      { name: 'Friends Austin', query: 'from:friendsaustin.org' },
+      { name: 'Front Steps', query: 'from:mailman.bloomerang-mail.com' },
     ],
   },
   {
@@ -316,6 +356,8 @@ const CATEGORIES = [
       { name: 'Austin Alchemist', query: 'from:theaustinalchemist.com' },
       { name: 'Lumos Fitness', query: 'from:lumosfc.com' },
       { name: 'UT Austin Announcements', query: 'from:(econnect.utexas.edu OR austin.utexas.edu)' },
+      { name: '10times', query: 'from:10times.com' },
+      { name: 'Summit Series', query: 'from:summit.co' },
     ],
   },
   {
@@ -332,6 +374,10 @@ const CATEGORIES = [
       { name: 'Houston Sports & Social Club', query: 'from:houstonssc.com' },
       { name: 'Tantra Institute', query: 'from:tantrany.com' },
       { name: 'CreativeMornings', query: 'from:creativemornings.com' },
+      { name: 'Austin Books & Comics', query: 'from:austinbooks.ccsend.com' },
+      { name: 'Texas Longhorns', query: 'from:go.texaslonghorns.com' },
+      { name: 'MyCheekyDate', query: 'from:mycheekydate.com' },
+      { name: 'Alchemy Fitness', query: 'from:alchemy.bm' },
     ],
   },
   {
@@ -360,6 +406,11 @@ const CATEGORIES = [
       { name: 'Goodreads', query: 'from:mail.goodreads.com' },
       { name: 'X Digests', query: 'from:newsletter@x.com' },
       { name: 'Instagram', query: 'from:mail.instagram.com' },
+      { name: 'TikTok', query: 'from:service.tiktok.com' },
+      { name: 'Facebook', query: 'from:(facebookmail.com OR priority.facebookmail.com)' },
+      { name: 'Discord', query: 'from:discord.com' },
+      { name: 'Prime Video', query: 'from:(primevideo.com OR channels.primevideo.com)' },
+      { name: 'Spotify', query: 'from:(spotify.com OR legal.spotify.com)' },
     ],
   },
   {
@@ -421,7 +472,7 @@ const CATEGORIES = [
     labelName: LABEL_SERVICES_HOME,
     archive: true,
     filters: [
-      { name: 'Ring', query: 'from:(mail.ring.com OR notifications.ring.com) -subject:"charge your" -subject:"action required"' },
+      { name: 'Ring', query: 'from:(mail.ring.com OR notifications.ring.com OR em.service.ring.com OR rs.ring.com) -subject:"charge your" -subject:"action required"' },
       { name: 'Handy', query: 'from:handy.com' },
       { name: 'EnergySage', query: 'from:energysage.com' },
       { name: 'GFiber', query: 'from:outreach.gfiber.com' },
@@ -509,6 +560,8 @@ const CATEGORIES = [
       { name: 'Docusign Account', query: 'from:account.docusign.net' },
       { name: 'Doppler Logins', query: 'from:doppler.com' },
       { name: 'Venmo Security', query: 'from:security-alerts@venmo.com' },
+      { name: 'Tesla Verification', query: 'from:tesla.com subject:verification' },
+      { name: 'npm Tokens', query: 'from:npmjs.com' },
     ],
   },
   {
@@ -532,6 +585,7 @@ const CATEGORIES = [
       { name: 'Equifax', query: 'from:(e.equifax.com OR equifax.com)' },
       { name: 'Experian Monitoring', query: 'from:s.usa.experian.com' },
       { name: 'Credit Karma', query: 'from:(mail.creditkarma.com OR notifications.creditkarma.com)' },
+      { name: 'IDnotify', query: 'from:email.idnotify.com' },
     ],
   },
   {
@@ -547,6 +601,8 @@ const CATEGORIES = [
       { name: 'Anthropic Receipts', query: 'from:mail.anthropic.com subject:receipt' },
       { name: 'DocHub Receipts', query: 'from:dochub.com subject:receipt' },
       { name: 'Toast Orders (JuiceLand etc.)', query: 'from:toasttab.com' },
+      { name: 'Park ATX', query: 'from:gopassport.com' },
+      { name: 'Hartsel Ranch', query: 'from:hartselranch.co' },
     ],
   },
   {
@@ -598,6 +654,7 @@ const CATEGORIES = [
       { name: 'Thorum', query: 'from:thorum.com' },
       { name: 'Smashwords', query: 'from:smashwords.com' },
       { name: 'Lumosity', query: 'from:updates.lumosity.com' },
+      { name: 'Move Dancewear', query: 'from:movedancewear.com' },
     ],
   },
   {
@@ -611,6 +668,8 @@ const CATEGORIES = [
       { name: 'Driftwood Spa', query: 'from:Driftwood@demandforced3.com' },
       { name: 'Dolce Blu', query: 'from:noreply@hirefrederick.com' },
       { name: 'Dermazen', query: 'from:dermazen.co' },
+      { name: 'WellnessLiving Studios', query: 'from:wellnessliving.com' },
+      { name: 'SweatDecks', query: 'from:sweatdecks.com' },
     ],
   },
   {
@@ -626,6 +685,8 @@ const CATEGORIES = [
       { name: 'Wells Fargo Offers', query: 'from:mail1.wellsfargo.com' },
       { name: 'Vanguard Digital Advisor', query: 'from:e-vanguard.com' },
       { name: 'CNN Subscriptions', query: 'from:email.cnn.com' },
+      { name: 'Lemonade', query: 'from:lemonade.com' },
+      { name: 'Better Cover', query: 'from:better.com' },
     ],
   },
   {
@@ -661,6 +722,8 @@ const CATEGORIES = [
       { name: 'Hopdoddy', query: 'from:hopdoddy@emails.thanx.com' },
       { name: 'MOD Pizza', query: 'from:offers@modpizza.com' },
       { name: 'Northside Wine & Spirits', query: 'from:northsidewine.com' },
+      { name: 'DoorDash', query: 'from:doordash.com' },
+      { name: 'Instacart', query: 'from:instacart.com' },
       { name: 'Whole Foods', query: 'from:mail.wholefoodsmarket.com' },
       { name: 'Papa Johns', query: 'from:promotions.papajohns.com' },
       { name: 'Wegmans', query: 'from:eml.wegmans.com' },

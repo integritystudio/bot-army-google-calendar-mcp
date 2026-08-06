@@ -20,12 +20,21 @@ import {
   LABEL_BILLING,
   LABEL_PRODUCT_UPDATES,
   LABEL_EVENTS,
+  LABEL_EVENTS_LUMA,
+  LABEL_EVENTS_CALENDAR_NOTIFICATIONS,
+  LABEL_EVENTS_DANCE,
+  LABEL_SERVICES_REAL_ESTATE,
+  LABEL_SERVICES_UTILITIES,
   LABEL_NEWSLETTERS,
   LABEL_JOB_SEARCH,
   LABEL_TRAVEL,
   LABEL_ADVOCACY,
   LABEL_ADVOCACY_POLITICAL,
   LABEL_ADVOCACY_NONPROFIT,
+  LABEL_ADVOCACY_KAW_BOARD,
+  LABEL_COMMUNITIES,
+  LABEL_PERSONAL_CORRESPONDENCE,
+  LABEL_PERSONAL_SELF_CORRESPONDENCE,
   LABEL_PROMOTIONS_RETAIL,
   LABEL_PROMOTIONS_BEAUTY,
   LABEL_PROMOTIONS_FOOD,
@@ -46,6 +55,7 @@ import {
   LABEL_VOICEMAIL,
   LABEL_NETWORKING,
   LABEL_NEWSLETTERS_CIVIC_AUSTIN,
+  LABEL_NEWSLETTERS_DEVELOPER,
   LABEL_TIME_SENSITIVE,
 } from './lib/constants.mjs';
 
@@ -65,6 +75,7 @@ const CATEGORIES = [
     filters: [
       { name: 'GitHub Notifications', query: 'from:notifications@github.com' },
       { name: 'GitHub Account', query: 'from:github.com' },
+      { name: 'Quora Digest', query: 'from:quora.com' },
     ],
   },
   {
@@ -99,6 +110,18 @@ const CATEGORIES = [
       { name: 'Charles Schwab', query: 'from:(email.schwab.com OR mail.schwab.com)' },
       { name: 'PayPal', query: 'from:news.paypal.com' },
       { name: 'American Express', query: 'from:(member.americanexpress.com OR welcome.americanexpress.com)' },
+      { name: 'Wells Fargo', query: 'from:(notify.wellsfargo.com OR customerfeedback.wellsfargo.com OR mail2.wellsfargorewards.com OR mail.accountoffers.wellsfargo.com)' },
+      { name: 'USAA', query: 'from:(omem.usaa.com OR mem.usaa.com OR mailcenter.usaa.com OR protect.usaa.com)' },
+      { name: 'Vanguard', query: 'from:(transactional.vanguard.com OR vanguard.com)' },
+      { name: 'Ally Alerts', query: 'from:alert.ally.com' },
+    ],
+  },
+  {
+    // Luma event invites & digests — label only, future events may need attention
+    labelName: LABEL_EVENTS_LUMA,
+    archive: false,
+    filters: [
+      { name: 'Luma (all sending domains)', query: 'from:(user.luma-mail.com OR calendar.luma-mail.com OR luma-mail.com)' },
     ],
   },
   {
@@ -106,6 +129,10 @@ const CATEGORIES = [
     archive: true,
     filters: [
       { name: 'Poshmark', query: 'from:(poshmark.com)' },
+      { name: 'cloudHQ', query: 'from:cloudhq.net' },
+      { name: 'NordVPN', query: 'from:mail.nordvpn.com' },
+      { name: 'Oura', query: 'from:m.ouraring.com' },
+      { name: 'Dropbox', query: 'from:em-s.dropbox.com' },
       { name: 'Amazon Promo', query: 'from:(amazon.com) subject:(sale OR deal OR offer OR savings OR "% off" OR promo OR coupon)' },
       { name: 'Zappos', query: 'from:emails.zappos.com' },
       { name: 'Etsy', query: 'from:email.etsy.com' },
@@ -174,6 +201,9 @@ const CATEGORIES = [
       { name: 'Idealist', query: 'from:idealist.org' },
       { name: 'Google Careers', query: 'from:careers-noreply@google.com' },
       { name: 'GrantWatch', query: 'from:grantwatch.com' },
+      { name: 'EstateJobs', query: 'from:estatejobs.com' },
+      { name: 'Lensa', query: 'from:lensa.com' },
+      { name: 'A.Team', query: 'from:a.team' },
     ],
   },
   {
@@ -193,6 +223,8 @@ const CATEGORIES = [
       { name: 'Grafana', query: 'from:update@grafana.com' },
       { name: 'Yubico', query: 'from:info.yubico.com' },
       { name: 'Render', query: 'from:dx@render.com' },
+      { name: 'Medium', query: 'from:medium.com' },
+      { name: 'Cryptonary', query: 'from:cryptonary.com' },
       { name: 'Thesis Driven', query: 'from:thesisdriven.com' },
       { name: 'MIT Sloan Thinking Forward', query: 'from:thinkingforward@mit.edu' },
       { name: 'IMF', query: 'from:updates.imf.org' },
@@ -222,6 +254,38 @@ const CATEGORIES = [
     // differ from the parent Advocacy category's per-sender criteria
     filters: [
       { name: 'Political senders', query: 'from:(dlcc.org OR mail.house.gov)' },
+    ],
+  },
+  {
+    // Austin Less Wrong meetup list & regular thread participants — stay in inbox
+    labelName: LABEL_COMMUNITIES,
+    archive: false,
+    filters: [
+      { name: 'Austin Less Wrong', query: 'from:(austinlesswrong@gmail.com OR sbarta@gmail.com OR chanj137036@gmail.com)' },
+    ],
+  },
+  {
+    // KAW nonprofit board correspondence — stay in inbox
+    labelName: LABEL_ADVOCACY_KAW_BOARD,
+    archive: false,
+    filters: [
+      { name: 'KAW board members', query: 'from:(mmaynesworth@gmail.com OR belindajroberts@gmail.com OR jshillis55@gmail.com)' },
+    ],
+  },
+  {
+    // Known personal contacts — stay in inbox
+    labelName: LABEL_PERSONAL_CORRESPONDENCE,
+    archive: false,
+    filters: [
+      { name: 'Personal contacts', query: 'from:(jasonledlie@gmail.com OR jeffschmulen@gmail.com OR girwin@gmail.com OR susan6100groce@gmail.com OR niki@pobox.com)' },
+    ],
+  },
+  {
+    // Mail from my own accounts (self-notes, cross-account forwards) — stay in inbox
+    labelName: LABEL_PERSONAL_SELF_CORRESPONDENCE,
+    archive: false,
+    filters: [
+      { name: 'Own accounts', query: 'from:(alwaysrunningfast@gmail.com OR alyshia@integritystudio.ai OR alyshia@inventoryai.io)' },
     ],
   },
   {
@@ -265,6 +329,17 @@ const CATEGORIES = [
       { name: 'Austin Westie Academy', query: 'from:austinwestieacademy' },
       { name: 'Open House Austin', query: 'from:openhouseaustin.co' },
       { name: 'Houston Sports & Social Club', query: 'from:houstonssc.com' },
+      { name: 'Tantra Institute', query: 'from:tantrany.com' },
+      { name: 'CreativeMornings', query: 'from:creativemornings.com' },
+    ],
+  },
+  {
+    // Dance scene mail (zouk, fuego, WCS) — stay in inbox like other event invites
+    labelName: LABEL_EVENTS_DANCE,
+    archive: false,
+    filters: [
+      { name: 'Fuego', query: 'from:fuegodance.com' },
+      { name: 'Zouk (Sindi Obando)', query: 'from:(zouk.us OR dancers.media)' },
     ],
   },
   {
@@ -297,6 +372,45 @@ const CATEGORIES = [
       { name: 'Northshore Medical', query: 'from:info-nmac.bm@shared1.ccsend.com' },
       { name: 'Genomelink', query: 'from:genomelink.io' },
       { name: 'Google Health', query: 'from:google-health-noreply@google.com' },
+      { name: 'UnitedHealthcare', query: 'from:(member.unitedhealthcare.com OR aca.unitedhealthcare.com OR edelivery.uhc.com)' },
+      { name: 'Family Medicine Austin', query: 'from:(phreesia-mail.com OR eclinicalmail.com OR campaigns.nexhealth.com OR thevalorsolution.com)' },
+      { name: 'One Medical', query: 'from:(onemedical.com OR care.onemedical.com)' },
+      { name: 'Galileo Medical', query: 'from:hello.galileohealth.com' },
+      { name: 'Allergies & Asthma Clinic', query: 'from:allallergies.com' },
+      { name: 'Texas Diabetes', query: 'from:texasdiabetes.com' },
+      { name: "Total Men's (campaigns)", query: 'from:totalmens.com' },
+      { name: 'Spruce', query: 'from:sprucehealth.com' },
+      { name: 'Baylor Scott & White', query: 'from:bswhealth.org' },
+      { name: 'FastMed', query: 'from:fastmed.com' },
+      { name: 'Probably Genetic', query: 'from:m.probablygenetic.com' },
+    ],
+  },
+  {
+    // Rental/apartment inquiry follow-ups & listing alerts — stay in inbox (active correspondence)
+    labelName: LABEL_SERVICES_REAL_ESTATE,
+    archive: false,
+    filters: [
+      { name: 'Furnished Finder', query: 'from:(leads.furnishedfinder.com OR communications.furnishedfinder.com)' },
+      { name: 'Apartment platforms', query: 'from:(assist.rent OR rentinquiries.com OR betterbot.com OR email.rentcafe.com OR emailrelay.com)' },
+      { name: 'Apartment List', query: 'from:(nurture.apartmentlist.com OR explore.apartmentlist.com)' },
+      { name: 'Zillow', query: 'from:(zmail.zillow.com OR convo.zillow.com)' },
+      { name: 'Berkshire Leasing', query: 'from:berkshire-residential-leasing.com' },
+      { name: 'KeyCheck Screening', query: 'from:keycheck.com' },
+      { name: 'Keyrenter Austin', query: 'from:keyrenteraustin.com' },
+      { name: 'PAMCO HOA', query: 'from:pamcotx.com' },
+      { name: 'Listing alerts (Ylopo/McGuire)', query: 'from:(ylopo-email.com OR mcguireatx.com)' },
+      { name: 'Kindred', query: 'from:m.livekindred.com' },
+    ],
+  },
+  {
+    // Utility bills, watering schedules, rebate programs — stay in inbox (bills matter)
+    labelName: LABEL_SERVICES_UTILITIES,
+    archive: false,
+    filters: [
+      { name: 'Austin Water', query: 'from:myatxwater.com' },
+      { name: 'City of Austin Utilities', query: 'from:coautilitiesemail.com' },
+      { name: 'Austin Energy Rebates', query: 'from:rebates.austinenergy.com' },
+      { name: 'Texas Water & Property (InvoiceCloud)', query: 'from:invoicecloud.net' },
     ],
   },
   {
@@ -314,6 +428,12 @@ const CATEGORIES = [
       { name: 'Nextdoor', query: 'from:email.nextdoor.com' },
       { name: 'CoStar Listings', query: 'from:c.costarmail.com' },
       { name: 'Magic Helpers', query: 'from:themagichelpers.com' },
+      { name: 'Turno', query: 'from:turnoverbnb.com' },
+      { name: 'Nest Reports', query: 'from:nest.com' },
+      { name: 'Yale Access', query: 'from:yalehomeus.com' },
+      { name: 'Life360 Devices', query: 'from:devices.life360.com' },
+      { name: 'Cleanster', query: 'from:cleanster.com' },
+      { name: '50K Lawn', query: 'from:50klawn.com' },
     ],
   },
   {
@@ -325,6 +445,8 @@ const CATEGORIES = [
       { name: 'Housecall Pro (Comax etc.)', query: 'from:notifications@housecallpro.com' },
       { name: 'Critter Control', query: 'from:crittercontrol.com' },
       { name: 'TexasProtax', query: 'from:texasprotax.com' },
+      { name: 'ABC Home & Commercial', query: 'from:(evolveone.com OR abchomeandcommercial.com)' },
+      { name: 'Critter Control (TruTech)', query: 'from:trutechinc.com' },
     ],
   },
   {
@@ -334,6 +456,23 @@ const CATEGORIES = [
     filters: [
       { name: 'EGBI', query: 'from:egbi.org' },
       { name: 'Austin Technology Council', query: 'from:austintechnologycouncil.org' },
+    ],
+  },
+  {
+    // Developer program digests & release roundups
+    labelName: LABEL_NEWSLETTERS_DEVELOPER,
+    archive: false,
+    filters: [
+      { name: 'Google Developer Program', query: 'from:googledev-noreply@google.com' },
+      { name: 'Supabase', query: 'from:supabase.com' },
+      { name: 'Render Updates', query: 'from:render.com' },
+      { name: 'PostHog', query: 'from:posthog.com' },
+      { name: 'TechExpert Academy', query: 'from:techexpert.io' },
+      { name: 'DataTalks.Club', query: 'from:datatalks.club' },
+      { name: 'OpenRouter', query: 'from:openrouter.ai' },
+      { name: 'PromptLayer', query: 'from:promptlayer.com' },
+      { name: 'xAI', query: 'from:x.ai' },
+      { name: 'Notiondesk', query: 'from:notiondesk.so' },
     ],
   },
   {
@@ -364,6 +503,11 @@ const CATEGORIES = [
       { name: 'Google Account Notices', query: 'from:noreply-accounts@google.com' },
       { name: 'Samsung Account', query: 'from:samsung-mail.com' },
       { name: 'PayPal Security', query: 'from:service@paypal.com subject:("trusted device" OR "sign in" OR sign-in OR password OR security)' },
+      { name: 'Google Security Alerts', query: 'from:accounts.google.com' },
+      { name: 'Netflix Account', query: 'from:account.netflix.com' },
+      { name: 'Docusign Account', query: 'from:account.docusign.net' },
+      { name: 'Doppler Logins', query: 'from:doppler.com' },
+      { name: 'Venmo Security', query: 'from:security-alerts@venmo.com' },
     ],
   },
   {
@@ -397,6 +541,11 @@ const CATEGORIES = [
       { name: 'Venmo', query: 'from:venmo@venmo.com' },
       { name: 'Vantaca (HOA)', query: 'from:vantaca.com' },
       { name: 'Square Receipts (ICON etc.)', query: 'from:messaging.squareup.com' },
+      { name: 'Stripe Receipts', query: 'from:stripe.com subject:receipt' },
+      { name: 'Netlify Invoices', query: 'from:netlify.com subject:(invoice OR payment)' },
+      { name: 'Anthropic Receipts', query: 'from:mail.anthropic.com subject:receipt' },
+      { name: 'DocHub Receipts', query: 'from:dochub.com subject:receipt' },
+      { name: 'Toast Orders (JuiceLand etc.)', query: 'from:toasttab.com' },
     ],
   },
   {
@@ -405,7 +554,7 @@ const CATEGORIES = [
     labelName: LABEL_PURCHASES_AMAZON,
     archive: true,
     filters: [
-      { name: 'Amazon Orders', query: 'from:(auto-confirm@amazon.com OR order-update@amazon.com)' },
+      { name: 'Amazon Orders', query: 'from:(auto-confirm@amazon.com OR order-update@amazon.com OR return@amazon.com)' },
       { name: 'Amazon Shipping', query: 'from:shipment-tracking@amazon.com' },
       { name: 'Amazon Marketplace', query: 'from:marketplace-messages@amazon.com' },
     ],
@@ -444,6 +593,10 @@ const CATEGORIES = [
       { name: 'Kiwi Drug', query: 'from:kiwidrug.com' },
       { name: 'Whole30', query: 'from:headquarters@whole30.com' },
       { name: 'Stanley Steemer', query: 'from:email.stanleysteemer.com' },
+      { name: 'Temu', query: 'from:news.temuemail.com' },
+      { name: 'Thorum', query: 'from:thorum.com' },
+      { name: 'Smashwords', query: 'from:smashwords.com' },
+      { name: 'Lumosity', query: 'from:updates.lumosity.com' },
     ],
   },
   {
@@ -456,6 +609,7 @@ const CATEGORIES = [
       // Shared marketing-platform domains — pin the full address so other merchants on the platform don't match
       { name: 'Driftwood Spa', query: 'from:Driftwood@demandforced3.com' },
       { name: 'Dolce Blu', query: 'from:noreply@hirefrederick.com' },
+      { name: 'Dermazen', query: 'from:dermazen.co' },
     ],
   },
   {
@@ -482,6 +636,14 @@ const CATEGORIES = [
       { name: 'Carvana', query: 'from:(mail.carvana.com OR vehicles.carvana.com)' },
       { name: 'CARFAX', query: 'from:no-reply.carfax.com' },
       { name: 'Driveway', query: 'from:email.driveway.com' },
+      { name: 'Autotrader', query: 'from:(psx.autotrader.com OR messages.autotrader.com)' },
+      { name: 'CarGurus', query: 'from:mail.cargurus.com' },
+      { name: 'Kelley Blue Book', query: 'from:messages.kbb.com' },
+      { name: 'CarMax', query: 'from:email-carmax.com' },
+      { name: 'AutoNation', query: 'from:autonation.com' },
+      { name: 'Mazda Dealers', query: 'from:dealers-mazdausa.com' },
+      { name: 'DealerCenter', query: 'from:dealercenter.net' },
+      { name: 'Autoblog', query: 'from:email.thestreet.com' },
     ],
   },
   {
@@ -498,11 +660,14 @@ const CATEGORIES = [
       { name: 'Hopdoddy', query: 'from:hopdoddy@emails.thanx.com' },
       { name: 'MOD Pizza', query: 'from:offers@modpizza.com' },
       { name: 'Northside Wine & Spirits', query: 'from:northsidewine.com' },
+      { name: 'Whole Foods', query: 'from:mail.wholefoodsmarket.com' },
+      { name: 'Papa Johns', query: 'from:promotions.papajohns.com' },
+      { name: 'Wegmans', query: 'from:eml.wegmans.com' },
     ],
   },
   {
-    // Google Calendar email notifications — archive + mark read silently
-    labelName: null,
+    // Google Calendar email notifications — label + archive + mark read silently
+    labelName: LABEL_EVENTS_CALENDAR_NOTIFICATIONS,
     archive: true,
     markRead: true,
     filters: [

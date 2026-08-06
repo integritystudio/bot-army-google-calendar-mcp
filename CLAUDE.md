@@ -71,6 +71,7 @@ Core pattern: Label → conditional archive (keep future events, important items
 
 **Key Scripts:**
 - `list-unread-emails.mjs`, `list-inbox.mjs`, `summarize-remaining.mjs` — Email analysis
+- `list-unlabeled-unread.mjs [--preview N] [--all]` — Count/preview unread emails with no user label (inbox by default; `--all` adds an exact mailbox-wide count, slow on large archives)
 - `organize-emails.mjs` — Full pipeline: label, filter, and conditionally archive emails
 - `create-gmail-filters.mjs` — Batch create Gmail filters from category definitions
 - `create-other-filters.mjs` — Filters for uncategorized "Other" emails (GitHub, finance, travel, newsletters, etc.)
@@ -89,7 +90,7 @@ Core pattern: Label → conditional archive (keep future events, important items
 - `gmail-client.mjs` — Authenticated client factory (used by all root .mjs scripts)
 - `gmail-label-utils.mjs` — Label caching: `buildLabelCache()`, `resolveLabelId()`, `resolveLabelIds()`
 - `gmail-batch.mjs` / `gmail-batch-utils.mjs` — Batch operations (10-100x speedup)
-- `gmail-message-utils.mjs` — Message header/body extraction, `decodeBase64Payload()`
+- `gmail-message-utils.mjs` — Message header/body extraction, `decodeBase64Payload()`, `countMessagesMatching()` (exact paginated query counts), `fetchMessageHeaders()`
 - `gmail-filter-utils.mjs` — Filter creation helpers
 - `date-based-filter.mjs` — Date parsing utility (ISO, US, text formats; no mutations)
 - `schema-extractor.mjs` — Schema.org type extraction from email HTML (htmlparser2)

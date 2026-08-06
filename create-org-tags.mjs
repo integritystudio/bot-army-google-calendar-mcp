@@ -17,6 +17,7 @@ import {
   LABEL_ORG_AUTOMOTIVE,
   LABEL_ORG_DEVELOPER_TOOLS,
   LABEL_ORG_GOVERNMENT,
+  LABEL_ORG_BIG_TECH,
 } from './lib/constants.mjs';
 
 const BATCH_SIZE = 1000;
@@ -76,6 +77,9 @@ const ORG_TAGS = [
       { name: 'NerdWallet', query: 'from:nerdwallet.com' },
       { name: 'GEICO', query: 'from:geico.com' },
       { name: 'Progressive Leasing', query: 'from:progleasing.com' },
+      { name: 'Splitwise', query: 'from:splitwise.com' },
+      { name: 'Lemonade', query: 'from:lemonade.com' },
+      { name: 'Better', query: 'from:better.com' },
     ],
   },
   {
@@ -109,6 +113,8 @@ const ORG_TAGS = [
       { name: 'Nespresso', query: 'from:nespresso.com' },
       { name: 'adidas', query: 'from:adidas.com' },
       { name: 'Quince', query: 'from:quince.com' },
+      { name: 'DoorDash', query: 'from:doordash.com' },
+      { name: 'Instacart', query: 'from:instacart.com' },
     ],
   },
   {
@@ -140,6 +146,7 @@ const ORG_TAGS = [
       { name: 'Lensa', query: 'from:lensa.com' },
       { name: 'A.Team', query: 'from:a.team' },
       { name: 'Idealist', query: 'from:idealist.org' },
+      { name: 'Read AI', query: 'from:read.ai' },
     ],
   },
   {
@@ -249,6 +256,7 @@ const ORG_TAGS = [
       { name: 'FastMed', query: 'from:fastmed.com' },
       { name: 'Texas Diabetes', query: 'from:texasdiabetes.com' },
       { name: 'Allergies & Asthma Clinic', query: 'from:allallergies.com' },
+      { name: 'WellnessLiving', query: 'from:wellnessliving.com' },
     ],
   },
   {
@@ -273,10 +281,13 @@ const ORG_TAGS = [
       { name: 'Lufthansa', query: 'from:lufthansa.com' },
       { name: 'British Airways', query: 'from:britishairways.com OR from:email.ba.com' },
       { name: 'Emirates', query: 'from:emirates.com' },
-      { name: 'Air France', query: 'from:airfrance.com OR from:airfrance.fr' },
+      { name: 'Air France', query: 'from:airfrance.com OR from:airfrance.fr OR from:enews-airfrance.com' },
       { name: 'Spirit Airlines', query: 'from:spirit.com' },
       { name: 'Alaska Airlines', query: 'from:alaskaair.com' },
       { name: 'Vonlane', query: 'from:vonlane.com' },
+      { name: 'Lyft', query: 'from:lyft.com OR from:lyftmail.com' },
+      { name: 'Couchsurfing', query: 'from:couchsurfing.com' },
+      { name: 'Wikiloc', query: 'from:wikiloc.com' },
     ],
   },
   {
@@ -318,6 +329,19 @@ const ORG_TAGS = [
       { name: 'USPS', query: 'from:usps.com' },
       { name: 'State of Texas', query: 'from:txt.texas.gov' },
       { name: 'US House', query: 'from:mail.house.gov' },
+    ],
+  },
+  {
+    // Consumer-tech platforms without their own org tree (Google has one)
+    labelName: LABEL_ORG_BIG_TECH,
+    orgs: [
+      { name: 'Apple', query: 'from:apple.com' },
+      { name: 'Microsoft', query: 'from:microsoft.com' },
+      { name: 'Meta', query: 'from:(meta.com OR facebookmail.com OR facebook.com OR instagram.com)' },
+      { name: 'TikTok', query: 'from:tiktok.com' },
+      { name: 'Discord', query: 'from:(discord.com OR discordapp.com)' },
+      { name: 'Spotify', query: 'from:spotify.com' },
+      { name: 'WordPress / Automattic', query: 'from:(wordpress.com OR automattic.com)' },
     ],
   },
 ];

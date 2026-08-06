@@ -8,6 +8,7 @@
  *   node create-other-filters.mjs                       # all categories
  *   node create-other-filters.mjs --only "Promotions"   # only categories whose label starts with the prefix
  */
+import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
 import { searchAndModify } from './lib/gmail-batch-utils.mjs';
@@ -69,7 +70,7 @@ import {
  *   markRead      — also strip UNREAD when applying (default false)
  *   applyQuery    — override the backfill query (default: join all filter queries with OR + is:unread)
  */
-const CATEGORIES = [
+export const CATEGORIES = [
   {
     labelName: LABEL_FORUMS,
     archive: true,
@@ -95,6 +96,7 @@ const CATEGORIES = [
       { name: 'Quest Diagnostics', query: 'from:e.questdiagnostics.com' },
       { name: 'Ascension Seton', query: 'from:communication.ascension.org' },
       { name: 'One Medical', query: 'from:access.onemedical.com' },
+      { name: 'Texas.gov Notifications', query: 'from:txt.texas.gov' },
     ],
   },
   {
@@ -115,7 +117,17 @@ const CATEGORIES = [
       { name: 'Wells Fargo', query: 'from:(notify.wellsfargo.com OR customerfeedback.wellsfargo.com OR mail2.wellsfargorewards.com OR mail.accountoffers.wellsfargo.com)' },
       { name: 'USAA', query: 'from:(omem.usaa.com OR mem.usaa.com OR mailcenter.usaa.com OR protect.usaa.com)' },
       { name: 'Vanguard', query: 'from:(transactional.vanguard.com OR vanguard.com)' },
-      { name: 'Ally Alerts', query: 'from:alert.ally.com' },
+      { name: 'Ally Alerts', query: 'from:(alert.ally.com OR alerts.ally.com)' },
+      { name: 'PayPal Service', query: 'from:(service.paypal.com OR communications.paypal.com OR service@paypal.com)' },
+      { name: 'Wise', query: 'from:(wise.com OR info.wise.com)' },
+      { name: 'Amex Credit & Feedback', query: 'from:(notificationmycredit-guide.americanexpress.com OR feedbackemail.americanexpress.com OR email.americanexpress.com)' },
+      { name: 'Credit Karma Reminders', query: 'from:(reminder.creditkarma.com OR savings.creditkarma.com)' },
+      { name: 'SoFi', query: 'from:o.sofi.org' },
+      { name: 'E-Trade', query: 'from:etrade.com' },
+      { name: 'Charles Schwab Corporate', query: 'from:schwab.com' },
+      { name: 'Progressive Leasing', query: 'from:t.progleasing.com' },
+      { name: 'Coinbase Info', query: 'from:info.coinbase.com' },
+      { name: 'Venmo Updates', query: 'from:email.venmo.com' },
     ],
   },
   {
@@ -159,6 +171,7 @@ const CATEGORIES = [
       { name: 'Wikiloc', query: 'from:wikiloc.com' },
       { name: 'Apple', query: 'from:email.apple.com' },
       { name: 'WordPress.com', query: 'from:wordpress.com' },
+      { name: 'Google Photos', query: 'from:noreply-photos@google.com' },
     ],
   },
   {
@@ -184,6 +197,13 @@ const CATEGORIES = [
       { name: 'Under30 Experiences', query: 'from:under30experiences.com' },
       { name: 'Couchsurfing', query: 'from:marketing.couchsurfing.com' },
       { name: 'Lyft', query: 'from:lyftmail.com' },
+      { name: 'United Notifications', query: 'from:(notifications@united.com OR insights.united.com)' },
+      { name: 'American Airlines Trips', query: 'from:(connect.email.aa.com OR info.ms.aa.com OR info.email.aa.com)' },
+      { name: 'Southwest Trips', query: 'from:ifly.southwest.com' },
+      { name: 'Delta', query: 'from:(delta.com OR t.delta.com)' },
+      { name: 'Frontier Airlines Updates', query: 'from:flyfrontier.com' },
+      { name: 'Singapore Airlines', query: 'from:email.singaporeair.com' },
+      { name: 'Marriott Stays', query: 'from:(marriott.com OR res-marriott.com)' },
     ],
   },
   {
@@ -200,6 +220,9 @@ const CATEGORIES = [
       { name: 'Rappi', query: 'from:hello.rappi.com.co' },
       { name: 'AirAsia Rewards', query: 'from:rewards.airasia.com' },
       { name: 'GOL', query: 'from:news.voegol.com.br' },
+      { name: 'JetBlue Marketing', query: 'from:email.jetblue.com' },
+      { name: 'Qatar Airways', query: 'from:(qr.qatarairways.com OR qrgroup.qatarairways.com)' },
+      { name: 'Air France Marketing', query: 'from:enews-airfrance.com' },
     ],
   },
   {
@@ -211,7 +234,7 @@ const CATEGORIES = [
       { name: 'Backstage', query: 'from:backstage.com' },
       { name: 'Virtual Vocations', query: 'from:(email.virtualvocations.com OR alerts.virtualvocations.com)' },
       { name: 'PostJobFree', query: 'from:postjobfree.com' },
-      { name: 'Indeed', query: 'from:(indeed.com OR match.indeed.com)' },
+      { name: 'Indeed', query: 'from:(indeed.com OR match.indeed.com OR indeedemail.com)' },
       { name: 'Idealist', query: 'from:idealist.org' },
       { name: 'Google Careers', query: 'from:careers-noreply@google.com' },
       { name: 'GrantWatch', query: 'from:grantwatch.com' },
@@ -257,6 +280,7 @@ const CATEGORIES = [
       { name: 'Sound Sight Tarot', query: 'from:soundsighttarot.com' },
       { name: 'Heart Centered Being', query: 'from:theheartcenteredbeing.com' },
       { name: 'UT Austin Newsletters', query: 'from:(utexas.edu OR mccombs.utexas.edu) subject:newsletter' },
+      { name: 'ACM Listserv', query: 'from:listserv.acm.org' },
     ],
   },
   {
@@ -289,6 +313,8 @@ const CATEGORIES = [
       { name: 'Austin Less Wrong', query: 'from:(austinlesswrong@gmail.com OR sbarta@gmail.com OR chanj137036@gmail.com)' },
       { name: 'Fiesta Community', query: 'from:fiesta.community' },
       { name: 'VIDA Coworking', query: 'from:vidacoworking.com' },
+      // UT mail not already routed to Newsletters (subject:newsletter) or Events (event subjects, econnect/austin announcements)
+      { name: 'UT Austin (other)', query: 'from:utexas.edu -subject:(newsletter OR event OR lecture OR register OR workshop) -from:(econnect.utexas.edu OR austin.utexas.edu)' },
     ],
   },
   {
@@ -435,6 +461,7 @@ const CATEGORIES = [
       { name: 'Baylor Scott & White', query: 'from:bswhealth.org' },
       { name: 'FastMed', query: 'from:fastmed.com' },
       { name: 'Probably Genetic', query: 'from:m.probablygenetic.com' },
+      { name: 'Amazon Pharmacy', query: 'from:(pharmacy.amazon.com OR email.pharmacy.amazon.com)' },
     ],
   },
   {
@@ -451,7 +478,7 @@ const CATEGORIES = [
       { name: 'Keyrenter Austin', query: 'from:keyrenteraustin.com' },
       { name: 'PAMCO HOA', query: 'from:pamcotx.com' },
       { name: 'Listing alerts (Ylopo/McGuire)', query: 'from:(ylopo-email.com OR mcguireatx.com)' },
-      { name: 'Kindred', query: 'from:m.livekindred.com' },
+      { name: 'Kindred', query: 'from:(m.livekindred.com OR t.livekindred.com)' },
     ],
   },
   {
@@ -463,6 +490,7 @@ const CATEGORIES = [
       { name: 'City of Austin Utilities', query: 'from:coautilitiesemail.com' },
       { name: 'Austin Energy Rebates', query: 'from:rebates.austinenergy.com' },
       { name: 'Texas Water & Property (InvoiceCloud)', query: 'from:invoicecloud.net' },
+      { name: 'Austin Energy Info', query: 'from:austinenergy.com' },
     ],
   },
   {
@@ -603,6 +631,8 @@ const CATEGORIES = [
       { name: 'Toast Orders (JuiceLand etc.)', query: 'from:toasttab.com' },
       { name: 'Park ATX', query: 'from:gopassport.com' },
       { name: 'Hartsel Ranch', query: 'from:hartselranch.co' },
+      { name: 'Etsy Order Updates', query: 'from:(account.etsy.com OR mail.etsy.com)' },
+      { name: 'Home Depot Orders', query: 'from:order.homedepot.com' },
     ],
   },
   {
@@ -644,8 +674,11 @@ const CATEGORIES = [
       { name: 'Tuft & Needle', query: 'from:news.tuftandneedle.com' },
       { name: 'Home Depot Deals', query: 'from:mg.homedepot.com' },
       { name: 'Mary & Jane', query: 'from:shopmaryandjane.com' },
-      { name: 'adidas', query: 'from:us-news.adidas.com' },
-      { name: 'Audible Promos', query: 'from:mail.audible.com' },
+      { name: 'adidas', query: 'from:(us-news.adidas.com OR us-news.comms.adidas.com OR us-info.adidas.com)' },
+      { name: 'Audible Promos', query: 'from:(mail.audible.com OR audible.com)' },
+      { name: 'Amazon Store News', query: 'from:store-news@amazon.com' },
+      { name: 'eBay Marketing', query: 'from:(reply.ebay.com OR info.ebay.com)' },
+      { name: 'Wayfair Stores', query: 'from:wayfair.com' },
       { name: 'Amazon Music', query: 'from:amazonmusic.com' },
       { name: 'Kiwi Drug', query: 'from:kiwidrug.com' },
       { name: 'Whole30', query: 'from:headquarters@whole30.com' },
@@ -687,6 +720,7 @@ const CATEGORIES = [
       { name: 'CNN Subscriptions', query: 'from:email.cnn.com' },
       { name: 'Lemonade', query: 'from:lemonade.com' },
       { name: 'Better Cover', query: 'from:better.com' },
+      { name: 'Truist Mortgage Marketing', query: 'from:(mail.mktg.truist.com OR cx.oneteam.truist.com)' },
     ],
   },
   {
@@ -712,7 +746,7 @@ const CATEGORIES = [
     labelName: LABEL_AUTOMOTIVE_INSURANCE,
     archive: true,
     filters: [
-      { name: 'GEICO', query: 'from:e.geico.com' },
+      { name: 'GEICO', query: 'from:(e.geico.com OR et.geico.com)' },
     ],
   },
   {
@@ -801,7 +835,9 @@ async function run() {
   console.log(BANNER + '\n');
 }
 
-run().catch(error => {
-  console.error('Error:', error.message);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  run().catch(error => {
+    console.error('Error:', error.message);
+    process.exit(1);
+  });
+}

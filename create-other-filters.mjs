@@ -37,6 +37,9 @@ import {
   LABEL_SERVICES_HEALTH,
   LABEL_SERVICES_HOME,
   LABEL_PURCHASES_AMAZON,
+  LABEL_BILLING_RECEIPTS,
+  LABEL_BILLING_STATEMENTS,
+  LABEL_SECURITY_ACCOUNT,
   LABEL_TIME_SENSITIVE,
 } from './lib/constants.mjs';
 
@@ -294,10 +297,44 @@ const CATEGORIES = [
     ],
   },
   {
-    // Amazon order lifecycle (money attached) — label only, never archive.
+    // Sign-in alerts, device confirmations, account-data notices — label only, stay in inbox
+    // (these deserve a "was that me?" glance). PayPal is subject-scoped because service@paypal.com
+    // also sends payment receipts.
+    labelName: LABEL_SECURITY_ACCOUNT,
+    archive: false,
+    filters: [
+      { name: 'Google Account Notices', query: 'from:noreply-accounts@google.com' },
+      { name: 'Samsung Account', query: 'from:samsung-mail.com' },
+      { name: 'PayPal Security', query: 'from:service@paypal.com subject:("trusted device" OR "sign in" OR sign-in OR password OR security)' },
+    ],
+  },
+  {
+    // Account statements — label + skip inbox. Subject-pinned where the sender domain
+    // also carries non-statement mail (e.g. SoFi's o.sofi.org sends card-shipped notices too).
+    labelName: LABEL_BILLING_STATEMENTS,
+    archive: true,
+    filters: [
+      { name: 'SoFi Statements', query: 'from:o.sofi.org subject:statement' },
+      { name: 'Vanguard Statements', query: 'from:transactional.vanguard.com subject:statement' },
+      { name: 'Wells Fargo Statements', query: 'from:notify.wellsfargo.com subject:statement' },
+      { name: 'Truist Alerts', query: 'from:message.truist.com' },
+    ],
+  },
+  {
+    // Payment receipts — label + skip inbox
+    labelName: LABEL_BILLING_RECEIPTS,
+    archive: true,
+    filters: [
+      { name: 'Venmo', query: 'from:venmo@venmo.com' },
+      { name: 'Vantaca (HOA)', query: 'from:vantaca.com' },
+      { name: 'Square Receipts (ICON etc.)', query: 'from:messaging.squareup.com' },
+    ],
+  },
+  {
+    // Amazon order lifecycle — label + skip inbox (receipts live under the label).
     // Deliberately excludes promo senders (amazonmusic.com etc.) by pinning transactional addresses.
     labelName: LABEL_PURCHASES_AMAZON,
-    archive: false,
+    archive: true,
     filters: [
       { name: 'Amazon Orders', query: 'from:(auto-confirm@amazon.com OR order-update@amazon.com)' },
       { name: 'Amazon Shipping', query: 'from:shipment-tracking@amazon.com' },

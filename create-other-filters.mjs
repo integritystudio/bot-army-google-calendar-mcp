@@ -4,7 +4,9 @@
  * LinkedIn digests, Newsletters, Advocacy, Calendar notifications,
  * Local Austin events, Health/Wellness, and Utilities.
  *
- * Usage: node create-other-filters.mjs
+ * Usage:
+ *   node create-other-filters.mjs                       # all categories
+ *   node create-other-filters.mjs --only "Promotions"   # only categories whose label starts with the prefix
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
@@ -22,6 +24,11 @@ import {
   LABEL_JOB_SEARCH,
   LABEL_TRAVEL,
   LABEL_ADVOCACY,
+  LABEL_PROMOTIONS_RETAIL,
+  LABEL_PROMOTIONS_BEAUTY,
+  LABEL_PROMOTIONS_FOOD,
+  LABEL_AUTOMOTIVE_SHOPPING,
+  LABEL_AUTOMOTIVE_INSURANCE,
 } from './lib/constants.mjs';
 
 /**
@@ -178,6 +185,63 @@ const CATEGORIES = [
     ],
   },
   {
+    labelName: LABEL_PROMOTIONS_RETAIL,
+    archive: true,
+    filters: [
+      { name: 'Wayfair', query: 'from:(members.wayfair.com OR service.wayfair.com)' },
+      { name: 'Quince', query: 'from:mail.quince.com' },
+      { name: 'Ruti', query: 'from:ruti.com' },
+      { name: "Margaret O'Leary", query: 'from:margaretoleary.com' },
+      { name: 'Tuft & Needle', query: 'from:news.tuftandneedle.com' },
+      { name: 'Home Depot Deals', query: 'from:mg.homedepot.com' },
+      { name: 'Mary & Jane', query: 'from:shopmaryandjane.com' },
+      { name: 'adidas', query: 'from:us-news.adidas.com' },
+      { name: 'Audible Promos', query: 'from:mail.audible.com' },
+      { name: 'Amazon Music', query: 'from:amazonmusic.com' },
+      { name: 'Kiwi Drug', query: 'from:kiwidrug.com' },
+      { name: 'Whole30', query: 'from:headquarters@whole30.com' },
+      { name: 'Stanley Steemer', query: 'from:email.stanleysteemer.com' },
+    ],
+  },
+  {
+    labelName: LABEL_PROMOTIONS_BEAUTY,
+    archive: true,
+    filters: [
+      { name: 'LaserAway', query: 'from:laseraway.com' },
+      { name: 'milk + honey', query: 'from:milkandhoney.com' },
+      // Shared marketing-platform domains — pin the full address so other merchants on the platform don't match
+      { name: 'Driftwood Spa', query: 'from:Driftwood@demandforced3.com' },
+      { name: 'Dolce Blu', query: 'from:noreply@hirefrederick.com' },
+    ],
+  },
+  {
+    labelName: LABEL_AUTOMOTIVE_SHOPPING,
+    archive: true,
+    filters: [
+      { name: 'Edmunds', query: 'from:email.edmunds.com' },
+      { name: 'Cars.com', query: 'from:em.cars.com' },
+      { name: 'Carvana', query: 'from:(mail.carvana.com OR vehicles.carvana.com)' },
+      { name: 'CARFAX', query: 'from:no-reply.carfax.com' },
+      { name: 'Driveway', query: 'from:email.driveway.com' },
+    ],
+  },
+  {
+    labelName: LABEL_AUTOMOTIVE_INSURANCE,
+    archive: true,
+    filters: [
+      { name: 'GEICO', query: 'from:e.geico.com' },
+    ],
+  },
+  {
+    labelName: LABEL_PROMOTIONS_FOOD,
+    archive: true,
+    filters: [
+      { name: 'Hopdoddy', query: 'from:hopdoddy@emails.thanx.com' },
+      { name: 'MOD Pizza', query: 'from:offers@modpizza.com' },
+      { name: 'Northside Wine & Spirits', query: 'from:northsidewine.com' },
+    ],
+  },
+  {
     // Google Calendar email notifications — archive + mark read silently
     labelName: null,
     archive: true,
@@ -188,7 +252,13 @@ const CATEGORIES = [
   },
 ];
 
+const argAfter = flag => {
+  const i = process.argv.indexOf(flag);
+  return i !== -1 ? process.argv[i + 1] : null;
+};
+
 async function run() {
+  const onlyPrefix = argAfter('--only');
   const gmail = createGmailClient();
 
   console.log('CREATING OTHER CATEGORY FILTERS\n');
@@ -198,6 +268,7 @@ async function run() {
   let totalEmails = 0;
 
   for (const category of CATEGORIES) {
+    if (onlyPrefix && !(category.labelName ?? '').startsWith(onlyPrefix)) continue;
     const displayName = category.labelName ?? 'Auto-archive (no label)';
     console.log(`\n${displayName.toUpperCase()}`);
 

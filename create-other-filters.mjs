@@ -39,7 +39,11 @@ import {
   LABEL_PURCHASES_AMAZON,
   LABEL_BILLING_RECEIPTS,
   LABEL_BILLING_STATEMENTS,
+  LABEL_BILLING_CREDIT_MONITORING,
   LABEL_SECURITY_ACCOUNT,
+  LABEL_VOICEMAIL,
+  LABEL_NETWORKING,
+  LABEL_NEWSLETTERS_CIVIC_AUSTIN,
   LABEL_TIME_SENSITIVE,
 } from './lib/constants.mjs';
 
@@ -115,6 +119,7 @@ const CATEGORIES = [
       { name: 'LinkedIn Digests', query: 'from:em.linkedin.com' },
       { name: 'Global Sources', query: 'from:(globalsources.com)' },
       { name: 'Pottery Barn', query: 'from:e.potterybarn.com' },
+      { name: 'Render Outreach', query: 'from:anurag.goel@render.com' },
     ],
   },
   {
@@ -197,6 +202,7 @@ const CATEGORIES = [
   {
     labelName: LABEL_ADVOCACY,
     archive: true,
+    markRead: true,
     filters: [
       { name: 'DLCC', query: 'from:dlcc.org' },
       { name: 'Congressman Doggett', query: 'from:mail.house.gov' },
@@ -297,6 +303,32 @@ const CATEGORIES = [
     ],
   },
   {
+    // Professional networking & membership outreach from real organizations — stay in inbox
+    labelName: LABEL_NETWORKING,
+    archive: false,
+    filters: [
+      { name: 'EGBI', query: 'from:egbi.org' },
+      { name: 'Austin Technology Council', query: 'from:austintechnologycouncil.org' },
+    ],
+  },
+  {
+    // City of Austin & civic sources (austintexas.gov covers publicinput/econdev/etc. subdomains)
+    labelName: LABEL_NEWSLETTERS_CIVIC_AUSTIN,
+    archive: false,
+    filters: [
+      { name: 'City of Austin', query: 'from:austintexas.gov' },
+      { name: 'Austin Neighborhoods Council', query: 'from:ancweb.org' },
+    ],
+  },
+  {
+    // Voicemail transcriptions — label only, stay in inbox (each needs listening/triage)
+    labelName: LABEL_VOICEMAIL,
+    archive: false,
+    filters: [
+      { name: 'YouMail', query: 'from:voicemail@youmail.com' },
+    ],
+  },
+  {
     // Sign-in alerts, device confirmations, account-data notices — label only, stay in inbox
     // (these deserve a "was that me?" glance). PayPal is subject-scoped because service@paypal.com
     // also sends payment receipts.
@@ -318,6 +350,17 @@ const CATEGORIES = [
       { name: 'Vanguard Statements', query: 'from:transactional.vanguard.com subject:statement' },
       { name: 'Wells Fargo Statements', query: 'from:notify.wellsfargo.com subject:statement' },
       { name: 'Truist Alerts', query: 'from:message.truist.com' },
+    ],
+  },
+  {
+    // Credit bureau monitoring noise — label, archive, and mark read automatically
+    labelName: LABEL_BILLING_CREDIT_MONITORING,
+    archive: true,
+    markRead: true,
+    filters: [
+      { name: 'Equifax', query: 'from:(e.equifax.com OR equifax.com)' },
+      { name: 'Experian Monitoring', query: 'from:s.usa.experian.com' },
+      { name: 'Credit Karma', query: 'from:(mail.creditkarma.com OR notifications.creditkarma.com)' },
     ],
   },
   {
@@ -472,9 +515,13 @@ async function run() {
     const filterQueries = [];
 
     for (const filter of category.filters) {
+      const removeIds = [
+        ...(category.archive ? [GMAIL_INBOX] : []),
+        ...(category.markRead ? [GMAIL_UNREAD] : []),
+      ];
       const action = {
         ...(labelId ? { addLabelIds: [labelId] } : {}),
-        ...(category.archive ? { removeLabelIds: [GMAIL_INBOX] } : {}),
+        ...(removeIds.length ? { removeLabelIds: removeIds } : {}),
       };
       const filterId = await createGmailFilter(gmail, { query: filter.query }, action);
       console.log(`  ${filterId ? '✓' : '~'} ${filter.name}`);

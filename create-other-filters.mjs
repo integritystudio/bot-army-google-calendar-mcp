@@ -30,6 +30,14 @@ import {
   LABEL_PROMOTIONS_FINANCIAL,
   LABEL_AUTOMOTIVE_SHOPPING,
   LABEL_AUTOMOTIVE_INSURANCE,
+  LABEL_PROMOTIONS_TRAVEL,
+  LABEL_EVENTS_LOCAL,
+  LABEL_EVENTS_PERFORMANCES,
+  LABEL_EVENTS_ENTERTAINMENT,
+  LABEL_SERVICES_HEALTH,
+  LABEL_SERVICES_HOME,
+  LABEL_PURCHASES_AMAZON,
+  LABEL_TIME_SENSITIVE,
 } from './lib/constants.mjs';
 
 /**
@@ -130,6 +138,19 @@ const CATEGORIES = [
     ],
   },
   {
+    // Airline/booking marketing domains — transactional mail (reservations, alerts) uses
+    // different domains and stays under Travel above
+    labelName: LABEL_PROMOTIONS_TRAVEL,
+    archive: true,
+    filters: [
+      { name: 'Delta Marketing', query: 'from:o.delta.com' },
+      { name: 'United News & Deals', query: 'from:enews.united.com' },
+      { name: 'Copa Airlines', query: 'from:email.copa.com' },
+      { name: 'Vrbo Marketing', query: 'from:eg.vrbo.com' },
+      { name: 'Rappi', query: 'from:hello.rappi.com.co' },
+    ],
+  },
+  {
     labelName: LABEL_JOB_SEARCH,
     archive: false,
     filters: [
@@ -140,6 +161,8 @@ const CATEGORIES = [
       { name: 'PostJobFree', query: 'from:postjobfree.com' },
       { name: 'Indeed', query: 'from:(indeed.com OR match.indeed.com)' },
       { name: 'Idealist', query: 'from:idealist.org' },
+      { name: 'Google Careers', query: 'from:careers-noreply@google.com' },
+      { name: 'GrantWatch', query: 'from:grantwatch.com' },
     ],
   },
   {
@@ -152,7 +175,20 @@ const CATEGORIES = [
       { name: 'SmartBrief', query: 'from:smartbrief.com' },
       { name: 'Built In', query: 'from:builtin.com' },
       { name: 'MIT Sloan AI at Work', query: 'from:mit.edu subject:"AI AT WORK"' },
-      { name: 'Austin Business Journal', query: 'from:(news.bizjournals.com OR engaged.bizjournals.com)' },
+      { name: 'Austin Business Journal', query: 'from:(news.bizjournals.com OR engaged.bizjournals.com OR partner.bizjournals.com)' },
+      { name: 'Superhuman AI', query: 'from:mail.joinsuperhuman.ai' },
+      { name: 'DEV Community', query: 'from:dev.to' },
+      { name: 'Apple Developer', query: 'from:insideapple.apple.com' },
+      { name: 'Grafana', query: 'from:update@grafana.com' },
+      { name: 'Yubico', query: 'from:info.yubico.com' },
+      { name: 'Render', query: 'from:dx@render.com' },
+      { name: 'Thesis Driven', query: 'from:thesisdriven.com' },
+      { name: 'MIT Sloan Thinking Forward', query: 'from:thinkingforward@mit.edu' },
+      { name: 'IMF', query: 'from:updates.imf.org' },
+      { name: 'F6S', query: 'from:f6s.com' },
+      { name: 'Axios Partners', query: 'from:partners@axios.com' },
+      { name: 'The Publish Press', query: 'from:mail.thepublishpress.com' },
+      { name: 'Google Scholar Alerts', query: 'from:scholaralerts-noreply@google.com' },
     ],
   },
   {
@@ -183,6 +219,106 @@ const CATEGORIES = [
       { name: 'Austin Alchemist', query: 'from:theaustinalchemist.com' },
       { name: 'Lumos Fitness', query: 'from:lumosfc.com' },
       { name: 'UT Austin Announcements', query: 'from:(econnect.utexas.edu OR austin.utexas.edu)' },
+    ],
+  },
+  {
+    // Austin venues & clubs — stay in inbox like the parent Events category (future events)
+    labelName: LABEL_EVENTS_LOCAL,
+    archive: false,
+    filters: [
+      { name: 'Tiny Minotaur Tavern', query: 'from:tinyminotaur.com' },
+      { name: 'Fallout Theater', query: 'from:fallouttheater.com' },
+      { name: 'Museum of Human Achievement', query: 'from:themuseumofhumanachievement.com' },
+      { name: 'Austin Westie Academy', query: 'from:austinwestieacademy' },
+      { name: 'Open House Austin', query: 'from:openhouseaustin.co' },
+      { name: 'Houston Sports & Social Club', query: 'from:houstonssc.com' },
+    ],
+  },
+  {
+    labelName: LABEL_EVENTS_PERFORMANCES,
+    archive: false,
+    filters: [
+      { name: 'Broadway San Jose', query: 'from:response.broadwaysanjose.com' },
+    ],
+  },
+  {
+    // Streaming/gaming/social notifications — no upcoming dates, safe to archive
+    labelName: LABEL_EVENTS_ENTERTAINMENT,
+    archive: true,
+    filters: [
+      { name: 'HBO Max', query: 'from:mail.hbomax.com' },
+      { name: 'Steam', query: 'from:steampowered.com' },
+      { name: 'Goodreads', query: 'from:mail.goodreads.com' },
+      { name: 'X Digests', query: 'from:newsletter@x.com' },
+      { name: 'Instagram', query: 'from:mail.instagram.com' },
+    ],
+  },
+  {
+    // Medical/appointment mail — must stay in inbox (visit links, confirmations)
+    labelName: LABEL_SERVICES_HEALTH,
+    archive: false,
+    filters: [
+      { name: 'Patient Messages (Hightop/Roots)', query: 'from:patient-message.com' },
+      { name: "Total Men's Primary Care", query: 'from:mj.totalmens.com' },
+      // Shared Constant Contact domain — pin the sender prefix
+      { name: 'Northshore Medical', query: 'from:info-nmac.bm@shared1.ccsend.com' },
+      { name: 'Genomelink', query: 'from:genomelink.io' },
+      { name: 'Google Health', query: 'from:google-health-noreply@google.com' },
+    ],
+  },
+  {
+    // Home services marketing/digest mail — label + archive.
+    // Ring alerts that need action ("charge your", "action required") are excluded here;
+    // the battery nudge is routed to Time Sensitive by the category below instead.
+    labelName: LABEL_SERVICES_HOME,
+    archive: true,
+    filters: [
+      { name: 'Ring', query: 'from:(mail.ring.com OR notifications.ring.com) -subject:"charge your" -subject:"action required"' },
+      { name: 'Handy', query: 'from:handy.com' },
+      { name: 'EnergySage', query: 'from:energysage.com' },
+      { name: 'GFiber', query: 'from:outreach.gfiber.com' },
+      { name: 'Gaston & Sheehan Auctions', query: 'from:txauction.com' },
+      { name: 'Nextdoor', query: 'from:email.nextdoor.com' },
+      { name: 'CoStar Listings', query: 'from:c.costarmail.com' },
+    ],
+  },
+  {
+    // Money attached (invoices, estimates, statements) + TexasProtax — label only, never archive
+    labelName: LABEL_SERVICES_HOME,
+    archive: false,
+    filters: [
+      { name: 'Summit Home & Appliance', query: 'from:summithomeappliance1@gmail.com' },
+      { name: 'Housecall Pro (Comax etc.)', query: 'from:notifications@housecallpro.com' },
+      { name: 'Critter Control', query: 'from:crittercontrol.com' },
+      { name: 'TexasProtax', query: 'from:texasprotax.com' },
+    ],
+  },
+  {
+    // Amazon order lifecycle (money attached) — label only, never archive.
+    // Deliberately excludes promo senders (amazonmusic.com etc.) by pinning transactional addresses.
+    labelName: LABEL_PURCHASES_AMAZON,
+    archive: false,
+    filters: [
+      { name: 'Amazon Orders', query: 'from:(auto-confirm@amazon.com OR order-update@amazon.com)' },
+      { name: 'Amazon Shipping', query: 'from:shipment-tracking@amazon.com' },
+      { name: 'Amazon Marketplace', query: 'from:marketplace-messages@amazon.com' },
+    ],
+  },
+  {
+    // Device alerts that need physical action — flag, keep in inbox, no Home label
+    labelName: LABEL_TIME_SENSITIVE,
+    archive: false,
+    filters: [
+      { name: 'Ring Device Battery', query: 'from:(mail.ring.com OR notifications.ring.com) subject:"charge your"' },
+    ],
+  },
+  {
+    // Daily practice drip mail — label as Health but archive
+    labelName: LABEL_SERVICES_HEALTH,
+    archive: true,
+    filters: [
+      { name: 'ACA WSO Daily Meditation', query: 'from:acawso.org' },
+      { name: 'Human Design Daily', query: 'from:office@human.design' },
     ],
   },
   {
@@ -310,7 +446,7 @@ async function run() {
     }
 
     const labelClause = category.labelName && !category.archive ? ` -label:"${category.labelName}"` : '';
-    const combinedQuery = `(${filterQueries.join(' OR ')}) is:unread${labelClause}`;
+    const combinedQuery = category.applyQuery ?? `(${filterQueries.join(' OR ')}) is:unread${labelClause}`;
     const modifications = {
       ...(labelId ? { addLabelIds: [labelId] } : {}),
       ...(category.archive ? { removeLabelIds: [GMAIL_INBOX] } : {}),

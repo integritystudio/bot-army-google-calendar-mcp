@@ -6,7 +6,12 @@ import open from 'open';
 import { loadCredentials } from './client.js';
 import { getAccountMode, isNodeError } from './utils.js';
 
-const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
+const AUTH_SCOPES = [
+  'https://www.googleapis.com/auth/calendar',
+  // Gmail handlers (src/handlers/gmail/): messages, labels, filters
+  'https://www.googleapis.com/auth/gmail.modify',
+  'https://www.googleapis.com/auth/gmail.settings.basic',
+];
 const PORT_RANGE = { start: 3500, end: 3505 };
 
 function buildAuthHtml(title: string, body: string): string {
@@ -47,7 +52,7 @@ export class AuthServer {
         const clientForUrl = this.flowOAuth2Client || this.baseOAuth2Client;
         const authUrl = clientForUrl.generateAuthUrl({
           access_type: 'offline',
-          scope: [CALENDAR_SCOPE],
+          scope: AUTH_SCOPES,
           prompt: 'consent'
         });
 
@@ -164,7 +169,7 @@ export class AuthServer {
 
     const authorizeUrl = this.flowOAuth2Client.generateAuthUrl({
       access_type: 'offline',
-      scope: [CALENDAR_SCOPE],
+      scope: AUTH_SCOPES,
       prompt: 'consent'
     });
     

@@ -23,6 +23,7 @@ export class GoogleCalendarMcpServer {
   private tokenManager!: TokenManager;
   private authServer!: AuthServer;
   private config: ServerConfig;
+  private accountClients = new Map<string, { client: OAuth2Client; tokenManager: TokenManager }>();
 
   constructor(config: ServerConfig) {
     this.config = config;
@@ -119,7 +120,32 @@ export class GoogleCalendarMcpServer {
     }
   }
 
-  private async executeWithHandler(handler: any, args: any): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+  private async getClientForAccount(account: string): Promise<OAuth2Client> {
+    let entry = this.accountClients.get(account);
+    if (!entry) {
+      const client = await initializeOAuth2Client();
+      entry = { client, tokenManager: new TokenManager(client, account) };
+      this.accountClients.set(account, entry);
+    }
+
+    if (!(await entry.tokenManager.isAuthenticated())) {
+      const available = await entry.tokenManager.listAvailableAccounts();
+      throw new McpError(
+        ErrorCode.InvalidRequest,
+        `No valid tokens for account "${account}" (available: ${available.join(', ') || 'none'}). ` +
+        `Run \`GOOGLE_ACCOUNT_MODE=${account} npm run auth\` to authenticate it.`
+      );
+    }
+
+    return entry.client;
+  }
+
+  private async executeWithHandler(handler: any, args: any, account?: string): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+    if (account && account !== this.tokenManager.getAccountMode()) {
+      const client = await this.getClientForAccount(account);
+      return handler.runTool(args, client);
+    }
+
     await this.ensureAuthenticated();
     const result = await handler.runTool(args, this.oauth2Client);
     return result;

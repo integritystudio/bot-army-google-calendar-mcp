@@ -16,10 +16,10 @@ export class TokenManager {
   private tokenPath: string;
   private accountMode: string;
 
-  constructor(oauth2Client: OAuth2Client) {
+  constructor(oauth2Client: OAuth2Client, accountMode: string = getAccountMode()) {
     this.oauth2Client = oauth2Client;
     this.tokenPath = getSecureTokenPath();
-    this.accountMode = getAccountMode();
+    this.accountMode = accountMode;
     this.setupTokenRefresh();
   }
 

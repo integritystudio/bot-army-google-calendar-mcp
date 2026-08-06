@@ -25,6 +25,10 @@ import { GmailCreateLabelHandler } from "../handlers/gmail/GmailCreateLabelHandl
 import { GmailCreateFilterHandler } from "../handlers/gmail/GmailCreateFilterHandler.js";
 import { GmailApplyFiltersHandler } from "../handlers/gmail/GmailApplyFiltersHandler.js";
 
+const accountParameter = z.string().optional().describe(
+  "Account to run this tool as (account mode key in tokens.json, e.g. 'alyshia' or 'personal'). Defaults to the server's active account."
+);
+
 const KEY_VALUE_REGEX = /^[^=]+=[^=]+$/;
 const KEY_VALUE_FORMAT_MSG = "Must be in key=value format";
 const MAX_CALENDARS_PER_REQUEST = 50;
@@ -576,18 +580,27 @@ export class ToolRegistry {
   ];
 
   static getToolsWithSchemas() {
-    return this.tools.map(tool => ({
-      name: tool.name,
-      description: tool.description,
-      inputSchema: zodToJsonSchema(this.unwrapZodEffects(tool.schema))
-    }));
+    return this.tools.map(tool => {
+      // zod-to-json-schema's typings pin a different zod release than the
+      // project's, so the runtime-compatible object needs a bridging cast
+      const schemaWithAccount = z.object({
+        ...this.extractSchemaShape(tool.schema),
+        account: accountParameter
+      }) as unknown as Parameters<typeof zodToJsonSchema>[0];
+      return {
+        name: tool.name,
+        description: tool.description,
+        inputSchema: zodToJsonSchema(schemaWithAccount)
+      };
+    });
   }
 
   static async registerAll(
     server: McpServer,
     executeWithHandler: (
       handler: any,
-      args: any
+      args: any,
+      account?: string
     ) => Promise<{ content: Array<{ type: "text"; text: string }> }>
   ) {
     for (const tool of this.tools) {
@@ -595,13 +608,15 @@ export class ToolRegistry {
         tool.name,
         {
           description: tool.description,
-          inputSchema: this.extractSchemaShape(tool.schema)
+          inputSchema: { ...this.extractSchemaShape(tool.schema), account: accountParameter }
         },
         async (args: any) => {
-          const validatedArgs = tool.schema.parse(args);
+          // `account` selects credentials; strip it before tool-specific validation
+          const { account, ...toolArgs } = args ?? {};
+          const validatedArgs = tool.schema.parse(toolArgs);
           const processedArgs = tool.handlerFunction ? await tool.handlerFunction(validatedArgs) : validatedArgs;
           const handler = new tool.handler();
-          return executeWithHandler(handler, processedArgs);
+          return executeWithHandler(handler, processedArgs, account);
         }
       );
     }

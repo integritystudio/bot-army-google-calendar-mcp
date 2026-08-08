@@ -51,7 +51,8 @@
     "test:doppler": "GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json doppler run --project integrity-studio --config dev -- npm test",
     "start:http": "node build/index.js --transport http --port 3000",
     "start:http:public": "node build/index.js --transport http --port 3000 --host 0.0.0.0",
-    "repomix": "bash scripts/repomix/repomix-regen.sh"
+    "repomix": "bash scripts/repomix/repomix-regen.sh",
+    "list-unlabeled-unread": "node list-unlabeled-unread.mjs"
   },
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",

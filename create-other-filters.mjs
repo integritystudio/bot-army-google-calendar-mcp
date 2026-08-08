@@ -720,7 +720,7 @@ export const CATEGORIES = [
   },
   {
     labelName: LABEL_EVENTS_AI_MONTHLY,
-    archive: false,
+    archive: true,
     filters: [
       { name: 'SolutionPeople monthly series', query: `${SOLUTIONMAN} ${SOLUTIONMAN_MONTHLY}` },
     ],

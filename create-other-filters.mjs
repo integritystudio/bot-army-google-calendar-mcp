@@ -41,6 +41,7 @@ import {
   LABEL_PROMOTIONS_RETAIL,
   LABEL_PROMOTIONS_BEAUTY,
   LABEL_PROMOTIONS_FOOD,
+  LABEL_PROMOTIONS_HEALTH,
   LABEL_PROMOTIONS_FINANCIAL,
   LABEL_AUTOMOTIVE_SHOPPING,
   LABEL_AUTOMOTIVE_INSURANCE,
@@ -394,6 +395,7 @@ export const CATEGORIES = [
     archive: false,
     filters: [
       { name: 'Tiny Minotaur Tavern', query: 'from:tinyminotaur.com' },
+      { name: 'Austin Tennis League', query: 'from:ccsend.com from:Tennis' },
       { name: 'The Unbuzzed Club', query: 'from:theunbuzzedclub.com' },
       { name: 'Fallout Theater', query: 'from:fallouttheater.com' },
       { name: 'Museum of Human Achievement', query: 'from:themuseumofhumanachievement.com' },
@@ -451,6 +453,8 @@ export const CATEGORIES = [
       // in the inbox, while .com marketing archives under Promotions/Beauty & Wellness.
       // Age-based cleanup: archive-old-emails.mjs --query "from:laseraway.co"
       { name: 'LaserAway Appointments', query: 'from:laseraway.co' },
+      { name: 'Victory Medical', query: 'from:demandforced3.com from:"Victory Medical"' },
+      { name: 'Integrative Psychiatry Austin', query: 'from:ccsend.com from:"Integrative Psychiatry"' },
       { name: "Total Men's Primary Care", query: 'from:mj.totalmens.com' },
       // Shared Constant Contact domain — pin the sender prefix
       { name: 'Northshore Medical', query: 'from:info-nmac.bm@shared1.ccsend.com' },
@@ -508,6 +512,8 @@ export const CATEGORIES = [
     filters: [
       { name: 'Ring', query: 'from:(mail.ring.com OR notifications.ring.com OR em.service.ring.com OR rs.ring.com OR neighborhoods.ring.com OR myaccount.ring.com) -subject:"charge your" -subject:"action required"' },
       { name: 'Handy', query: 'from:handy.com' },
+      { name: 'Maid Affordable', query: 'from:ccsend.com from:"Maid Affordable"' },
+      { name: 'Grass Works Lawn Care', query: 'from:demandforced3.com from:"Grass Works"' },
       { name: 'EnergySage', query: 'from:energysage.com' },
       { name: 'GFiber', query: 'from:outreach.gfiber.com' },
       { name: 'Gaston & Sheehan Auctions', query: 'from:txauction.com' },
@@ -697,6 +703,16 @@ export const CATEGORIES = [
     ],
   },
   {
+    // Practice marketing from medical providers — kept apart from Services & Alerts/Health,
+    // which carries transactional patient mail that should stay visible
+    labelName: LABEL_PROMOTIONS_HEALTH,
+    archive: true,
+    filters: [
+      { name: 'Sanova Dermatology', query: 'from:ccsend.com from:Sanova' },
+      { name: 'Sleep Medicine Consultants', query: 'from:ccsend.com from:"Sleep Medicine"' },
+    ],
+  },
+  {
     labelName: LABEL_PROMOTIONS_BEAUTY,
     archive: true,
     filters: [
@@ -704,7 +720,13 @@ export const CATEGORIES = [
       { name: 'Saving Face Austin', query: 'from:savingfaceaustin.com' },
       { name: 'milk + honey', query: 'from:milkandhoney.com' },
       // Shared marketing-platform domains — pin the full address so other merchants on the platform don't match
+      // Demandforce is multi-vertical and noreply@demandforced3.com is shared by at least
+      // four merchants, so senders here are keyed on display name, not address.
       { name: 'Driftwood Spa', query: 'from:Driftwood@demandforced3.com' },
+      { name: 'exhale Spa', query: 'from:demandforced3.com from:exhale' },
+      { name: 'Satori Day Spa', query: 'from:demandforced3.com from:Satori' },
+      { name: 'Strands', query: 'from:demandforced3.com from:Strands' },
+      { name: 'Aveda Institute', query: 'from:demandforced3.com from:Aveda' },
       { name: 'Dolce Blu', query: 'from:noreply@hirefrederick.com' },
       { name: 'Dermazen', query: 'from:dermazen.co' },
       { name: 'WellnessLiving Studios', query: 'from:wellnessliving.com' },
@@ -734,6 +756,10 @@ export const CATEGORIES = [
     archive: true,
     filters: [
       { name: 'Edmunds', query: 'from:email.edmunds.com' },
+      // Match on "Ultimate": the display name appears as both "Dave's Ultimate Automotive"
+      // and "Daves Ultimate Automotive", and the apostrophe tokenizes badly (from:Dave
+      // returns well under half the messages)
+      { name: "Dave's Ultimate Automotive", query: 'from:demandforced3.com from:Ultimate' },
       { name: 'Cars.com', query: 'from:em.cars.com' },
       { name: 'Carvana', query: 'from:(mail.carvana.com OR vehicles.carvana.com)' },
       { name: 'CARFAX', query: 'from:no-reply.carfax.com' },
@@ -761,7 +787,10 @@ export const CATEGORIES = [
     filters: [
       // Food/pharmacy delivery; .co and .mx send independently, so both are listed
       { name: 'Rappi', query: 'from:(rappi.com.co OR rappi.com.mx)' },
-      { name: 'Hopdoddy', query: 'from:hopdoddy@emails.thanx.com' },
+      // Thanx is a restaurant-loyalty platform, so every merchant on it is food — the only
+      // shared platform here safe to route by domain. Pinning one address missed a second
+      // Hopdoddy sender on the bare domain (emails@thanx.com).
+      { name: 'Thanx platform (Hopdoddy, Via 313)', query: 'from:thanx.com' },
       { name: 'MOD Pizza', query: 'from:offers@modpizza.com' },
       { name: 'Northside Wine & Spirits', query: 'from:northsidewine.com' },
       { name: 'DoorDash', query: 'from:doordash.com' },

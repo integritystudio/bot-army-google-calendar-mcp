@@ -17,6 +17,13 @@ import {
   LABEL_ORG_ECOMMERCE_FOOD,
   LABEL_ORG_ECOMMERCE_BEAUTY,
   LABEL_ORG_ECOMMERCE_TECH,
+  LABEL_ORG_LC_COLLEGE,
+  LABEL_ORG_LC_COLLEGE_ALUMNI,
+  LABEL_ORG_LC_GOVERNMENT,
+  LABEL_ORG_LC_NEWS_MEDIA,
+  LABEL_ORG_LC_NGO,
+  LABEL_ORG_LC_CONSORTIUM,
+  LABEL_ORG_LC_ONLINE_BUSINESS,
   LABEL_ORG_DIGITAL_NOMAD,
   LABEL_ORG_GOOGLE,
   LABEL_ORG_HEALTH,
@@ -145,6 +152,57 @@ const ORG_TAGS = [
       { name: 'EGBI', query: 'from:egbi.org' },
       { name: 'Austin Technology Council', query: 'from:austintechnologycouncil.org' },
       { name: 'Meetup', query: 'from:meetup.com' },
+    ],
+  },
+  // LocalCommunity members repeated below under their schema.org Organization subtype.
+  // Routing is unaffected — these are label-only tags, and the entries above still apply
+  // the parent LocalCommunity tag, so each org carries both its sector and its type.
+  {
+    labelName: LABEL_ORG_LC_COLLEGE,
+    orgs: [
+      { name: 'UT Austin', query: 'from:utexas.edu' },
+    ],
+  },
+  {
+    // schema.org subOrganization of UT Austin
+    labelName: LABEL_ORG_LC_COLLEGE_ALUMNI,
+    orgs: [
+      { name: 'Texas Exes Alumni Association', query: 'from:texasexesemail.com' },
+    ],
+  },
+  {
+    labelName: LABEL_ORG_LC_GOVERNMENT,
+    orgs: [
+      { name: 'City of Austin', query: 'from:austintexas.gov OR from:coautilitiesemail.com OR from:myatxwater.com OR from:austinenergy.com' },
+    ],
+  },
+  {
+    labelName: LABEL_ORG_LC_NEWS_MEDIA,
+    orgs: [
+      { name: 'Austin Business Journal', query: 'from:bizjournals.com' },
+    ],
+  },
+  {
+    labelName: LABEL_ORG_LC_NGO,
+    orgs: [
+      { name: 'Austin Pets Alive', query: 'from:austinpetsalive.org' },
+      { name: 'Austin Habitat for Humanity', query: 'from:ahfh.org' },
+      { name: 'EGBI', query: 'from:egbi.org' },
+      { name: 'Austin Neighborhoods Council', query: 'from:ancweb.org' },
+    ],
+  },
+  {
+    // Membership organization whose members are themselves organizations
+    labelName: LABEL_ORG_LC_CONSORTIUM,
+    orgs: [
+      { name: 'Austin Technology Council', query: 'from:austintechnologycouncil.org' },
+    ],
+  },
+  {
+    labelName: LABEL_ORG_LC_ONLINE_BUSINESS,
+    orgs: [
+      { name: 'Meetup', query: 'from:meetup.com' },
+      { name: 'Nextdoor', query: 'from:nextdoor.com' },
     ],
   },
   {

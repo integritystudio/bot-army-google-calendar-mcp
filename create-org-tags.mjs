@@ -14,6 +14,9 @@ import {
   LABEL_ORG_PROFESSIONAL_METAPHYSICAL,
   LABEL_ORG_PROFESSIONAL_HOME,
   LABEL_ORG_PROFESSIONAL_BEAUTY,
+  LABEL_ORG_ECOMMERCE_FOOD,
+  LABEL_ORG_ECOMMERCE_BEAUTY,
+  LABEL_ORG_ECOMMERCE_TECH,
   LABEL_ORG_DIGITAL_NOMAD,
   LABEL_ORG_GOOGLE,
   LABEL_ORG_HEALTH,
@@ -100,6 +103,32 @@ const ORG_TAGS = [
       { name: 'Quince', query: 'from:quince.com' },
       { name: 'DoorDash', query: 'from:doordash.com' },
       { name: 'Instacart', query: 'from:instacart.com' },
+    ],
+  },
+  {
+    // Restaurants, grocery and delivery. DoorDash/Instacart also appear in the flat
+    // Ecommerce list above; sublabels are independent, so they carry both tags.
+    labelName: LABEL_ORG_ECOMMERCE_FOOD,
+    orgs: [
+      { name: 'Rappi', query: 'from:(rappi.com.co OR rappi.com.mx)' },
+      { name: 'Front Porch Pantry', query: 'from:frontporchpantry.com' },
+      { name: 'Hopdoddy Burger Bar', query: 'from:thanx.com from:Hopdoddy' },
+      { name: 'Via 313 Pizza', query: 'from:thanx.com from:"Via 313"' },
+      { name: 'DoorDash', query: 'from:doordash.com' },
+      { name: 'Instacart', query: 'from:instacart.com' },
+    ],
+  },
+  {
+    labelName: LABEL_ORG_ECOMMERCE_BEAUTY,
+    orgs: [
+      { name: 'Benefit Cosmetics', query: 'from:benefitcosmetics.com' },
+    ],
+  },
+  {
+    labelName: LABEL_ORG_ECOMMERCE_TECH,
+    orgs: [
+      // Senders are brother@/account@my.brother.com; the registrable domain catches both
+      { name: 'Brother USA', query: 'from:brother.com' },
     ],
   },
   {

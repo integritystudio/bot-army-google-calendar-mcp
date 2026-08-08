@@ -13,6 +13,7 @@ import {
   LABEL_ORG_PROFESSIONAL,
   LABEL_ORG_PROFESSIONAL_METAPHYSICAL,
   LABEL_ORG_PROFESSIONAL_HOME,
+  LABEL_ORG_PROFESSIONAL_BEAUTY,
   LABEL_ORG_DIGITAL_NOMAD,
   LABEL_ORG_GOOGLE,
   LABEL_ORG_HEALTH,
@@ -151,6 +152,19 @@ const ORG_TAGS = [
       { name: 'Maid Affordable', query: 'from:ccsend.com from:"Maid Affordable"' },
       { name: 'Five Star Home Delivery', query: 'from:homedelivery.ccsend.com' },
       { name: 'Grass Works Lawn Care', query: 'from:demandforced3.com from:"Grass Works"' },
+    ],
+  },
+  {
+    // Spas and salons. All but LaserAway reach the mailbox via Demandforce, whose
+    // noreply@ address is shared across merchants, so these key on display name.
+    labelName: LABEL_ORG_PROFESSIONAL_BEAUTY,
+    orgs: [
+      { name: 'exhale Spa', query: 'from:demandforced3.com from:exhale' },
+      { name: 'Satori Day Spa', query: 'from:demandforced3.com from:Satori' },
+      { name: 'Strands', query: 'from:demandforced3.com from:Strands' },
+      { name: 'Aveda Institute', query: 'from:demandforced3.com from:Aveda' },
+      { name: 'Driftwood Spa', query: 'from:demandforced3.com from:Driftwood' },
+      { name: 'LaserAway', query: 'from:(laseraway.com OR laseraway.co)' },
     ],
   },
   {

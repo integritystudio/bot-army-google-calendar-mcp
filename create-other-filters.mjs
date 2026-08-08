@@ -742,7 +742,7 @@ export const CATEGORIES = [
   {
     // Catch-all for this sender: everything not matched by the three buckets above
     labelName: LABEL_EVENTS_TECH,
-    archive: false,
+    archive: true,
     filters: [
       {
         name: 'SolutionPeople other',

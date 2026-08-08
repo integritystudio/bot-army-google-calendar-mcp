@@ -79,7 +79,7 @@ Core pattern: Label → conditional archive (keep future events, important items
 - `create-country-tags.mjs [--filters-only] [--only <label>] [--countries a,b]` — Country/* sender-origin tags; label-only like `create-org-tags.mjs` (never archives). Seeded from ccTLD domains only — brands sending localized mail from a global domain can't be attributed and are left untagged
 - `sublabel-services.mjs` — Sub-categorize Services & Alerts into Real Estate/Health/Utilities sublabels + auto-label filters (`--all` includes read mail)
 - `protect-important-inbox.mjs`, `filter-events-by-date.mjs` — Filtering & organization
-- `mark-read.mjs` (label/past-event based, `--archived-only`/`--past-events` flags), `mark-forums-read.mjs`, `archive-old-emails.mjs --label "X"` — Read/archive maintenance
+- `mark-read.mjs` (label/past-event based, `--archived-only`/`--past-events` flags), `mark-forums-read.mjs`, `archive-old-emails.mjs (--label "X" | --query "<gmail-query>")` — Read/archive maintenance (7-day cutoff; `--query` covers senders that should sit in the inbox briefly, since Gmail filters run only on arrival and can't express age)
 - `mark-old-label-read.mjs --label "X" [--before YYYY/MM/DD]` — Mark a label's unread emails older than a cutoff (default 30 days) as read
 - `mark-past-events-read.mjs [--label "Events"] [--dry-run]` — Date-classify a label's unread mail (subject/body via `classifyEmail`, HTML fallback); mark past events read, keep future/undatable unread
 - `extract-event-details.mjs [--max N] [--full] "<gmail-query>" [query...]` — Print subject + body fragments around date/time/location keywords for each query's matches (calendar-entry prep without opening emails)

@@ -1,36 +1,43 @@
 /**
- * Archive emails older than DAYS_AGO that match a given label.
+ * Archive emails older than DAYS_AGO that match a given label or Gmail query.
+ *
+ * A query targets senders that should stay in the inbox briefly but not linger —
+ * Gmail filters run only on arrival, so age-based archiving has to happen here.
  *
  * Usage:
  *   node archive-old-emails.mjs --label "Meeting Responses"
+ *   node archive-old-emails.mjs --query "from:laseraway.co"
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { GMAIL_INBOX, GMAIL_UNREAD, DEFAULT_MAX_RESULTS, MS_PER_DAY } from './lib/constants.mjs';
 import { searchAndModifyOlderThan } from './lib/gmail-batch-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { BANNER } from './lib/console-utils.mjs';
+import { argAfter } from './lib/cli-utils.mjs';
 
 const DAYS_AGO = 7;
 
-const labelArgIndex = process.argv.indexOf('--label');
-const labelName = labelArgIndex !== -1 ? process.argv[labelArgIndex + 1] : null;
+const labelName = argAfter('--label');
+const rawQuery = argAfter('--query');
 
-if (!labelName) {
-  console.error('Usage: node archive-old-emails.mjs --label "<label name>"');
+if (!labelName && !rawQuery) {
+  console.error('Usage: node archive-old-emails.mjs (--label "<label name>" | --query "<gmail-query>")');
   process.exit(1);
 }
 
 async function archiveOldEmails() {
   const gmail = createGmailClient();
 
-  const labelCache = await buildLabelCache(gmail);
-  const labelId = labelCache.get(labelName);
-  if (!labelId) {
-    console.error(`Label not found: "${labelName}"`);
-    process.exit(1);
+  if (labelName) {
+    const labelCache = await buildLabelCache(gmail);
+    if (!labelCache.get(labelName)) {
+      console.error(`Label not found: "${labelName}"`);
+      process.exit(1);
+    }
   }
 
-  console.log(`ARCHIVING OLD EMAILS — label: ${labelName}\n`);
+  const searchQuery = rawQuery ?? `label:"${labelName}"`;
+  console.log(`ARCHIVING OLD EMAILS — ${rawQuery ? `query: ${rawQuery}` : `label: ${labelName}`}\n`);
   console.log(BANNER + '\n');
 
   const cutoffDate = new Date(Date.now() - DAYS_AGO * MS_PER_DAY).toISOString().split('T')[0];
@@ -38,7 +45,7 @@ async function archiveOldEmails() {
 
   const archivedIds = await searchAndModifyOlderThan(
     gmail,
-    `label:"${labelName}"`,
+    searchQuery,
     DAYS_AGO,
     { removeLabelIds: [GMAIL_UNREAD, GMAIL_INBOX] },
     DEFAULT_MAX_RESULTS

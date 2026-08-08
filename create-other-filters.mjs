@@ -447,6 +447,10 @@ export const CATEGORIES = [
     archive: false,
     filters: [
       { name: 'Patient Messages (Hightop/Roots)', query: 'from:patient-message.com' },
+      // LaserAway splits senders: .co is transactional (booking confirmations) and stays
+      // in the inbox, while .com marketing archives under Promotions/Beauty & Wellness.
+      // Age-based cleanup: archive-old-emails.mjs --query "from:laseraway.co"
+      { name: 'LaserAway Appointments', query: 'from:laseraway.co' },
       { name: "Total Men's Primary Care", query: 'from:mj.totalmens.com' },
       // Shared Constant Contact domain — pin the sender prefix
       { name: 'Northshore Medical', query: 'from:info-nmac.bm@shared1.ccsend.com' },

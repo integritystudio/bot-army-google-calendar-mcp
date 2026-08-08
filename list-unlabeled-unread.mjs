@@ -9,12 +9,14 @@
  * Usage:
  *   node list-unlabeled-unread.mjs                # inbox count + previews
  *   node list-unlabeled-unread.mjs --preview 25   # more preview lines
+ *   node list-unlabeled-unread.mjs --preview all  # every inbox match, no count to guess
  *   node list-unlabeled-unread.mjs --all          # include mailbox-wide count
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { countMessagesMatching, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 
 const DEFAULT_PREVIEW_COUNT = 10;
+const PREVIEW_ALL = 'all';
 const FROM_MAX_LENGTH = 40;
 const SUBJECT_MAX_LENGTH = 60;
 const UNLABELED_UNREAD_QUERY = 'is:unread has:nouserlabels';
@@ -24,7 +26,9 @@ const argAfter = flag => {
   return i !== -1 ? process.argv[i + 1] : null;
 };
 
-const previewCount = Number(argAfter('--preview')) || DEFAULT_PREVIEW_COUNT;
+// Previews always come from the inbox query, so 'all' stays bounded by inbox size.
+const previewArg = argAfter('--preview');
+const previewCount = previewArg === PREVIEW_ALL ? Infinity : Number(previewArg) || DEFAULT_PREVIEW_COUNT;
 const includeAll = process.argv.includes('--all');
 
 const gmail = await createGmailClient();

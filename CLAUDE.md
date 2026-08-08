@@ -71,7 +71,7 @@ Core pattern: Label → conditional archive (keep future events, important items
 
 **Key Scripts:**
 - `list-unread-emails.mjs`, `list-inbox.mjs`, `summarize-remaining.mjs` — Email analysis
-- `list-unlabeled-unread.mjs [--preview N] [--all]` — Count/preview unread emails with no user label (inbox by default; `--all` adds an exact mailbox-wide count, slow on large archives)
+- `list-unlabeled-unread.mjs [--preview N|all] [--all]` — Count/preview unread emails with no user label (inbox by default; `--preview all` lists every inbox match; `--all` adds an exact mailbox-wide count, slow on large archives)
 - `dump-messages.mjs [--max N] "<gmail-query>"` — TSV dump (date, from, subject) of messages matching any Gmail query; count goes to stderr so stdout pipes cleanly
 - `organize-emails.mjs` — Full pipeline: label, filter, and conditionally archive emails
 - `create-gmail-filters.mjs` — Batch create Gmail filters from category definitions

@@ -308,7 +308,7 @@ const ORG_TAGS = [
     labelName: LABEL_ORG_GOVERNMENT,
     orgs: [
       { name: 'USPS', query: 'from:usps.com' },
-      { name: 'State of Texas', query: 'from:txt.texas.gov' },
+      { name: 'State of Texas', query: 'from:(txt.texas.gov OR dps.texas.gov)' },
       { name: 'US House', query: 'from:mail.house.gov' },
     ],
   },

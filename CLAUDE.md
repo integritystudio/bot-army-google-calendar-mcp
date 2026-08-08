@@ -76,6 +76,7 @@ Core pattern: Label → conditional archive (keep future events, important items
 - `organize-emails.mjs` — Full pipeline: label, filter, and conditionally archive emails
 - `create-gmail-filters.mjs` — Batch create Gmail filters from category definitions
 - `create-other-filters.mjs` — Filters for uncategorized "Other" emails (GitHub, finance, travel, newsletters, etc.)
+- `create-country-tags.mjs [--filters-only] [--only <label>] [--countries a,b]` — Country/* sender-origin tags; label-only like `create-org-tags.mjs` (never archives). Seeded from ccTLD domains only — brands sending localized mail from a global domain can't be attributed and are left untagged
 - `sublabel-services.mjs` — Sub-categorize Services & Alerts into Real Estate/Health/Utilities sublabels + auto-label filters (`--all` includes read mail)
 - `protect-important-inbox.mjs`, `filter-events-by-date.mjs` — Filtering & organization
 - `mark-read.mjs` (label/past-event based, `--archived-only`/`--past-events` flags), `mark-forums-read.mjs`, `archive-old-emails.mjs --label "X"` — Read/archive maintenance
@@ -94,6 +95,7 @@ Core pattern: Label → conditional archive (keep future events, important items
 - `gmail-batch.mjs` / `gmail-batch-utils.mjs` — Batch operations (10-100x speedup)
 - `gmail-message-utils.mjs` — Message header/body extraction, `decodeBase64Payload()`, `countMessagesMatching()` (exact paginated query counts), `fetchMessageHeaders()`
 - `gmail-filter-utils.mjs` — Filter creation helpers
+- `gmail-tag-utils.mjs` — Label-only tag sets shared by `create-org-tags.mjs` / `create-country-tags.mjs`: `withRetry()`, `labelAllMatching()`, `applyTagSet()`
 - `date-based-filter.mjs` — Date parsing utility (ISO, US, text formats; no mutations)
 - `schema-extractor.mjs` — Schema.org type extraction from email HTML (htmlparser2)
 - `email-analyzer.mjs` / `email-utils.mjs` — Email parsing, categorization helpers

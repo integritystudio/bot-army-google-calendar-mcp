@@ -3,7 +3,7 @@
 // the same Organization label. Filters here are label-only — never archive/mark-read.
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { argAfter } from './lib/cli-utils.mjs';
-import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
+import { applyTagSet } from './lib/gmail-tag-utils.mjs';
 import {
   LABEL_ORG_OPEN_SOURCE,
   LABEL_ORG_FINANCIAL,
@@ -19,25 +19,6 @@ import {
   LABEL_ORG_GOVERNMENT,
   LABEL_ORG_BIG_TECH,
 } from './lib/constants.mjs';
-
-const BATCH_SIZE = 1000;
-const LIST_PAGE_SIZE = 500;
-const MAX_RETRIES = 4;
-const RETRY_DELAY_MS = 3000;
-
-// Gmail intermittently throws FAILED_PRECONDITION / 429 on rapid batch operations
-async function withRetry(fn) {
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      const transient = (error instanceof Error && error.message.includes('Precondition'))
-        || (typeof error?.code === 'number' && [429, 500, 503].includes(error.code));
-      if (!transient || attempt >= MAX_RETRIES) throw error;
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempt));
-    }
-  }
-}
 
 const ORG_TAGS = [
   {
@@ -350,48 +331,14 @@ const skipBackfill = process.argv.includes('--filters-only');
 const onlyLabel = argAfter('--only');
 const onlyOrgs = argAfter('--orgs')?.split(',').map(s => s.trim().toLowerCase());
 
-async function labelAllMatching(gmail, query, labelId) {
-  let total = 0;
-  let pageToken;
-  do {
-    const res = await withRetry(() => gmail.users.messages.list({
-      userId: 'me', q: query, maxResults: LIST_PAGE_SIZE, pageToken,
-    }));
-    const ids = (res.data.messages || []).map(m => m.id);
-    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
-      const chunk = ids.slice(i, i + BATCH_SIZE);
-      await withRetry(() => gmail.users.messages.batchModify({
-        userId: 'me',
-        requestBody: { ids: chunk, addLabelIds: [labelId] },
-      }));
-    }
-    total += ids.length;
-    pageToken = res.data.nextPageToken;
-  } while (pageToken);
-  return total;
-}
-
 async function run() {
   const gmail = createGmailClient();
-  let filterCount = 0;
-
-  for (const tag of ORG_TAGS) {
-    if (onlyLabel && !tag.labelName.startsWith(onlyLabel)) continue;
-    console.log(`\n${tag.labelName.toUpperCase()}`);
-    const labelId = await ensureLabelExists(gmail, tag.labelName);
-
-    for (const org of tag.orgs) {
-      if (onlyOrgs && !onlyOrgs.includes(org.name.toLowerCase())) continue;
-      const filterId = await withRetry(() => createGmailFilter(gmail, { query: org.query }, { addLabelIds: [labelId] }));
-      if (filterId) filterCount++;
-
-      let backfilled = 0;
-      if (!skipBackfill) {
-        backfilled = await labelAllMatching(gmail, `(${org.query}) -label:"${tag.labelName}"`, labelId);
-      }
-      console.log(`  ${filterId ? '✓' : '~'} ${org.name}${backfilled ? ` (+${backfilled} tagged)` : ''}`);
-    }
-  }
+  const tagSet = ORG_TAGS.map(({ labelName, orgs }) => ({ labelName, entries: orgs }));
+  const filterCount = await applyTagSet(gmail, tagSet, {
+    skipBackfill,
+    onlyLabel,
+    onlyEntries: onlyOrgs,
+  });
 
   console.log(`\nFilters created: ${filterCount}`);
 }

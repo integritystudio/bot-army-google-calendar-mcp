@@ -218,7 +218,6 @@ export const CATEGORIES = [
       { name: 'Copa Airlines', query: 'from:email.copa.com' },
       { name: 'Vrbo Marketing', query: 'from:eg.vrbo.com' },
       { name: 'American Airlines Loyalty', query: 'from:loyalty.ms.aa.com' },
-      { name: 'Rappi', query: 'from:hello.rappi.com.co' },
       { name: 'AirAsia Rewards', query: 'from:rewards.airasia.com' },
       { name: 'GOL', query: 'from:news.voegol.com.br' },
       { name: 'JetBlue Marketing', query: 'from:email.jetblue.com' },
@@ -754,6 +753,8 @@ export const CATEGORIES = [
     labelName: LABEL_PROMOTIONS_FOOD,
     archive: true,
     filters: [
+      // Food/pharmacy delivery; .co and .mx send independently, so both are listed
+      { name: 'Rappi', query: 'from:(rappi.com.co OR rappi.com.mx)' },
       { name: 'Hopdoddy', query: 'from:hopdoddy@emails.thanx.com' },
       { name: 'MOD Pizza', query: 'from:offers@modpizza.com' },
       { name: 'Northside Wine & Spirits', query: 'from:northsidewine.com' },

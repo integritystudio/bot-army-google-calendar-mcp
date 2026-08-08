@@ -11,6 +11,9 @@ import {
   LABEL_ORG_ECOMMERCE,
   LABEL_ORG_LOCAL_COMMUNITY,
   LABEL_ORG_PROFESSIONAL,
+  LABEL_ORG_PROFESSIONAL_METAPHYSICAL,
+  LABEL_ORG_PROFESSIONAL_HOME,
+  LABEL_ORG_DIGITAL_NOMAD,
   LABEL_ORG_GOOGLE,
   LABEL_ORG_HEALTH,
   LABEL_ORG_TRAVEL,
@@ -128,6 +131,33 @@ const ORG_TAGS = [
       { name: 'A.Team', query: 'from:a.team' },
       { name: 'Idealist', query: 'from:idealist.org' },
       { name: 'Read AI', query: 'from:read.ai' },
+    ],
+  },
+  {
+    labelName: LABEL_ORG_PROFESSIONAL_METAPHYSICAL,
+    orgs: [
+      { name: 'Human Design', query: 'from:human.design' },
+      { name: 'The Heart Centered Being', query: 'from:shared1.ccsend.com from:"Heart Centered"' },
+    ],
+  },
+  {
+    // Home services. Shared-platform senders are keyed on display name — ccsend and
+    // demandforced3 carry many unrelated merchants on the same domain.
+    labelName: LABEL_ORG_PROFESSIONAL_HOME,
+    orgs: [
+      { name: 'Angi', query: 'from:angi.com' },
+      { name: 'Handy', query: 'from:handy.com' },
+      { name: 'Stanley Steemer', query: 'from:stanleysteemer.com' },
+      { name: 'Maid Affordable', query: 'from:ccsend.com from:"Maid Affordable"' },
+      { name: 'Five Star Home Delivery', query: 'from:homedelivery.ccsend.com' },
+      { name: 'Grass Works Lawn Care', query: 'from:demandforced3.com from:"Grass Works"' },
+    ],
+  },
+  {
+    labelName: LABEL_ORG_DIGITAL_NOMAD,
+    orgs: [
+      { name: 'Outsite', query: 'from:outsite.co' },
+      { name: 'KIMA SURF', query: 'from:kimasurf.com' },
     ],
   },
   {

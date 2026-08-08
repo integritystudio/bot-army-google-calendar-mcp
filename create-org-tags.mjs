@@ -229,7 +229,7 @@ const ORG_TAGS = [
       { name: 'One Medical', query: 'from:onemedical.com' },
       { name: 'Quest Diagnostics', query: 'from:questdiagnostics.com' },
       { name: 'Ascension Seton', query: 'from:ascension.org' },
-      { name: 'Baylor Scott & White', query: 'from:bswhealth.org OR from:bswhealth.com' },
+      { name: 'Baylor Scott & White', query: 'from:bswhealth.org' },
       { name: 'Family Medicine Austin', query: 'from:phreesia-mail.com OR from:eclinicalmail.com OR from:campaigns.nexhealth.com OR from:thevalorsolution.com' },
       { name: "Total Men's Primary Care", query: 'from:totalmens.com' },
       { name: 'Galileo Medical', query: 'from:galileohealth.com' },

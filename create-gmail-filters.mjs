@@ -63,7 +63,8 @@ const REMAINING_CATEGORIES = [
       { query: 'from:notifications@mail.postman.com', name: 'Postman' },
       { query: 'from:zeno@updates.resend.com', name: 'Resend' },
       { query: 'from:(support@mixpanel.com OR content@mixpanel.com)', name: 'Mixpanel' },
-      { query: 'from:noreply@tm.openai.com', name: 'OpenAI' },
+      // tm/tm1 are OpenAI's marketing senders; the bare domain would pull in account+security mail
+      { query: 'from:(tm.openai.com OR tm1.openai.com)', name: 'OpenAI' },
       { query: 'from:communications@yodlee.com', name: 'Yodlee' },
       { query: 'from:hello@adapty.io', name: 'Adapty' },
       { query: 'from:no-reply@comms.datahub.com', name: 'DataHub' },
@@ -84,7 +85,7 @@ const REMAINING_CATEGORIES = [
       { query: 'from:bot@notifications.heroku.com', name: 'Heroku' },
       { query: 'from:my-saved-home@mail.zillow.com', name: 'Zillow' },
       { query: 'from:upcoming@americanbestech.com', name: 'American Best' },
-      { query: 'from:alerts@mail.zapier.com', name: 'Zapier' },
+      { query: 'from:zapier.com', name: 'Zapier' },
     ],
   },
 ];

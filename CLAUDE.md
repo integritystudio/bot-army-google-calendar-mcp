@@ -83,6 +83,7 @@ Core pattern: Label → conditional archive (keep future events, important items
 - `mark-past-events-read.mjs [--label "Events"] [--dry-run]` — Date-classify a label's unread mail (subject/body via `classifyEmail`, HTML fallback); mark past events read, keep future/undatable unread
 - `extract-event-details.mjs [--max N] [--full] "<gmail-query>" [query...]` — Print subject + body fragments around date/time/location keywords for each query's matches (calendar-entry prep without opening emails)
 - `bulk-archive-unread.mjs` — Archive all unread inbox mail except "Keep Important" (stays unread; resumable; retry + batch-split on FAILED_PRECONDITION)
+- `mark-spam.mjs "<gmail-query>" [--yes]` — Add SPAM / remove INBOX+UNREAD for a query's matches; previews and changes nothing without `--yes` (an over-broad query trains Gmail's classifier on wanted mail)
 - `switch-account.mjs` — Switch active Google account (file-based resolution)
 
 **Categories:** Protected (never archive) | Events (future=keep, past=archive) | Monitoring (archive) | Product Updates (label+archive) | Communities (keep) | Services (archive) | Billing (conditional)

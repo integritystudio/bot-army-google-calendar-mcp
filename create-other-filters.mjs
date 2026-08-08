@@ -40,8 +40,12 @@ import {
   LABEL_LEGAL,
   LABEL_PROMOTIONS_RETAIL,
   LABEL_PROMOTIONS_BEAUTY,
+  LABEL_PROMOTIONS,
   LABEL_PROMOTIONS_FOOD,
   LABEL_PROMOTIONS_HEALTH,
+  LABEL_EVENTS_AI_MONTHLY,
+  LABEL_EVENTS_CONVENTIONS_TECH,
+  LABEL_EVENTS_TECH,
   LABEL_PROMOTIONS_FINANCIAL,
   LABEL_AUTOMOTIVE_SHOPPING,
   LABEL_AUTOMOTIVE_INSURANCE,
@@ -71,6 +75,18 @@ import {
  *   markRead      — also strip UNREAD when applying (default false)
  *   applyQuery    — override the backfill query (default: join all filter queries with OR + is:unread)
  */
+// SolutionPeople sends ~3x/week across four offerings. Subject matching partitions them
+// cleanly; body matching cannot, because 44% of the mail cross-sells every offering in the
+// footer. Plural forms are spelled out because Gmail phrase matching is token-based and
+// does not stem — "AI Innovation Summit" alone misses the "…Summits" news releases.
+const SOLUTIONMAN = 'from:solutionman@solutionpeople.ccsend.com';
+const SOLUTIONMAN_MONTHLY =
+  'subject:("AI Innovation Summit" OR "AI Innovation Summits" OR "Networking on Zoom" OR "Network On Zoom" OR "AI Summit")';
+const SOLUTIONMAN_CONVENTIONS =
+  'subject:(Thinkathon OR "Global Founders" OR GFIS OR "AI Con USA")';
+const SOLUTIONMAN_PROMOS =
+  'subject:("Networking Mastery" OR "LinkedIn Group" OR "LinkedIn Groups" OR "Linkedin Groups" OR "HR and Training Professionals" OR "HR and Training Innovators Group")';
+
 // Exported so backfill/drain scripts can import the definitions without executing run()
 export const CATEGORIES = [
   {
@@ -700,6 +716,38 @@ export const CATEGORIES = [
       { name: 'Smashwords', query: 'from:smashwords.com' },
       { name: 'Lumosity', query: 'from:lumosity.com' },
       { name: 'Move Dancewear', query: 'from:movedancewear.com' },
+    ],
+  },
+  {
+    labelName: LABEL_EVENTS_AI_MONTHLY,
+    archive: false,
+    filters: [
+      { name: 'SolutionPeople monthly series', query: `${SOLUTIONMAN} ${SOLUTIONMAN_MONTHLY}` },
+    ],
+  },
+  {
+    labelName: LABEL_EVENTS_CONVENTIONS_TECH,
+    archive: false,
+    filters: [
+      { name: 'SolutionPeople conventions', query: `${SOLUTIONMAN} ${SOLUTIONMAN_CONVENTIONS}` },
+    ],
+  },
+  {
+    labelName: LABEL_PROMOTIONS,
+    archive: true,
+    filters: [
+      { name: 'SolutionPeople book & LinkedIn-group promos', query: `${SOLUTIONMAN} ${SOLUTIONMAN_PROMOS}` },
+    ],
+  },
+  {
+    // Catch-all for this sender: everything not matched by the three buckets above
+    labelName: LABEL_EVENTS_TECH,
+    archive: false,
+    filters: [
+      {
+        name: 'SolutionPeople other',
+        query: `${SOLUTIONMAN} -${SOLUTIONMAN_MONTHLY} -${SOLUTIONMAN_CONVENTIONS} -${SOLUTIONMAN_PROMOS}`,
+      },
     ],
   },
   {

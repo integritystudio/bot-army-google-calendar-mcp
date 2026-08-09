@@ -175,7 +175,7 @@ export const CATEGORIES = [
     labelName: LABEL_PRODUCT_UPDATES,
     archive: true,
     filters: [
-      { name: 'AI product announcements', query: 'from:(noreply@email.openai.com OR no-reply@email.claude.com OR googlecloud@google.com OR "AlphaSignal" OR lukak@storylane.io)' },
+      { name: 'AI product announcements', query: 'from:(noreply@email.openai.com OR no-reply@email.claude.com OR googlecloud@google.com OR lukak@storylane.io)' },
       { name: 'Google Workspace', query: 'from:workspace-noreply@google.com' },
       { name: 'Google Cloud Startups', query: 'from:GoogleCloudStartups@google.com' },
       { name: 'Google Developer Forums', query: 'from:no-reply@discuss.google.d' },
@@ -186,8 +186,6 @@ export const CATEGORIES = [
       { name: 'Mixpanel', query: 'from:(support@mixpanel.com OR content@mixpanel.com)' },
       // tm/tm1 are OpenAI's marketing senders; the bare domain would pull in account+security mail
       { name: 'OpenAI', query: 'from:(tm.openai.com OR tm1.openai.com)' },
-      { name: 'Yodlee', query: 'from:communications@yodlee.com' },
-      { name: 'Adapty', query: 'from:hello@adapty.io' },
       { name: 'DataHub', query: 'from:no-reply@comms.datahub.com' },
       { name: 'Storylane', query: 'from:arthur@storylane.io' },
       { name: 'Poshmark', query: 'from:(poshmark.com)' },
@@ -330,6 +328,9 @@ export const CATEGORIES = [
       { name: 'Heart Centered Being', query: 'from:theheartcenteredbeing.com' },
       { name: 'UT Austin Newsletters', query: 'from:(utexas.edu OR mccombs.utexas.edu) subject:newsletter' },
       { name: 'ACM Listserv', query: 'from:listserv.acm.org' },
+      { name: 'AlphaSignal', query: 'from:"AlphaSignal"' },
+      { name: 'Yodlee', query: 'from:communications@yodlee.com' },
+      { name: 'Adapty', query: 'from:hello@adapty.io' },
     ],
   },
   {

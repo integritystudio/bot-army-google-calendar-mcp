@@ -16,6 +16,7 @@ import {
   LABEL_ORG, LABEL_ORG_OPEN_SOURCE, LABEL_ORG_FINANCIAL,
   LABEL_ORG_REAL_ESTATE, LABEL_ORG_ECOMMERCE,
   LABEL_ORG_LOCAL_COMMUNITY, LABEL_ORG_PROFESSIONAL,
+  LABEL_LINKEDIN_UPDATES, LABEL_MEETUP_EVENTS, LABEL_PRODUCT_UPDATES,
   DEFAULT_MAX_RESULTS,
 } from './lib/constants.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
@@ -79,26 +80,27 @@ const CONFIGS = {
   newsletters: {
     label: LABEL_NEWSLETTERS,
     title: 'ORGANIZING NEWSLETTERS',
+    // Entries may override the config-wide label; these four belong to categories
+    // create-filters.mjs already owns, and routing them here too double-labeled them.
     searchPatterns: [
       'from:news@alphasignal.ai',
-      'from:noreply@email.openai.com',
       'from:hello@adapty.io',
-      'from:info@email.meetup.com',
-      'from:googlecloud@google.com',
       'from:communications@yodlee.com',
-      'from:updates-noreply@linkedin.com',
       'from:noreply@notifications.hubspot.com',
       'from:support@substack.com',
+      { query: 'from:updates-noreply@linkedin.com', label: LABEL_LINKEDIN_UPDATES },
+      { query: 'from:info@email.meetup.com', label: LABEL_MEETUP_EVENTS },
+      { query: 'from:noreply@email.openai.com', label: LABEL_PRODUCT_UPDATES },
+      { query: 'from:googlecloud@google.com', label: LABEL_PRODUCT_UPDATES },
       'subject:newsletter OR subject:digest OR subject:weekly OR subject:monthly',
-      'label:Promotions',
     ],
     filterConfigs: [
       { name: 'AlphaSignal News', criteria: { from: 'news@alphasignal.ai' } },
-      { name: 'OpenAI Newsletter', criteria: { from: 'noreply@email.openai.com' } },
       { name: 'Adapty Updates', criteria: { from: 'hello@adapty.io' } },
-      { name: 'Meetup Notifications', criteria: { from: 'info@email.meetup.com' } },
-      { name: 'Google Cloud Updates', criteria: { from: 'googlecloud@google.com' } },
-      { name: 'Promotional Emails', criteria: { query: 'label:Promotions' } },
+      { name: 'LinkedIn Updates', criteria: { from: 'updates-noreply@linkedin.com' }, label: LABEL_LINKEDIN_UPDATES },
+      { name: 'Meetup Notifications', criteria: { from: 'info@email.meetup.com' }, label: LABEL_MEETUP_EVENTS },
+      { name: 'OpenAI Product Updates', criteria: { from: 'noreply@email.openai.com' }, label: LABEL_PRODUCT_UPDATES },
+      { name: 'Google Cloud Updates', criteria: { from: 'googlecloud@google.com' }, label: LABEL_PRODUCT_UPDATES },
     ],
   },
 };
@@ -115,20 +117,25 @@ function countFiltersCreated(filterResults) {
 }
 
 async function runSingleLabel(gmail, labelCache, cfg) {
-  const labelId = labelCache.get(cfg.label);
-  if (!labelId) {
-    console.error(`${cfg.label} label not found`);
-    process.exit(1);
-  }
+  const labelIdFor = (name = cfg.label) => {
+    const id = labelCache.get(name);
+    if (!id) {
+      console.error(`${name} label not found`);
+      process.exit(1);
+    }
+    return id;
+  };
+  labelIdFor();
   console.log(BANNER);
   console.log('\n1. APPLYING LABEL TO EXISTING EMAILS\n');
 
   const searchResults = await Promise.all(
-    cfg.searchPatterns.map(query =>
-      searchAndModify(gmail, query, { addLabelIds: [labelId] }, DEFAULT_MAX_RESULTS)
+    cfg.searchPatterns.map(pattern => {
+      const { query, label } = typeof pattern === 'string' ? { query: pattern } : pattern;
+      return searchAndModify(gmail, query, { addLabelIds: [labelIdFor(label)] }, DEFAULT_MAX_RESULTS)
         .then(count => ({ query, count, error: null }))
-        .catch(error => ({ query, count: 0, error: error.message }))
-    )
+        .catch(error => ({ query, count: 0, error: error.message }));
+    })
   );
   let totalLabeled = 0;
   for (const { query, count, error } of searchResults) {
@@ -143,7 +150,7 @@ async function runSingleLabel(gmail, labelCache, cfg) {
 
   const filterResults = await Promise.all(
     cfg.filterConfigs.map(fc =>
-      createGmailFilter(gmail, fc.criteria, { addLabelIds: [labelId] })
+      createGmailFilter(gmail, fc.criteria, { addLabelIds: [labelIdFor(fc.label)] })
         .then(filterId => ({ name: fc.name, created: !!filterId }))
     )
   );

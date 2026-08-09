@@ -26,6 +26,9 @@ import {
   LABEL_ORG_LC_ONLINE_BUSINESS,
   LABEL_ORG_LC_STORE,
   LABEL_ORG_LC_ENTERTAINMENT,
+  LABEL_ORG_BIGTECH_STREAMING,
+  LABEL_ORG_BIGTECH_ENTERTAINMENT,
+  LABEL_ORG_BIGTECH_DEVELOPER_AI,
   LABEL_ORG_LC_PERFORMING_GROUP,
   LABEL_ORG_LC_MUSEUM,
   LABEL_ORG_LC_RESEARCH,
@@ -485,9 +488,10 @@ const ORG_TAGS = [
       { name: 'Grafana', query: 'from:grafana.com' },
       { name: 'OpenRouter', query: 'from:openrouter.ai' },
       { name: 'PromptLayer', query: 'from:promptlayer.com' },
-      { name: 'Anthropic', query: 'from:anthropic.com' },
       { name: 'cloudHQ', query: 'from:cloudhq.net' },
       { name: 'Yubico', query: 'from:yubico.com' },
+      { name: 'Zapier', query: 'from:zapier.com' },
+      { name: 'DocuSign', query: 'from:docusign.net' },
     ],
   },
   {
@@ -509,6 +513,39 @@ const ORG_TAGS = [
       { name: 'Discord', query: 'from:(discord.com OR discordapp.com)' },
       { name: 'Spotify', query: 'from:spotify.com' },
       { name: 'WordPress / Automattic', query: 'from:(wordpress.com OR automattic.com)' },
+      { name: 'Netflix', query: 'from:netflix.com' },
+      { name: 'HBO Max', query: 'from:hbomax.com' },
+      { name: 'Last.fm', query: 'from:last.fm' },
+      { name: 'OpenAI', query: 'from:openai.com' },
+      { name: 'Anthropic', query: 'from:anthropic.com' },
+    ],
+  },
+  // BigTech members map to schema.org SoftwareApplication. The sub-sectors below are
+  // named for the applicationCategory / applicationSubCategory each represents, and are
+  // additive — members keep the parent BigTech tag as well.
+  {
+    // applicationCategory: Multimedia, applicationSubCategory: StreamingVideo
+    labelName: LABEL_ORG_BIGTECH_STREAMING,
+    orgs: [
+      { name: 'Netflix', query: 'from:netflix.com' },
+      { name: 'HBO Max', query: 'from:hbomax.com' },
+    ],
+  },
+  {
+    // applicationCategory: EntertainmentApplication
+    labelName: LABEL_ORG_BIGTECH_ENTERTAINMENT,
+    orgs: [
+      { name: 'Last.fm', query: 'from:last.fm' },
+    ],
+  },
+  {
+    // applicationCategory: DeveloperApplication, applicationSubCategory: AI API
+    labelName: LABEL_ORG_BIGTECH_DEVELOPER_AI,
+    orgs: [
+      // Bare domain, unlike the category filter: an org tag identifies the sender, so
+      // account and security mail belongs under it too
+      { name: 'OpenAI', query: 'from:openai.com' },
+      { name: 'Anthropic', query: 'from:anthropic.com' },
     ],
   },
 ];

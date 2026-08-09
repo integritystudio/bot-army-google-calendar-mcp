@@ -47,6 +47,7 @@ import {
   LABEL_EVENTS_CONVENTIONS_TECH,
   LABEL_EVENTS_TECH,
   LABEL_PROMOTIONS_FINANCIAL,
+  LABEL_PROMOTIONS_ENTERTAINMENT,
   LABEL_AUTOMOTIVE_SHOPPING,
   LABEL_AUTOMOTIVE_INSURANCE,
   LABEL_PROMOTIONS_TRAVEL,
@@ -162,6 +163,8 @@ export const CATEGORIES = [
     filters: [
       { name: 'Poshmark', query: 'from:(poshmark.com)' },
       { name: 'cloudHQ', query: 'from:cloudhq.net' },
+      // Listening reports and Labs feature news — about the user's own data, not merchandising
+      { name: 'Last.fm', query: 'from:(music@last.fm OR mailer.last.fm)' },
       { name: 'NordVPN', query: 'from:mail.nordvpn.com' },
       { name: 'Oura', query: 'from:ouraring.com' },
       { name: 'Dropbox', query: 'from:dropbox.com' },
@@ -783,6 +786,21 @@ export const CATEGORIES = [
       { name: 'WellnessLiving Studios', query: 'from:wellnessliving.com' },
       { name: 'SweatDecks', query: 'from:sweatdecks.com' },
       { name: 'Pure Body Studio', query: 'from:purebodystudio.com' },
+    ],
+  },
+  {
+    // Netflix sends marketing from several subdomains but security mail from account.netflix.com,
+    // which the Security & Account group keeps in the inbox. Excluding by sender rather than
+    // enumerating marketing subdomains means a new marketing subdomain is covered automatically
+    // while sign-in codes can never be swept up. discship/customerservice are legacy DVD-era
+    // transactional mail and are left unrouted.
+    labelName: LABEL_PROMOTIONS_ENTERTAINMENT,
+    archive: true,
+    filters: [
+      {
+        name: 'Netflix Marketing',
+        query: 'from:netflix.com -from:account.netflix.com -from:discship@netflix.com -from:customerservice@netflix.com',
+      },
     ],
   },
   {

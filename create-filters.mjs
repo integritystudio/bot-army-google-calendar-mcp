@@ -1,11 +1,6 @@
 /**
  * Create every Gmail routing filter and backfill existing mail into its label.
- * Single source of truth for category routing — create-gmail-filters.mjs was
- * merged in here so one file answers "what routes to label X".
- *
- * Covers: GitHub, Real Estate, Job Search, Finance, Shopping, Travel,
- * LinkedIn digests, Newsletters, Advocacy, Calendar notifications,
- * Local Austin events, Health/Wellness, Utilities, Sentry, and Monitoring.
+ * Single source of truth for category routing: CATEGORIES below is the list.
  *
  * Usage:
  *   node create-filters.mjs                       # all categories
@@ -88,9 +83,10 @@ import {
  *   filters       — array of { name, query } for createGmailFilter
  *   archive       — remove from INBOX when applying (default true)
  *   markRead      — also strip UNREAD when applying (default false)
- *   applyQuery    — override the backfill query (default: join all filter queries with OR + is:unread)
- *   maxResults    — cap the backfill page (default 500); lower it for broad subject-only queries
+ *   includeRead   — backfill read mail too (default: unread only)
+ *   maxResults    — cap the backfill page (default: searchAndModify's own 500)
  */
+const BACKFILL_PAGE_NARROW = 200;
 // SolutionPeople sends ~3x/week across four offerings. Subject matching partitions them
 // cleanly; body matching cannot, because 44% of the mail cross-sells every offering in the
 // footer. Plural forms are spelled out because Gmail phrase matching is token-based and
@@ -122,7 +118,6 @@ export const CATEGORIES = [
       { name: 'FoundersCard', query: 'from:memberservices@founderscard.com' },
       { name: 'Link', query: 'from:notifications@link.com' },
       { name: 'Heroku', query: 'from:bot@notifications.heroku.com' },
-      { name: 'Zillow Saved Homes', query: 'from:my-saved-home@mail.zillow.com' },
       { name: 'American Best', query: 'from:upcoming@americanbestech.com' },
       { name: 'Zillow', query: 'from:mail.zillow.com' },
       { name: 'Zillow Rental Manager', query: 'from:zillowrentals.com' },
@@ -937,9 +932,6 @@ export const CATEGORIES = [
     ],
   },
   {
-    // Events and Communities each already have an
-    // archive: false block above — these senders archive on arrival, so they stay separate
-    // rather than inheriting the keep-in-inbox policy of the labels they share.
     labelName: LABEL_SENTRY,
     archive: true,
     filters: [
@@ -987,7 +979,7 @@ export const CATEGORIES = [
     labelName: LABEL_DMARC_REPORTS,
     archive: true,
     maxResults: DEFAULT_MAX_RESULTS,
-    applyQuery: 'subject:DMARC',
+    includeRead: true,
     filters: [
       { name: 'DMARC Reports', query: 'subject:DMARC' },
     ],
@@ -995,14 +987,16 @@ export const CATEGORIES = [
   {
     labelName: LABEL_MONITORING,
     archive: true,
-    maxResults: 200,
-    applyQuery: 'from:alertmanager@signoz.cloud',
+    maxResults: BACKFILL_PAGE_NARROW,
+    includeRead: true,
     filters: [
       { name: 'SigNoz Alertmanager', query: 'from:alertmanager@signoz.cloud' },
     ],
   },
   {
-    // Eventbrite reminders archive; the Events label's other senders do not.
+    // Events and Communities each already have an archive: false block above. These
+    // senders archive on arrival, so they stay separate rather than inheriting the
+    // keep-in-inbox policy of the labels they share.
     labelName: LABEL_EVENTS,
     archive: true,
     filters: [
@@ -1031,7 +1025,7 @@ async function run() {
   const onlyPrefix = argAfter('--only');
   const gmail = createGmailClient();
 
-  console.log('CREATING OTHER CATEGORY FILTERS\n');
+  console.log('CREATING CATEGORY FILTERS\n');
   console.log(BANNER + '\n');
 
   let totalFilters = 0;
@@ -1052,12 +1046,12 @@ async function run() {
     if (category.labelName && !labelId) continue;
 
     const filterQueries = [];
+    const removeIds = [
+      ...(category.archive ? [GMAIL_INBOX] : []),
+      ...(category.markRead ? [GMAIL_UNREAD] : []),
+    ];
 
     for (const filter of category.filters) {
-      const removeIds = [
-        ...(category.archive ? [GMAIL_INBOX] : []),
-        ...(category.markRead ? [GMAIL_UNREAD] : []),
-      ];
       const action = {
         ...(labelId ? { addLabelIds: [labelId] } : {}),
         ...(removeIds.length ? { removeLabelIds: removeIds } : {}),
@@ -1069,14 +1063,14 @@ async function run() {
     }
 
     const labelClause = category.labelName && !category.archive ? ` -label:"${category.labelName}"` : '';
-    const combinedQuery = category.applyQuery ?? `(${filterQueries.join(' OR ')}) is:unread${labelClause}`;
+    const readClause = category.includeRead ? '' : ' is:unread';
+    const combinedQuery = `(${filterQueries.join(' OR ')})${readClause}${labelClause}`;
     const modifications = {
       ...(labelId ? { addLabelIds: [labelId] } : {}),
-      ...(category.archive ? { removeLabelIds: [GMAIL_INBOX] } : {}),
-      ...(category.markRead ? { removeLabelIds: [...(category.archive ? [GMAIL_INBOX] : []), GMAIL_UNREAD] } : {}),
+      ...(removeIds.length ? { removeLabelIds: removeIds } : {}),
     };
 
-    const count = await searchAndModify(gmail, combinedQuery, modifications, category.maxResults ?? 500);
+    const count = await searchAndModify(gmail, combinedQuery, modifications, category.maxResults);
     if (count > 0) {
       console.log(`  → ${count} existing emails processed`);
       totalEmails += count;

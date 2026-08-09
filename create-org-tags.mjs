@@ -297,6 +297,7 @@ const ORG_TAGS = [
       { name: 'Maid Affordable', query: 'from:ccsend.com from:"Maid Affordable"' },
       { name: 'Five Star Home Delivery', query: 'from:homedelivery.ccsend.com' },
       { name: 'Grass Works Lawn Care', query: 'from:demandforced3.com from:"Grass Works"' },
+      { name: 'BY Design Home Staging', query: 'from:bydesignsa.com' },
     ],
   },
   {
@@ -310,6 +311,7 @@ const ORG_TAGS = [
       { name: 'Aveda Institute', query: 'from:demandforced3.com from:Aveda' },
       { name: 'Driftwood Spa', query: 'from:demandforced3.com from:Driftwood' },
       { name: 'LaserAway', query: 'from:(laseraway.com OR laseraway.co)' },
+      { name: 'Pure Body Studio', query: 'from:purebodystudio.com' },
     ],
   },
   {

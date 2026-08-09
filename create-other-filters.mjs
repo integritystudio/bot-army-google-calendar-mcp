@@ -718,6 +718,7 @@ export const CATEGORIES = [
       { name: 'Smashwords', query: 'from:smashwords.com' },
       { name: 'Lumosity', query: 'from:lumosity.com' },
       { name: 'Move Dancewear', query: 'from:movedancewear.com' },
+      { name: 'BY Design Home Staging', query: 'from:bydesignsa.com' },
     ],
   },
   {
@@ -781,6 +782,7 @@ export const CATEGORIES = [
       { name: 'Dermazen', query: 'from:dermazen.co' },
       { name: 'WellnessLiving Studios', query: 'from:wellnessliving.com' },
       { name: 'SweatDecks', query: 'from:sweatdecks.com' },
+      { name: 'Pure Body Studio', query: 'from:purebodystudio.com' },
     ],
   },
   {

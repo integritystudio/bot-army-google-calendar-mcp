@@ -319,7 +319,9 @@ export const CATEGORIES = [
     // Single combined filter: Gmail dedupes filters on criteria alone, so these must
     // differ from the parent Advocacy category's per-sender criteria
     filters: [
-      { name: 'Political senders', query: 'from:(dlcc.org OR mail.house.gov)' },
+      // Scoped to the individual senator, not senate.gov — the broader domain would
+      // sweep in unrelated congressional mail
+      { name: 'Political senders', query: 'from:(dlcc.org OR mail.house.gov OR gillibrand.senate.gov)' },
     ],
   },
   {

@@ -8,8 +8,8 @@
  * Local Austin events, Health/Wellness, Utilities, Sentry, and Monitoring.
  *
  * Usage:
- *   node create-other-filters.mjs                       # all categories
- *   node create-other-filters.mjs --only "Promotions"   # only categories whose label starts with the prefix
+ *   node create-filters.mjs                       # all categories
+ *   node create-filters.mjs --only "Promotions"   # only categories whose label starts with the prefix
  */
 import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';

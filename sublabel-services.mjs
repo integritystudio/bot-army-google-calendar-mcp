@@ -36,8 +36,10 @@ const SUBLABEL_DOMAINS = [
     domains: ['access.onemedical.com', 'e.questdiagnostics.com', 'communication.ascension.org'],
   },
   {
+    // USPS Informed Delivery is routed to Services & Alerts/USPS by create-filters.mjs,
+    // which also marks it read — a disposition this script cannot express.
     sublabel: LABEL_SERVICES_UTILITIES,
-    domains: ['coautilities.com', 'texasgasservice.com', 'email.informeddelivery.usps.com'],
+    domains: ['coautilities.com', 'texasgasservice.com'],
   },
 ];
 

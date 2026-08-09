@@ -438,7 +438,6 @@ export const CATEGORIES = [
       { name: 'The Concourse Project', query: 'from:concourseproject.com' },
       { name: 'Texas Exes', query: 'from:texasexesemail.com' },
       { name: 'dadageek', query: 'from:dadageek.com' },
-      { name: 'Eventbrite Campaigns', query: 'from:eventbrite.com' },
       { name: 'Salem Center', query: 'from:mccombs.utexas.edu subject:event' },
       { name: 'Meetup', query: 'from:(email.meetup.com OR meetup.com)' },
       { name: 'Austin Pets Alive', query: 'from:austinpetsalive.org' },
@@ -1000,7 +999,8 @@ export const CATEGORIES = [
     labelName: LABEL_EVENTS,
     archive: true,
     filters: [
-      { name: 'Eventbrite Reminders', query: 'from:noreply@reminder.eventbrite.com' },
+      // Covers reminder.eventbrite.com too, so the reminder-only filter it replaced is gone
+      { name: 'Eventbrite', query: 'from:eventbrite.com' },
     ],
   },
   {

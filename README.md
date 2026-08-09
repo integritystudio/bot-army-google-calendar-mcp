@@ -21,7 +21,6 @@ A Model Context Protocol (MCP) server that provides Google Calendar and Gmail in
 
 **Email Organization Pipeline:**
 - `organize-emails.mjs` — Full pipeline: label, filter, and conditionally archive emails with parallelized search/filter calls
-- `create-gmail-filters.mjs` — Batch create Gmail filters from category definitions
 - `switch-account.mjs` — File-based active account switching for multi-account workflows
 
 **Schema.org Email Categorization:**
@@ -202,7 +201,6 @@ Automated scripts for organizing and filtering large volumes of Gmail with focus
 
 **Management Scripts:** (use shared `createGmailClient()` for OAuth, error handling, and multi-account support)
 - `organize-emails.mjs` - Full pipeline: label, filter, and conditionally archive with parallelized calls
-- `create-gmail-filters.mjs` - Batch create Gmail filters from category definitions
 - `list-unread-emails.mjs` - Categorize and summarize unread emails; `--stats` for per-label counts, `--verify` for label spot-checks, `--count` for quick total
 - `summarize-remaining.mjs` - Summary of uncategorized/remaining unread emails; parallel fetching
 - `apply-filters-to-unread.mjs` - Apply existing filters to current unread emails

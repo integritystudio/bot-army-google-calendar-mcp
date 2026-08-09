@@ -74,8 +74,7 @@ Core pattern: Label → conditional archive (keep future events, important items
 - `list-unlabeled-unread.mjs [--preview N|all] [--all]` — Count/preview unread emails with no user label (inbox by default; `--preview all` lists every inbox match; `--all` adds an exact mailbox-wide count, slow on large archives)
 - `dump-messages.mjs [--max N] "<gmail-query>"` — TSV dump (date, from, subject) of messages matching any Gmail query; count goes to stderr so stdout pipes cleanly
 - `organize-emails.mjs` — Full pipeline: label, filter, and conditionally archive emails
-- `create-gmail-filters.mjs` — Batch create Gmail filters from category definitions
-- `create-other-filters.mjs` — Filters for uncategorized "Other" emails (GitHub, finance, travel, newsletters, etc.)
+- `create-other-filters.mjs [--only <label-prefix>]` — Single source of truth for category routing: creates every Gmail filter and backfills existing mail. Absorbed `create-gmail-filters.mjs`; per-category `archive`/`markRead`/`maxResults` flags
 - `create-country-tags.mjs [--filters-only] [--only <label>] [--countries a,b]` — Country/* sender-origin tags; label-only like `create-org-tags.mjs` (never archives). Seeded from ccTLD domains only — brands sending localized mail from a global domain can't be attributed and are left untagged
 - `sublabel-services.mjs` — Sub-categorize Services & Alerts into Real Estate/Health/Utilities sublabels + auto-label filters (`--all` includes read mail)
 - `relabel-messages.mjs --query "<gmail-query>" [--add "<label>"] [--remove "<label>"]` — Move a query's matches between user labels; both labels must already exist (fails fast rather than creating one from a typo)

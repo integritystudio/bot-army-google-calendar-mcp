@@ -1,8 +1,11 @@
 /**
- * Create Gmail filters for uncategorized "Other" emails.
+ * Create every Gmail routing filter and backfill existing mail into its label.
+ * Single source of truth for category routing — create-gmail-filters.mjs was
+ * merged in here so one file answers "what routes to label X".
+ *
  * Covers: GitHub, Real Estate, Job Search, Finance, Shopping, Travel,
  * LinkedIn digests, Newsletters, Advocacy, Calendar notifications,
- * Local Austin events, Health/Wellness, and Utilities.
+ * Local Austin events, Health/Wellness, Utilities, Sentry, and Monitoring.
  *
  * Usage:
  *   node create-other-filters.mjs                       # all categories
@@ -17,6 +20,15 @@ import { argAfter } from './lib/cli-utils.mjs';
 import {
   GMAIL_INBOX,
   GMAIL_UNREAD,
+  DEFAULT_MAX_RESULTS,
+  LABEL_SENTRY,
+  LABEL_MEETUP_EVENTS,
+  LABEL_COMMUNITY_EVENTS,
+  LABEL_CALENDLY_NOTIFICATIONS,
+  LABEL_LINKEDIN_UPDATES,
+  LABEL_DMARC_REPORTS,
+  LABEL_MEETING_NOTES,
+  LABEL_MONITORING,
   LABEL_FORUMS,
   LABEL_SERVICES,
   LABEL_BILLING,
@@ -77,6 +89,7 @@ import {
  *   archive       — remove from INBOX when applying (default true)
  *   markRead      — also strip UNREAD when applying (default false)
  *   applyQuery    — override the backfill query (default: join all filter queries with OR + is:unread)
+ *   maxResults    — cap the backfill page (default 500); lower it for broad subject-only queries
  */
 // SolutionPeople sends ~3x/week across four offerings. Subject matching partitions them
 // cleanly; body matching cannot, because 44% of the mail cross-sells every offering in the
@@ -106,6 +119,11 @@ export const CATEGORIES = [
     labelName: LABEL_SERVICES,
     archive: true,
     filters: [
+      { name: 'FoundersCard', query: 'from:memberservices@founderscard.com' },
+      { name: 'Link', query: 'from:notifications@link.com' },
+      { name: 'Heroku', query: 'from:bot@notifications.heroku.com' },
+      { name: 'Zillow Saved Homes', query: 'from:my-saved-home@mail.zillow.com' },
+      { name: 'American Best', query: 'from:upcoming@americanbestech.com' },
       { name: 'Zillow', query: 'from:mail.zillow.com' },
       { name: 'Zillow Rental Manager', query: 'from:zillowrentals.com' },
       { name: 'Redfin', query: 'from:redfin.com' },
@@ -162,6 +180,21 @@ export const CATEGORIES = [
     labelName: LABEL_PRODUCT_UPDATES,
     archive: true,
     filters: [
+      { name: 'AI product announcements', query: 'from:(noreply@email.openai.com OR no-reply@email.claude.com OR googlecloud@google.com OR "AlphaSignal" OR lukak@storylane.io)' },
+      { name: 'Google Workspace', query: 'from:workspace-noreply@google.com' },
+      { name: 'Google Cloud Startups', query: 'from:GoogleCloudStartups@google.com' },
+      { name: 'Google Developer Forums', query: 'from:no-reply@discuss.google.d' },
+      { name: 'Google Analytics', query: 'from:analytics-noreply@google.com' },
+      { name: 'HubSpot', query: 'from:noreply@notifications.hubspot.com' },
+      { name: 'Postman', query: 'from:notifications@mail.postman.com' },
+      { name: 'Resend', query: 'from:zeno@updates.resend.com' },
+      { name: 'Mixpanel', query: 'from:(support@mixpanel.com OR content@mixpanel.com)' },
+      // tm/tm1 are OpenAI's marketing senders; the bare domain would pull in account+security mail
+      { name: 'OpenAI', query: 'from:(tm.openai.com OR tm1.openai.com)' },
+      { name: 'Yodlee', query: 'from:communications@yodlee.com' },
+      { name: 'Adapty', query: 'from:hello@adapty.io' },
+      { name: 'DataHub', query: 'from:no-reply@comms.datahub.com' },
+      { name: 'Storylane', query: 'from:arthur@storylane.io' },
       { name: 'Poshmark', query: 'from:(poshmark.com)' },
       { name: 'cloudHQ', query: 'from:cloudhq.net' },
       // Listening reports and Labs feature news — about the user's own data, not merchandising
@@ -306,8 +339,8 @@ export const CATEGORIES = [
   },
   {
     // Newsletter senders that archive on arrival, unlike the label-only group above.
-    // Zapier's news@ is product-update marketing, not a service alert — the bare
-    // from:zapier.com rule in create-gmail-filters.mjs excludes it to avoid double-labeling.
+    // Zapier's news@ is product-update marketing, not a service alert; the
+    // Promotions/Tech block below excludes it to avoid double-labeling.
     labelName: LABEL_NEWSLETTERS,
     archive: true,
     filters: [
@@ -904,6 +937,86 @@ export const CATEGORIES = [
     ],
   },
   {
+    // Events and Communities each already have an
+    // archive: false block above — these senders archive on arrival, so they stay separate
+    // rather than inheriting the keep-in-inbox policy of the labels they share.
+    labelName: LABEL_SENTRY,
+    archive: true,
+    filters: [
+      { name: 'Sentry Alerts', query: 'from:noreply@md.getsentry.com' },
+    ],
+  },
+  {
+    labelName: LABEL_MEETUP_EVENTS,
+    archive: true,
+    filters: [
+      { name: 'Meetup Announcements', query: 'from:info@email.meetup.com' },
+    ],
+  },
+  {
+    labelName: LABEL_COMMUNITY_EVENTS,
+    archive: true,
+    filters: [
+      { name: 'Austin community groups', query: 'from:("ATX - Awkwardly Zen" OR "Austin Cafe Drawing Group" OR "Austin Robotics & AI")' },
+    ],
+  },
+  {
+    labelName: LABEL_CALENDLY_NOTIFICATIONS,
+    archive: true,
+    filters: [
+      { name: 'Calendly', query: 'from:teamcalendly@send.calendly.com' },
+    ],
+  },
+  {
+    labelName: LABEL_LINKEDIN_UPDATES,
+    archive: true,
+    filters: [
+      { name: 'LinkedIn Updates', query: 'from:updates-noreply@linkedin.com' },
+    ],
+  },
+  {
+    labelName: LABEL_MEETING_NOTES,
+    archive: true,
+    filters: [
+      { name: 'Google Meet Notes', query: 'from:meetings-noreply@google.com subject:Notes' },
+    ],
+  },
+  {
+    // Subject-only match with no sender constraint — capped lower so a broad backfill
+    // cannot sweep unrelated mail that merely mentions DMARC.
+    labelName: LABEL_DMARC_REPORTS,
+    archive: true,
+    maxResults: DEFAULT_MAX_RESULTS,
+    applyQuery: 'subject:DMARC',
+    filters: [
+      { name: 'DMARC Reports', query: 'subject:DMARC' },
+    ],
+  },
+  {
+    labelName: LABEL_MONITORING,
+    archive: true,
+    maxResults: 200,
+    applyQuery: 'from:alertmanager@signoz.cloud',
+    filters: [
+      { name: 'SigNoz Alertmanager', query: 'from:alertmanager@signoz.cloud' },
+    ],
+  },
+  {
+    // Eventbrite reminders archive; the Events label's other senders do not.
+    labelName: LABEL_EVENTS,
+    archive: true,
+    filters: [
+      { name: 'Eventbrite Reminders', query: 'from:noreply@reminder.eventbrite.com' },
+    ],
+  },
+  {
+    labelName: LABEL_COMMUNITIES,
+    archive: true,
+    filters: [
+      { name: 'Women Techmakers', query: 'from:wtm@technovation.org' },
+    ],
+  },
+  {
     // Google Calendar email notifications — label + archive + mark read silently
     labelName: LABEL_EVENTS_CALENDAR_NOTIFICATIONS,
     archive: true,
@@ -963,7 +1076,7 @@ async function run() {
       ...(category.markRead ? { removeLabelIds: [...(category.archive ? [GMAIL_INBOX] : []), GMAIL_UNREAD] } : {}),
     };
 
-    const count = await searchAndModify(gmail, combinedQuery, modifications, 500);
+    const count = await searchAndModify(gmail, combinedQuery, modifications, category.maxResults ?? 500);
     if (count > 0) {
       console.log(`  → ${count} existing emails processed`);
       totalEmails += count;

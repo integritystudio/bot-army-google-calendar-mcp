@@ -44,10 +44,8 @@ node organize-emails.mjs --type organization     # Organization label hierarchy
 ## 4. Create auto-label filters
 
 ```bash
-node create-gmail-filters.mjs              # Batch-create filters from category definitions
-node create-gmail-filters.mjs --apply      # Apply existing filters to current emails only
-node create-gmail-filters.mjs --remaining  # Handle remaining uncategorized senders
-node create-other-filters.mjs              # Filters for "Other" emails (GitHub, finance, travel, newsletters)
+node create-other-filters.mjs                     # Create all category filters + backfill
+node create-other-filters.mjs --only "Promotions" # Only categories whose label starts with the prefix
 node sublabel-services.mjs                 # Sub-categorize Services & Alerts (Real Estate/Health/Utilities) + auto-label filters
 node sublabel-services.mjs --all           # Also retro-label already-read Services & Alerts mail
 ```

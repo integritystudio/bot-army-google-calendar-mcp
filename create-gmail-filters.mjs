@@ -85,7 +85,8 @@ const REMAINING_CATEGORIES = [
       { query: 'from:bot@notifications.heroku.com', name: 'Heroku' },
       { query: 'from:my-saved-home@mail.zillow.com', name: 'Zillow' },
       { query: 'from:upcoming@americanbestech.com', name: 'American Best' },
-      { query: 'from:zapier.com', name: 'Zapier' },
+      // Zapier is newsletter/marketing traffic, not a service alert: news@ routes to
+      // Newsletters and the rest to Promotions/Tech, both in create-other-filters.mjs
     ],
   },
 ];

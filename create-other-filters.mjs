@@ -48,6 +48,7 @@ import {
   LABEL_EVENTS_TECH,
   LABEL_PROMOTIONS_FINANCIAL,
   LABEL_PROMOTIONS_ENTERTAINMENT,
+  LABEL_PROMOTIONS_TECH,
   LABEL_AUTOMOTIVE_SHOPPING,
   LABEL_AUTOMOTIVE_INSURANCE,
   LABEL_PROMOTIONS_TRAVEL,
@@ -56,6 +57,7 @@ import {
   LABEL_EVENTS_ENTERTAINMENT,
   LABEL_SERVICES_HEALTH,
   LABEL_SERVICES_HOME,
+  LABEL_SERVICES_USPS,
   LABEL_PURCHASES_AMAZON,
   LABEL_BILLING_RECEIPTS,
   LABEL_BILLING_STATEMENTS,
@@ -109,9 +111,8 @@ export const CATEGORIES = [
       { name: 'Redfin', query: 'from:redfin.com' },
       { name: 'Realtor.com', query: 'from:e.mail.realtor.com' },
       { name: 'Apartment List', query: 'from:emp.apartmentlist.com' },
-      { name: 'USPS Informed Delivery', query: 'from:email.informeddelivery.usps.com' },
-      { name: 'Texas Gas Service', query: 'from:texasgasservice.com' },
-      { name: 'City of Austin Utilities', query: 'from:coautilities.com' },
+      // Texas Gas Service and City of Austin Utilities moved to Services & Alerts/Utilities,
+      // which keeps bills in the inbox instead of archiving them here
       { name: 'Quest Diagnostics', query: 'from:e.questdiagnostics.com' },
       { name: 'Ascension Seton', query: 'from:communication.ascension.org' },
       { name: 'One Medical', query: 'from:access.onemedical.com' },
@@ -304,6 +305,16 @@ export const CATEGORIES = [
     ],
   },
   {
+    // Newsletter senders that archive on arrival, unlike the label-only group above.
+    // Zapier's news@ is product-update marketing, not a service alert — the bare
+    // from:zapier.com rule in create-gmail-filters.mjs excludes it to avoid double-labeling.
+    labelName: LABEL_NEWSLETTERS,
+    archive: true,
+    filters: [
+      { name: 'Zapier News', query: 'from:news@send.zapier.com' },
+    ],
+  },
+  {
     labelName: LABEL_ADVOCACY,
     archive: true,
     markRead: true,
@@ -465,6 +476,16 @@ export const CATEGORIES = [
     ],
   },
   {
+    // Daily mail-scan digests: each is superseded by the next day's, so they are
+    // archived and marked read on arrival rather than accumulating unread.
+    labelName: LABEL_SERVICES_USPS,
+    archive: true,
+    markRead: true,
+    filters: [
+      { name: 'USPS Informed Delivery', query: 'from:email.informeddelivery.usps.com' },
+    ],
+  },
+  {
     // Medical/appointment mail — must stay in inbox (visit links, confirmations)
     labelName: LABEL_SERVICES_HEALTH,
     archive: false,
@@ -518,7 +539,10 @@ export const CATEGORIES = [
     archive: false,
     filters: [
       { name: 'Austin Water', query: 'from:myatxwater.com' },
-      { name: 'City of Austin Utilities', query: 'from:coautilitiesemail.com' },
+      // Two independent COA senders: coautilitiesemail.com (billing) and coautilities.com
+      // (weekly usage updates) — neither is a subdomain of the other
+      { name: 'City of Austin Utilities', query: 'from:(coautilitiesemail.com OR coautilities.com)' },
+      { name: 'Texas Gas Service', query: 'from:texasgasservice.com' },
       { name: 'Austin Energy Rebates', query: 'from:rebates.austinenergy.com' },
       { name: 'Texas Water & Property (InvoiceCloud)', query: 'from:invoicecloud.net' },
       { name: 'Austin Energy Info', query: 'from:austinenergy.com' },
@@ -801,6 +825,15 @@ export const CATEGORIES = [
         name: 'Netflix Marketing',
         query: 'from:netflix.com -from:account.netflix.com -from:discship@netflix.com -from:customerservice@netflix.com',
       },
+    ],
+  },
+  {
+    // SaaS marketing drips (automation tips, trial nurture, webinar invites). Zapier's
+    // news@ is excluded — it routes to Newsletters — leaving blog@/learn@/events@ here.
+    labelName: LABEL_PROMOTIONS_TECH,
+    archive: true,
+    filters: [
+      { name: 'Zapier Marketing', query: 'from:zapier.com -from:news@send.zapier.com' },
     ],
   },
   {

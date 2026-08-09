@@ -25,6 +25,7 @@ import {
   LABEL_ORG_LC_CONSORTIUM,
   LABEL_ORG_LC_ONLINE_BUSINESS,
   LABEL_ORG_LC_STORE,
+  LABEL_ORG_LC_ENTERTAINMENT,
   LABEL_ORG_LC_PERFORMING_GROUP,
   LABEL_ORG_LC_MUSEUM,
   LABEL_ORG_LC_RESEARCH,
@@ -226,6 +227,12 @@ const ORG_TAGS = [
     labelName: LABEL_ORG_LC_STORE,
     orgs: [
       { name: 'Austin Books & Comics', query: 'from:ccsend.com from:"Austin Books"' },
+    ],
+  },
+  {
+    // Venue programming (album drops, takeovers, anniversaries), not retail
+    labelName: LABEL_ORG_LC_ENTERTAINMENT,
+    orgs: [
       { name: 'BATHE', query: 'from:batheaustin.com' },
     ],
   },

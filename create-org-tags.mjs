@@ -24,6 +24,11 @@ import {
   LABEL_ORG_LC_NGO,
   LABEL_ORG_LC_CONSORTIUM,
   LABEL_ORG_LC_ONLINE_BUSINESS,
+  LABEL_ORG_LC_STORE,
+  LABEL_ORG_LC_PERFORMING_GROUP,
+  LABEL_ORG_LC_MUSEUM,
+  LABEL_ORG_LC_RESEARCH,
+  LABEL_ORG_LC_SPORTS,
   LABEL_ORG_DIGITAL_NOMAD,
   LABEL_ORG_GOOGLE,
   LABEL_ORG_HEALTH,
@@ -152,6 +157,15 @@ const ORG_TAGS = [
       { name: 'EGBI', query: 'from:egbi.org' },
       { name: 'Austin Technology Council', query: 'from:austintechnologycouncil.org' },
       { name: 'Meetup', query: 'from:meetup.com' },
+      // ccsend.com is Constant Contact's shared platform; these key on display name
+      { name: 'Austin Books & Comics', query: 'from:ccsend.com from:"Austin Books"' },
+      { name: 'ColdTowne Theater', query: 'from:coldtowne.ccsend.com' },
+      { name: 'Neill-Cochran House Museum', query: 'from:ccsend.com from:Neill-Cochran' },
+      { name: 'Environmental Science Institute', query: 'from:ccsend.com from:"Environmental Science"' },
+      { name: 'Austin Tennis League', query: 'from:ccsend.com from:Tennis' },
+      { name: 'Austin AI Alliance', query: 'from:austin-ai.org' },
+      { name: 'BATHE', query: 'from:batheaustin.com' },
+      { name: "Games Y'all", query: 'from:gamesyall.com' },
     ],
   },
   // LocalCommunity members repeated below under their schema.org Organization subtype.
@@ -196,6 +210,8 @@ const ORG_TAGS = [
     labelName: LABEL_ORG_LC_CONSORTIUM,
     orgs: [
       { name: 'Austin Technology Council', query: 'from:austintechnologycouncil.org' },
+      { name: 'Austin AI Alliance', query: 'from:austin-ai.org' },
+      { name: 'Austin Less Wrong', query: 'from:austinlesswrong@gmail.com' },
     ],
   },
   {
@@ -203,6 +219,38 @@ const ORG_TAGS = [
     orgs: [
       { name: 'Meetup', query: 'from:meetup.com' },
       { name: 'Nextdoor', query: 'from:nextdoor.com' },
+    ],
+  },
+  {
+    // schema.org Store, a subtype of LocalBusiness
+    labelName: LABEL_ORG_LC_STORE,
+    orgs: [
+      { name: 'Austin Books & Comics', query: 'from:ccsend.com from:"Austin Books"' },
+      { name: 'BATHE', query: 'from:batheaustin.com' },
+    ],
+  },
+  {
+    labelName: LABEL_ORG_LC_PERFORMING_GROUP,
+    orgs: [
+      { name: 'ColdTowne Theater', query: 'from:coldtowne.ccsend.com' },
+    ],
+  },
+  {
+    labelName: LABEL_ORG_LC_MUSEUM,
+    orgs: [
+      { name: 'Neill-Cochran House Museum', query: 'from:ccsend.com from:Neill-Cochran' },
+    ],
+  },
+  {
+    labelName: LABEL_ORG_LC_RESEARCH,
+    orgs: [
+      { name: 'Environmental Science Institute', query: 'from:ccsend.com from:"Environmental Science"' },
+    ],
+  },
+  {
+    labelName: LABEL_ORG_LC_SPORTS,
+    orgs: [
+      { name: 'Austin Tennis League', query: 'from:ccsend.com from:Tennis' },
     ],
   },
   {

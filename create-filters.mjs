@@ -28,6 +28,8 @@ import {
   LABEL_SERVICES,
   LABEL_BILLING,
   LABEL_PRODUCT_UPDATES,
+  LABEL_PRODUCT_UPDATES_DEV_TOOLS,
+  LABEL_PRODUCT_UPDATES_DATA,
   LABEL_EVENTS,
   LABEL_EVENTS_LUMA,
   LABEL_EVENTS_CALENDAR_NOTIFICATIONS,
@@ -76,6 +78,9 @@ import {
   LABEL_NETWORKING,
   LABEL_NEWSLETTERS_CIVIC_AUSTIN,
   LABEL_NEWSLETTERS_DEVELOPER,
+  LABEL_NEWSLETTERS_NEWS,
+  LABEL_NEWSLETTERS_LEGAL,
+  LABEL_NEWSLETTERS_PERSONAL_DEV,
   LABEL_TIME_SENSITIVE,
 } from './lib/constants.mjs';
 
@@ -174,6 +179,25 @@ export const CATEGORIES = [
     ],
   },
   {
+    // Developer tooling release notes. Whimsical is a diagramming tool rather than a
+    // dev tool proper, but it is used the same way and does not warrant a label of its own.
+    labelName: LABEL_PRODUCT_UPDATES_DEV_TOOLS,
+    archive: true,
+    filters: [
+      { name: 'Vercel', query: 'from:vercel.com' },
+      { name: 'GitKraken', query: 'from:gitkraken.com' },
+      { name: 'Kestra', query: 'from:kestra.io' },
+      { name: 'Whimsical', query: 'from:whimsical.com' },
+    ],
+  },
+  {
+    labelName: LABEL_PRODUCT_UPDATES_DATA,
+    archive: true,
+    filters: [
+      { name: 'Databricks', query: 'from:mkt.databricks.com' },
+    ],
+  },
+  {
     labelName: LABEL_PRODUCT_UPDATES,
     archive: true,
     filters: [
@@ -190,11 +214,6 @@ export const CATEGORIES = [
       { name: 'OpenAI', query: 'from:(tm.openai.com OR tm1.openai.com)' },
       { name: 'DataHub', query: 'from:no-reply@comms.datahub.com' },
       { name: 'Storylane', query: 'from:arthur@storylane.io' },
-      { name: 'Vercel', query: 'from:vercel.com' },
-      { name: 'GitKraken', query: 'from:gitkraken.com' },
-      { name: 'Kestra', query: 'from:kestra.io' },
-      { name: 'Databricks', query: 'from:mkt.databricks.com' },
-      { name: 'Whimsical', query: 'from:whimsical.com' },
       { name: 'Poshmark', query: 'from:(poshmark.com)' },
       { name: 'cloudHQ', query: 'from:cloudhq.net' },
       // Listening reports and Labs feature news — about the user's own data, not merchandising
@@ -335,14 +354,33 @@ export const CATEGORIES = [
       { name: 'Heart Centered Being', query: 'from:theheartcenteredbeing.com' },
       { name: 'UT Austin Newsletters', query: 'from:(utexas.edu OR mccombs.utexas.edu) subject:newsletter' },
       { name: 'ACM Listserv', query: 'from:listserv.acm.org' },
-      { name: 'CNN', query: 'from:mail.cnn.com' },
-      { name: 'New York Times', query: 'from:e.newyorktimes.com' },
-      { name: 'ALM (legal press)', query: 'from:alm.com' },
-      { name: 'Ladies Get Paid', query: 'from:ladiesgetpaid.com' },
-      { name: 'School of Greatness', query: 'from:schoolofgreatness.com' },
       { name: 'AlphaSignal', query: 'from:"AlphaSignal"' },
       { name: 'Yodlee', query: 'from:communications@yodlee.com' },
       { name: 'Adapty', query: 'from:hello@adapty.io' },
+    ],
+  },
+  {
+    labelName: LABEL_NEWSLETTERS_NEWS,
+    archive: false,
+    filters: [
+      { name: 'CNN', query: 'from:mail.cnn.com' },
+      { name: 'New York Times', query: 'from:e.newyorktimes.com' },
+    ],
+  },
+  {
+    // ALM publishes Law.com, already routed to the parent Newsletters block
+    labelName: LABEL_NEWSLETTERS_LEGAL,
+    archive: false,
+    filters: [
+      { name: 'ALM', query: 'from:alm.com' },
+    ],
+  },
+  {
+    labelName: LABEL_NEWSLETTERS_PERSONAL_DEV,
+    archive: false,
+    filters: [
+      { name: 'Ladies Get Paid', query: 'from:ladiesgetpaid.com' },
+      { name: 'School of Greatness', query: 'from:schoolofgreatness.com' },
     ],
   },
   {

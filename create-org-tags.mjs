@@ -40,10 +40,19 @@ import {
   LABEL_ORG_AUTOMOTIVE,
   LABEL_ORG_DEVELOPER_TOOLS,
   LABEL_ORG_GOVERNMENT,
+  LABEL_ORG_POLITICAL,
   LABEL_ORG_BIG_TECH,
 } from './lib/constants.mjs';
 
 const ORG_TAGS = [
+  {
+    // National parties and campaign committees. Government covers public agencies and
+    // LC/NGO covers local nonprofits; neither fits a party organization.
+    labelName: LABEL_ORG_POLITICAL,
+    orgs: [
+      { name: 'Democrats.org', query: 'from:democrats.org' },
+    ],
+  },
   {
     labelName: LABEL_ORG_OPEN_SOURCE,
     orgs: [
@@ -58,6 +67,10 @@ const ORG_TAGS = [
     labelName: LABEL_ORG_FINANCIAL,
     orgs: [
       { name: 'Wells Fargo', query: 'from:wellsfargo.com OR from:wellsfargorewards.com' },
+      { name: 'Barchart', query: 'from:barchart.com' },
+      { name: 'Citi', query: 'from:citi.com' },
+      { name: 'ProxyVote (Broadridge)', query: 'from:proxyvote.com' },
+      { name: 'AV.VC', query: 'from:av.vc' },
       { name: 'USAA', query: 'from:usaa.com' },
       { name: 'Vanguard', query: 'from:vanguard.com' },
       { name: 'Ally', query: 'from:ally.com OR from:ally-invest.com' },
@@ -90,6 +103,8 @@ const ORG_TAGS = [
     labelName: LABEL_ORG_REAL_ESTATE,
     orgs: [
       { name: 'Zillow', query: 'from:zillow.com' },
+      { name: 'Turno (STR turnover)', query: 'from:(turno.com OR turnoverbnb.com)' },
+      { name: 'Beyond Pricing', query: 'from:beyondpricing.com' },
       { name: 'Redfin', query: 'from:redfin.com' },
       { name: 'Realtor.com', query: 'from:realtor.com' },
       { name: 'Apartment List', query: 'from:apartmentlist.com' },
@@ -119,6 +134,11 @@ const ORG_TAGS = [
       { name: 'Quince', query: 'from:quince.com' },
       { name: 'DoorDash', query: 'from:doordash.com' },
       { name: 'Instacart', query: 'from:instacart.com' },
+      { name: 'Shapermint', query: 'from:shapermint.com' },
+      { name: 'Perigold', query: 'from:perigold.com' },
+      { name: 'Woodcraft', query: 'from:woodcraft.com' },
+      { name: 'Thuma', query: 'from:thuma.co' },
+      { name: 'Alp N Rock', query: 'from:alpnrock.com' },
     ],
   },
   {
@@ -128,6 +148,11 @@ const ORG_TAGS = [
     orgs: [
       { name: 'Rappi', query: 'from:(rappi.com.co OR rappi.com.mx)' },
       { name: 'Front Porch Pantry', query: 'from:frontporchpantry.com' },
+      { name: 'Toast', query: 'from:toast-restaurants.com' },
+      { name: 'Grubhub', query: 'from:grubhub.com' },
+      { name: 'Sweetgreen', query: 'from:email.sweetgreen.com' },
+      { name: 'SevenRooms', query: 'from:email.sevenrooms.com' },
+      { name: 'Snooze Eatery', query: 'from:snoozeeatery.com' },
       { name: 'Hopdoddy Burger Bar', query: 'from:thanx.com from:Hopdoddy' },
       { name: 'Via 313 Pizza', query: 'from:thanx.com from:"Via 313"' },
       { name: 'DoorDash', query: 'from:doordash.com' },
@@ -152,6 +177,9 @@ const ORG_TAGS = [
     orgs: [
       { name: 'Nextdoor', query: 'from:nextdoor.com' },
       { name: 'Austin Business Journal', query: 'from:bizjournals.com' },
+      { name: 'CNN', query: 'from:cnn.com' },
+      { name: 'New York Times', query: 'from:newyorktimes.com' },
+      { name: 'ALM', query: 'from:alm.com' },
       { name: 'City of Austin', query: 'from:austintexas.gov OR from:coautilitiesemail.com OR from:myatxwater.com OR from:austinenergy.com' },
       { name: 'Austin Less Wrong', query: 'from:austinlesswrong@gmail.com' },
       { name: 'UT Austin', query: 'from:utexas.edu OR from:texasexesemail.com' },
@@ -292,6 +320,10 @@ const ORG_TAGS = [
     labelName: LABEL_ORG_PROFESSIONAL_HOME,
     orgs: [
       { name: 'Angi', query: 'from:angi.com' },
+      { name: 'LawnStarter', query: 'from:lawnstarter.com' },
+      { name: 'YardDoc', query: 'from:yarddoc.com' },
+      { name: 'Premier Home Warranty', query: 'from:premierhw.com' },
+      { name: 'HomeDesigns AI', query: 'from:homedesigns.ai' },
       { name: 'Handy', query: 'from:handy.com' },
       { name: 'Stanley Steemer', query: 'from:stanleysteemer.com' },
       { name: 'Maid Affordable', query: 'from:ccsend.com from:"Maid Affordable"' },
@@ -417,6 +449,12 @@ const ORG_TAGS = [
     labelName: LABEL_ORG_HEALTH,
     orgs: [
       { name: 'UnitedHealthcare', query: 'from:unitedhealthcare.com OR from:uhc.com' },
+      { name: 'SonderMind', query: 'from:sondermind.com' },
+      { name: 'CVS', query: 'from:cvs.com' },
+      { name: 'Fitbit', query: 'from:fitbit.com' },
+      { name: 'FamilyTreeDNA', query: 'from:familytreedna.com' },
+      { name: "Barry's Bootcamp", query: 'from:barrys.com' },
+      { name: 'ClubReady', query: 'from:clubreadymail.com' },
       { name: 'One Medical', query: 'from:onemedical.com' },
       { name: 'Quest Diagnostics', query: 'from:questdiagnostics.com' },
       { name: 'Ascension Seton', query: 'from:ascension.org' },
@@ -435,6 +473,11 @@ const ORG_TAGS = [
     labelName: LABEL_ORG_TRAVEL,
     orgs: [
       { name: 'Southwest Airlines', query: 'from:southwest.com' },
+      { name: 'Turo', query: 'from:turo.com' },
+      { name: 'Aeromexico', query: 'from:(aeromexico.com OR aeromexicorewards.com)' },
+      { name: 'Booking.com', query: 'from:booking.com' },
+      { name: 'Wild Women Expeditions', query: 'from:wildwomenexpeditions.com' },
+      { name: 'Rewilding Guide', query: 'from:rewildinguide.com' },
       { name: 'Delta', query: 'from:delta.com' },
       { name: 'United', query: 'from:united.com' },
       { name: 'American Airlines', query: 'from:aa.com' },
@@ -483,6 +526,13 @@ const ORG_TAGS = [
     labelName: LABEL_ORG_DEVELOPER_TOOLS,
     orgs: [
       { name: 'Render', query: 'from:render.com' },
+      { name: 'Vercel', query: 'from:vercel.com' },
+      { name: 'GitKraken', query: 'from:gitkraken.com' },
+      { name: 'Kestra', query: 'from:kestra.io' },
+      { name: 'Databricks', query: 'from:databricks.com' },
+      { name: 'Whimsical', query: 'from:whimsical.com' },
+      { name: 'Data Science Dojo', query: 'from:datasciencedojo.com' },
+      { name: 'Reach AI', query: 'from:getreach.ai' },
       { name: 'Supabase', query: 'from:supabase.com' },
       { name: 'PostHog', query: 'from:posthog.com' },
       { name: 'Netlify', query: 'from:netlify.com' },
@@ -500,6 +550,7 @@ const ORG_TAGS = [
     labelName: LABEL_ORG_GOVERNMENT,
     orgs: [
       { name: 'USPS', query: 'from:usps.com' },
+      { name: 'Healthcare.gov', query: 'from:healthcare.gov' },
       { name: 'State of Texas', query: 'from:(txt.texas.gov OR dps.texas.gov)' },
       { name: 'US House', query: 'from:mail.house.gov' },
     ],

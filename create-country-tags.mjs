@@ -31,6 +31,7 @@ const COUNTRY_TAGS = [
     labelName: LABEL_COUNTRY_MEXICO,
     entries: [
       { name: 'Rappi', query: 'from:rappi.com.mx' },
+      { name: 'Zen To Go', query: 'from:zentogo.com.mx' },
     ],
   },
 ];

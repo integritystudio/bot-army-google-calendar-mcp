@@ -341,14 +341,12 @@ export const CATEGORIES = [
       { name: 'MIT Sloan Thinking Forward', query: 'from:thinkingforward@mit.edu' },
       { name: 'IMF', query: 'from:updates.imf.org' },
       { name: 'F6S', query: 'from:f6s.com' },
-      { name: 'Axios', query: 'from:axios.com' },
       { name: 'The Publish Press', query: 'from:mail.thepublishpress.com' },
       { name: 'Google Scholar Alerts', query: 'from:scholaralerts-noreply@google.com' },
       { name: 'Cherub', query: 'from:investwithcherub.com' },
       { name: 'Wilbe', query: 'from:wilbe.com' },
       { name: 'Advisory Board Centre', query: 'from:advisoryboardcentre.com' },
       { name: 'Unbuilt Lab', query: 'from:unbuiltlab.com' },
-      { name: 'Law.com', query: 'from:law.com' },
       { name: 'Dr. Hyman', query: 'from:drhyman.com' },
       { name: 'Sound Sight Tarot', query: 'from:soundsighttarot.com' },
       { name: 'Heart Centered Being', query: 'from:theheartcenteredbeing.com' },
@@ -365,6 +363,7 @@ export const CATEGORIES = [
     filters: [
       { name: 'CNN', query: 'from:mail.cnn.com' },
       { name: 'New York Times', query: 'from:e.newyorktimes.com' },
+      { name: 'Axios', query: 'from:axios.com' },
     ],
   },
   {
@@ -373,6 +372,7 @@ export const CATEGORIES = [
     archive: false,
     filters: [
       { name: 'ALM', query: 'from:alm.com' },
+      { name: 'Law.com (an ALM property)', query: 'from:law.com' },
     ],
   },
   {

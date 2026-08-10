@@ -82,13 +82,13 @@ const CONFIGS = {
     title: 'ORGANIZING NEWSLETTERS',
     // Entries may override the config-wide label; these four belong to categories
     // create-filters.mjs already owns, and routing them here too double-labeled them.
+    // info@email.meetup.com is deliberately absent — EVENT_SUBLABEL_CATEGORIES owns it.
     searchPatterns: [
       'from:news@alphasignal.ai',
       'from:hello@adapty.io',
       'from:communications@yodlee.com',
       'from:support@substack.com',
       { query: 'from:updates-noreply@linkedin.com', label: LABEL_LINKEDIN_UPDATES },
-      { query: 'from:info@email.meetup.com', label: LABEL_EVENTS_MEETUP },
       { query: 'from:noreply@notifications.hubspot.com', label: LABEL_PRODUCT_UPDATES },
       { query: 'from:noreply@email.openai.com', label: LABEL_PRODUCT_UPDATES },
       { query: 'from:googlecloud@google.com', label: LABEL_PRODUCT_UPDATES },
@@ -98,7 +98,6 @@ const CONFIGS = {
       { name: 'AlphaSignal News', criteria: { from: 'news@alphasignal.ai' } },
       { name: 'Adapty Updates', criteria: { from: 'hello@adapty.io' } },
       { name: 'LinkedIn Updates', criteria: { from: 'updates-noreply@linkedin.com' }, label: LABEL_LINKEDIN_UPDATES },
-      { name: 'Meetup Notifications', criteria: { from: 'info@email.meetup.com' }, label: LABEL_EVENTS_MEETUP },
       { name: 'HubSpot Product Updates', criteria: { from: 'noreply@notifications.hubspot.com' }, label: LABEL_PRODUCT_UPDATES },
       { name: 'OpenAI Product Updates', criteria: { from: 'noreply@email.openai.com' }, label: LABEL_PRODUCT_UPDATES },
       { name: 'Google Cloud Updates', criteria: { from: 'googlecloud@google.com' }, label: LABEL_PRODUCT_UPDATES },

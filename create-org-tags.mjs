@@ -178,9 +178,6 @@ const ORG_TAGS = [
     orgs: [
       { name: 'Nextdoor', query: 'from:nextdoor.com' },
       { name: 'Austin Business Journal', query: 'from:bizjournals.com' },
-      { name: 'CNN', query: 'from:cnn.com' },
-      { name: 'New York Times', query: 'from:newyorktimes.com' },
-      { name: 'ALM', query: 'from:alm.com' },
       { name: 'City of Austin', query: 'from:austintexas.gov OR from:coautilitiesemail.com OR from:myatxwater.com OR from:austinenergy.com' },
       { name: 'Austin Less Wrong', query: 'from:austinlesswrong@gmail.com' },
       { name: 'UT Austin', query: 'from:utexas.edu OR from:texasexesemail.com' },
@@ -227,6 +224,9 @@ const ORG_TAGS = [
     labelName: LABEL_ORG_LC_NEWS_MEDIA,
     orgs: [
       { name: 'Austin Business Journal', query: 'from:bizjournals.com' },
+      { name: 'CNN', query: 'from:cnn.com' },
+      { name: 'New York Times', query: 'from:newyorktimes.com' },
+      { name: 'ALM', query: 'from:alm.com' },
     ],
   },
   {

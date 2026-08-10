@@ -65,9 +65,11 @@ import {
   LABEL_SERVICES_HEALTH,
   LABEL_SERVICES_HOME,
   LABEL_SERVICES_USPS,
+  LABEL_SERVICES_RENTAL_OPS,
   LABEL_PURCHASES_AMAZON,
   LABEL_BILLING_RECEIPTS,
   LABEL_BILLING_STATEMENTS,
+  LABEL_BILLING_MARKET_ALERTS,
   LABEL_BILLING_CREDIT_MONITORING,
   LABEL_SECURITY_ACCOUNT,
   LABEL_VOICEMAIL,
@@ -188,6 +190,11 @@ export const CATEGORIES = [
       { name: 'OpenAI', query: 'from:(tm.openai.com OR tm1.openai.com)' },
       { name: 'DataHub', query: 'from:no-reply@comms.datahub.com' },
       { name: 'Storylane', query: 'from:arthur@storylane.io' },
+      { name: 'Vercel', query: 'from:vercel.com' },
+      { name: 'GitKraken', query: 'from:gitkraken.com' },
+      { name: 'Kestra', query: 'from:kestra.io' },
+      { name: 'Databricks', query: 'from:mkt.databricks.com' },
+      { name: 'Whimsical', query: 'from:whimsical.com' },
       { name: 'Poshmark', query: 'from:(poshmark.com)' },
       { name: 'cloudHQ', query: 'from:cloudhq.net' },
       // Listening reports and Labs feature news — about the user's own data, not merchandising
@@ -328,6 +335,11 @@ export const CATEGORIES = [
       { name: 'Heart Centered Being', query: 'from:theheartcenteredbeing.com' },
       { name: 'UT Austin Newsletters', query: 'from:(utexas.edu OR mccombs.utexas.edu) subject:newsletter' },
       { name: 'ACM Listserv', query: 'from:listserv.acm.org' },
+      { name: 'CNN', query: 'from:mail.cnn.com' },
+      { name: 'New York Times', query: 'from:e.newyorktimes.com' },
+      { name: 'ALM (legal press)', query: 'from:alm.com' },
+      { name: 'Ladies Get Paid', query: 'from:ladiesgetpaid.com' },
+      { name: 'School of Greatness', query: 'from:schoolofgreatness.com' },
       { name: 'AlphaSignal', query: 'from:"AlphaSignal"' },
       { name: 'Yodlee', query: 'from:communications@yodlee.com' },
       { name: 'Adapty', query: 'from:hello@adapty.io' },
@@ -364,7 +376,7 @@ export const CATEGORIES = [
     filters: [
       // Scoped to the individual senator, not senate.gov — the broader domain would
       // sweep in unrelated congressional mail
-      { name: 'Political senders', query: 'from:(dlcc.org OR mail.house.gov OR gillibrand.senate.gov)' },
+      { name: 'Political senders', query: 'from:(dlcc.org OR mail.house.gov OR gillibrand.senate.gov OR e.democrats.org)' },
     ],
   },
   {
@@ -504,6 +516,17 @@ export const CATEGORIES = [
     ],
   },
   {
+    // Short-term rental operations: turnover scheduling and dynamic pricing drive
+    // same-day decisions, so this stays in the inbox like Real Estate above rather
+    // than archiving with the Home marketing block.
+    labelName: LABEL_SERVICES_RENTAL_OPS,
+    archive: false,
+    filters: [
+      { name: 'Turno (turnover cleaning)', query: 'from:(turno.com OR turnoverbnb.com)' },
+      { name: 'Beyond Pricing', query: 'from:beyondpricing.com' },
+    ],
+  },
+  {
     // Daily mail-scan digests: each is superseded by the next day's, so they are
     // archived and marked read on arrival rather than accumulating unread.
     labelName: LABEL_SERVICES_USPS,
@@ -542,6 +565,10 @@ export const CATEGORIES = [
       { name: 'FastMed', query: 'from:fastmed.com' },
       { name: 'Probably Genetic', query: 'from:m.probablygenetic.com' },
       { name: 'Amazon Pharmacy', query: 'from:(pharmacy.amazon.com OR email.pharmacy.amazon.com)' },
+      { name: 'SonderMind', query: 'from:notify.sondermind.com' },
+      { name: 'CVS Pharmacy Alerts', query: 'from:alerts.cvs.com' },
+      { name: 'Healthcare.gov', query: 'from:healthcare.gov' },
+      { name: 'LiveWello', query: 'from:livewello.com' },
     ],
   },
   {
@@ -593,12 +620,14 @@ export const CATEGORIES = [
       { name: 'Nextdoor', query: 'from:email.nextdoor.com' },
       { name: 'CoStar Listings', query: 'from:c.costarmail.com' },
       { name: 'Magic Helpers', query: 'from:themagichelpers.com' },
-      { name: 'Turno', query: 'from:turnoverbnb.com' },
       { name: 'Nest Reports', query: 'from:nest.com' },
       { name: 'Yale Access', query: 'from:yalehomeus.com' },
       { name: 'Life360 Devices', query: 'from:devices.life360.com' },
       { name: 'Cleanster', query: 'from:cleanster.com' },
       { name: '50K Lawn', query: 'from:50klawn.com' },
+      { name: 'LawnStarter', query: 'from:lawnstarter.com' },
+      { name: 'YardDoc', query: 'from:yarddoc.com' },
+      { name: 'Premier Home Warranty', query: 'from:premierhw.com' },
     ],
   },
   {
@@ -678,6 +707,23 @@ export const CATEGORIES = [
     ],
   },
   {
+    // Market-data digests — the highest-volume unrouted sender in the unlabeled backlog
+    labelName: LABEL_BILLING_MARKET_ALERTS,
+    archive: true,
+    filters: [
+      { name: 'Barchart', query: 'from:partners.barchart.com' },
+    ],
+  },
+  {
+    // Proxy material carries a dated voting deadline, so it stays in the inbox —
+    // unlike the statement senders below, which archive on arrival
+    labelName: LABEL_BILLING_STATEMENTS,
+    archive: false,
+    filters: [
+      { name: 'ProxyVote', query: 'from:proxyvote.com' },
+    ],
+  },
+  {
     // Account statements — label + skip inbox. Subject-pinned where the sender domain
     // also carries non-statement mail (e.g. SoFi's o.sofi.org sends card-shipped notices too).
     labelName: LABEL_BILLING_STATEMENTS,
@@ -746,6 +792,10 @@ export const CATEGORIES = [
     filters: [
       { name: 'ACA WSO Daily Meditation', query: 'from:acawso.org' },
       { name: 'Human Design Daily', query: 'from:human.design' },
+      { name: 'Turo', query: 'from:mail.turo.com' },
+      { name: 'Aeromexico', query: 'from:(mx.aeromexico.com OR mx.aeromexicorewards.com)' },
+      { name: 'Booking.com', query: 'from:sg.booking.com' },
+      { name: 'Wild Women Expeditions', query: 'from:wildwomenexpeditions.com' },
     ],
   },
   {
@@ -774,6 +824,11 @@ export const CATEGORIES = [
       { name: 'Lumosity', query: 'from:lumosity.com' },
       { name: 'Move Dancewear', query: 'from:movedancewear.com' },
       { name: 'BY Design Home Staging', query: 'from:bydesignsa.com' },
+      { name: 'Shapermint', query: 'from:shapermint.com' },
+      { name: 'Perigold', query: 'from:members.perigold.com' },
+      { name: 'Woodcraft', query: 'from:woodcraft.com' },
+      { name: 'Thuma', query: 'from:thuma.co' },
+      { name: 'Alp N Rock', query: 'from:alpnrock.com' },
     ],
   },
   {
@@ -880,6 +935,7 @@ export const CATEGORIES = [
       { name: 'Lemonade', query: 'from:lemonade.com' },
       { name: 'Better Cover', query: 'from:better.com' },
       { name: 'Truist Mortgage Marketing', query: 'from:(mail.mktg.truist.com OR cx.oneteam.truist.com)' },
+      { name: 'Citi Offers', query: 'from:info15.citi.com' },
     ],
   },
   {
@@ -929,6 +985,11 @@ export const CATEGORIES = [
       { name: 'Whole Foods', query: 'from:mail.wholefoodsmarket.com' },
       { name: 'Papa Johns', query: 'from:promotions.papajohns.com' },
       { name: 'Wegmans', query: 'from:eml.wegmans.com' },
+      { name: 'Toast (restaurant marketing platform)', query: 'from:toast-restaurants.com' },
+      { name: 'Grubhub', query: 'from:a.grubhub.com' },
+      { name: 'Sweetgreen', query: 'from:email.sweetgreen.com' },
+      { name: 'SevenRooms (reservation platform)', query: 'from:email.sevenrooms.com' },
+      { name: 'Snooze Eatery', query: 'from:snoozeeatery.com' },
     ],
   },
   {

@@ -12,6 +12,7 @@ import { createGmailClient } from './lib/gmail-client.mjs';
 import { BANNER, DIVIDER } from './lib/console-utils.mjs';
 import { extractDisplayName, getHeader } from './lib/email-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { mapWithConcurrency } from './lib/gmail-message-utils.mjs';
 import { extractSchemaMarkupFromGmailPayload, categorizeBySchema, extractHtmlFromPayload } from './lib/schema-extractor.mjs';
 import {
   USER_ID,
@@ -86,6 +87,7 @@ import {
   LABEL_PROMOTIONS_HEALTH,
   LABEL_PROMOTIONS_TECH,
   LABEL_SERVICES_USPS,
+  LABEL_SERVICES_RENTAL_OPS,
   LABEL_PRODUCT_UPDATES_EXPERIAN,
   LABEL_PRODUCT_UPDATES_TURBOTAX,
   LABEL_EVENTS_COMMUNITY,
@@ -140,7 +142,7 @@ const STANDALONE_LABELS = [
 
 const SERVICES_SUBLABELS = [
   LABEL_SERVICES_REAL_ESTATE, LABEL_SERVICES_HEALTH, LABEL_SERVICES_UTILITIES,
-  LABEL_SERVICES_HOME, LABEL_SERVICES_USPS,
+  LABEL_SERVICES_HOME, LABEL_SERVICES_USPS, LABEL_SERVICES_RENTAL_OPS,
 ];
 
 const BILLING_SUBLABELS = [
@@ -218,10 +220,8 @@ async function listUnreadEmails(gmail) {
   const labelCache = await buildLabelCache(gmail);
   const labelMap = new Map([...labelCache.entries()].map(([name, id]) => [id, name]));
 
-  const fullMsgs = await Promise.all(
-    messageIds.map(msg =>
-      gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'metadata', metadataHeaders: ['Subject', 'From'] })
-    )
+  const fullMsgs = await mapWithConcurrency(messageIds, msg =>
+    gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'metadata', metadataHeaders: ['Subject', 'From'] })
   );
 
   const emails = fullMsgs.map(fullMsg => {
@@ -281,14 +281,12 @@ async function showStats(gmail) {
   console.log(`Unread in inbox: ${inboxCounts.unread}`);
 
   console.log('\nBy Label (total / unread):');
-  const labelStats = await Promise.all(
-    TRACKED_LABELS.map(async label => {
+  const labelStats = await mapWithConcurrency(TRACKED_LABELS, async label => {
       const labelId = labelMap.get(label);
       if (!labelId) return { label, total: 0, unread: 0, missing: true };
       const { total, unread } = await getLabelCounts(gmail, labelId);
       return { label, total, unread };
-    })
-  );
+  });
 
   for (const { label, total, unread, missing } of labelStats) {
     if (missing) {
@@ -340,10 +338,8 @@ async function auditSchemaMarkup(gmail) {
 
   if (messageIds.length === 0) return;
 
-  const fullMsgs = await Promise.all(
-    messageIds.map(msg =>
-      gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'full' })
-    )
+  const fullMsgs = await mapWithConcurrency(messageIds, msg =>
+    gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'full' })
   );
 
   const typeCounts = {};

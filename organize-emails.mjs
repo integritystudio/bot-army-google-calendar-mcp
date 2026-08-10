@@ -8,6 +8,7 @@
  *   node organize-emails.mjs --type event-sublabels
  *   node organize-emails.mjs --type organization
  */
+import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import {
   LABEL_EVENTS, LABEL_NEWSLETTERS,
@@ -25,11 +26,6 @@ import { createGmailFilter } from './lib/gmail-filter-utils.mjs';
 import { BANNER } from './lib/console-utils.mjs';
 
 const VALID_TYPES = ['events', 'newsletters', 'event-sublabels', 'organization'];
-const typeArg = process.argv[process.argv.indexOf('--type') + 1];
-if (!typeArg || !VALID_TYPES.includes(typeArg)) {
-  console.error(`Usage: node organize-emails.mjs --type <${VALID_TYPES.join('|')}>`);
-  process.exit(1);
-}
 
 const EVENT_SUBLABEL_CATEGORIES = [
   { label: LABEL_EVENTS_MEETUP, searchQuery: 'from:info@email.meetup.com', filterCriteria: { from: 'info@email.meetup.com' }, filterName: 'Meetup Notifications' },
@@ -104,8 +100,6 @@ const CONFIGS = {
     ],
   },
 };
-
-const config = CONFIGS[typeArg];
 
 function countFiltersCreated(filterResults) {
   let created = 0;
@@ -217,6 +211,13 @@ async function runSublabels(gmail, labelCache, categoryConfigs, title, parentLab
 }
 
 async function run() {
+  const typeArg = process.argv[process.argv.indexOf('--type') + 1];
+  if (!typeArg || !VALID_TYPES.includes(typeArg)) {
+    console.error(`Usage: node organize-emails.mjs --type <${VALID_TYPES.join('|')}>`);
+    process.exit(1);
+  }
+  const config = CONFIGS[typeArg];
+
   const gmail = createGmailClient();
   const labelCache = await buildLabelCache(gmail);
 
@@ -234,7 +235,9 @@ async function run() {
   await runSingleLabel(gmail, labelCache, config);
 }
 
-run().catch(error => {
-  console.error('Error:', error.message);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  run().catch(error => {
+    console.error('Error:', error.message);
+    process.exit(1);
+  });
+}

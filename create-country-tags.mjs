@@ -12,6 +12,7 @@
 //   node create-country-tags.mjs --filters-only       # skip backfill
 //   node create-country-tags.mjs --only Country/Mexico
 //   node create-country-tags.mjs --countries rappi
+import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { argAfter } from './lib/cli-utils.mjs';
 import { applyTagSet } from './lib/gmail-tag-utils.mjs';
@@ -51,7 +52,9 @@ async function run() {
   console.log(`\nFilters created: ${filterCount}`);
 }
 
-run().catch(error => {
-  console.error('Error:', error.message);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  run().catch(error => {
+    console.error('Error:', error.message);
+    process.exit(1);
+  });
+}

@@ -1,6 +1,7 @@
 // Organization tags are an informational dimension, orthogonal to category routing:
 // a sender's mail may route to Billing, Promotions, or Purchases, but always carries
 // the same Organization label. Filters here are label-only — never archive/mark-read.
+import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { argAfter } from './lib/cli-utils.mjs';
 import { applyTagSet } from './lib/gmail-tag-utils.mjs';
@@ -619,7 +620,9 @@ async function run() {
   console.log(`\nFilters created: ${filterCount}`);
 }
 
-run().catch(error => {
-  console.error('Error:', error.message);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  run().catch(error => {
+    console.error('Error:', error.message);
+    process.exit(1);
+  });
+}

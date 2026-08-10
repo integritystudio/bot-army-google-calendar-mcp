@@ -188,6 +188,9 @@ export const CATEGORIES = [
       { name: 'GitKraken', query: 'from:gitkraken.com' },
       { name: 'Kestra', query: 'from:kestra.io' },
       { name: 'Whimsical', query: 'from:whimsical.com' },
+      { name: 'Postman', query: 'from:notifications@mail.postman.com' },
+      { name: 'Resend', query: 'from:zeno@updates.resend.com' },
+      { name: 'Render Outreach', query: 'from:anurag.goel@render.com' },
     ],
   },
   {
@@ -195,6 +198,9 @@ export const CATEGORIES = [
     archive: true,
     filters: [
       { name: 'Databricks', query: 'from:mkt.databricks.com' },
+      { name: 'Mixpanel', query: 'from:(support@mixpanel.com OR content@mixpanel.com)' },
+      { name: 'Google Analytics', query: 'from:analytics-noreply@google.com' },
+      { name: 'DataHub', query: 'from:no-reply@comms.datahub.com' },
     ],
   },
   {
@@ -205,14 +211,9 @@ export const CATEGORIES = [
       { name: 'Google Workspace', query: 'from:workspace-noreply@google.com' },
       { name: 'Google Cloud Startups', query: 'from:GoogleCloudStartups@google.com' },
       { name: 'Google Developer Forums', query: 'from:no-reply@discuss.google.d' },
-      { name: 'Google Analytics', query: 'from:analytics-noreply@google.com' },
       { name: 'HubSpot', query: 'from:noreply@notifications.hubspot.com' },
-      { name: 'Postman', query: 'from:notifications@mail.postman.com' },
-      { name: 'Resend', query: 'from:zeno@updates.resend.com' },
-      { name: 'Mixpanel', query: 'from:(support@mixpanel.com OR content@mixpanel.com)' },
       // tm/tm1 are OpenAI's marketing senders; the bare domain would pull in account+security mail
       { name: 'OpenAI', query: 'from:(tm.openai.com OR tm1.openai.com)' },
-      { name: 'DataHub', query: 'from:no-reply@comms.datahub.com' },
       { name: 'Storylane', query: 'from:arthur@storylane.io' },
       { name: 'Poshmark', query: 'from:(poshmark.com)' },
       { name: 'cloudHQ', query: 'from:cloudhq.net' },
@@ -236,7 +237,6 @@ export const CATEGORIES = [
       { name: 'LinkedIn Digests', query: 'from:em.linkedin.com' },
       { name: 'Global Sources', query: 'from:(globalsources.com)' },
       { name: 'Pottery Barn', query: 'from:e.potterybarn.com' },
-      { name: 'Render Outreach', query: 'from:anurag.goel@render.com' },
       { name: 'Read AI', query: 'from:(read.ai OR e.read.ai)' },
       { name: 'Otter.ai', query: 'from:otter.ai' },
       { name: 'Microsoft', query: 'from:(microsoft.com OR notificationmail.microsoft.com)' },

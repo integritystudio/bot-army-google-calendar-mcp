@@ -17,7 +17,7 @@ import {
   GMAIL_UNREAD,
   DEFAULT_MAX_RESULTS,
   LABEL_SENTRY,
-  LABEL_MEETUP_EVENTS,
+  LABEL_EVENTS_MEETUP,
   LABEL_COMMUNITY_EVENTS,
   LABEL_CALENDLY_NOTIFICATIONS,
   LABEL_LINKEDIN_UPDATES,
@@ -939,7 +939,7 @@ export const CATEGORIES = [
     ],
   },
   {
-    labelName: LABEL_MEETUP_EVENTS,
+    labelName: LABEL_EVENTS_MEETUP,
     archive: true,
     filters: [
       { name: 'Meetup Announcements', query: 'from:info@email.meetup.com' },

@@ -37,11 +37,11 @@ const COUNTRY_TAGS = [
   },
 ];
 
-const skipBackfill = process.argv.includes('--filters-only');
-const onlyLabel = argAfter('--only');
-const onlyCountries = argAfter('--countries')?.split(',').map(s => s.trim().toLowerCase());
 
 async function run() {
+  const skipBackfill = process.argv.includes('--filters-only');
+  const onlyLabel = argAfter('--only');
+  const onlyCountries = argAfter('--countries')?.split(',').map(s => s.trim().toLowerCase());
   const gmail = createGmailClient();
   const filterCount = await applyTagSet(gmail, COUNTRY_TAGS, {
     skipBackfill,

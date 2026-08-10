@@ -604,11 +604,11 @@ const ORG_TAGS = [
   },
 ];
 
-const skipBackfill = process.argv.includes('--filters-only');
-const onlyLabel = argAfter('--only');
-const onlyOrgs = argAfter('--orgs')?.split(',').map(s => s.trim().toLowerCase());
 
 async function run() {
+  const skipBackfill = process.argv.includes('--filters-only');
+  const onlyLabel = argAfter('--only');
+  const onlyOrgs = argAfter('--orgs')?.split(',').map(s => s.trim().toLowerCase());
   const gmail = createGmailClient();
   const tagSet = ORG_TAGS.map(({ labelName, orgs }) => ({ labelName, entries: orgs }));
   const filterCount = await applyTagSet(gmail, tagSet, {

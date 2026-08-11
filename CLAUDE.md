@@ -65,6 +65,16 @@ npm run repomix           # Regenerate docs/repomix/ artifacts (token tree, comp
 - `date-utils.ts` — `formatRFC3339()`, `addMilliseconds()`, `oneDayBefore()`, etc.
 - `timezone-utils.ts` — `createTimeObject()`, `resolveTimeZone()`, etc.
 
+## Known Issues
+
+**Read [README.md#known-issues](README.md#known-issues) before bulk label work.** Every
+entry there fails *silently* — the script prints success while doing nothing. Summary:
+`ORG_TAGS` must hold no time-varying data (`schema.event` = recurring programmes, never
+dated instances); parentheses in a label name break Gmail's `label:` operator, which
+misreads strips, backfills **and delete guards**; `searchAndModify()` does not page, so
+`relabel-messages.mjs` caps at 100 and still reports success; a filter can add only one
+user label; and a sender's domain does not reveal its org type (5 of 5 guesses wrong).
+
 ## Email Organization System
 
 Core pattern: Label → conditional archive (keep future events, important items, archive notifications).
@@ -75,9 +85,14 @@ Core pattern: Label → conditional archive (keep future events, important items
 - `dump-messages.mjs [--max N] "<gmail-query>"` — TSV dump (date, from, subject) of messages matching any Gmail query; count goes to stderr so stdout pipes cleanly
 - `organize-emails.mjs` — Full pipeline: label, filter, and conditionally archive emails
 - `create-filters.mjs [--only <label-prefix>]` — Single source of truth for category routing: creates every Gmail filter and backfills existing mail. Absorbed `create-gmail-filters.mjs`; per-category `archive`/`markRead`/`maxResults` flags
+- `create-org-tags.mjs [--filters-only] [--only <label-prefix>] [--orgs a,b]` — Organization/* sender tags; label-only (never archives/marks read). `ORG_TAGS` uses field `orgs`, normalized to `entries` at the `applyTagSet()` call site. Backfill covers read **and** unread mailbox-wide. **See [docs/ORG-TAGS-GUIDE.md](docs/ORG-TAGS-GUIDE.md) before adding tags**
+- `audit-org-tag-coverage.mjs [--max N] [--query "<gmail-query>"]` — Sender domains with no `Organization/*` label that no `ORG_TAGS` entry claims; also flags `ORG_TAGS` labels missing from Gmail
+- `audit-sender-signals.mjs (--domains-file <path> | --domains a.com,b.com) [--sample N]` — Scores each sender's subject+body text against schema.org-type keyword sets. **Never infer an org's type from its domain name** — fuegodance.com is a shoe brand, tinyminotaur.com a tavern, experiencehouse.co a design cohort; five of five name-based guesses were wrong. The scanner is a signal, not an oracle: calibrated 2/3 on known answers (tantrany.com's "happy hour / tickets" language mis-scores as EntertainmentBusiness when it is an EducationalOrganization). Also prints true mailbox-wide totals, which the unread sample badly understates
+- `extract-platform-orgs.mjs --domain <d> [--max N] [--emit]` — Enumerate every org behind a platform domain (ESPs, survey/booking tools). **Pages the whole domain rather than sampling** — a 25-message sample of `express.medallia.com` found 3 of 20 orgs and would have missed 46% of the mail. Refuses above `--max` (default 400) as too fragmented; flags `FANS-OUT` local parts that carry many orgs (`marriott@` → 16 hotel properties) and `NAME-ONLY` ones whose address is no guide to the org (`posadas@`→Fiesta Inn, `noreply@`→**Avianca**)
 - `create-country-tags.mjs [--filters-only] [--only <label>] [--countries a,b]` — Country/* sender-origin tags; label-only like `create-org-tags.mjs` (never archives). Seeded from ccTLD domains only — brands sending localized mail from a global domain can't be attributed and are left untagged
 - `sublabel-services.mjs` — Sub-categorize Services & Alerts into Real Estate/Health/Utilities sublabels + auto-label filters (`--all` includes read mail)
-- `relabel-messages.mjs --query "<gmail-query>" [--add "<label>"] [--remove "<label>"]` — Move a query's matches between user labels; both labels must already exist (fails fast rather than creating one from a typo)
+- `relabel-messages.mjs --query "<gmail-query>" [--add "<label>"] [--remove "<label>"]` — Move a query's matches between user labels; both labels must already exist (fails fast rather than creating one from a typo). **Caps at 100 messages and does not page** — it calls `searchAndModify`, which issues one `messages.list` at `DEFAULT_MAX_RESULTS`; on a larger set it moves 100 and prints a success line. Use `strip-label.mjs` for bulk removal
+- `strip-label.mjs --label "X" [--dry-run]` — Remove a label from *every* message carrying it, paging until none remain. Re-queries the first page each round rather than using `pageToken`, because removing the label shrinks the result set and invalidates tokens
 - `protect-important-inbox.mjs`, `filter-events-by-date.mjs` — Filtering & organization
 - `mark-read.mjs` (label/past-event based, `--archived-only`/`--past-events` flags), `mark-forums-read.mjs`, `archive-old-emails.mjs (--label "X" | --query "<gmail-query>")` — Read/archive maintenance (7-day cutoff; `--query` covers senders that should sit in the inbox briefly, since Gmail filters run only on arrival and can't express age)
 - `mark-old-label-read.mjs --label "X" [--before YYYY/MM/DD]` — Mark a label's unread emails older than a cutoff (default 30 days) as read
@@ -96,6 +111,7 @@ Core pattern: Label → conditional archive (keep future events, important items
 - `gmail-message-utils.mjs` — Message header/body extraction, `decodeBase64Payload()`, `countMessagesMatching()` (exact paginated query counts), `fetchMessageHeaders()`
 - `gmail-filter-utils.mjs` — Filter creation helpers
 - `gmail-tag-utils.mjs` — Label-only tag sets shared by `create-org-tags.mjs` / `create-country-tags.mjs`: `withRetry()`, `labelAllMatching()`, `applyTagSet()`
+- `defined-terms.mjs` / `vocabularies.mjs` — schema.org `DefinedTerm`/`DefinedTermSet` builders + `validateVocabulary()`, and the vocabularies `ORG_TAGS` points at (`VOCABULARIES` lists all five). A tag group's `schema` field is **documentation only** — `applyTagSet()` never reads it, so adding a term changes no mail. **See [docs/DEFINED-TERMS-GUIDE.md](docs/DEFINED-TERMS-GUIDE.md) before adding a term or set**
 - `date-based-filter.mjs` — Date parsing utility (ISO, US, text formats; no mutations)
 - `schema-extractor.mjs` — Schema.org type extraction from email HTML (htmlparser2)
 - `email-analyzer.mjs` / `email-utils.mjs` — Email parsing, categorization helpers
@@ -104,5 +120,6 @@ Core pattern: Label → conditional archive (keep future events, important items
 
 **Patterns:**
 - Use `Promise.all` for concurrent fetches (not serial loops)
+- `npm run build:jsonld` / `check:jsonld` (`build-jsonld.mjs`) — emits `docs/mailbox.jsonld`, one flattened JSON-LD `@graph` of `VOCABULARIES` + every `ORG_TAGS` `schema` block; `--check` fails when stale. **Nothing else stores these entities** — they are built in memory per run and discarded, since a Gmail label holds only a name
 - Dynamic label resolution (L6) — `labelCache.get('Label/Name')` instead of hardcoded IDs (see `docs/LABEL-RESOLUTION-GUIDE.md`)
 

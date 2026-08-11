@@ -236,6 +236,87 @@ Automated scripts for organizing and filtering large volumes of Gmail with focus
 - `lib/console-utils.mjs` - Formatted console output helpers
 - `lib/date-based-filter.mjs` - Pure utility for date-based email classification: extracts dates (ISO, US format, text dates, weekday patterns), compares to today, classifies as past/future/unknown. Does not mutate input.
 
+## Known Issues
+
+Sharp edges found the hard way. Each one fails **silently** — the script reports success
+while doing nothing, or does the wrong thing without erroring.
+
+### `ORG_TAGS` must contain no time-varying data
+
+`ORG_TAGS` in [`create-org-tags.mjs`](create-org-tags.mjs) is long-lived routing config.
+Anything in it that expires rots silently, because nothing re-reads the source to notice.
+
+An org's `schema.event` therefore lists **recurring programmes, not dated instances** —
+what kinds of event the org runs is stable; which edition runs when is not. No
+`startDate`/`endDate`, and no edition year in a programme name (`ZoukMX Main Festival`,
+not `ZoukMX Main Festival 2027`). `startDate` is optional on schema.org `Event`, so a
+dateless programme is still valid.
+
+Historical dates inside `DefinedTerm` descriptions are fine — "the Houston Fusion
+Exchange (January 2008)" is a fact about a dance form's origin, not a forecast. The terms
+themselves live in [`lib/vocabularies.mjs`](lib/vocabularies.mjs); see
+[`docs/DEFINED-TERMS-GUIDE.md`](docs/DEFINED-TERMS-GUIDE.md).
+
+To check: serialize `ORG_TAGS` and grep for ISO-date-shaped values.
+
+```bash
+node -e "import('./create-org-tags.mjs').then(m=>console.log(JSON.stringify(m.ORG_TAGS).match(/\"20[0-9]{2}-[0-9]{2}/g)||'none'))"
+```
+
+### Parentheses in a label name break Gmail's `label:` operator
+
+Gmail's query parser cannot match `(` or `)` in a label name **even inside quotes**.
+`label:"Organization/…/Council (BZDC)/ZoukMX"` returns **0** against a label that
+demonstrably holds mail (confirmed via `labelIds`, which bypasses the parser).
+
+This silently breaks:
+- `strip-label.mjs` — reports `Stripped 0` against a full label
+- `applyTagSet()`'s `-label:"…"` backfill clause — re-tags everything on every run
+- **any emptiness check guarding a label deletion** — a parenthesised label reads as
+  empty and gets deleted with mail still on it
+
+Keep label names free of parentheses. An acronym belongs in schema `alternateName`, not
+in the path.
+
+### `searchAndModify()` does not page
+
+`searchAndModify()` in [`lib/gmail-batch-utils.mjs`](lib/gmail-batch-utils.mjs) issues
+one `messages.list` and never follows `nextPageToken`. `relabel-messages.mjs` calls it
+with `DEFAULT_MAX_RESULTS` (100), so on a 7,000-message label it moves **100** and prints
+`Total relabeled: 100` — which reads as success. The inner `Processed 50/61` lines come
+from batch chunking of that single page, not from list paging, so they give false
+reassurance of full coverage.
+
+Use [`strip-label.mjs`](strip-label.mjs) for bulk removal; it pages until the label is
+empty, re-querying the first page each round because removing the label shrinks the
+result set and invalidates page tokens.
+
+Never confirm a bulk relabel from a script's own count — re-query afterwards.
+
+### A Gmail filter can add only one user label
+
+`users.settings.filters.create` rejects an action whose `addLabelIds` holds more than one
+**user** label (`Too many user labels in filter`); system labels in `removeLabelIds` do
+not count. To apply two labels on arrival, create one filter per label on the same query,
+with only the first carrying the archive/mark-read action.
+
+`users.messages.modify` has no such limit, which is why a backfill can succeed on a label
+set that filter creation rejects.
+
+### Sender domains do not reveal an organization's type
+
+Five of five type guesses made from domain names alone were wrong: `fuegodance.com` is a
+shoe brand, `tinyminotaur.com` a tavern, `experiencehouse.co` a design cohort,
+`thesisdriven.com` a real-estate data business, `houstonssc.com` a recreational sports
+league. Audit content before assigning a type — see
+[`audit-sender-signals.mjs`](audit-sender-signals.mjs), whose display-name output is more
+reliable than its keyword scores (calibrated 2/5 on known answers).
+
+Related: many domains are **sending platforms**, not organizations —
+`express.medallia.com` carries 20 orgs including Airbnb, CVS and Marriott. Use
+[`extract-platform-orgs.mjs`](extract-platform-orgs.mjs), which enumerates the whole
+domain; a 25-message sample of that domain found 3 of the 20.
+
 ## Example Usage
 
 Along with the normal capabilities you would expect for a calendar integration you can also do really dynamic, multi-step processes like:

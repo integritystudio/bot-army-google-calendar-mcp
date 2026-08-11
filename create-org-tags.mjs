@@ -540,7 +540,6 @@ export const ORG_TAGS = [
       { name: 'Angi', query: 'from:angi.com' },
       { name: 'LawnStarter', query: 'from:lawnstarter.com' },
       { name: 'YardDoc', query: 'from:yarddoc.com' },
-      { name: 'Premier Home Warranty', query: 'from:premierhw.com' },
       { name: 'HomeDesigns AI', query: 'from:homedesigns.ai' },
       { name: 'Handy', query: 'from:handy.com' },
       { name: 'Stanley Steemer', query: 'from:stanleysteemer.com' },
@@ -699,6 +698,10 @@ export const ORG_TAGS = [
       { name: 'Texas Diabetes', query: 'from:texasdiabetes.com' },
       { name: 'Allergies & Asthma Clinic', query: 'from:allallergies.com' },
       { name: 'WellnessLiving', query: 'from:wellnessliving.com' },
+      // "premierhw" is Health and Wellness, not Home Warranty: the mail is spa offers,
+      // bodysculpting and hormone content from Dr. Edgerton, and the footer reads
+      // "Premier Health and Wellness, Austin TX". Was tagged Professional/Home.
+      { name: 'Premier Health and Wellness', query: 'from:premierhw.com' },
     ],
   },
   {

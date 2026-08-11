@@ -45,6 +45,8 @@
     "verify-tokens": "GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json npx vite-node src/verify-tokens.ts",
     "dev": "node scripts/dev.js",
     "check-duplicates": "node scripts/check-duplicates.mjs src 6",
+    "build:jsonld": "node build-jsonld.mjs",
+    "check:jsonld": "node build-jsonld.mjs --check",
     "lint": "tsc --noEmit -p tsconfig.lint.json",
     "with-dev-creds": "GOOGLE_ACCOUNT_MODE=normal GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json doppler run --project integrity-studio --config dev --",
     "test": "vitest run src/tests/unit",

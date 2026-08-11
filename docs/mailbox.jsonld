@@ -1,0 +1,638 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "DefinedTerm",
+      "name": "Basic",
+      "description": "A named foundational step of Brazilian Zouk.",
+      "termCode": "step:basic",
+      "inDefinedTermSet": {
+        "@id": "https://www.brazilianzoukcouncil.com/#zouk-vocabulary"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "name": "Bonus",
+      "description": "A named foundational step of Brazilian Zouk.",
+      "termCode": "step:bonus",
+      "inDefinedTermSet": {
+        "@id": "https://www.brazilianzoukcouncil.com/#zouk-vocabulary"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "name": "Elástico",
+      "description": "A named foundational step of Brazilian Zouk.",
+      "termCode": "step:elástico",
+      "inDefinedTermSet": {
+        "@id": "https://www.brazilianzoukcouncil.com/#zouk-vocabulary"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Anchor_Step",
+      "name": "Anchor Step",
+      "description": "The stationary two-beat pattern that ends most West Coast Swing figures.",
+      "inDefinedTermSet": {
+        "@id": "https://worldsdc.com/#wcs-vocabulary"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Ballet",
+      "name": "Ballet",
+      "description": "A technique source fusion incorporates.",
+      "inDefinedTermSet": {
+        "@id": "https://motleyhue.org/about/#what-is-fusion"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Blues_dance",
+      "name": "Blues",
+      "description": "Bridged to the tango community by \"Tangoed Up In Blues\" (2005), an influence on fusion's emergence.",
+      "inDefinedTermSet": {
+        "@id": "https://motleyhue.org/about/#what-is-fusion"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Brazilian_Zouk",
+      "name": "Brazilian Zouk",
+      "alternateName": "Zouk",
+      "description": "A partner dance which began in Brazil during the early 1990s. It evolved from Lambada: as Lambada music fell out of fashion, dancers moved to zouk music from the francophone Caribbean, and the dance took that name to distinguish itself from the musical genre. Its most distinctive feature is the follower's upper-body movement, led out of axis through intricate lead-follow technique, alongside body isolations, tilted turns and counter-balance.",
+      "inDefinedTermSet": {
+        "@id": "https://www.brazilianzoukcouncil.com/#zouk-vocabulary"
+      },
+      "sameAs": "https://en.wikipedia.org/wiki/Brazilian_Zouk"
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Co-living",
+      "name": "Coliving",
+      "alternateName": "Co-living",
+      "description": "A residential community model in which multiple unrelated people share living space and common facilities, typically managed by a single operator (Wikipedia) — private bedrooms alongside communal kitchens and lounges. Distinct from cohousing, which it borrows from: a coliving operator runs the home.",
+      "inDefinedTermSet": {
+        "@type": "DefinedTermSet",
+        "name": "Mailbox Subject Terms",
+        "description": "Practice and subject areas an organization works in, for use in Organization.keywords."
+      },
+      "sameAs": "https://en.wikipedia.org/wiki/Co-living"
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Coaster_Step",
+      "name": "Coaster Step",
+      "description": "A back-together-forward triple step used to recover the slot.",
+      "inDefinedTermSet": {
+        "@id": "https://worldsdc.com/#wcs-vocabulary"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Contact_improvisation",
+      "name": "Contact Improvisation",
+      "description": "A technique source fusion incorporates.",
+      "inDefinedTermSet": {
+        "@id": "https://motleyhue.org/about/#what-is-fusion"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Coworking",
+      "name": "Coworking",
+      "description": "An arrangement in which workers for different companies share an office space (Wikipedia), sharing infrastructure and, for remote workers, avoiding isolation. Covers the practice and the spaces sold on it; day passes, hot desks and dedicated desks are pricing tiers of this, not separate subjects.",
+      "inDefinedTermSet": {
+        "@type": "DefinedTermSet",
+        "name": "Mailbox Subject Terms",
+        "description": "Practice and subject areas an organization works in, for use in Organization.keywords."
+      },
+      "sameAs": "https://en.wikipedia.org/wiki/Coworking"
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Digital_nomad",
+      "name": "Digital Nomads",
+      "alternateName": "Location-Independent Professionals",
+      "description": "People who travel freely while working remotely using information and communications technology, working from co-working spaces and temporary housing (Wikipedia). As a mailbox term it marks organizations whose offer is built around that pattern — co-living and co-working operators, work-travel programmes, and the insurance, community and job services sold to the same audience — regardless of the schema.org type the organization itself takes.",
+      "inDefinedTermSet": {
+        "@type": "DefinedTermSet",
+        "name": "Mailbox Audience Terms",
+        "description": "Audience segments an organization serves, for use in Organization.keywords."
+      },
+      "sameAs": "https://en.wikipedia.org/wiki/Digital_nomad"
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Ecovillage",
+      "name": "Ecovillage",
+      "alternateName": "Eco-village",
+      "description": "A traditional or intentional community that aims to become more socially, culturally, economically or environmentally sustainable, striving for the least possible negative impact on the natural environment through intentional physical design and the behavioural choices of its inhabitants (Wikipedia). Typically 50–250 residents. A subtype of intentional community, distinguished from cohousing by an explicit commitment to ecological regeneration rather than shared living alone.",
+      "inDefinedTermSet": {
+        "@type": "DefinedTermSet",
+        "name": "Mailbox Subject Terms",
+        "description": "Practice and subject areas an organization works in, for use in Organization.keywords."
+      },
+      "sameAs": "https://en.wikipedia.org/wiki/Ecovillage"
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Fusion_dance",
+      "name": "Fusion Dance",
+      "alternateName": "Fusion Partner Dancing",
+      "description": "A contemporary social improvised partner dance that combines different dance styles to create a new aesthetic (Wikipedia). The community frames it as dancing \"outside\" the boxes of traditional forms such as tango or waltz, drawing on the techniques of all partner dances to create personal, improvisational expressions to music — \"the ability to be endlessly creative and say yes! to your partner\" (Motley Hue). Emerged in the United States in the 2000s and spread to Canada and Europe; the Houston Fusion Exchange (January 2008) was the first nationally recognised event. Emphasises lead-follow connection, extension-compression and frame, decouples dance roles from gender, and prioritises consent between partners.",
+      "inDefinedTermSet": {
+        "@id": "https://motleyhue.org/about/#what-is-fusion"
+      },
+      "sameAs": "https://en.wikipedia.org/wiki/Fusion_dance"
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Lambada",
+      "name": "Lambada",
+      "description": "The Brazilian partner dance popular in the 1980s from which Brazilian Zouk directly evolved.",
+      "inDefinedTermSet": {
+        "@id": "https://www.brazilianzoukcouncil.com/#zouk-vocabulary"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Lindy_Hop",
+      "name": "Lindy Hop",
+      "description": "Blended with non-traditional music at Lindy Booty (2004, San Francisco and Sacramento), shaping fusion's development.",
+      "inDefinedTermSet": {
+        "@id": "https://motleyhue.org/about/#what-is-fusion"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Popping",
+      "name": "Popping",
+      "description": "A technique source fusion incorporates.",
+      "inDefinedTermSet": {
+        "@id": "https://motleyhue.org/about/#what-is-fusion"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Remote_work",
+      "name": "Remote Workers",
+      "description": "People who work at or from home or another space rather than from an office or workplace (Wikipedia). Broader than Digital Nomads: it carries no implication of travel, so it fits remote-job boards and distributed-team tooling that a location-independence term would overclaim.",
+      "inDefinedTermSet": {
+        "@type": "DefinedTermSet",
+        "name": "Mailbox Audience Terms",
+        "description": "Audience segments an organization serves, for use in Organization.keywords."
+      },
+      "sameAs": "https://en.wikipedia.org/wiki/Remote_work"
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Tango_(dance)",
+      "name": "Tango",
+      "description": "Named by Motley Hue as a traditional form fusion dances outside of; bridged to blues by the 2005 \"Tangoed Up In Blues\" workshops.",
+      "inDefinedTermSet": {
+        "@id": "https://motleyhue.org/about/#what-is-fusion"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Waltz",
+      "name": "Waltz",
+      "description": "Named by Motley Hue as a traditional form fusion dances outside of.",
+      "inDefinedTermSet": {
+        "@id": "https://motleyhue.org/about/#what-is-fusion"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/West_Coast_Swing",
+      "name": "West Coast Swing",
+      "alternateName": "WCS",
+      "description": "An evolution of Savoy Style Lindy Hop that originated in the 1930s and is the Official State Dance of California.",
+      "inDefinedTermSet": {
+        "@id": "https://worldsdc.com/#wcs-vocabulary"
+      },
+      "sameAs": "https://worldsdc.com"
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://en.wikipedia.org/wiki/Zouk",
+      "name": "Zouk",
+      "description": "The Caribbean music genre, from the francophone islands, that Lambada dancers adopted and which gave the dance its name.",
+      "inDefinedTermSet": {
+        "@id": "https://www.brazilianzoukcouncil.com/#zouk-vocabulary"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "name": "Lamba Zouk",
+      "description": "Porto Seguro style; the substyle closest to the original Lambada.",
+      "termCode": "substyle:lamba-zouk",
+      "inDefinedTermSet": {
+        "@id": "https://www.brazilianzoukcouncil.com/#zouk-vocabulary"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "name": "Lateral",
+      "description": "A named foundational step of Brazilian Zouk.",
+      "termCode": "step:lateral",
+      "inDefinedTermSet": {
+        "@id": "https://www.brazilianzoukcouncil.com/#zouk-vocabulary"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "name": "Metaphysical / Esoteric / Alternative Practice",
+      "description": "Tantra, human design, energy work and adjacent non-clinical practices.",
+      "termCode": "subject:alternative-practice",
+      "inDefinedTermSet": {
+        "@type": "DefinedTermSet",
+        "name": "Mailbox Subject Terms",
+        "description": "Practice and subject areas an organization works in, for use in Organization.keywords."
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "name": "Mzouk",
+      "description": "Originated in Mallorca, Spain.",
+      "termCode": "substyle:mzouk",
+      "inDefinedTermSet": {
+        "@id": "https://www.brazilianzoukcouncil.com/#zouk-vocabulary"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "name": "Neozouk",
+      "description": "Circular movements with a focus on energy management.",
+      "termCode": "substyle:neozouk",
+      "inDefinedTermSet": {
+        "@id": "https://www.brazilianzoukcouncil.com/#zouk-vocabulary"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "name": "Soulzouk",
+      "description": "Rio de Janeiro-based substyle.",
+      "termCode": "substyle:soulzouk",
+      "inDefinedTermSet": {
+        "@id": "https://www.brazilianzoukcouncil.com/#zouk-vocabulary"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "name": "Traditional Zouk",
+      "description": "Rio-style, the established traditional form.",
+      "termCode": "substyle:traditional-zouk",
+      "inDefinedTermSet": {
+        "@id": "https://www.brazilianzoukcouncil.com/#zouk-vocabulary"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "name": "Viradinha",
+      "description": "A named foundational step of Brazilian Zouk.",
+      "termCode": "step:viradinha",
+      "inDefinedTermSet": {
+        "@id": "https://www.brazilianzoukcouncil.com/#zouk-vocabulary"
+      }
+    },
+    {
+      "@type": "DefinedTerm",
+      "name": "Zouk Flow",
+      "description": "Influenced by hip-hop culture.",
+      "termCode": "substyle:zouk-flow",
+      "inDefinedTermSet": {
+        "@id": "https://www.brazilianzoukcouncil.com/#zouk-vocabulary"
+      }
+    },
+    {
+      "@type": "DefinedTermSet",
+      "@id": "https://motleyhue.org/about/#what-is-fusion",
+      "name": "Fusion Partner Dance Vocabulary",
+      "description": "Terms describing fusion partner dance and the traditional forms it draws on, compiled from en.wikipedia.org/wiki/Fusion_dance and Motley Hue."
+    },
+    {
+      "@type": "DefinedTermSet",
+      "@id": "https://worldsdc.com/#wcs-vocabulary",
+      "name": "West Coast Swing Vocabulary"
+    },
+    {
+      "@type": "DefinedTermSet",
+      "@id": "https://www.brazilianzoukcouncil.com/#zouk-vocabulary",
+      "name": "Brazilian Zouk Vocabulary",
+      "description": "Terms describing Brazilian Zouk, its lineage, step vocabulary and substyles. Definitions from en.wikipedia.org/wiki/Brazilian_Zouk; community framing from the Brazilian Zouk Dance Council, \"a platform dedicated to connecting dancers, events, and professionals of Brazilian Zouk around the world\"."
+    },
+    {
+      "@type": "DefinedTermSet",
+      "name": "Mailbox Audience Terms",
+      "description": "Audience segments an organization serves, for use in Organization.keywords."
+    },
+    {
+      "@type": "DefinedTermSet",
+      "name": "Mailbox Subject Terms",
+      "description": "Practice and subject areas an organization works in, for use in Organization.keywords."
+    },
+    {
+      "@type": [
+        "LocalBusiness",
+        "School"
+      ],
+      "name": "Austin Westie Academy",
+      "knowsAbout": {
+        "@id": "https://en.wikipedia.org/wiki/West_Coast_Swing"
+      },
+      "parentOrganization": "World Swing Dance Council",
+      "identifier": [
+        {
+          "@type": "PropertyValue",
+          "propertyID": "gmail-label",
+          "value": "Organization/EducationalOrganization/World Swing Dance Council/Austin Westie Academy"
+        },
+        {
+          "@type": "PropertyValue",
+          "propertyID": "gmail-query",
+          "value": "from:austinwestieacademy"
+        }
+      ]
+    },
+    {
+      "@type": "LodgingBusiness",
+      "name": "KIMA SURF",
+      "keywords": [
+        {
+          "@id": "https://en.wikipedia.org/wiki/Digital_nomad"
+        }
+      ],
+      "identifier": [
+        {
+          "@type": "PropertyValue",
+          "propertyID": "gmail-label",
+          "value": "Organization/LodgingBusiness"
+        },
+        {
+          "@type": "PropertyValue",
+          "propertyID": "gmail-query",
+          "value": "from:kimasurf.com"
+        }
+      ]
+    },
+    {
+      "@type": "LodgingBusiness",
+      "name": "Outsite",
+      "keywords": [
+        {
+          "@id": "https://en.wikipedia.org/wiki/Digital_nomad"
+        }
+      ],
+      "identifier": [
+        {
+          "@type": "PropertyValue",
+          "propertyID": "gmail-label",
+          "value": "Organization/LodgingBusiness"
+        },
+        {
+          "@type": "PropertyValue",
+          "propertyID": "gmail-query",
+          "value": "from:outsite.co"
+        }
+      ]
+    },
+    {
+      "@type": "LodgingBusiness",
+      "name": "WiFi Tribe",
+      "keywords": [
+        {
+          "@id": "https://en.wikipedia.org/wiki/Digital_nomad"
+        }
+      ],
+      "identifier": [
+        {
+          "@type": "PropertyValue",
+          "propertyID": "gmail-label",
+          "value": "Organization/LodgingBusiness"
+        },
+        {
+          "@type": "PropertyValue",
+          "propertyID": "gmail-query",
+          "value": "from:wifitribe.co"
+        }
+      ]
+    },
+    {
+      "@type": "Organization",
+      "name": "Nexus Villages",
+      "keywords": [
+        {
+          "@id": "https://en.wikipedia.org/wiki/Ecovillage"
+        }
+      ],
+      "identifier": [
+        {
+          "@type": "PropertyValue",
+          "propertyID": "gmail-label",
+          "value": "Organization/RealEstate"
+        },
+        {
+          "@type": "PropertyValue",
+          "propertyID": "gmail-query",
+          "value": "from:nexusvillages.com"
+        }
+      ]
+    },
+    {
+      "@type": "Organization",
+      "name": "Texas Tribune",
+      "nonprofitStatus": "Nonprofit501c3",
+      "identifier": [
+        {
+          "@type": "PropertyValue",
+          "propertyID": "gmail-label",
+          "value": "Organization/LocalCommunity/NewsMediaOrganization"
+        },
+        {
+          "@type": "PropertyValue",
+          "propertyID": "gmail-query",
+          "value": "from:texastribune.org"
+        }
+      ]
+    },
+    {
+      "@type": "Organization",
+      "name": "The Tantra Institute",
+      "keywords": [
+        {
+          "@type": "DefinedTerm",
+          "name": "Metaphysical / Esoteric / Alternative Practice",
+          "description": "Tantra, human design, energy work and adjacent non-clinical practices.",
+          "termCode": "subject:alternative-practice",
+          "inDefinedTermSet": {
+            "@type": "DefinedTermSet",
+            "name": "Mailbox Subject Terms",
+            "description": "Practice and subject areas an organization works in, for use in Organization.keywords."
+          }
+        }
+      ],
+      "identifier": [
+        {
+          "@type": "PropertyValue",
+          "propertyID": "gmail-label",
+          "value": "Organization/EducationalOrganization"
+        },
+        {
+          "@type": "PropertyValue",
+          "propertyID": "gmail-query",
+          "value": "from:tantrany.com"
+        }
+      ]
+    },
+    {
+      "@type": "Organization",
+      "name": "Virtual Vocations",
+      "keywords": [
+        {
+          "@id": "https://en.wikipedia.org/wiki/Remote_work"
+        }
+      ],
+      "identifier": [
+        {
+          "@type": "PropertyValue",
+          "propertyID": "gmail-label",
+          "value": "Organization/Professional"
+        },
+        {
+          "@type": "PropertyValue",
+          "propertyID": "gmail-query",
+          "value": "from:virtualvocations.com"
+        }
+      ]
+    },
+    {
+      "@type": "SportsOrganization",
+      "@id": "https://brazilianzoukcouncil.com",
+      "name": "Brazilian Zouk Dance Council",
+      "alternateName": "BZDC",
+      "url": "https://www.brazilianzoukcouncil.com/",
+      "subOrganization": {
+        "@id": "https://zouk.mx"
+      }
+    },
+    {
+      "@type": "SportsOrganization",
+      "@id": "https://motleyhue.org",
+      "name": "Motley Hue",
+      "url": "https://motleyhue.org/",
+      "description": "An event production company hosting experiences meant to educate and inspire through the medium of partner dancing.",
+      "knowsAbout": {
+        "@id": "https://en.wikipedia.org/wiki/Fusion_dance"
+      },
+      "event": [
+        {
+          "@type": "Festival",
+          "name": "The Fusion Nest",
+          "description": "An immersive weekend of fusion dance in the mountains of Cuneo — an all-inclusive retreat-style festival blending instruction, social dancing, live music, meals and lodging in a rural co-living space.",
+          "url": "https://motleyhue.org/nest/",
+          "location": {
+            "@type": "Place",
+            "name": "Osservatorio P.U.S.H.",
+            "address": {
+              "@type": "PostalAddress",
+              "addressLocality": "Busca",
+              "addressRegion": "Piemonte",
+              "addressCountry": "IT"
+            }
+          }
+        },
+        {
+          "@type": "Festival",
+          "name": "Crème de la Connection",
+          "description": "A spacious sleep-away weekend at a riverside monastery filled with fusion dance, group games and embodiment workshops, on a schedule that prioritises rest.",
+          "url": "https://motleyhue.org/cremeconnection2/",
+          "location": {
+            "@type": "Place",
+            "name": "Herder-Kulturzentrum",
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": "Klosterstraße 10",
+              "postalCode": "93188",
+              "addressLocality": "Pielenhofen",
+              "addressCountry": "DE"
+            }
+          }
+        },
+        {
+          "@type": "EducationEvent",
+          "name": "Fusion Teacher Training (FTT)",
+          "description": "A multi-module pathway developing fusion dance instructors through technique, theory and teaching methodology, delivered as rotating European and North American modules.",
+          "url": "https://motleyhue.org/teachertraining/"
+        }
+      ]
+    },
+    {
+      "@type": "SportsOrganization",
+      "@id": "https://zouk.mx",
+      "name": "ZoukMX",
+      "url": "https://zouk.mx/",
+      "description": "An immersive dance organization specializing in Brazilian Zouk training and festival experiences in Central America.",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Playa del Carmen",
+        "addressRegion": "Quintana Roo",
+        "addressCountry": "MX"
+      },
+      "knowsAbout": {
+        "@id": "https://en.wikipedia.org/wiki/Brazilian_Zouk"
+      },
+      "event": [
+        {
+          "@type": "EducationEvent",
+          "name": "ZoukMX 100 Hour Training Program",
+          "description": "An immersive month-long dance journey featuring 6 distinct training tracks.",
+          "location": {
+            "@type": "Place",
+            "name": "Playa del Carmen",
+            "address": "Playa del Carmen, Mexico"
+          }
+        },
+        {
+          "@type": "SportsEvent",
+          "name": "ZoukMX Weekdays & Intensives Festival",
+          "description": "A 3-day intensive festival focused on sharpening dance technique.",
+          "location": {
+            "@type": "Place",
+            "name": "Playa del Carmen",
+            "address": "Playa del Carmen, Mexico"
+          }
+        },
+        {
+          "@type": "SportsEvent",
+          "name": "ZoukMX Main Festival",
+          "description": "The main festival weekend bringing together hundreds of dancers for connection and workshops.",
+          "location": {
+            "@type": "Place",
+            "name": "Playa del Carmen",
+            "address": "Playa del Carmen, Mexico"
+          }
+        },
+        {
+          "@type": "Festival",
+          "name": "ZoukMX Excursion: Lagoon Jungle Party",
+          "location": {
+            "@type": "Place",
+            "name": "Playa del Carmen",
+            "address": "Playa del Carmen, Mexico"
+          }
+        },
+        {
+          "@type": "Festival",
+          "name": "ZoukMX Retreat: Tulum Days",
+          "location": {
+            "@type": "Place",
+            "name": "Tulum",
+            "address": "Tulum, Mexico"
+          }
+        }
+      ]
+    }
+  ]
+}

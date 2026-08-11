@@ -350,6 +350,8 @@ export const CATEGORIES = [
       { name: 'Dr. Hyman', query: 'from:drhyman.com' },
       { name: 'Sound Sight Tarot', query: 'from:soundsighttarot.com' },
       { name: 'Heart Centered Being', query: 'from:theheartcenteredbeing.com' },
+      { name: 'ACA WSO Daily Meditation', query: 'from:acawso.org' },
+      { name: 'Human Design Daily', query: 'from:human.design' },
       { name: 'UT Austin Newsletters', query: 'from:(utexas.edu OR mccombs.utexas.edu) subject:newsletter' },
       { name: 'ACM Listserv', query: 'from:listserv.acm.org' },
       { name: 'AlphaSignal', query: 'from:"AlphaSignal"' },
@@ -828,8 +830,6 @@ export const CATEGORIES = [
     labelName: LABEL_SERVICES_HEALTH,
     archive: true,
     filters: [
-      { name: 'ACA WSO Daily Meditation', query: 'from:acawso.org' },
-      { name: 'Human Design Daily', query: 'from:human.design' },
       { name: 'Turo', query: 'from:mail.turo.com' },
       { name: 'Aeromexico', query: 'from:(mx.aeromexico.com OR mx.aeromexicorewards.com)' },
       { name: 'Booking.com', query: 'from:sg.booking.com' },

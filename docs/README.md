@@ -42,7 +42,7 @@ the wrong thing without erroring. Full detail in the
 | Parentheses break Gmail's `label:` operator | `label:"…(X)…"` returns 0 on a full label — strips, backfills and delete-guards all misread |
 | `searchAndModify()` does not page | `relabel-messages.mjs` caps at 100 and still prints success |
 | A filter can add only one user label | `Too many user labels in filter`; `messages.modify` has no such limit |
-| Domain names do not reveal org type | 5 of 5 name-based guesses wrong; many domains are sending platforms, not orgs |
+| Domain names do not reveal org type | Every name-based guess so far has been wrong (tally in the main README); many domains are sending platforms, not orgs |
 
 ## Quick Links
 

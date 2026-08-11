@@ -305,12 +305,21 @@ set that filter creation rejects.
 
 ### Sender domains do not reveal an organization's type
 
-Five of five type guesses made from domain names alone were wrong: `fuegodance.com` is a
+**This is the canonical tally — other docs point here rather than repeating it, because a
+count duplicated across files goes stale in every copy at once.**
+
+Six of six type guesses made from domain names alone were wrong: `fuegodance.com` is a
 shoe brand, `tinyminotaur.com` a tavern, `experiencehouse.co` a design cohort,
 `thesisdriven.com` a real-estate data business, `houstonssc.com` a recreational sports
-league. Audit content before assigning a type — see
-[`audit-sender-signals.mjs`](audit-sender-signals.mjs), whose display-name output is more
-reliable than its keyword scores (calibrated 2/5 on known answers).
+league, and `premierhw.com` is **Premier Health and Wellness** — a medical spa — not the
+"Premier Home Warranty" its entry was named for. Audit content before assigning a type —
+see [`audit-sender-signals.mjs`](audit-sender-signals.mjs), whose display-name output is
+more reliable than its keyword scores (calibrated 2/5 on known answers; it did score
+`premierhw.com` correctly at `HealthAndBeautyBusiness:19`).
+
+`premierhw.com` adds a second trap: an **abbreviation** expanded from the domain. `HW` was
+read as Home Warranty; the mail footer says Health and Wellness. An acronym in a domain is
+a guess, not evidence — the body text is evidence.
 
 Related: many domains are **sending platforms**, not organizations —
 `express.medallia.com` carries 20 orgs including Airbnb, CVS and Marriott. Use

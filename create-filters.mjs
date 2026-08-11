@@ -42,7 +42,7 @@ import {
   LABEL_ADVOCACY,
   LABEL_ADVOCACY_POLITICAL,
   LABEL_ADVOCACY_NONPROFIT,
-  LABEL_ADVOCACY_KAW_BOARD,
+  LABEL_ADVOCACY_CCV_BOARD,
   LABEL_COMMUNITIES,
   LABEL_PERSONAL_CORRESPONDENCE,
   LABEL_PERSONAL_SELF_CORRESPONDENCE,
@@ -82,11 +82,16 @@ import {
   LABEL_NEWSLETTERS_LEGAL,
   LABEL_NEWSLETTERS_PERSONAL_DEV,
   LABEL_TIME_SENSITIVE,
+  LABEL_KEEP_IMPORTANT,
+  LABEL_CAREER_OPPORTUNITY,
+  LABEL_CAREER_FELLOWSHIP_INVITE,
+  LABEL_EVENTS_CLASSES,
 } from './lib/constants.mjs';
 
 /**
  * Each category:
  *   labelName     — existing or new label constant
+ *   extraLabels   — additional labels applied alongside labelName (e.g. Keep Important)
  *   filters       — array of { name, query } for createGmailFilter
  *   archive       — remove from INBOX when applying (default true)
  *   markRead      — also strip UNREAD when applying (default false)
@@ -296,6 +301,10 @@ export const CATEGORIES = [
       { name: 'JetBlue Marketing', query: 'from:email.jetblue.com' },
       { name: 'Qatar Airways', query: 'from:(qr.qatarairways.com OR qrgroup.qatarairways.com)' },
       { name: 'Air France Marketing', query: 'from:enews-airfrance.com' },
+      { name: 'Turo', query: 'from:mail.turo.com' },
+      { name: 'Aeromexico', query: 'from:(mx.aeromexico.com OR mx.aeromexicorewards.com)' },
+      { name: 'Booking.com', query: 'from:sg.booking.com' },
+      { name: 'Wild Women Expeditions', query: 'from:wildwomenexpeditions.com' },
     ],
   },
   {
@@ -432,11 +441,15 @@ export const CATEGORIES = [
     ],
   },
   {
-    // KAW nonprofit board correspondence — stay in inbox
-    labelName: LABEL_ADVOCACY_KAW_BOARD,
+    // CCV nonprofit board correspondence — stays in inbox, never marked read.
+    // includeRead because board threads are read-then-forgotten, and the org's
+    // own domain carries the same governance mail as the members' personal accounts.
+    labelName: LABEL_ADVOCACY_CCV_BOARD,
     archive: false,
+    includeRead: true,
     filters: [
-      { name: 'KAW board members', query: 'from:(mmaynesworth@gmail.com OR belindajroberts@gmail.com OR jshillis55@gmail.com)' },
+      { name: 'CCV board members', query: 'from:(mmaynesworth@gmail.com OR belindajroberts@gmail.com OR jshillis55@gmail.com)' },
+      { name: 'Capital City Village', query: 'from:capitalcityvillage.org' },
     ],
   },
   {
@@ -581,6 +594,7 @@ export const CATEGORIES = [
     labelName: LABEL_SERVICES_HEALTH,
     archive: false,
     filters: [
+      { name: 'Dogwood Therapy ATX', query: 'from:dogwoodtherapyatx.com' },
       { name: 'Patient Messages (Hightop/Roots)', query: 'from:patient-message.com' },
       // LaserAway splits senders: .co is transactional (booking confirmations) and stays
       // in the inbox, while .com marketing archives under Promotions/Beauty & Wellness.
@@ -823,17 +837,6 @@ export const CATEGORIES = [
     archive: false,
     filters: [
       { name: 'Ring Device Battery', query: 'from:(mail.ring.com OR notifications.ring.com) subject:"charge your"' },
-    ],
-  },
-  {
-    // Daily practice drip mail — label as Health but archive
-    labelName: LABEL_SERVICES_HEALTH,
-    archive: true,
-    filters: [
-      { name: 'Turo', query: 'from:mail.turo.com' },
-      { name: 'Aeromexico', query: 'from:(mx.aeromexico.com OR mx.aeromexicorewards.com)' },
-      { name: 'Booking.com', query: 'from:sg.booking.com' },
-      { name: 'Wild Women Expeditions', query: 'from:wildwomenexpeditions.com' },
     ],
   },
   {
@@ -1119,6 +1122,36 @@ export const CATEGORIES = [
       { name: 'Google Calendar Notifications', query: 'from:calendar-notification@google.com' },
     ],
   },
+  // Recruiter and inbound-opportunity threads. Never archived and pinned with Keep Important:
+  // these were the mail that sat unread-and-archived long enough to go stale.
+  {
+    labelName: LABEL_CAREER_OPPORTUNITY,
+    extraLabels: [LABEL_KEEP_IMPORTANT],
+    archive: false,
+    includeRead: true,
+    filters: [
+      { name: 'Leucadia Talent', query: 'from:leucadia-talent.com' },
+      { name: '8VC', query: 'from:8vc.com' },
+    ],
+  },
+  {
+    // from:a16z.com also matches sr-team./alpha. subdomains, which is where the
+    // speedrun fellowship mail actually originates.
+    labelName: LABEL_CAREER_FELLOWSHIP_INVITE,
+    archive: false,
+    includeRead: true,
+    filters: [
+      { name: 'a16z Speedrun', query: 'from:a16z.com' },
+    ],
+  },
+  {
+    labelName: LABEL_EVENTS_CLASSES,
+    archive: false,
+    includeRead: true,
+    filters: [
+      { name: 'Austin Gymnastics Club', query: 'from:austingymnasticsclub.com' },
+    ],
+  },
 ];
 
 async function run() {
@@ -1145,6 +1178,12 @@ async function run() {
 
     if (category.labelName && !labelId) continue;
 
+    const extraLabelIds = [];
+    for (const extra of category.extraLabels ?? []) {
+      extraLabelIds.push(await ensureLabelExists(gmail, extra));
+    }
+    const addIds = [...(labelId ? [labelId] : []), ...extraLabelIds];
+
     const filterQueries = [];
     const removeIds = [
       ...(category.archive ? [GMAIL_INBOX] : []),
@@ -1152,13 +1191,25 @@ async function run() {
     ];
 
     for (const filter of category.filters) {
-      const action = {
-        ...(labelId ? { addLabelIds: [labelId] } : {}),
-        ...(removeIds.length ? { removeLabelIds: removeIds } : {}),
-      };
-      const filterId = await createGmailFilter(gmail, { query: filter.query }, action);
-      console.log(`  ${filterId ? '✓' : '~'} ${filter.name}`);
-      if (filterId) totalFilters++;
+      // Gmail rejects a filter action carrying more than one user label
+      // ("Too many user labels in filter"), so each extra label needs its own
+      // filter on the same query. messages.modify has no such limit, so the
+      // backfill below still applies every label in a single pass.
+      let created = false;
+      if (addIds.length === 0 && removeIds.length) {
+        // Label-less category: archive/mark-read only
+        if (await createGmailFilter(gmail, { query: filter.query }, { removeLabelIds: removeIds })) created = true;
+      }
+      for (const [index, addId] of addIds.entries()) {
+        const action = {
+          addLabelIds: [addId],
+          // Only the first filter needs to move the message out of INBOX/UNREAD
+          ...(index === 0 && removeIds.length ? { removeLabelIds: removeIds } : {}),
+        };
+        if (await createGmailFilter(gmail, { query: filter.query }, action)) created = true;
+      }
+      console.log(`  ${created ? '✓' : '~'} ${filter.name}`);
+      if (created) totalFilters++;
       filterQueries.push(`(${filter.query})`);
     }
 
@@ -1166,7 +1217,7 @@ async function run() {
     const readClause = category.includeRead ? '' : ' is:unread';
     const combinedQuery = `(${filterQueries.join(' OR ')})${readClause}${labelClause}`;
     const modifications = {
-      ...(labelId ? { addLabelIds: [labelId] } : {}),
+      ...(addIds.length ? { addLabelIds: addIds } : {}),
       ...(removeIds.length ? { removeLabelIds: removeIds } : {}),
     };
 

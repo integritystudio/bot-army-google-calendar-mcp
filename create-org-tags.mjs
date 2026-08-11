@@ -25,27 +25,194 @@ import {
   LABEL_ORG_LC_NGO,
   LABEL_ORG_LC_CONSORTIUM,
   LABEL_ORG_LC_ONLINE_BUSINESS,
+  LABEL_ORG_LC_LOCAL_BUSINESS,
   LABEL_ORG_LC_STORE,
   LABEL_ORG_LC_ENTERTAINMENT,
-  LABEL_ORG_BIGTECH_STREAMING,
-  LABEL_ORG_BIGTECH_ENTERTAINMENT,
-  LABEL_ORG_BIGTECH_DEVELOPER_AI,
   LABEL_ORG_LC_PERFORMING_GROUP,
   LABEL_ORG_LC_MUSEUM,
   LABEL_ORG_LC_RESEARCH,
-  LABEL_ORG_LC_SPORTS,
-  LABEL_ORG_DIGITAL_NOMAD,
+  LABEL_ORG_SPORTS,
+  LABEL_ORG_LB_STORE_CLOTHING,
+  LABEL_ORG_LB_STORE_GROCERY,
+  LABEL_ORG_LB_STORE_HOMEGOODS,
+  LABEL_ORG_LB_FOOD,
+  LABEL_ORG_PERFORMING_GROUP,
+  LABEL_ORG_LODGING_BUSINESS,
   LABEL_ORG_GOOGLE,
   LABEL_ORG_HEALTH,
   LABEL_ORG_TRAVEL,
   LABEL_ORG_AUTOMOTIVE,
-  LABEL_ORG_DEVELOPER_TOOLS,
+  LABEL_ORG_CORPORATION,
+  LABEL_ORG_CORP_TAXI_SERVICE,
+  LABEL_ORG_CORP_AMAZON_RING,
+  LABEL_ORG_ONLINE_BUSINESS,
+  LABEL_ORG_ONLINE_STORE,
+  LABEL_ORG_EDUCATIONAL,
+  LABEL_ORG_EDU_WSDC_AWA,
+  LABEL_ORG_SPORTS_ZOUKMX,
   LABEL_ORG_GOVERNMENT,
   LABEL_ORG_POLITICAL,
-  LABEL_ORG_BIG_TECH,
 } from './lib/constants.mjs';
+// Controlled vocabularies: a tag group's optional `schema` field records the modeling a
+// Gmail label cannot express — labels are flat strings, so `keywords` and `knowsAbout`
+// have nowhere else to live. Definitions and shape rules in lib/vocabularies.mjs.
+import {
+  TERM_DIGITAL_NOMADS,
+  TERM_REMOTE_WORKERS,
+  TERM_ALTERNATIVE_PRACTICE,
+  TERM_ECOVILLAGE,
+  TERM_WEST_COAST_SWING,
+  TERM_FUSION_DANCE,
+  TERM_BRAZILIAN_ZOUK,
+} from './lib/vocabularies.mjs';
 
-const ORG_TAGS = [
+/**
+ * ZoukMX and its parent council, typed as schema.org SportsOrganization.
+ *
+ * `event` lists the org's recurring PROGRAMMES, not dated instances: what kinds of event
+ * it runs is stable, which edition runs when is not. Dates and year-stamped names are
+ * deliberately absent — ORG_TAGS is long-lived routing config, and anything here that
+ * expires silently rots. startDate is optional on schema.org Event, so these stay valid.
+ */
+const PLAYA_DEL_CARMEN = {
+  '@type': 'Place',
+  name: 'Playa del Carmen',
+  address: 'Playa del Carmen, Mexico',
+};
+
+export const ZOUKMX_PROGRAMS = [
+  {
+    '@type': 'EducationEvent',
+    name: 'ZoukMX 100 Hour Training Program',
+    description: 'An immersive month-long dance journey featuring 6 distinct training tracks.',
+    location: PLAYA_DEL_CARMEN,
+  },
+  {
+    '@type': 'SportsEvent',
+    name: 'ZoukMX Weekdays & Intensives Festival',
+    description: 'A 3-day intensive festival focused on sharpening dance technique.',
+    location: PLAYA_DEL_CARMEN,
+  },
+  {
+    '@type': 'SportsEvent',
+    name: 'ZoukMX Main Festival',
+    description: 'The main festival weekend bringing together hundreds of dancers for connection and workshops.',
+    location: PLAYA_DEL_CARMEN,
+  },
+  {
+    '@type': 'Festival',
+    name: 'ZoukMX Excursion: Lagoon Jungle Party',
+    location: PLAYA_DEL_CARMEN,
+  },
+  {
+    '@type': 'Festival',
+    name: 'ZoukMX Retreat: Tulum Days',
+    location: { '@type': 'Place', name: 'Tulum', address: 'Tulum, Mexico' },
+  },
+];
+
+export const ORG_ZOUKMX = {
+  '@type': 'SportsOrganization',
+  '@id': 'https://zouk.mx',
+  name: 'ZoukMX',
+  url: 'https://zouk.mx/',
+  description: 'An immersive dance organization specializing in Brazilian Zouk training '
+    + 'and festival experiences in Central America.',
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: 'Playa del Carmen',
+    addressRegion: 'Quintana Roo',
+    addressCountry: 'MX',
+  },
+  knowsAbout: TERM_BRAZILIAN_ZOUK,
+  event: ZOUKMX_PROGRAMS,
+};
+
+/** subOrganization only — the inverse parentOrganization would make this cyclic. */
+export const ORG_BZDC = {
+  '@type': 'SportsOrganization',
+  '@id': 'https://brazilianzoukcouncil.com',
+  name: 'Brazilian Zouk Dance Council',
+  alternateName: 'BZDC',
+  url: 'https://www.brazilianzoukcouncil.com/',
+  subOrganization: ORG_ZOUKMX,
+};
+
+/**
+ * Motley Hue and its recurring programmes. Same shape as ORG_BZDC/ORG_ZOUKMX, minus the
+ * subOrganization wrapper — Motley Hue has no parent org.
+ *
+ * @type is SportsOrganization to match the label it converged onto, though the company
+ * self-describes as an event production company; the participatory-vs-audience rule that
+ * put it there is a local convention, not a schema.org distinction.
+ *
+ * Dates omitted for the same reason as ZoukMX's. The About page also cites an NYC
+ * flagship festival, absent here because no page for it was supplied — an omitted
+ * programme is better than an invented one.
+ */
+export const MOTLEY_HUE_PROGRAMS = [
+  {
+    '@type': 'Festival',
+    name: 'The Fusion Nest',
+    description: 'An immersive weekend of fusion dance in the mountains of Cuneo — an '
+      + 'all-inclusive retreat-style festival blending instruction, social dancing, live '
+      + 'music, meals and lodging in a rural co-living space.',
+    url: 'https://motleyhue.org/nest/',
+    location: {
+      '@type': 'Place',
+      name: 'Osservatorio P.U.S.H.',
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: 'Busca',
+        addressRegion: 'Piemonte',
+        addressCountry: 'IT',
+      },
+    },
+  },
+  {
+    '@type': 'Festival',
+    name: 'Crème de la Connection',
+    description: 'A spacious sleep-away weekend at a riverside monastery filled with '
+      + 'fusion dance, group games and embodiment workshops, on a schedule that '
+      + 'prioritises rest.',
+    url: 'https://motleyhue.org/cremeconnection2/',
+    location: {
+      '@type': 'Place',
+      name: 'Herder-Kulturzentrum',
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: 'Klosterstraße 10',
+        postalCode: '93188',
+        addressLocality: 'Pielenhofen',
+        addressCountry: 'DE',
+      },
+    },
+  },
+  {
+    // One programme, delivered as rotating regional modules. The regions are stable;
+    // which city hosts a given cohort is not, so no location is pinned.
+    '@type': 'EducationEvent',
+    name: 'Fusion Teacher Training (FTT)',
+    description: 'A multi-module pathway developing fusion dance instructors through '
+      + 'technique, theory and teaching methodology, delivered as rotating European and '
+      + 'North American modules.',
+    url: 'https://motleyhue.org/teachertraining/',
+  },
+];
+
+export const ORG_MOTLEY_HUE = {
+  '@type': 'SportsOrganization',
+  '@id': 'https://motleyhue.org',
+  name: 'Motley Hue',
+  url: 'https://motleyhue.org/',
+  description: 'An event production company hosting experiences meant to educate and '
+    + 'inspire through the medium of partner dancing.',
+  knowsAbout: TERM_FUSION_DANCE,
+  event: MOTLEY_HUE_PROGRAMS,
+};
+
+// Exported so coverage-audit scripts can read the definitions without executing main()
+export const ORG_TAGS = [
   {
     // National parties and campaign committees. Government covers public agencies and
     // LC/NGO covers local nonprofits; neither fits a party organization.
@@ -113,6 +280,16 @@ const ORG_TAGS = [
       { name: 'Furnished Finder', query: 'from:furnishedfinder.com' },
       { name: 'Kindred', query: 'from:livekindred.com' },
       { name: 'Keyrenter', query: 'from:keyrenteraustin.com' },
+      {
+        // Developer of "futuristic eco-village" communities — Amara Village (Portugal)
+        // and Azulik Residences (Tulum). Audited against the digital-nomad vocabulary and
+        // scored 0 of 76 terms across every message and its own site: the offer is a home
+        // to settle in ("See Your Future Home for the First Time"), not accommodation for
+        // people on the move, so it belongs with Zillow rather than with Outsite.
+        name: 'Nexus Villages',
+        query: 'from:nexusvillages.com',
+        schema: { keywords: [TERM_ECOVILLAGE] },
+      },
     ],
   },
   {
@@ -223,6 +400,15 @@ const ORG_TAGS = [
   {
     labelName: LABEL_ORG_LC_NEWS_MEDIA,
     orgs: [
+      { name: 'Axios', query: 'from:axios.com' },
+      { name: 'The Boston Globe', query: 'from:globe.com' },
+      // 501(c)(3) nonprofit newsroom. NewsMediaOrganization is the type ("a newspaper
+      // or TV station"); nonprofit status is a property, not a competing NGO type.
+      {
+        name: 'Texas Tribune',
+        query: 'from:texastribune.org',
+        schema: { nonprofitStatus: 'Nonprofit501c3' },
+      },
       { name: 'Austin Business Journal', query: 'from:bizjournals.com' },
       { name: 'CNN', query: 'from:cnn.com' },
       { name: 'New York Times', query: 'from:newyorktimes.com' },
@@ -232,6 +418,9 @@ const ORG_TAGS = [
   {
     labelName: LABEL_ORG_LC_NGO,
     orgs: [
+      { name: 'Dhamma Sukha', query: 'from:sukha.dhamma.org' },
+      { name: 'Snehalaya', query: 'from:snehalaya.org' },
+      { name: 'SAFE Austin', query: 'from:safeaustin.org' },
       { name: 'Austin Pets Alive', query: 'from:austinpetsalive.org' },
       { name: 'Austin Habitat for Humanity', query: 'from:ahfh.org' },
       { name: 'EGBI', query: 'from:egbi.org' },
@@ -262,10 +451,21 @@ const ORG_TAGS = [
     ],
   },
   {
+    // areaServed is Austin-only; no narrower schema.org type applies (there is no
+    // SocialOrganization type, so a sober-social club is just a LocalBusiness)
+    labelName: LABEL_ORG_LC_LOCAL_BUSINESS,
+    orgs: [
+      // LocalBusiness half of Austin Westie Academy's [LocalBusiness, School] multi-type
+      { name: 'Austin Westie Academy (local business)', query: 'from:austinwestieacademy' },
+      { name: 'The Unbuzzed Club', query: 'from:theunbuzzedclub.com' },
+    ],
+  },
+  {
     // Venue programming (album drops, takeovers, anniversaries), not retail
     labelName: LABEL_ORG_LC_ENTERTAINMENT,
     orgs: [
       { name: 'BATHE', query: 'from:batheaustin.com' },
+      { name: 'Tiny Minotaur Tavern', query: 'from:tinyminotaur.com' },
     ],
   },
   {
@@ -287,8 +487,16 @@ const ORG_TAGS = [
     ],
   },
   {
-    labelName: LABEL_ORG_LC_SPORTS,
+    labelName: LABEL_ORG_SPORTS,
     orgs: [
+      // Participatory partner-dance events: attendees dance, they do not watch. Grouped
+      // with the sports leagues rather than EntertainmentBusiness, which would imply an
+      // audience. Self-described "event production company hosting experiences meant to
+      // educate and inspire through the medium of partner dancing".
+      { name: 'Motley Hue', query: 'from:motleyhue.org', schema: ORG_MOTLEY_HUE },
+      // Recreational leagues (volleyball, soccer, kickball) + tournaments — organizes
+      // sport, so SportsOrganization rather than a SportsActivityLocation venue
+      { name: 'Houston Sports & Social Club', query: 'from:houstonssc.com' },
       { name: 'Austin Tennis League', query: 'from:ccsend.com from:Tennis' },
     ],
   },
@@ -301,7 +509,14 @@ const ORG_TAGS = [
       { name: 'ACM', query: 'from:acm.org' },
       { name: 'Google Careers', query: 'from:careers-noreply@google.com' },
       { name: 'Backstage', query: 'from:backstage.com' },
-      { name: 'Virtual Vocations', query: 'from:virtualvocations.com' },
+      {
+        // A remote-only job board: the audience is the whole product, but it is Remote
+        // Workers, not Digital Nomads — none of its 342 messages carries a travel or
+        // location-independence signal.
+        name: 'Virtual Vocations',
+        query: 'from:virtualvocations.com',
+        schema: { keywords: [TERM_REMOTE_WORKERS] },
+      },
       { name: 'Lensa', query: 'from:lensa.com' },
       { name: 'A.Team', query: 'from:a.team' },
       { name: 'Idealist', query: 'from:idealist.org' },
@@ -320,6 +535,8 @@ const ORG_TAGS = [
     // demandforced3 carry many unrelated merchants on the same domain.
     labelName: LABEL_ORG_PROFESSIONAL_HOME,
     orgs: [
+      { name: '50K Professional Lawn Services', query: 'from:50klawn.com' },
+      { name: 'Critter Control', query: 'from:crittercontrol.com' },
       { name: 'Angi', query: 'from:angi.com' },
       { name: 'LawnStarter', query: 'from:lawnstarter.com' },
       { name: 'YardDoc', query: 'from:yarddoc.com' },
@@ -338,6 +555,8 @@ const ORG_TAGS = [
     // noreply@ address is shared across merchants, so these key on display name.
     labelName: LABEL_ORG_PROFESSIONAL_BEAUTY,
     orgs: [
+      { name: 'milk + honey', query: 'from:milkandhoney.com' },
+      { name: 'Illumma', query: 'from:illumma.com' },
       { name: 'exhale Spa', query: 'from:demandforced3.com from:exhale' },
       { name: 'Satori Day Spa', query: 'from:demandforced3.com from:Satori' },
       { name: 'Strands', query: 'from:demandforced3.com from:Strands' },
@@ -348,10 +567,20 @@ const ORG_TAGS = [
     ],
   },
   {
-    labelName: LABEL_ORG_DIGITAL_NOMAD,
+    // Co-living / co-working operators, all LodgingBusiness. "Digital Nomads" is their
+    // audience, not their type, so it lives in schema.keywords as a DefinedTerm rather
+    // than as a path segment. Organization.keywords is the one Organization property
+    // that accepts DefinedTerm; Organization is outside the domain of both `audience`
+    // and the superseded `serviceAudience`, which are Service/Event/LodgingBusiness-only.
+    labelName: LABEL_ORG_LODGING_BUSINESS,
+    schema: {
+      '@type': 'LodgingBusiness',
+      keywords: [TERM_DIGITAL_NOMADS],
+    },
     orgs: [
       { name: 'Outsite', query: 'from:outsite.co' },
       { name: 'KIMA SURF', query: 'from:kimasurf.com' },
+      { name: 'WiFi Tribe', query: 'from:wifitribe.co' },
     ],
   },
   {
@@ -449,6 +678,8 @@ const ORG_TAGS = [
   {
     labelName: LABEL_ORG_HEALTH,
     orgs: [
+      { name: 'Labcorp', query: 'from:labcorp.com' },
+      { name: 'VSP Vision Care', query: 'from:vsp.com' },
       { name: 'UnitedHealthcare', query: 'from:unitedhealthcare.com OR from:uhc.com' },
       { name: 'SonderMind', query: 'from:sondermind.com' },
       { name: 'CVS', query: 'from:cvs.com' },
@@ -488,7 +719,15 @@ const ORG_TAGS = [
       { name: 'Viva Aerobus', query: 'from:vivaaerobus.com' },
       { name: 'Airbnb', query: 'from:airbnb.com' },
       { name: 'Vrbo', query: 'from:vrbo.com' },
-      { name: 'Marriott', query: 'from:email-marriott.com OR from:marriott.com' },
+      // One Marriott org, five sending paths. The Medallia survey address carries 16
+      // distinct hotel properties (Ritz-Carlton, Courtyard, Aloft...) — collapsed to the
+      // parent brand rather than 16 labels for 32 messages. Marriott-Bonvoy@ must stay
+      // address-scoped: points-mail.com is a platform shared with Southwest.
+      {
+        name: 'Marriott',
+        query: 'from:(marriott.com OR email-marriott.com OR jwmarriott-res.com OR marriott-local-news.com) '
+          + 'OR from:marriott@express.medallia.com OR from:Marriott-Bonvoy@points-mail.com',
+      },
       { name: 'Hertz', query: 'from:hertz.com' },
       { name: 'Vacasa', query: 'from:vacasa.com' },
       { name: 'Trip.com', query: 'from:trip.com' },
@@ -523,16 +762,32 @@ const ORG_TAGS = [
     ],
   },
   {
-    // Commercial developer-platform vendors — distinct from OpenSource foundations/registries
-    labelName: LABEL_ORG_DEVELOPER_TOOLS,
+    // schema.org Corporation. Absorbed the former BigTech and DeveloperTools groups:
+    // neither was a schema.org type, and both described the same kind of entity.
+    labelName: LABEL_ORG_CORPORATION,
     orgs: [
+      { name: 'Sentry', query: 'from:sentry.io' },
+      { name: 'Reddit', query: 'from:reddit.com' },
+      { name: 'Ubisoft', query: 'from:ubisoft.com' },
+      { name: 'PlayStation', query: 'from:playstation.com' },
+      { name: 'Disney+', query: 'from:disneyplus.com' },
+      { name: 'Apple', query: 'from:apple.com' },
+      { name: 'Microsoft', query: 'from:microsoft.com' },
+      { name: 'Meta', query: 'from:(meta.com OR facebookmail.com OR facebook.com OR instagram.com)' },
+      { name: 'TikTok', query: 'from:tiktok.com' },
+      { name: 'Discord', query: 'from:(discord.com OR discordapp.com)' },
+      { name: 'Spotify', query: 'from:spotify.com' },
+      { name: 'WordPress / Automattic', query: 'from:(wordpress.com OR automattic.com)' },
+      // Bare domain, unlike the category filter: an org tag identifies the sender, so
+      // account and security mail belongs under it too
+      { name: 'OpenAI', query: 'from:openai.com' },
+      { name: 'Anthropic', query: 'from:anthropic.com' },
       { name: 'Render', query: 'from:render.com' },
       { name: 'Vercel', query: 'from:vercel.com' },
       { name: 'GitKraken', query: 'from:gitkraken.com' },
       { name: 'Kestra', query: 'from:kestra.io' },
       { name: 'Databricks', query: 'from:databricks.com' },
       { name: 'Whimsical', query: 'from:whimsical.com' },
-      { name: 'Data Science Dojo', query: 'from:datasciencedojo.com' },
       { name: 'Reach AI', query: 'from:getreach.ai' },
       { name: 'Supabase', query: 'from:supabase.com' },
       { name: 'PostHog', query: 'from:posthog.com' },
@@ -548,8 +803,76 @@ const ORG_TAGS = [
     ],
   },
   {
+    // TaxiService is a schema.org Service subtype, not an Organization one: the segment
+    // names the service these corporations provide, not what kind of org they are.
+    labelName: LABEL_ORG_CORP_TAXI_SERVICE,
+    orgs: [
+      { name: 'Uber', query: 'from:uber.com' },
+      { name: 'Lyft', query: 'from:lyft.com' },
+    ],
+  },
+  {
+    // Bare domain covers both notifications.ring.com and mail.ring.com — Gmail's
+    // from: matches subdomains.
+    labelName: LABEL_ORG_CORP_AMAZON_RING,
+    orgs: [
+      { name: 'Ring', query: 'from:ring.com' },
+    ],
+  },
+  {
+    // Digital-native businesses: streaming, scrobbling, and subscription publishing.
+    // Thesis Driven is deliberately NOT NewsMediaOrganization — schema.org scopes that
+    // to "a newspaper or TV station", and Thesis Driven sells industry analysis,
+    // workshops and data products rather than reporting news.
+    labelName: LABEL_ORG_ONLINE_BUSINESS,
+    orgs: [
+      { name: 'Thesis Driven', query: 'from:thesisdriven.com' },
+      { name: 'Netflix', query: 'from:netflix.com' },
+      { name: 'HBO Max', query: 'from:hbomax.com' },
+      { name: 'Last.fm', query: 'from:last.fm' },
+    ],
+  },
+  {
+    // Training providers. Data Science Dojo was misfiled under the former
+    // DeveloperTools group; The Tantra Institute runs paid workshops, so the type is
+    // EducationalOrganization and the practice area rides along as a keywords
+    // DefinedTerm rather than as a non-schema path segment.
+    labelName: LABEL_ORG_EDUCATIONAL,
+    orgs: [
+      { name: 'MIT', query: 'from:mit.edu' },
+      { name: 'Emeritus (Wharton Exec Ed)', query: 'from:emeritus.org' },
+      { name: 'Data Science Dojo', query: 'from:datasciencedojo.com' },
+      {
+        name: 'The Tantra Institute',
+        query: 'from:tantrany.com',
+        schema: { keywords: [TERM_ALTERNATIVE_PRACTICE] },
+      },
+      // Cohort mastermind in experience design (applications, artist grants, IDEO /
+      // d.school guest sessions). Audited against the Digital Nomads term: zero
+      // location-independence signals in any of its mail, so no keywords entry.
+      { name: 'Experience House', query: 'from:experiencehouse.co' },
+    ],
+  },
+  {
+    // Dance-adjacent domains are usually not PerformingGroup: Fuego is a shoe brand
+    labelName: LABEL_ORG_ONLINE_STORE,
+    orgs: [
+      { name: 'Fuego Dance Shoes', query: 'from:fuegodance.com' },
+    ],
+  },
+  {
+    // ZoukMX festival — subOrganization of the Brazilian Zouk Council, which the
+    // path records. Not a PerformingGroup: it organizes, it does not perform.
+    labelName: LABEL_ORG_SPORTS_ZOUKMX,
+    schema: ORG_BZDC,
+    orgs: [
+      { name: 'ZoukMX', query: 'from:zouk.us' },
+    ],
+  },
+  {
     labelName: LABEL_ORG_GOVERNMENT,
     orgs: [
+      { name: 'International Monetary Fund', query: 'from:imf.org' },
       { name: 'USPS', query: 'from:usps.com' },
       { name: 'Healthcare.gov', query: 'from:healthcare.gov' },
       { name: 'State of Texas', query: 'from:(txt.texas.gov OR dps.texas.gov)' },
@@ -557,49 +880,54 @@ const ORG_TAGS = [
     ],
   },
   {
-    // Consumer-tech platforms without their own org tree (Google has one)
-    labelName: LABEL_ORG_BIG_TECH,
+    labelName: LABEL_ORG_LB_STORE_CLOTHING,
     orgs: [
-      { name: 'Apple', query: 'from:apple.com' },
-      { name: 'Microsoft', query: 'from:microsoft.com' },
-      { name: 'Meta', query: 'from:(meta.com OR facebookmail.com OR facebook.com OR instagram.com)' },
-      { name: 'TikTok', query: 'from:tiktok.com' },
-      { name: 'Discord', query: 'from:(discord.com OR discordapp.com)' },
-      { name: 'Spotify', query: 'from:spotify.com' },
-      { name: 'WordPress / Automattic', query: 'from:(wordpress.com OR automattic.com)' },
-      { name: 'Netflix', query: 'from:netflix.com' },
-      { name: 'HBO Max', query: 'from:hbomax.com' },
-      { name: 'Last.fm', query: 'from:last.fm' },
-      { name: 'OpenAI', query: 'from:openai.com' },
-      { name: 'Anthropic', query: 'from:anthropic.com' },
-    ],
-  },
-  // BigTech members map to schema.org SoftwareApplication. The sub-sectors below are
-  // named for the applicationCategory / applicationSubCategory each represents, and are
-  // additive — members keep the parent BigTech tag as well.
-  {
-    // applicationCategory: Multimedia, applicationSubCategory: StreamingVideo
-    labelName: LABEL_ORG_BIGTECH_STREAMING,
-    orgs: [
-      { name: 'Netflix', query: 'from:netflix.com' },
-      { name: 'HBO Max', query: 'from:hbomax.com' },
+      { name: 'Ruti', query: 'from:ruti.com' },
+      { name: 'PAIGE', query: 'from:paige.com' },
+      { name: "Margaret O'Leary", query: 'from:margaretoleary.com' },
+      { name: 'H&M', query: 'from:hm.com' },
     ],
   },
   {
-    // applicationCategory: EntertainmentApplication
-    labelName: LABEL_ORG_BIGTECH_ENTERTAINMENT,
+    labelName: LABEL_ORG_LB_STORE_GROCERY,
     orgs: [
-      { name: 'Last.fm', query: 'from:last.fm' },
+      { name: 'Whole Foods Market', query: 'from:wholefoodsmarket.com' },
+      { name: 'Wegmans', query: 'from:wegmans.com' },
     ],
   },
   {
-    // applicationCategory: DeveloperApplication, applicationSubCategory: AI API
-    labelName: LABEL_ORG_BIGTECH_DEVELOPER_AI,
+    labelName: LABEL_ORG_LB_STORE_HOMEGOODS,
     orgs: [
-      // Bare domain, unlike the category filter: an org tag identifies the sender, so
-      // account and security mail belongs under it too
-      { name: 'OpenAI', query: 'from:openai.com' },
-      { name: 'Anthropic', query: 'from:anthropic.com' },
+      { name: 'Williams Sonoma', query: 'from:williams-sonoma.com' },
+    ],
+  },
+  {
+    labelName: LABEL_ORG_LB_FOOD,
+    orgs: [
+      { name: 'MOD Pizza', query: 'from:modpizza.com' },
+      { name: 'Pangloss Cellars', query: 'from:panglosscellars.com' },
+    ],
+  },
+  {
+    // A touring house presenting Broadway productions to an audience.
+    labelName: LABEL_ORG_PERFORMING_GROUP,
+    orgs: [
+      { name: 'Broadway San Jose', query: 'from:broadwaysanjose.com' },
+    ],
+  },
+  {
+    // Matches the local part, not a domain: this sender has no mail from
+    // austinwestieacademy.com at all — it arrives via a unique Mailchimp account
+    // subdomain, a shared Mailchimp domain, and its own Gmail account. All 40 messages
+    // across the three use the same austinwestieacademy@ local part.
+    labelName: LABEL_ORG_EDU_WSDC_AWA,
+    schema: {
+      '@type': ['LocalBusiness', 'School'],
+      knowsAbout: TERM_WEST_COAST_SWING,
+      parentOrganization: 'World Swing Dance Council',
+    },
+    orgs: [
+      { name: 'Austin Westie Academy', query: 'from:austinwestieacademy' },
     ],
   },
 ];

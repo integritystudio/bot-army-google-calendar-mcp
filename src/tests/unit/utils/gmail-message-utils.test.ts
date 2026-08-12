@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 // @ts-expect-error - plain .mjs utility with no type declarations
-import { htmlToText, extractBodyText, decodeMessageBody, countMessagesMatching } from '../../../../lib/gmail-message-utils.mjs';
+import { htmlToText, extractBodyText, decodeMessageBody, countMessagesMatching, fetchMessageHeaders } from '../../../../lib/gmail-message-utils.mjs';
 
 /** Gmail stub returning the given pages of message ids, one per list() call. */
 const gmailWithPages = (pages: string[][]) => {
@@ -130,5 +130,53 @@ describe('countMessagesMatching', () => {
   it('returns all ids when sampleSize exceeds the matches', async () => {
     const { sampleIds } = await countMessagesMatching(gmailWithPages([['a', 'b']]), 'q', { sampleSize: 10 });
     expect(sampleIds).toEqual(['a', 'b']);
+  });
+});
+
+describe('fetchMessageHeaders', () => {
+  const headers = (subject: string) => ({
+    data: { payload: { headers: [{ name: 'Subject', value: subject }, { name: 'From', value: 'a@b.c' }] } },
+  });
+
+  it('retries a transient failure rather than dropping the message', async () => {
+    let attempts = 0;
+    const gmail = {
+      users: {
+        messages: {
+          get: async () => {
+            if (++attempts === 1) {
+              const err: Error & { code?: number } = new Error('rate limited');
+              err.code = 429;
+              throw err;
+            }
+            return headers('Recovered');
+          },
+        },
+      },
+    };
+    // Fake timers so the retry backoff does not cost the suite a real 3s sleep.
+    vi.useFakeTimers();
+    const pending = fetchMessageHeaders(gmail, ['id1']);
+    await vi.runAllTimersAsync();
+    const rows = await pending;
+    vi.useRealTimers();
+
+    expect(attempts).toBe(2);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].subject).toBe('Recovered');
+  });
+
+  it('reports a permanent failure instead of silently shrinking the result', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const gmail = {
+      users: { messages: { get: async ({ id }: { id: string }) => {
+        if (id === 'bad') throw new Error('gone');
+        return headers('Fine');
+      } } },
+    };
+    const rows = await fetchMessageHeaders(gmail, ['ok', 'bad']);
+    expect(rows).toHaveLength(1);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('1 of 2'));
+    warn.mockRestore();
   });
 });

@@ -14,7 +14,6 @@ import { readFileSync } from 'node:fs';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { getHeader } from './lib/email-utils.mjs';
 import { extractBodyText, countMessagesMatching, mapWithConcurrency } from './lib/gmail-message-utils.mjs';
-import { extractHtmlFromPayload } from './lib/schema-extractor.mjs';
 import { argAfter } from './lib/cli-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 
@@ -48,23 +47,6 @@ export const shareLeadingToken = (names) => {
   const first = names.map((n) => n.toLowerCase().split(/[\s|,–-]+/)[0]).filter(Boolean);
   return first.length > 0 && first.every((t) => t === first[0]);
 };
-
-/**
- * Marketing mail is frequently HTML-only, and extractBodyText handles text/plain
- * exclusively — 27 of 76 domains scored "(no signal)" purely from that gap before
- * this fallback existed. Strip script/style first so JS and CSS text cannot score.
- */
-function bodyTextOf(payload) {
-  const plain = extractBodyText(payload);
-  if (plain && plain.trim()) return plain;
-  const html = extractHtmlFromPayload(payload);
-  if (!html) return '';
-  return html
-    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&');
-}
 
 /** Signal terms per candidate schema.org type. Order is report order. */
 const SIGNALS = {
@@ -138,7 +120,7 @@ export async function scanDomain(gmail, domain, sampleSize) {
     sender ||= getHeader(headers, 'From') ?? '';
     const subject = getHeader(headers, 'Subject') ?? '';
     subjects.push(subject.replace(/\s+/g, ' ').trim());
-    text += ` ${subject} ${bodyTextOf(msg.payload)}`;
+    text += ` ${subject} ${extractBodyText(msg.payload)}`;
   }
   text = text.replace(/\s+/g, ' ');
 

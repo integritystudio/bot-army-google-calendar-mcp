@@ -319,11 +319,14 @@ async function verifyLabels(gmail) {
     console.log(`Labels on first Meetup email: ${labels.map(id => labelMapById.get(id)).filter(Boolean).join(', ')}`);
     console.log(`Has 'Events' label: ${labels.some(id => labelMapById.get(id) === LABEL_EVENTS)}\n`);
 
+    // AlphaSignal is a Newsletters sender in both create-filters.mjs and organize-emails.mjs.
+    // This asserted 'Product Updates' until 2026-08-11 and so reported a miss on correctly
+    // labeled mail — the label it was looking for came from an older config no filter applies.
     const alphaResult = await gmail.users.messages.list({ userId: USER_ID, q: 'from:news@alphasignal.ai' });
     if (alphaResult.data.messages?.length > 0) {
       const msg2 = await gmail.users.messages.get({ userId: USER_ID, id: alphaResult.data.messages[0].id });
       const labels2 = msg2.data.labelIds || [];
-      console.log(`AlphaSignal email has 'Product Updates' label: ${labels2.some(id => labelMapById.get(id) === LABEL_PRODUCT_UPDATES)}`);
+      console.log(`AlphaSignal email has '${LABEL_NEWSLETTERS}' label: ${labels2.some(id => labelMapById.get(id) === LABEL_NEWSLETTERS)}`);
     }
   }
 }

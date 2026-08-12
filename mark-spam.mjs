@@ -2,16 +2,19 @@
  * Move messages matching a Gmail query into Spam.
  * Adds SPAM and removes INBOX/UNREAD; other labels are untouched.
  *
- * Prints every match and exits without modifying anything unless --yes is
- * passed, so a query can be checked before it is applied.
+ * Prints matches and exits without modifying anything unless --yes is passed,
+ * so a query can be checked before it is applied — an over-broad one trains
+ * Gmail's classifier on wanted mail.
+ *
+ * Selection, preview and batching live in modify-messages.mjs; this is the
+ * spam-shaped preset of it.
  *
  * Usage:
  *   node mark-spam.mjs "from:someone@example.com subject:Hello"        # preview
  *   node mark-spam.mjs "from:someone@example.com subject:Hello" --yes  # apply
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { listAllMessageIds, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
-import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
+import { modifyMessages } from './modify-messages.mjs';
 import { GMAIL_SPAM, GMAIL_INBOX, GMAIL_UNREAD } from './lib/constants.mjs';
 
 const apply = process.argv.includes('--yes');
@@ -21,24 +24,11 @@ if (!query) {
   process.exit(1);
 }
 
-const gmail = await createGmailClient();
-
-const ids = await listAllMessageIds(gmail, query);
-
-console.log(`Matches for "${query}": ${ids.length}`);
-for (const { from, subject } of await fetchMessageHeaders(gmail, ids)) {
-  console.log(`  • ${from} | ${subject}`);
-}
-
-if (!ids.length) process.exit(0);
-if (!apply) {
-  console.log('\nPreview only — re-run with --yes to move these to Spam.');
-  process.exit(0);
-}
-
-await batchModifyMessages(gmail, ids, {
-  addLabelIds: [GMAIL_SPAM],
-  removeLabelIds: [GMAIL_INBOX, GMAIL_UNREAD],
+const { modified } = await modifyMessages(await createGmailClient(), {
+  query,
+  add: [GMAIL_SPAM],
+  remove: [GMAIL_INBOX, GMAIL_UNREAD],
+  apply,
 });
 
-console.log(`Moved ${ids.length} to Spam.`);
+if (apply) console.log(`Moved ${modified} to Spam.`);

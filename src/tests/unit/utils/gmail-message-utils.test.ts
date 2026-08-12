@@ -1,6 +1,26 @@
 import { describe, it, expect } from 'vitest';
 // @ts-expect-error - plain .mjs utility with no type declarations
-import { htmlToText, extractBodyText, decodeMessageBody } from '../../../../lib/gmail-message-utils.mjs';
+import { htmlToText, extractBodyText, decodeMessageBody, countMessagesMatching } from '../../../../lib/gmail-message-utils.mjs';
+
+/** Gmail stub returning the given pages of message ids, one per list() call. */
+const gmailWithPages = (pages: string[][]) => {
+  let call = 0;
+  return {
+    users: {
+      messages: {
+        list: async () => {
+          const page = pages[call++] ?? [];
+          return {
+            data: {
+              messages: page.map((id) => ({ id })),
+              nextPageToken: call < pages.length ? `t${call}` : undefined,
+            },
+          };
+        },
+      },
+    },
+  };
+};
 
 const b64 = (s: string) => Buffer.from(s, 'utf-8').toString('base64');
 const part = (mimeType: string, body: string) => ({ mimeType, body: { data: b64(body) } });
@@ -82,5 +102,33 @@ describe('extractBodyText', () => {
   it('returns the plain part when there is no HTML to fall back to', () => {
     const payload = { mimeType: 'multipart/alternative', parts: [part('text/plain', '   ')] };
     expect(extractBodyText(payload)).toBe('');
+  });
+});
+
+describe('countMessagesMatching', () => {
+  it('counts across every page, not just the first', async () => {
+    const { count } = await countMessagesMatching(gmailWithPages([['a', 'b'], ['c', 'd'], ['e']]), 'q');
+    expect(count).toBe(5);
+  });
+
+  // The slice end is `sampleSize - sampleIds.length`; if collection could overshoot,
+  // that would go negative and slice would read it as an offset from the end, taking
+  // the wrong ids instead of none.
+  it('stops collecting ids at exactly sampleSize and never overshoots', async () => {
+    const { count, sampleIds } = await countMessagesMatching(
+      gmailWithPages([['a', 'b'], ['c', 'd'], ['e', 'f']]), 'q', { sampleSize: 3 },
+    );
+    expect(sampleIds).toEqual(['a', 'b', 'c']);
+    expect(count).toBe(6);
+  });
+
+  it('collects nothing when no sample is requested', async () => {
+    const { sampleIds } = await countMessagesMatching(gmailWithPages([['a', 'b']]), 'q');
+    expect(sampleIds).toEqual([]);
+  });
+
+  it('returns all ids when sampleSize exceeds the matches', async () => {
+    const { sampleIds } = await countMessagesMatching(gmailWithPages([['a', 'b']]), 'q', { sampleSize: 10 });
+    expect(sampleIds).toEqual(['a', 'b']);
   });
 });

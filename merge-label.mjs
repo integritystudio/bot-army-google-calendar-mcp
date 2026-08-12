@@ -18,7 +18,7 @@
 import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
-import { withRetry } from './lib/gmail-tag-utils.mjs';
+import { withRetry } from './lib/gmail-retry.mjs';
 import { argAfter } from './lib/cli-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 

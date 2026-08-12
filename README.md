@@ -305,14 +305,19 @@ set that filter creation rejects.
 
 ### `resultSizeEstimate` is not a count
 
-`messages.list` returns `resultSizeEstimate`, and it is an **estimate** that repeats round
-numbers across unrelated queries. It reported `201` for both `from:info@email.meetup.com`
-and `from:alphasignal.ai`; a paged walk of the latter found **433**. Anything sized from it
-— a coverage percentage, a "how much mail would this touch" check, a decision to skip
-paging — is wrong by an unknown margin and never errors.
+`messages.list` returns `resultSizeEstimate`, and Gmail **caps it at ~201** — so it is not
+merely imprecise, it is a ceiling that any larger result set hits exactly. It reported `201`
+for both `from:info@email.meetup.com` (true count **10,475**, off by 52×) and
+`from:news@alphasignal.ai` (true count 433). Two unrelated senders reporting an identical
+total is the tell.
+
+The failure is silent and always *under*-reports, so anything sized from it — a coverage
+percentage, a "how much mail would this touch" check, a decision that a set is small enough
+to skip paging — is wrong in the direction that looks safe.
 
 Use `countMessagesMatching()` in [`lib/gmail-message-utils.mjs`](lib/gmail-message-utils.mjs),
-which pages to a true total, or say "sampled N" and don't imply a total at all.
+which pages to a true total and can return sample IDs in the same walk, or `labels.get`'s
+authoritative `messagesTotal`/`messagesUnread` when counting a whole label.
 
 ### Sender-matching helpers miss grouped `from:(a OR b)` queries
 

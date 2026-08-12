@@ -16,6 +16,12 @@
  * from any sender, and no sender-keyed rule here can account for that. Confirm a stray is
  * real (as Product Updates on AlphaSignal was) before stripping it.
  *
+ * MISSING_LABEL needs --exact to be trusted. Without it the check reads a sample, and
+ * messages.list returns NEWEST first while a backfill gap sits in the OLDEST mail — so the
+ * sample is drawn from precisely the messages a filter has already handled. A 10-message
+ * sample of info@email.meetup.com reported 0 missing against a real gap of 6,381 of 10,475.
+ * --exact counts by labelIds instead (never a label:"…" query, which is unsafe input).
+ *
  * Usage:
  *   node audit-label-drift.mjs                                  # every source
  *   node audit-label-drift.mjs --source filters --only "Product Updates"
@@ -25,7 +31,7 @@
 import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { getHeader } from './lib/email-utils.mjs';
-import { mapWithConcurrency, countMessagesMatching } from './lib/gmail-message-utils.mjs';
+import { mapWithConcurrency } from './lib/gmail-message-utils.mjs';
 import { argAfter } from './lib/cli-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 import { CATEGORIES } from './create-filters.mjs';
@@ -40,6 +46,7 @@ const LABEL_TYPE_SYSTEM = 'system';
 const MAX_SENDERS_SHOWN = 3;
 const MAX_FILTERS_SHOWN = 4;
 const SUMMARY_PAD = 46;
+const COUNT_PAGE_SIZE = 500;
 
 /**
  * The three config sources disagree on what the entry array is called
@@ -145,12 +152,14 @@ export function expectedLabels(rule, allRules) {
 async function loadLabelIndex(gmail) {
   const { data } = await gmail.users.labels.list({ userId: USER_ID, fields: 'labels(id,name,type)' });
   const nameById = new Map();
+  const idByName = new Map();
   const userLabels = new Set();
   for (const label of data.labels ?? []) {
     nameById.set(label.id, label.name);
+    idByName.set(label.name, label.id);
     if (label.type !== LABEL_TYPE_SYSTEM) userLabels.add(label.name);
   }
-  return { nameById, userLabels };
+  return { nameById, idByName, userLabels };
 }
 
 async function loadFilters(gmail, nameById) {
@@ -162,13 +171,28 @@ async function loadFilters(gmail, nameById) {
   }));
 }
 
+/** Exact count for any messages.list selector, by paging. */
+async function countMatching(gmail, params) {
+  let count = 0;
+  let pageToken;
+  do {
+    const res = await gmail.users.messages.list({ userId: USER_ID, maxResults: COUNT_PAGE_SIZE, pageToken, ...params });
+    count += (res.data.messages ?? []).length;
+    pageToken = res.data.nextPageToken;
+  } while (pageToken);
+  return count;
+}
+
 /** Sample a rule's mail and record which labels it actually carries. */
-async function inspectRule(gmail, rule, { sample, exact, nameById }) {
+async function inspectRule(gmail, rule, { sample, exact, nameById, idByName }) {
   const listed = await gmail.users.messages.list({ userId: USER_ID, q: rule.query, maxResults: sample });
   const ids = (listed.data.messages ?? []).map((m) => m.id);
-  // resultSizeEstimate is not a count — it is an estimate that repeats round numbers
-  // across unrelated queries, so a true total costs a full paged walk.
-  const total = exact ? (await countMessagesMatching(gmail, rule.query)).count : null;
+  // resultSizeEstimate is not a count — Gmail caps it at ~201, so any larger sender
+  // reports that same ceiling. A true total costs a full paged walk.
+  const total = exact ? await countMatching(gmail, { q: rule.query }) : null;
+  // Selected by labelIds, never a label:"…" query — a label name is unsafe search input.
+  const labelId = idByName.get(rule.labelName);
+  const labeled = exact && labelId ? await countMatching(gmail, { q: rule.query, labelIds: [labelId] }) : null;
 
   const messages = await mapWithConcurrency(ids, (id) =>
     gmail.users.messages
@@ -189,7 +213,7 @@ async function inspectRule(gmail, rule, { sample, exact, nameById }) {
       labelCounts.set(name, (labelCounts.get(name) ?? 0) + 1);
     }
   }
-  return { sampled, total, labelCounts, senders: [...senders] };
+  return { sampled, total, labeled, labelCounts, senders: [...senders] };
 }
 
 function findingsFor(rule, observed, filters, expected, userLabels) {
@@ -204,9 +228,18 @@ function findingsFor(rule, observed, filters, expected, userLabels) {
     const adds = [...new Set(matchingFilters.flatMap((f) => f.adds))];
     findings.push({ type: FINDING.NO_FILTER, detail: adds.length ? `live filters add instead: ${adds.join(', ')}` : 'no live filter matches these senders at all' });
   }
-  const withLabel = observed.labelCounts.get(rule.labelName) ?? 0;
-  if (withLabel < observed.sampled) {
-    findings.push({ type: FINDING.MISSING_LABEL, detail: `${observed.sampled - withLabel}/${observed.sampled} sampled lack it` });
+  // Prefer the exact figure: messages.list returns NEWEST first, and a backfill gap sits in
+  // the OLDEST mail, so a sample of recent messages is precisely where the gap is not.
+  if (observed.labeled !== null) {
+    const missing = observed.total - observed.labeled;
+    if (missing > 0) {
+      findings.push({ type: FINDING.MISSING_LABEL, detail: `${missing}/${observed.total} lack it (exact)` });
+    }
+  } else {
+    const withLabel = observed.labelCounts.get(rule.labelName) ?? 0;
+    if (withLabel < observed.sampled) {
+      findings.push({ type: FINDING.MISSING_LABEL, detail: `${observed.sampled - withLabel}/${observed.sampled} sampled lack it — sample is newest-first, rerun with --exact` });
+    }
   }
   const strays = [...observed.labelCounts]
     .filter(([name, count]) => userLabels.has(name) && !expected.has(name) && count > 0)
@@ -266,13 +299,13 @@ async function main() {
   }
 
   const gmail = createGmailClient();
-  const { nameById, userLabels } = await loadLabelIndex(gmail);
+  const { nameById, idByName, userLabels } = await loadLabelIndex(gmail);
   const filters = await loadFilters(gmail, nameById);
 
   const results = await mapWithConcurrency(
     rules,
     async (rule) => {
-      const observed = await inspectRule(gmail, rule, { sample, exact, nameById });
+      const observed = await inspectRule(gmail, rule, { sample, exact, nameById, idByName });
       // An ad-hoc query with no --expect has nothing to assert, so it only reports what it sees.
       if (!rule.labelName) {
         return { rule, observed, matchingFilters: filters.filter((f) => tokensOverlap(rule.tokens, f.tokens)), findings: [] };

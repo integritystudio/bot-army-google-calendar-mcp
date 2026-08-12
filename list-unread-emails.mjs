@@ -12,7 +12,7 @@ import { createGmailClient } from './lib/gmail-client.mjs';
 import { BANNER, DIVIDER } from './lib/console-utils.mjs';
 import { extractDisplayName, getHeader } from './lib/email-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
-import { mapWithConcurrency } from './lib/gmail-message-utils.mjs';
+import { mapWithConcurrency, countMessagesMatching } from './lib/gmail-message-utils.mjs';
 import { extractSchemaMarkupFromGmailPayload, categorizeBySchema, extractHtmlFromPayload } from './lib/schema-extractor.mjs';
 import {
   USER_ID,
@@ -310,24 +310,30 @@ async function verifyLabels(gmail) {
 
   console.log('Checking if labels were applied...\n');
 
-  const meetupResult = await gmail.users.messages.list({ userId: USER_ID, q: 'from:info@email.meetup.com' });
-  console.log(`Meetup emails found: ${meetupResult.data.resultSizeEstimate}`);
+  // Counted by paging, not read from resultSizeEstimate: Gmail caps that estimate at ~201,
+  // so it reported the same 201 for this sender and for AlphaSignal's true 433.
+  const { count: meetupCount, sampleIds: meetupIds } = await countMessagesMatching(
+    gmail, 'from:info@email.meetup.com', { sampleSize: 1 },
+  );
+  console.log(`Meetup emails found: ${meetupCount}`);
 
-  if (meetupResult.data.messages?.length > 0) {
-    const msg = await gmail.users.messages.get({ userId: USER_ID, id: meetupResult.data.messages[0].id });
+  if (meetupIds.length > 0) {
+    const msg = await gmail.users.messages.get({ userId: USER_ID, id: meetupIds[0] });
     const labels = msg.data.labelIds || [];
     console.log(`Labels on first Meetup email: ${labels.map(id => labelMapById.get(id)).filter(Boolean).join(', ')}`);
     console.log(`Has 'Events' label: ${labels.some(id => labelMapById.get(id) === LABEL_EVENTS)}\n`);
+  }
 
-    // AlphaSignal is a Newsletters sender in both create-filters.mjs and organize-emails.mjs.
-    // This asserted 'Product Updates' until 2026-08-11 and so reported a miss on correctly
-    // labeled mail — the label it was looking for came from an older config no filter applies.
-    const alphaResult = await gmail.users.messages.list({ userId: USER_ID, q: 'from:news@alphasignal.ai' });
-    if (alphaResult.data.messages?.length > 0) {
-      const msg2 = await gmail.users.messages.get({ userId: USER_ID, id: alphaResult.data.messages[0].id });
-      const labels2 = msg2.data.labelIds || [];
-      console.log(`AlphaSignal email has '${LABEL_NEWSLETTERS}' label: ${labels2.some(id => labelMapById.get(id) === LABEL_NEWSLETTERS)}`);
-    }
+  // AlphaSignal is a Newsletters sender in both create-filters.mjs and organize-emails.mjs.
+  // This asserted 'Product Updates' until 2026-08-11 and so reported a miss on correctly
+  // labeled mail — the label it was looking for came from an older config no filter applies.
+  const { sampleIds: alphaIds } = await countMessagesMatching(
+    gmail, 'from:news@alphasignal.ai', { sampleSize: 1 },
+  );
+  if (alphaIds.length > 0) {
+    const msg2 = await gmail.users.messages.get({ userId: USER_ID, id: alphaIds[0] });
+    const labels2 = msg2.data.labelIds || [];
+    console.log(`AlphaSignal email has '${LABEL_NEWSLETTERS}' label: ${labels2.some(id => labelMapById.get(id) === LABEL_NEWSLETTERS)}`);
   }
 }
 

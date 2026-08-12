@@ -57,7 +57,8 @@ async function markPastEventsRead(gmail) {
       const headers = fullMsg.data.payload?.headers || [];
       const subject = getHeader(headers, 'Subject');
       const body = decodeMessageBody(fullMsg.data.payload);
-      const eventDate = extractEventDate(subject + '\n' + body);
+      // Anchor year-less dates to arrival, not to now (see date-based-filter.mjs).
+      const eventDate = extractEventDate(subject + '\n' + body, new Date(Number(fullMsg.data.internalDate)));
       return eventDate && isPastEvent(eventDate);
     })
     .map(fullMsg => fullMsg.data.id);

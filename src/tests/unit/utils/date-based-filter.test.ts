@@ -1,9 +1,78 @@
 import { describe, it, expect } from 'vitest';
 // @ts-expect-error - plain .mjs utility with no type declarations
-import { eventTitleFromSubject, windowAfterTitle, classifyEmail } from '../../../../lib/date-based-filter.mjs';
+import { eventTitleFromSubject, windowAfterTitle, classifyEmail, extractEventDate, isPastEvent } from '../../../../lib/date-based-filter.mjs';
 
 const FAR_FUTURE_YEAR = new Date().getFullYear() + 2;
 const FAR_PAST_YEAR = new Date().getFullYear() - 2;
+
+describe('extractEventDate', () => {
+  const REF = new Date(2026, 0, 15);
+
+  it.each([
+    ['2026-03-25', 2026, 2, 25],
+    ['03/25/2026', 2026, 2, 25],
+    ['March 25, 2026', 2026, 2, 25],
+    ['@ Mon, Mar 23 2026', 2026, 2, 23],
+    ['Sunday, October 12, 2025 7:00 PM', 2025, 9, 12],
+  ])('parses %s', (text, year, month, day) => {
+    const d = extractEventDate(text, REF);
+    expect([d.getFullYear(), d.getMonth(), d.getDate()]).toEqual([year, month, day]);
+  });
+
+  // The regex parser this replaced looked up months by the first three letters, so any
+  // word starting with a month abbreviation became a date: "Marathon 5" -> Mar 5.
+  it.each(['Marathon 5 miles', 'Maybe 3 people', 'Mayor 12 speaks', 'Augment 7 tips', 'Deck 9 opens'])(
+    'does not invent a date from %s',
+    (text) => expect(extractEventDate(text, REF)).toBeNull(),
+  );
+
+  // Default (non-strict) chrono resolves these against the reference date, which would
+  // date every backfilled email to whenever the script last ran.
+  it.each(['Hide ads Saturday Morning Run', 'tomorrow at the usual place', 'Your new group is waiting'])(
+    'ignores the relative/bare-weekday phrase %s',
+    (text) => expect(extractEventDate(text, REF)).toBeNull(),
+  );
+
+  it('reads a year-less date as the next occurrence after the reference', () => {
+    // Jan 15 is the reference; Jan 5 has passed, so it belongs to the following year.
+    expect(extractEventDate('January 5', REF).getFullYear()).toBe(REF.getFullYear() + 1);
+    expect(extractEventDate('March 25', REF).getFullYear()).toBe(REF.getFullYear());
+  });
+
+  it('anchors to the reference date, not to now', () => {
+    const oldMail = new Date(2021, 5, 1);
+    expect(extractEventDate('June 15', oldMail).getFullYear()).toBe(2021);
+  });
+
+  it('returns null for empty input', () => {
+    expect(extractEventDate('', REF)).toBeNull();
+    expect(extractEventDate(null, REF)).toBeNull();
+  });
+});
+
+describe('isPastEvent', () => {
+  const NOW = new Date(2026, 5, 15, 12, 0, 0);
+
+  it('compares by day, so an event earlier today is not past', () => {
+    expect(isPastEvent(new Date(2026, 5, 15, 9, 0, 0), NOW)).toBe(false);
+  });
+
+  it('reports yesterday as past and tomorrow as not', () => {
+    expect(isPastEvent(new Date(2026, 5, 14, 23, 59), NOW)).toBe(true);
+    expect(isPastEvent(new Date(2026, 5, 16, 0, 1), NOW)).toBe(false);
+  });
+
+  it('returns null when the date is unknown', () => {
+    expect(isPastEvent(null, NOW)).toBeNull();
+  });
+
+  it('does not mutate its argument', () => {
+    const event = new Date(2026, 5, 14, 8, 30, 15);
+    const before = event.getTime();
+    isPastEvent(event, NOW);
+    expect(event.getTime()).toBe(before);
+  });
+});
 
 describe('eventTitleFromSubject', () => {
   it('takes the quoted phrase when the subject has one', () => {

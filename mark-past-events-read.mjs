@@ -65,7 +65,10 @@ for (let i = 0; i < ids.length; i += FETCH_CHUNK) {
     const headers = msg.data.payload?.headers || [];
     const subject = getHeader(headers, 'Subject', '');
     const body = extractBodyText(msg.data.payload);
-    const { status } = classifyEmail(subject, body);
+    // Anchor year-less dates to when the mail arrived, not to now: a 2025 email saying
+    // "March 25" means March 2025, and resolving it against today would date every
+    // backfilled message to whenever this script happens to run.
+    const { status } = classifyEmail(subject, body, new Date(Number(msg.data.internalDate)));
     if (status === 'past') pastIds.push(msg.data.id);
     else if (status === 'future') futureCount++;
     else unknownCount++;

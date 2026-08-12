@@ -64,6 +64,7 @@
     "@google-cloud/local-auth": "^3.0.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@sentry/node": "^10.47.0",
+    "chrono-node": "^2.10.1",
     "date-fns": "^4.1.0",
     "esbuild": "^0.28.0",
     "google-auth-library": "^10.9.1",

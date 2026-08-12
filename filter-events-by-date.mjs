@@ -49,7 +49,8 @@ async function filterEventsByDate() {
     const headers = fullMsg.data.payload?.headers || [];
     const subject = getHeader(headers, 'Subject');
     const body = decodeMessageBody(fullMsg.data.payload);
-    const classification = classifyEmail(subject, body);
+    // Anchor year-less dates to arrival, not to now (see date-based-filter.mjs).
+    const classification = classifyEmail(subject, body, new Date(Number(fullMsg.data.internalDate)));
     if (classification.status === 'future') futureIds.push(fullMsg.data.id);
     else if (classification.status === 'past') pastIds.push(fullMsg.data.id);
   }

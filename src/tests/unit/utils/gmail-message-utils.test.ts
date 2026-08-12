@@ -180,3 +180,26 @@ describe('fetchMessageHeaders', () => {
     warn.mockRestore();
   });
 });
+
+describe('countMessagesMatching selectors', () => {
+  const capturingGmail = (seen: Record<string, unknown>[]) => ({
+    users: { messages: { list: async (params: Record<string, unknown>) => {
+      seen.push(params);
+      return { data: { messages: [{ id: 'a' }], nextPageToken: undefined } };
+    } } },
+  });
+
+  it('treats a string as a query', async () => {
+    const seen: Record<string, unknown>[] = [];
+    await countMessagesMatching(capturingGmail(seen), 'is:unread');
+    expect(seen[0]).toMatchObject({ q: 'is:unread' });
+  });
+
+  // A label name is unsafe as search input (parens return 0 matches), so counting a
+  // label's mail has to go through labelIds, which a query-only signature cannot express.
+  it('passes an object selector through to messages.list', async () => {
+    const seen: Record<string, unknown>[] = [];
+    await countMessagesMatching(capturingGmail(seen), { q: 'from:x.com', labelIds: ['Label_18'] });
+    expect(seen[0]).toMatchObject({ q: 'from:x.com', labelIds: ['Label_18'] });
+  });
+});

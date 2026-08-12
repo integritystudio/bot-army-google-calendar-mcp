@@ -31,7 +31,7 @@
 import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { getHeader } from './lib/email-utils.mjs';
-import { mapWithConcurrency } from './lib/gmail-message-utils.mjs';
+import { mapWithConcurrency, countMessagesMatching } from './lib/gmail-message-utils.mjs';
 import { argAfter } from './lib/cli-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 import { CATEGORIES } from './create-filters.mjs';
@@ -46,7 +46,6 @@ const LABEL_TYPE_SYSTEM = 'system';
 const MAX_SENDERS_SHOWN = 3;
 const MAX_FILTERS_SHOWN = 4;
 const SUMMARY_PAD = 46;
-const COUNT_PAGE_SIZE = 500;
 
 /**
  * The three config sources disagree on what the entry array is called
@@ -171,28 +170,18 @@ async function loadFilters(gmail, nameById) {
   }));
 }
 
-/** Exact count for any messages.list selector, by paging. */
-async function countMatching(gmail, params) {
-  let count = 0;
-  let pageToken;
-  do {
-    const res = await gmail.users.messages.list({ userId: USER_ID, maxResults: COUNT_PAGE_SIZE, pageToken, ...params });
-    count += (res.data.messages ?? []).length;
-    pageToken = res.data.nextPageToken;
-  } while (pageToken);
-  return count;
-}
-
 /** Sample a rule's mail and record which labels it actually carries. */
 async function inspectRule(gmail, rule, { sample, exact, nameById, idByName }) {
   const listed = await gmail.users.messages.list({ userId: USER_ID, q: rule.query, maxResults: sample });
   const ids = (listed.data.messages ?? []).map((m) => m.id);
   // resultSizeEstimate is not a count — Gmail caps it at ~201, so any larger sender
   // reports that same ceiling. A true total costs a full paged walk.
-  const total = exact ? await countMatching(gmail, { q: rule.query }) : null;
+  const total = exact ? (await countMessagesMatching(gmail, rule.query)).count : null;
   // Selected by labelIds, never a label:"…" query — a label name is unsafe search input.
   const labelId = idByName.get(rule.labelName);
-  const labeled = exact && labelId ? await countMatching(gmail, { q: rule.query, labelIds: [labelId] }) : null;
+  const labeled = exact && labelId
+    ? (await countMessagesMatching(gmail, { q: rule.query, labelIds: [labelId] })).count
+    : null;
 
   const messages = await mapWithConcurrency(ids, (id) =>
     gmail.users.messages

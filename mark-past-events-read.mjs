@@ -14,10 +14,10 @@ import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { classifyEmail } from './lib/date-based-filter.mjs';
 import { getHeader } from './lib/email-utils.mjs';
 import { listAllMessageIds, extractBodyText } from './lib/gmail-message-utils.mjs';
+import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
 import { USER_ID, GMAIL_UNREAD, LABEL_EVENTS } from './lib/constants.mjs';
 
 const FETCH_CHUNK = 25;
-const BATCH_LIMIT = 1000;
 
 const args = process.argv.slice(2);
 const labelFlag = args.indexOf('--label');
@@ -70,12 +70,7 @@ console.log(`Past: ${pastIds.length} | Future: ${futureCount} | Unknown (left un
 if (dryRun) {
   console.log('Dry run - no changes made.');
 } else if (pastIds.length > 0) {
-  for (let i = 0; i < pastIds.length; i += BATCH_LIMIT) {
-    await gmail.users.messages.batchModify({
-      userId: USER_ID,
-      requestBody: { ids: pastIds.slice(i, i + BATCH_LIMIT), removeLabelIds: [GMAIL_UNREAD] },
-    });
-  }
+  await batchModifyMessages(gmail, pastIds, { removeLabelIds: [GMAIL_UNREAD] });
   console.log(`Marked ${pastIds.length} past events as read.`);
 } else {
   console.log('No past events to mark.');

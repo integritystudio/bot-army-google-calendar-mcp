@@ -11,11 +11,8 @@
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { listAllMessageIds, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
-
-const BATCH_LIMIT = 1000;
-const SPAM_LABEL = 'SPAM';
-const INBOX_LABEL = 'INBOX';
-const UNREAD_LABEL = 'UNREAD';
+import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
+import { GMAIL_SPAM, GMAIL_INBOX, GMAIL_UNREAD } from './lib/constants.mjs';
 
 const apply = process.argv.includes('--yes');
 const query = process.argv.slice(2).filter(arg => !arg.startsWith('--')).join(' ');
@@ -39,15 +36,9 @@ if (!apply) {
   process.exit(0);
 }
 
-for (let i = 0; i < ids.length; i += BATCH_LIMIT) {
-  await gmail.users.messages.batchModify({
-    userId: 'me',
-    requestBody: {
-      ids: ids.slice(i, i + BATCH_LIMIT),
-      addLabelIds: [SPAM_LABEL],
-      removeLabelIds: [INBOX_LABEL, UNREAD_LABEL],
-    },
-  });
-}
+await batchModifyMessages(gmail, ids, {
+  addLabelIds: [GMAIL_SPAM],
+  removeLabelIds: [GMAIL_INBOX, GMAIL_UNREAD],
+});
 
 console.log(`Moved ${ids.length} to Spam.`);

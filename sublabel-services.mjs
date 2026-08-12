@@ -15,6 +15,7 @@ import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
 import { getHeader } from './lib/email-utils.mjs';
 import { listAllMessageIds } from './lib/gmail-message-utils.mjs';
+import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
 import {
   USER_ID,
   LABEL_SERVICES,
@@ -24,7 +25,6 @@ import {
 } from './lib/constants.mjs';
 
 const CHUNK = 50;
-const BATCH_LIMIT = 1000;
 
 const SUBLABEL_DOMAINS = [
   {
@@ -95,13 +95,7 @@ async function run() {
   }
 
   for (const [sublabel, msgIds] of idsBySublabel) {
-    const labelId = sublabelIds.get(sublabel);
-    for (let i = 0; i < msgIds.length; i += BATCH_LIMIT) {
-      await gmail.users.messages.batchModify({
-        userId: USER_ID,
-        requestBody: { ids: msgIds.slice(i, i + BATCH_LIMIT), addLabelIds: [labelId] },
-      });
-    }
+    await batchModifyMessages(gmail, msgIds, { addLabelIds: [sublabelIds.get(sublabel)] });
     console.log(`  ${sublabel}: ${msgIds.length} labeled`);
   }
   console.log(`  Unmatched (left on parent only): ${unmatched}`);

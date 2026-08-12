@@ -9,8 +9,9 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { listAllMessageIds } from './lib/gmail-message-utils.mjs';
+import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
+import { GMAIL_UNREAD } from './lib/constants.mjs';
 
-const BATCH_LIMIT = 1000;
 const DEFAULT_CUTOFF_DAYS = 30;
 
 const argAfter = flag => {
@@ -39,16 +40,12 @@ if (!labelId) {
   process.exit(1);
 }
 
-const ids = await listAllMessageIds(gmail, { labelIds: [labelId, 'UNREAD'], q: `before:${before}` });
+const ids = await listAllMessageIds(gmail, { labelIds: [labelId, GMAIL_UNREAD], q: `before:${before}` });
 
 console.log(`Unread "${labelName}" emails before ${before}: ${ids.length}`);
 
-for (let i = 0; i < ids.length; i += BATCH_LIMIT) {
-  await gmail.users.messages.batchModify({
-    userId: 'me',
-    requestBody: { ids: ids.slice(i, i + BATCH_LIMIT), removeLabelIds: ['UNREAD'] },
-  });
-  if (ids.length > BATCH_LIMIT) console.log(`  ${Math.min(i + BATCH_LIMIT, ids.length)}/${ids.length}`);
-}
+await batchModifyMessages(gmail, ids, { removeLabelIds: [GMAIL_UNREAD] }, {
+  onProgress: (done, total) => { if (done < total) console.log(`  ${done}/${total}`); },
+});
 
 console.log(`Marked ${ids.length} as read.`);

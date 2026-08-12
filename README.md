@@ -303,6 +303,47 @@ with only the first carrying the archive/mark-read action.
 `users.messages.modify` has no such limit, which is why a backfill can succeed on a label
 set that filter creation rejects.
 
+### `resultSizeEstimate` is not a count
+
+`messages.list` returns `resultSizeEstimate`, and it is an **estimate** that repeats round
+numbers across unrelated queries. It reported `201` for both `from:info@email.meetup.com`
+and `from:alphasignal.ai`; a paged walk of the latter found **433**. Anything sized from it
+— a coverage percentage, a "how much mail would this touch" check, a decision to skip
+paging — is wrong by an unknown margin and never errors.
+
+Use `countMessagesMatching()` in [`lib/gmail-message-utils.mjs`](lib/gmail-message-utils.mjs),
+which pages to a true total, or say "sampled N" and don't imply a total at all.
+
+### Sender-matching helpers miss grouped `from:(a OR b)` queries
+
+A `/from:([^\s()]+)/` sweep requires a non-paren character right after `from:`, so on
+`from:(news.bizjournals.com OR engaged.bizjournals.com)` it matches **nothing** — not the
+first domain, not a partial. The config uses both spellings interchangeably
+([`create-filters.mjs`](create-filters.mjs) has ~a dozen grouped ones), so a helper built
+on that regex silently treats those domains as unclaimed.
+
+`coveredDomains()` in [`audit-org-tag-coverage.mjs`](audit-org-tag-coverage.mjs) has this
+bug today and under-reports coverage as a result. `fromTokens()` in
+[`audit-label-drift.mjs`](audit-label-drift.mjs) handles both forms; extract from there
+rather than writing a third copy.
+
+The same helper class must also handle `from:"Display Name"` — a bare word with no dot
+never suffix-matches a domain, so filters written that way stay invisible to any
+domain-only comparison.
+
+### A verification check can assert a label the config never produces
+
+`list-unread-emails.mjs --verify` reported `AlphaSignal email has 'Product Updates' label:
+false` for months. The mail was labeled correctly — the *check* was stale: both
+[`create-filters.mjs`](create-filters.mjs) and [`organize-emails.mjs`](organize-emails.mjs)
+route AlphaSignal to `Newsletters`, and no live filter applies `Product Updates` to it. The
+label it looked for was residue from an older config, still sitting on 321 messages.
+
+A spot-check that hardcodes its expectation drifts from the config it is meant to verify,
+and reads as a labeling failure when it is really a check failure. Derive the expected
+label from the config, or audit with [`audit-label-drift.mjs`](audit-label-drift.mjs),
+which compares config, live filters and actual mail rather than trusting any one of them.
+
 ### Sender domains do not reveal an organization's type
 
 **This is the canonical tally — other docs point here rather than repeating it, because a

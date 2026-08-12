@@ -20,11 +20,9 @@ import { createGmailClient } from './lib/gmail-client.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { withRetry } from './lib/gmail-retry.mjs';
 import { messagePages, countMessagesMatching } from './lib/gmail-message-utils.mjs';
+import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
 import { argAfter } from './lib/cli-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
-
-// Gmail's hard cap on ids per batchModify call.
-const BATCH_SIZE = 1000;
 
 async function labelMessageCount(gmail, labelId) {
   const res = await withRetry(() => gmail.users.labels.get({ userId: USER_ID, id: labelId }));
@@ -65,15 +63,8 @@ export async function mergeLabel(gmail, fromName, intoName, { dryRun = false, de
   // Streamed rather than collected: the source label can hold tens of thousands of ids,
   // and paging is safe here because adding a label leaves the source set unchanged.
   for await (const messages of messagePages(gmail, { labelIds: [fromId] })) {
-    const ids = messages.map((m) => m.id);
-    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
-      await withRetry(() => gmail.users.messages.batchModify({
-        userId: USER_ID,
-        requestBody: { ids: ids.slice(i, i + BATCH_SIZE), addLabelIds: [intoId] },
-      }));
-    }
-    merged += ids.length;
-    if (ids.length) console.log(`  merged ${merged}...`);
+    merged += await batchModifyMessages(gmail, messages, { addLabelIds: [intoId] });
+    if (messages.length) console.log(`  merged ${merged}...`);
   }
 
   const after = {

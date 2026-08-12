@@ -16,11 +16,11 @@ import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { withRetry } from './lib/gmail-retry.mjs';
+import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
 import { argAfter } from './lib/cli-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 
 const LIST_PAGE_SIZE = 500;
-const BATCH_SIZE = 1000;
 
 export async function stripLabel(gmail, labelName, { dryRun = false, scopeQuery = null } = {}) {
   const labelCache = await buildLabelCache(gmail);
@@ -40,12 +40,7 @@ export async function stripLabel(gmail, labelName, { dryRun = false, scopeQuery 
       console.log(`  would strip ${ids.length} (first page only in dry-run)`);
       return ids.length;
     }
-    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
-      await withRetry(() => gmail.users.messages.batchModify({
-        userId: USER_ID,
-        requestBody: { ids: ids.slice(i, i + BATCH_SIZE), removeLabelIds: [labelId] },
-      }));
-    }
+    await batchModifyMessages(gmail, ids, { removeLabelIds: [labelId] });
     total += ids.length;
     console.log(`  stripped ${total}...`);
   }

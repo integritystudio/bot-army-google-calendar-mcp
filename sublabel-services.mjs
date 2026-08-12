@@ -14,6 +14,7 @@ import { createGmailClient } from './lib/gmail-client.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
 import { getHeader } from './lib/email-utils.mjs';
+import { listAllMessageIds } from './lib/gmail-message-utils.mjs';
 import {
   USER_ID,
   LABEL_SERVICES,
@@ -22,7 +23,6 @@ import {
   LABEL_SERVICES_UTILITIES,
 } from './lib/constants.mjs';
 
-const PAGE_SIZE = 500;
 const CHUNK = 50;
 const BATCH_LIMIT = 1000;
 
@@ -69,13 +69,7 @@ async function run() {
 
   console.log('\n2. RETRO-LABELING EXISTING EMAILS\n');
   const listLabels = includeRead ? [parentId] : [parentId, 'UNREAD'];
-  const ids = [];
-  let pageToken;
-  do {
-    const res = await gmail.users.messages.list({ userId: USER_ID, labelIds: listLabels, maxResults: PAGE_SIZE, pageToken });
-    for (const m of res.data.messages || []) ids.push(m.id);
-    pageToken = res.data.nextPageToken;
-  } while (pageToken);
+  const ids = await listAllMessageIds(gmail, { labelIds: listLabels });
 
   const domainToSublabel = new Map();
   for (const { sublabel, domains } of SUBLABEL_DOMAINS) {

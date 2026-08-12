@@ -13,7 +13,7 @@ import { createGmailClient } from './lib/gmail-client.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { classifyEmail } from './lib/date-based-filter.mjs';
 import { getHeader } from './lib/email-utils.mjs';
-import { extractBodyText } from './lib/gmail-message-utils.mjs';
+import { listAllMessageIds, extractBodyText } from './lib/gmail-message-utils.mjs';
 import { USER_ID, GMAIL_UNREAD, LABEL_EVENTS } from './lib/constants.mjs';
 
 const FETCH_CHUNK = 25;
@@ -37,18 +37,7 @@ if (!labelId) {
   process.exit(1);
 }
 
-const ids = [];
-let pageToken;
-do {
-  const res = await gmail.users.messages.list({
-    userId: USER_ID,
-    labelIds: [labelId, GMAIL_UNREAD],
-    maxResults: 500,
-    pageToken,
-  });
-  for (const m of res.data.messages || []) ids.push(m.id);
-  pageToken = res.data.nextPageToken;
-} while (pageToken);
+const ids = await listAllMessageIds(gmail, { labelIds: [labelId, GMAIL_UNREAD] });
 console.log(`Unread "${labelName}" emails: ${ids.length}`);
 
 const pastIds = [];

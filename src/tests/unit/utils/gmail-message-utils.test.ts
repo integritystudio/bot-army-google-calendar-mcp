@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 // @ts-expect-error - plain .mjs utility with no type declarations
-import { htmlToText, extractBodyText, decodeMessageBody, countMessagesMatching, fetchMessageHeaders } from '../../../../lib/gmail-message-utils.mjs';
+import { htmlToText, extractBodyText, decodeMessageBody, countMessagesMatching, fetchMessageHeaders, listAllMessageIds, messagePages } from '../../../../lib/gmail-message-utils.mjs';
 
 /** Gmail stub returning the given pages of message ids, one per list() call. */
 const gmailWithPages = (pages: string[][]) => {
@@ -201,5 +201,39 @@ describe('countMessagesMatching selectors', () => {
     const seen: Record<string, unknown>[] = [];
     await countMessagesMatching(capturingGmail(seen), { q: 'from:x.com', labelIds: ['Label_18'] });
     expect(seen[0]).toMatchObject({ q: 'from:x.com', labelIds: ['Label_18'] });
+  });
+});
+
+describe('listAllMessageIds', () => {
+  it('collects ids across every page', async () => {
+    const ids = await listAllMessageIds(gmailWithPages([['a', 'b'], ['c'], ['d', 'e']]), 'q');
+    expect(ids).toEqual(['a', 'b', 'c', 'd', 'e']);
+  });
+
+  it('stops early once the limit is reached', async () => {
+    const ids = await listAllMessageIds(gmailWithPages([['a', 'b'], ['c', 'd']]), 'q', { limit: 3 });
+    expect(ids).toEqual(['a', 'b', 'c']);
+  });
+
+  it('returns an empty array when nothing matches', async () => {
+    expect(await listAllMessageIds(gmailWithPages([[]]), 'q')).toEqual([]);
+  });
+
+  it('accepts an object selector', async () => {
+    const seen: Record<string, unknown>[] = [];
+    const gmail = { users: { messages: { list: async (p: Record<string, unknown>) => {
+      seen.push(p);
+      return { data: { messages: [{ id: 'a' }], nextPageToken: undefined } };
+    } } } };
+    await listAllMessageIds(gmail, { labelIds: ['L1'] });
+    expect(seen[0]).toMatchObject({ labelIds: ['L1'] });
+  });
+});
+
+describe('messagePages', () => {
+  it('yields one array per page, following the token', async () => {
+    const pages = [];
+    for await (const page of messagePages(gmailWithPages([['a'], ['b', 'c']]), 'q')) pages.push(page);
+    expect(pages.map((p) => p.map((m: { id: string }) => m.id))).toEqual([['a'], ['b', 'c']]);
   });
 });

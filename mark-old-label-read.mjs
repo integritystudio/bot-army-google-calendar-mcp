@@ -8,8 +8,8 @@
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { listAllMessageIds } from './lib/gmail-message-utils.mjs';
 
-const PAGE_SIZE = 500;
 const BATCH_LIMIT = 1000;
 const DEFAULT_CUTOFF_DAYS = 30;
 
@@ -39,19 +39,7 @@ if (!labelId) {
   process.exit(1);
 }
 
-const ids = [];
-let pageToken;
-do {
-  const res = await gmail.users.messages.list({
-    userId: 'me',
-    labelIds: [labelId, 'UNREAD'],
-    q: `before:${before}`,
-    maxResults: PAGE_SIZE,
-    pageToken,
-  });
-  for (const m of res.data.messages || []) ids.push(m.id);
-  pageToken = res.data.nextPageToken;
-} while (pageToken);
+const ids = await listAllMessageIds(gmail, { labelIds: [labelId, 'UNREAD'], q: `before:${before}` });
 
 console.log(`Unread "${labelName}" emails before ${before}: ${ids.length}`);
 

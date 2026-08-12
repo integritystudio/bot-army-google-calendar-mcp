@@ -19,10 +19,10 @@ import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { withRetry } from './lib/gmail-retry.mjs';
+import { messagePages, countMessagesMatching } from './lib/gmail-message-utils.mjs';
 import { argAfter } from './lib/cli-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 
-const LIST_PAGE_SIZE = 500;
 // Gmail's hard cap on ids per batchModify call.
 const BATCH_SIZE = 1000;
 
@@ -36,16 +36,7 @@ async function labelMessageCount(gmail, labelId) {
  * Counted by paging rather than read from resultSizeEstimate, which is approximate.
  */
 async function countMessagesWithLabels(gmail, labelIds) {
-  let total = 0;
-  let pageToken;
-  do {
-    const res = await withRetry(() => gmail.users.messages.list({
-      userId: USER_ID, labelIds, maxResults: LIST_PAGE_SIZE, pageToken,
-    }));
-    total += (res.data.messages ?? []).length;
-    pageToken = res.data.nextPageToken;
-  } while (pageToken);
-  return total;
+  return (await countMessagesMatching(gmail, { labelIds })).count;
 }
 
 export async function mergeLabel(gmail, fromName, intoName, { dryRun = false, deleteSource = false } = {}) {
@@ -71,12 +62,10 @@ export async function mergeLabel(gmail, fromName, intoName, { dryRun = false, de
   }
 
   let merged = 0;
-  let pageToken;
-  do {
-    const res = await withRetry(() => gmail.users.messages.list({
-      userId: USER_ID, labelIds: [fromId], maxResults: LIST_PAGE_SIZE, pageToken,
-    }));
-    const ids = (res.data.messages ?? []).map((m) => m.id);
+  // Streamed rather than collected: the source label can hold tens of thousands of ids,
+  // and paging is safe here because adding a label leaves the source set unchanged.
+  for await (const messages of messagePages(gmail, { labelIds: [fromId] })) {
+    const ids = messages.map((m) => m.id);
     for (let i = 0; i < ids.length; i += BATCH_SIZE) {
       await withRetry(() => gmail.users.messages.batchModify({
         userId: USER_ID,
@@ -85,8 +74,7 @@ export async function mergeLabel(gmail, fromName, intoName, { dryRun = false, de
     }
     merged += ids.length;
     if (ids.length) console.log(`  merged ${merged}...`);
-    pageToken = res.data.nextPageToken;
-  } while (pageToken);
+  }
 
   const after = {
     from: await labelMessageCount(gmail, fromId),

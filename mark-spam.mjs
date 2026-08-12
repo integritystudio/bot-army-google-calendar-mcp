@@ -10,9 +10,8 @@
  *   node mark-spam.mjs "from:someone@example.com subject:Hello" --yes  # apply
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
+import { listAllMessageIds, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 
-const PAGE_SIZE = 500;
 const BATCH_LIMIT = 1000;
 const SPAM_LABEL = 'SPAM';
 const INBOX_LABEL = 'INBOX';
@@ -27,13 +26,7 @@ if (!query) {
 
 const gmail = await createGmailClient();
 
-const ids = [];
-let pageToken;
-do {
-  const res = await gmail.users.messages.list({ userId: 'me', q: query, maxResults: PAGE_SIZE, pageToken });
-  for (const m of res.data.messages || []) ids.push(m.id);
-  pageToken = res.data.nextPageToken;
-} while (pageToken);
+const ids = await listAllMessageIds(gmail, query);
 
 console.log(`Matches for "${query}": ${ids.length}`);
 for (const { from, subject } of await fetchMessageHeaders(gmail, ids)) {

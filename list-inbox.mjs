@@ -1,30 +1,23 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { listAllMessageIds } from './lib/gmail-message-utils.mjs';
 
 const gmail = createGmailClient();
 const LIMIT = 200;
 const BATCH = 25;
 
 // Fetch up to LIMIT message IDs from inbox
-let messages = [];
-let pageToken;
-do {
-  const res = await gmail.users.messages.list({
-    userId: 'me', labelIds: ['INBOX'], maxResults: Math.min(100, LIMIT - messages.length), pageToken,
-  });
-  messages.push(...(res.data.messages || []));
-  pageToken = res.data.nextPageToken;
-} while (pageToken && messages.length < LIMIT);
+const ids = await listAllMessageIds(gmail, { labelIds: ['INBOX'] }, { limit: LIMIT });
 
-console.log(`Fetching details for ${messages.length} messages...`);
+console.log(`Fetching details for ${ids.length} messages...`);
 
 // Batch fetch metadata to avoid OOM
 const details = [];
-for (let i = 0; i < messages.length; i += BATCH) {
-  const batch = messages.slice(i, i + BATCH);
+for (let i = 0; i < ids.length; i += BATCH) {
+  const batch = ids.slice(i, i + BATCH);
   const results = await Promise.all(
-    batch.map(m =>
+    batch.map(id =>
       gmail.users.messages.get({
-        userId: 'me', id: m.id, format: 'metadata',
+        userId: 'me', id, format: 'metadata',
         metadataHeaders: ['From', 'Subject'],
       }).then(r => r.data)
     )

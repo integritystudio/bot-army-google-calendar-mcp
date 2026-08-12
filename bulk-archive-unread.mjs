@@ -9,6 +9,7 @@
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { listAllMessageIds } from './lib/gmail-message-utils.mjs';
 
 const PAGE_SIZE = 500;
 const KEEP_LABEL = 'Keep Important';
@@ -45,15 +46,7 @@ async function withRetry(fn) {
 
 // Collect protected IDs by label ID up front — exact membership, no reliance on
 // how Gmail search normalizes the "Keep Important" name in a -label: query.
-const keepIds = new Set();
-let pageToken;
-do {
-  const res = await withRetry(() =>
-    gmail.users.messages.list({ userId: 'me', labelIds: [keepId, 'UNREAD', 'INBOX'], maxResults: PAGE_SIZE, pageToken })
-  );
-  for (const m of res.data.messages || []) keepIds.add(m.id);
-  pageToken = res.data.nextPageToken;
-} while (pageToken);
+const keepIds = new Set(await listAllMessageIds(gmail, { labelIds: [keepId, 'UNREAD', 'INBOX'] }));
 console.log(`Protected (${KEEP_LABEL}, unread, in inbox): ${keepIds.size}`);
 
 // Retries exhausted on a batch → split it and recurse, so one unmodifiable

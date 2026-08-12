@@ -14,12 +14,11 @@
 import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { getHeader } from './lib/email-utils.mjs';
-import { mapWithConcurrency } from './lib/gmail-message-utils.mjs';
+import { listAllMessageIds, mapWithConcurrency } from './lib/gmail-message-utils.mjs';
 import { argAfter } from './lib/cli-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 import { localPartOf, displayNameOf, GENERIC_LOCAL_PARTS } from './audit-sender-signals.mjs';
 
-const LIST_PAGE_SIZE = 500;
 const FETCH_CONCURRENCY = 15;
 /** Above this, a domain is too fragmented to tag per-org (substack.com is ~8,900). */
 const DEFAULT_MAX_MESSAGES = 400;
@@ -27,18 +26,7 @@ const DEFAULT_MAX_MESSAGES = 400;
 const FANOUT_THRESHOLD = 3;
 
 /** Every message id from the domain — sampling cannot enumerate a platform. */
-async function allMessageIds(gmail, domain) {
-  const ids = [];
-  let pageToken;
-  do {
-    const { data } = await gmail.users.messages.list({
-      userId: USER_ID, q: `from:${domain}`, maxResults: LIST_PAGE_SIZE, pageToken,
-    });
-    ids.push(...(data.messages ?? []).map((m) => m.id));
-    pageToken = data.nextPageToken;
-  } while (pageToken);
-  return ids;
-}
+const allMessageIds = (gmail, domain) => listAllMessageIds(gmail, `from:${domain}`);
 
 export async function extractPlatformOrgs(gmail, domain, { maxMessages = DEFAULT_MAX_MESSAGES } = {}) {
   const ids = await allMessageIds(gmail, domain);

@@ -13,18 +13,14 @@ import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
-import { getHeader } from './lib/email-utils.mjs';
-import { listAllMessageIds } from './lib/gmail-message-utils.mjs';
+import { listAllMessageIds, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
 import {
-  USER_ID,
   LABEL_SERVICES,
   LABEL_SERVICES_REAL_ESTATE,
   LABEL_SERVICES_HEALTH,
   LABEL_SERVICES_UTILITIES,
 } from './lib/constants.mjs';
-
-const CHUNK = 50;
 
 const SUBLABEL_DOMAINS = [
   {
@@ -78,20 +74,16 @@ async function run() {
 
   const idsBySublabel = new Map();
   let unmatched = 0;
-  for (let i = 0; i < ids.length; i += CHUNK) {
-    const metas = await Promise.all(
-      ids.slice(i, i + CHUNK).map(id =>
-        gmail.users.messages.get({ userId: USER_ID, id, format: 'metadata', metadataHeaders: ['From'] })
-      )
-    );
-    for (const m of metas) {
-      const from = getHeader(m.data.payload?.headers || [], 'From', '');
-      const domain = (from.match(/@([\w.-]+)/) || [])[1] || '';
-      const sublabel = domainToSublabel.get(domain);
-      if (!sublabel) { unmatched++; continue; }
-      if (!idsBySublabel.has(sublabel)) idsBySublabel.set(sublabel, []);
-      idsBySublabel.get(sublabel).push(m.data.id);
-    }
+  // fetchMessageHeaders retries and bounds its own concurrency. The chunked
+  // Promise.all this replaces did neither: one transient failure rejected the
+  // whole chunk, and since labeling happens after the scan, the run discarded
+  // every message it had already classified.
+  for (const { id, from } of await fetchMessageHeaders(gmail, ids)) {
+    const domain = (from.match(/@([\w.-]+)/) || [])[1] || '';
+    const sublabel = domainToSublabel.get(domain);
+    if (!sublabel) { unmatched++; continue; }
+    if (!idsBySublabel.has(sublabel)) idsBySublabel.set(sublabel, []);
+    idsBySublabel.get(sublabel).push(id);
   }
 
   for (const [sublabel, msgIds] of idsBySublabel) {

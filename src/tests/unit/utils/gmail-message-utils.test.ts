@@ -179,6 +179,23 @@ describe('fetchMessageHeaders', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('1 of 2'));
     warn.mockRestore();
   });
+
+  // Callers that label what they fetched cannot zip the result back against the
+  // input ids, because a dropped failure shifts every later row by one.
+  it('carries each message id so a dropped failure cannot misalign the rows', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const gmail = {
+      users: { messages: { get: async ({ id }: { id: string }) => {
+        if (id === 'bad') throw new Error('gone');
+        return { data: { id, ...headers(`subject-${id}`).data } };
+      } } },
+    };
+    const rows = await fetchMessageHeaders(gmail, ['first', 'bad', 'last']);
+
+    expect(rows.map((r: { id: string }) => r.id)).toEqual(['first', 'last']);
+    expect(rows[1].subject).toBe('subject-last');
+    warn.mockRestore();
+  });
 });
 
 describe('countMessagesMatching selectors', () => {

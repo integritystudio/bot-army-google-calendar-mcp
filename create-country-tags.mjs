@@ -21,7 +21,7 @@ import {
   LABEL_COUNTRY_MEXICO,
 } from './lib/constants.mjs';
 
-const COUNTRY_TAGS = [
+export const COUNTRY_TAGS = [
   {
     labelName: LABEL_COUNTRY_COLOMBIA,
     entries: [

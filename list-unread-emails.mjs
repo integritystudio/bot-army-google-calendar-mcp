@@ -11,7 +11,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { BANNER, DIVIDER } from './lib/console-utils.mjs';
 import { extractDisplayName, getHeader } from './lib/email-utils.mjs';
-import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { buildLabelCache, buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import { mapWithConcurrency, countMessagesMatching } from './lib/gmail-message-utils.mjs';
 import { extractSchemaMarkupFromGmailPayload, categorizeBySchema, extractHtmlFromPayload } from './lib/schema-extractor.mjs';
 import {
@@ -224,8 +224,7 @@ async function listUnreadEmails(gmail) {
     return;
   }
 
-  const labelCache = await buildLabelCache(gmail);
-  const labelMap = new Map([...labelCache.entries()].map(([name, id]) => [id, name]));
+  const { byId: labelMap } = await buildLabelIndex(gmail);
 
   const fullMsgs = await mapWithConcurrency(messageIds, msg =>
     gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'metadata', metadataHeaders: ['Subject', 'From'] })
@@ -305,8 +304,7 @@ async function showStats(gmail) {
 }
 
 async function verifyLabels(gmail) {
-  const labelCache = await buildLabelCache(gmail);
-  const labelMapById = new Map([...labelCache.entries()].map(([name, id]) => [id, name]));
+  const { byId: labelMapById } = await buildLabelIndex(gmail);
 
   console.log('Checking if labels were applied...\n');
 

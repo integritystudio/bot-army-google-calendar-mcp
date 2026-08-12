@@ -6,7 +6,7 @@
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { getHeader } from './lib/email-utils.mjs';
-import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import { mapWithConcurrency } from './lib/gmail-message-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 
@@ -21,9 +21,7 @@ const flatten = (value) => (value || '').replace(/\s+/g, ' ').trim();
 
 async function main() {
   const gmail = await createGmailClient();
-  const labelCache = await buildLabelCache(gmail);
-  const idToName = new Map();
-  for (const [name, id] of labelCache.entries()) idToName.set(id, name);
+  const { byId: idToName } = await buildLabelIndex(gmail);
 
   const { data } = await gmail.users.messages.list({ userId: USER_ID, q: 'is:unread', maxResults: AUDIT_SIZE });
   const messages = data.messages ?? [];

@@ -7,7 +7,7 @@
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { getHeader } from './lib/email-utils.mjs';
-import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import { mapWithConcurrency } from './lib/gmail-message-utils.mjs';
 import { argAfter } from './lib/cli-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
@@ -48,8 +48,7 @@ async function main() {
   const query = argAfter('--query') ?? 'is:unread';
   const gmail = await createGmailClient();
 
-  const labelCache = await buildLabelCache(gmail);
-  const idToName = new Map([...labelCache.entries()].map(([name, id]) => [id, name]));
+  const { byName: labelCache, byId: idToName } = await buildLabelIndex(gmail);
   const covered = coveredDomains();
 
   const { data } = await gmail.users.messages.list({ userId: USER_ID, q: query, maxResults: max });

@@ -31,6 +31,7 @@
 import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { getHeader } from './lib/email-utils.mjs';
+import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import { mapWithConcurrency, countMessagesMatching } from './lib/gmail-message-utils.mjs';
 import { argAfter } from './lib/cli-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
@@ -42,7 +43,6 @@ const DEFAULT_SAMPLE = 5;
 const RULE_CONCURRENCY = 8;
 const SOURCE_ALL = 'all';
 const AD_HOC_SOURCE = 'ad-hoc';
-const LABEL_TYPE_SYSTEM = 'system';
 const MAX_SENDERS_SHOWN = 3;
 const MAX_FILTERS_SHOWN = 4;
 const SUMMARY_PAD = 46;
@@ -146,19 +146,6 @@ export function expectedLabels(rule, allRules) {
     if (other !== rule && tokensOverlap(rule.tokens, other.tokens)) expected.add(other.labelName);
   }
   return expected;
-}
-
-async function loadLabelIndex(gmail) {
-  const { data } = await gmail.users.labels.list({ userId: USER_ID, fields: 'labels(id,name,type)' });
-  const nameById = new Map();
-  const idByName = new Map();
-  const userLabels = new Set();
-  for (const label of data.labels ?? []) {
-    nameById.set(label.id, label.name);
-    idByName.set(label.name, label.id);
-    if (label.type !== LABEL_TYPE_SYSTEM) userLabels.add(label.name);
-  }
-  return { nameById, idByName, userLabels };
 }
 
 async function loadFilters(gmail, nameById) {
@@ -288,7 +275,7 @@ async function main() {
   }
 
   const gmail = createGmailClient();
-  const { nameById, idByName, userLabels } = await loadLabelIndex(gmail);
+  const { byId: nameById, byName: idByName, userLabelNames: userLabels } = await buildLabelIndex(gmail);
   const filters = await loadFilters(gmail, nameById);
 
   const results = await mapWithConcurrency(

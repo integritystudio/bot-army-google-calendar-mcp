@@ -257,22 +257,14 @@ export const CATEGORIES = [
     labelName: LABEL_TRAVEL,
     archive: false,
     filters: [
-      { name: 'Southwest Airlines', query: 'from:iluv.southwest.com' },
       { name: 'Frontier Airlines', query: 'from:emails.flyfrontier.com' },
       { name: 'JetBlue', query: 'from:marketing.jetblue.com' },
       { name: 'Airbnb', query: 'from:airbnb.com' },
-      { name: 'Hertz', query: 'from:emails.hertz.com' },
-      { name: 'Marriott', query: 'from:email-marriott.com' },
       { name: 'Vacasa', query: 'from:e.vacasa.com' },
       { name: 'Virgin Red', query: 'from:rewards.red.virgin.com' },
       { name: 'Vonlane', query: 'from:vonlane.com' },
-      { name: 'Viva Aerobus', query: 'from:newsletter.vivaaerobus.com' },
-      { name: 'ConnectMiles', query: 'from:email.connectmiles.com' },
-      { name: 'MileagePlus Dining', query: 'from:email.rewardsnetwork.com' },
-      { name: 'MileagePlus Shopping', query: 'from:mileageplusshoppingnews.com' },
       { name: 'WeSalute Travel', query: 'from:(wesalute.com)' },
       { name: 'Google Flights Alerts', query: 'from:google.com subject:"tracked route"' },
-      { name: 'Trip.com', query: 'from:newsletter.trip.com' },
       { name: 'Under30 Experiences', query: 'from:under30experiences.com' },
       { name: 'Couchsurfing', query: 'from:marketing.couchsurfing.com' },
       { name: 'Lyft', query: 'from:(lyft.com OR lyftmail.com)' },
@@ -290,7 +282,19 @@ export const CATEGORIES = [
     // different domains and stays under Travel above
     labelName: LABEL_PROMOTIONS_TRAVEL,
     archive: true,
+    markRead: true,
     filters: [
+      { name: 'Southwest Airlines', query: 'from:iluv.southwest.com' },
+      { name: 'Hertz', query: 'from:emails.hertz.com' },
+      { name: 'Marriott', query: 'from:email-marriott.com' },
+      { name: 'Viva Aerobus', query: 'from:newsletter.vivaaerobus.com' },
+      { name: 'ConnectMiles', query: 'from:email.connectmiles.com' },
+      { name: 'MileagePlus Dining', query: 'from:email.rewardsnetwork.com' },
+      { name: 'MileagePlus Shopping', query: 'from:mileageplusshoppingnews.com' },
+      { name: 'Trip.com', query: 'from:newsletter.trip.com' },
+      // Address-scoped: express@airbnb.com is guest correspondence and must stay
+      // in the inbox; only the recommendations/impact sender archives.
+      { name: 'Airbnb Discover', query: 'from:discover@airbnb.com' },
       { name: 'Delta Marketing', query: 'from:o.delta.com' },
       { name: 'United News & Deals', query: 'from:enews.united.com' },
       { name: 'Copa Airlines', query: 'from:email.copa.com' },
@@ -312,7 +316,9 @@ export const CATEGORIES = [
     archive: false,
     filters: [
       { name: 'Glassdoor Jobs', query: 'from:glassdoor.com' },
-      { name: 'LinkedIn', query: 'from:linkedin.com' },
+      // Excludes the social/newsletter senders routed to Forums/LinkedIn Social and
+      // Newsletters/LinkedIn — an unqualified from:linkedin.com labels those Job Search too
+      { name: 'LinkedIn', query: 'from:linkedin.com -from:newsletters-noreply@linkedin.com -from:messages-noreply@linkedin.com -from:invitations@linkedin.com -from:groups-noreply@linkedin.com -from:notifications-noreply@linkedin.com -from:messaging-digest-noreply@linkedin.com' },
       { name: 'Backstage', query: 'from:backstage.com' },
       { name: 'Virtual Vocations', query: 'from:(email.virtualvocations.com OR alerts.virtualvocations.com)' },
       { name: 'PostJobFree', query: 'from:postjobfree.com' },
@@ -844,6 +850,8 @@ export const CATEGORIES = [
     archive: true,
     filters: [
       { name: 'Wayfair', query: 'from:(members.wayfair.com OR service.wayfair.com)' },
+      { name: "Macy's", query: 'from:macys.com' },
+      { name: 'Rent the Runway', query: 'from:renttherunway.com' },
       { name: 'Quince', query: 'from:mail.quince.com' },
       { name: 'Ruti', query: 'from:ruti.com' },
       { name: "Margaret O'Leary", query: 'from:margaretoleary.com' },
@@ -999,6 +1007,10 @@ export const CATEGORIES = [
       { name: 'AutoNation', query: 'from:autonation.com' },
       { name: 'Mazda Dealers', query: 'from:dealers-mazdausa.com' },
       { name: 'DealerCenter', query: 'from:dealercenter.net' },
+      { name: 'Capitol Chevrolet', query: 'from:capitolchevy.com' },
+      // Full address: alstspecials.com is a dealer-marketing platform domain; other
+      // dealers may send from it, so match the local part too
+      { name: 'City Limits Subaru', query: 'from:citylimitssubaru@alstspecials.com' },
       { name: 'Autoblog', query: 'from:email.thestreet.com' },
     ],
   },

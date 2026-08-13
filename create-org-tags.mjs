@@ -746,6 +746,22 @@ export const ORG_TAGS = [
       { name: 'Lyft', query: 'from:lyft.com OR from:lyftmail.com' },
       { name: 'Couchsurfing', query: 'from:couchsurfing.com' },
       { name: 'Wikiloc', query: 'from:wikiloc.com' },
+      { name: 'Virgin', query: 'from:virgin.com' },
+    ],
+  },
+  // MileagePlus partner programs: the mail is United-branded but sent by the
+  // third parties that operate each program, so the domains never mention
+  // United. Nested under the United instance as subOrganization.
+  {
+    labelName: `${LABEL_ORG_TRAVEL}/United/Rewards Network`,
+    orgs: [
+      { name: 'Rewards Network', query: 'from:rewardsnetwork.com' },
+    ],
+  },
+  {
+    labelName: `${LABEL_ORG_TRAVEL}/United/Cartera Commerce`,
+    orgs: [
+      { name: 'Cartera Commerce', query: 'from:mileageplusshoppingnews.com' },
     ],
   },
   {

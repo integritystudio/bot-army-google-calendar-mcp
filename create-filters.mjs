@@ -1379,7 +1379,7 @@ async function run() {
           totalEmails += count;
         }
       } catch (error) {
-        console.error(`  ✗ Backfill failed: ${error.message}`);
+        console.error(`  ✗ Backfill failed: ${error?.message ?? String(error)}`);
         failedBackfills.add(displayName);
       }
     }

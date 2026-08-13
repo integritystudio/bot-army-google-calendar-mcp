@@ -870,6 +870,7 @@ export const CATEGORIES = [
   {
     labelName: LABEL_PROMOTIONS_RETAIL,
     archive: true,
+    markRead: true,
     consolidate: true,
     filters: [
       { name: 'Wayfair', query: 'from:(members.wayfair.com OR service.wayfair.com)' },

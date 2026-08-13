@@ -1397,7 +1397,7 @@ async function run() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   run().catch(error => {
-    console.error('Error:', error.message);
+    console.error('Error:', error?.message ?? String(error));
     process.exit(1);
   });
 }

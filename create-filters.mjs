@@ -5,13 +5,22 @@
  * Usage:
  *   node create-filters.mjs                       # all categories
  *   node create-filters.mjs --only "Promotions"   # only categories whose label starts with the prefix
+ *   node create-filters.mjs --dry-run             # print the create/delete plan without mutating
+ *   node create-filters.mjs --prune               # also delete stale filters (see diffFilters)
  */
 import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
+import {
+  ensureLabelExists,
+  createGmailFilter,
+  deleteGmailFilter,
+  diffFilters,
+  chunkQueries,
+} from './lib/gmail-filter-utils.mjs';
 import { searchAndModify } from './lib/gmail-batch-utils.mjs';
+import { withRetry } from './lib/gmail-retry.mjs';
 import { BANNER } from './lib/console-utils.mjs';
-import { argAfter } from './lib/cli-utils.mjs';
+import { argAfter, hasFlag } from './lib/cli-utils.mjs';
 import {
   GMAIL_INBOX,
   GMAIL_UNREAD,
@@ -86,17 +95,24 @@ import {
   LABEL_CAREER_OPPORTUNITY,
   LABEL_CAREER_FELLOWSHIP_INVITE,
   LABEL_EVENTS_CLASSES,
+  USER_ID,
 } from './lib/constants.mjs';
 
 /**
  * Each category:
  *   labelName     — existing or new label constant
  *   extraLabels   — additional labels applied alongside labelName (e.g. Keep Important)
- *   filters       — array of { name, query } for createGmailFilter
+ *   filters       — array of { name, query } for createGmailFilter; a filter may set
+ *                   its own markRead to override the category's
  *   archive       — remove from INBOX when applying (default true)
  *   markRead      — also strip UNREAD when applying (default false)
  *   includeRead   — backfill read mail too (default: unread only)
  *   maxResults    — cap the backfill page (default: searchAndModify's own 500)
+ *   consolidate   — merge the per-sender entries into OR-joined chunk filters
+ *                   (Gmail caps accounts at 1,000 filters). Entries stay one per
+ *                   sender in this config; only the live filters merge. APPEND new
+ *                   senders — mid-list inserts shift chunk boundaries and churn
+ *                   filters on the next sync. Incompatible with per-filter markRead.
  */
 const BACKFILL_PAGE_NARROW = 200;
 // SolutionPeople sends ~3x/week across four offerings. Subject matching partitions them
@@ -258,15 +274,12 @@ export const CATEGORIES = [
     archive: false,
     filters: [
       { name: 'Frontier Airlines', query: 'from:emails.flyfrontier.com' },
-      { name: 'JetBlue', query: 'from:marketing.jetblue.com' },
       { name: 'Airbnb', query: 'from:airbnb.com' },
       { name: 'Vacasa', query: 'from:e.vacasa.com' },
-      { name: 'Virgin Red', query: 'from:rewards.red.virgin.com' },
       { name: 'Vonlane', query: 'from:vonlane.com' },
       { name: 'WeSalute Travel', query: 'from:(wesalute.com)' },
       { name: 'Google Flights Alerts', query: 'from:google.com subject:"tracked route"' },
       { name: 'Under30 Experiences', query: 'from:under30experiences.com' },
-      { name: 'Couchsurfing', query: 'from:marketing.couchsurfing.com' },
       { name: 'Lyft', query: 'from:(lyft.com OR lyftmail.com)' },
       { name: 'United Notifications', query: 'from:(notifications@united.com OR insights.united.com)' },
       { name: 'American Airlines Trips', query: 'from:(connect.email.aa.com OR info.ms.aa.com OR info.email.aa.com)' },
@@ -302,7 +315,9 @@ export const CATEGORIES = [
       { name: 'American Airlines Loyalty', query: 'from:loyalty.ms.aa.com' },
       { name: 'AirAsia Rewards', query: 'from:rewards.airasia.com' },
       { name: 'GOL', query: 'from:news.voegol.com.br' },
-      { name: 'JetBlue Marketing', query: 'from:email.jetblue.com' },
+      { name: 'JetBlue Marketing', query: 'from:(email.jetblue.com OR marketing.jetblue.com)' },
+      { name: 'Virgin Red', query: 'from:rewards.red.virgin.com' },
+      { name: 'Couchsurfing Marketing', query: 'from:marketing.couchsurfing.com' },
       { name: 'Qatar Airways', query: 'from:(qr.qatarairways.com OR qrgroup.qatarairways.com)' },
       { name: 'Air France Marketing', query: 'from:enews-airfrance.com' },
       { name: 'Turo', query: 'from:mail.turo.com' },
@@ -335,8 +350,12 @@ export const CATEGORIES = [
   },
   {
     labelName: LABEL_NEWSLETTERS,
-    archive: false,
+    archive: true,
+    markRead: true,
     filters: [
+      // Zapier's news@ is product-update marketing, not a service alert; the
+      // Promotions/Tech block below excludes it to avoid double-labeling.
+      { name: 'Zapier News', query: 'from:news@send.zapier.com' },
       { name: 'Substack', query: 'from:substack.com' },
       { name: 'Beehiiv', query: 'from:mail.beehiiv.com' },
       { name: 'Mozilla Ten Tabs', query: 'from:mail.mozilla.org' },
@@ -369,14 +388,21 @@ export const CATEGORIES = [
       { name: 'Human Design Daily', query: 'from:human.design' },
       { name: 'UT Austin Newsletters', query: 'from:(utexas.edu OR mccombs.utexas.edu) subject:newsletter' },
       { name: 'ACM Listserv', query: 'from:listserv.acm.org' },
-      { name: 'AlphaSignal', query: 'from:"AlphaSignal"' },
+      { name: 'AlphaSignal', query: 'from:("AlphaSignal" OR alphasignal.ai)' },
       { name: 'Yodlee', query: 'from:communications@yodlee.com' },
       { name: 'Adapty', query: 'from:hello@adapty.io' },
+      // The next four existed only as live Gmail filters (no config entry) until the
+      // 2026-08-13 markRead sync; added here so the prune upgrades instead of unrouting.
+      { name: 'OpenAI', query: 'from:email.openai.com' },
+      { name: 'Google Cloud', query: 'from:googlecloud@google.com' },
+      { name: 'LinkedIn Newsletters', query: 'from:newsletters-noreply@linkedin.com' },
+      { name: 'Lumos FC', query: 'from:lumosfc.com' },
     ],
   },
   {
     labelName: LABEL_NEWSLETTERS_NEWS,
-    archive: false,
+    archive: true,
+    markRead: true,
     filters: [
       { name: 'CNN', query: 'from:mail.cnn.com' },
       { name: 'New York Times', query: 'from:e.newyorktimes.com' },
@@ -386,7 +412,8 @@ export const CATEGORIES = [
   {
     // ALM publishes Law.com, already routed to the parent Newsletters block
     labelName: LABEL_NEWSLETTERS_LEGAL,
-    archive: false,
+    archive: true,
+    markRead: true,
     filters: [
       { name: 'ALM', query: 'from:alm.com' },
       { name: 'Law.com (an ALM property)', query: 'from:law.com' },
@@ -394,20 +421,11 @@ export const CATEGORIES = [
   },
   {
     labelName: LABEL_NEWSLETTERS_PERSONAL_DEV,
-    archive: false,
+    archive: true,
+    markRead: true,
     filters: [
       { name: 'Ladies Get Paid', query: 'from:ladiesgetpaid.com' },
       { name: 'School of Greatness', query: 'from:schoolofgreatness.com' },
-    ],
-  },
-  {
-    // Newsletter senders that archive on arrival, unlike the label-only group above.
-    // Zapier's news@ is product-update marketing, not a service alert; the
-    // Promotions/Tech block below excludes it to avoid double-labeling.
-    labelName: LABEL_NEWSLETTERS,
-    archive: true,
-    filters: [
-      { name: 'Zapier News', query: 'from:news@send.zapier.com' },
     ],
   },
   {
@@ -601,6 +619,7 @@ export const CATEGORIES = [
     archive: false,
     filters: [
       { name: 'Dogwood Therapy ATX', query: 'from:dogwoodtherapyatx.com' },
+      { name: 'OptumRx', query: 'from:optumrx.com' },
       { name: 'Patient Messages (Hightop/Roots)', query: 'from:patient-message.com' },
       // LaserAway splits senders: .co is transactional (booking confirmations) and stays
       // in the inbox, while .com marketing archives under Promotions/Beauty & Wellness.
@@ -715,7 +734,8 @@ export const CATEGORIES = [
   {
     // Developer program digests & release roundups
     labelName: LABEL_NEWSLETTERS_DEVELOPER,
-    archive: false,
+    archive: true,
+    markRead: true,
     filters: [
       { name: 'Google Developer Program', query: 'from:googledev-noreply@google.com' },
       { name: 'Supabase', query: 'from:supabase.com' },
@@ -732,9 +752,11 @@ export const CATEGORIES = [
   {
     // City of Austin & civic sources (austintexas.gov covers publicinput/econdev/etc. subdomains)
     labelName: LABEL_NEWSLETTERS_CIVIC_AUSTIN,
-    archive: false,
+    archive: true,
+    markRead: true,
     filters: [
       { name: 'City of Austin', query: 'from:austintexas.gov' },
+      { name: 'Austin Current', query: 'from:austincurrent.org' },
       { name: 'Austin Neighborhoods Council', query: 'from:ancweb.org' },
       { name: 'Austin Habitat for Humanity', query: 'from:ahfh.org' },
     ],
@@ -848,6 +870,7 @@ export const CATEGORIES = [
   {
     labelName: LABEL_PROMOTIONS_RETAIL,
     archive: true,
+    consolidate: true,
     filters: [
       { name: 'Wayfair', query: 'from:(members.wayfair.com OR service.wayfair.com)' },
       { name: "Macy's", query: 'from:macys.com' },
@@ -975,6 +998,9 @@ export const CATEGORIES = [
     archive: true,
     filters: [
       { name: 'NerdWallet', query: 'from:mail.nerdwallet.com' },
+      // e. subdomain only: marketing sender; a live-mortgage transactional thread
+      // would come from elsewhere and should not be auto-read
+      { name: 'Rocket Mortgage', query: 'from:e.rocketmortgage.com', markRead: true },
       { name: 'SoFi Marketing', query: 'from:(m.sofi.org OR r.sofi.com)' },
       { name: 'USAA Offers', query: 'from:(Perks@mem.usaa.com OR exmac.usaa.com)' },
       { name: 'Boston Globe Offers', query: 'from:email.globe.com' },
@@ -1166,14 +1192,70 @@ export const CATEGORIES = [
   },
 ];
 
+// Gmail's per-filter query length limit is undocumented; 500 sits well inside
+// every reported bound while still collapsing ~30 senders into 2 filters
+const MAX_CONSOLIDATED_QUERY_LENGTH = 500;
+
+function describeFilter(filter, labelNameById) {
+  const criteria = filter.criteria?.query ?? JSON.stringify(filter.criteria);
+  const adds = (filter.action?.addLabelIds ?? []).map(id => labelNameById.get(id) ?? id);
+  const removes = filter.action?.removeLabelIds ?? [];
+  const parts = [];
+  if (adds.length) parts.push(`+[${adds.join(', ')}]`);
+  if (removes.length) parts.push(`-[${removes.join(', ')}]`);
+  return `${criteria} → ${parts.join(' ')}`;
+}
+
+/**
+ * A consolidated category's sender entries collapse into OR-joined chunk
+ * filters; everything else keeps one filter per entry. Per-filter markRead
+ * cannot survive a merge, so consolidate rejects it.
+ */
+function planEntriesFor(category) {
+  if (!category.consolidate) return category.filters;
+  const overridden = category.filters.find(f => f.markRead !== undefined);
+  if (overridden) {
+    throw new Error(
+      `${category.labelName}: per-filter markRead ("${overridden.name}") is incompatible with consolidate`
+    );
+  }
+  const chunks = chunkQueries(category.filters.map(f => f.query), MAX_CONSOLIDATED_QUERY_LENGTH);
+  return chunks.map((query, i) => ({ name: `chunk ${i + 1}/${chunks.length}`, query }));
+}
+
 async function run() {
   const onlyPrefix = argAfter('--only');
+  const dryRun = hasFlag('--dry-run');
+  const prune = hasFlag('--prune');
   const gmail = createGmailClient();
 
-  console.log('CREATING CATEGORY FILTERS\n');
+  console.log(`CREATING CATEGORY FILTERS${dryRun ? ' (DRY RUN)' : ''}\n`);
   console.log(BANNER + '\n');
 
+  // One live snapshot for diffing. Creations during the run aren't re-listed,
+  // which is fine — only what the snapshot lacked gets created.
+  const [{ data: filterData }, { data: labelData }] = await Promise.all([
+    withRetry(() => gmail.users.settings.filters.list({ userId: USER_ID })),
+    withRetry(() => gmail.users.labels.list({ userId: USER_ID })),
+  ]);
+  const liveFilters = filterData.filter ?? [];
+  const labelNameById = new Map(labelData.labels.map(l => [l.id, l.name]));
+  const labelIdByName = new Map(labelData.labels.map(l => [l.name, l.id]));
+
+  // Existing labels resolve from the snapshot; missing ones are only created
+  // outside --dry-run (a dry run must not mutate anything, labels included)
+  const resolveLabelId = async name => {
+    const existing = labelIdByName.get(name);
+    if (existing) return existing;
+    if (dryRun) {
+      console.log(`  + would create label ${name}`);
+      return null;
+    }
+    return ensureLabelExists(gmail, name);
+  };
+
   let totalFilters = 0;
+  let totalDeleted = 0;
   let totalEmails = 0;
 
   for (const category of CATEGORIES) {
@@ -1182,7 +1264,7 @@ async function run() {
     console.log(`\n${displayName.toUpperCase()}`);
 
     const labelId = category.labelName
-      ? await ensureLabelExists(gmail, category.labelName).catch(err => {
+      ? await resolveLabelId(category.labelName).catch(err => {
           console.warn(`  Warning: ${err.message}`);
           return null;
         })
@@ -1192,56 +1274,113 @@ async function run() {
 
     const extraLabelIds = [];
     for (const extra of category.extraLabels ?? []) {
-      extraLabelIds.push(await ensureLabelExists(gmail, extra));
+      const extraId = await resolveLabelId(extra);
+      if (extraId) extraLabelIds.push(extraId);
     }
     const addIds = [...(labelId ? [labelId] : []), ...extraLabelIds];
 
-    const filterQueries = [];
-    const removeIds = [
+    const removalIdsFor = (markRead) => [
       ...(category.archive ? [GMAIL_INBOX] : []),
-      ...(category.markRead ? [GMAIL_UNREAD] : []),
+      ...(markRead ? [GMAIL_UNREAD] : []),
     ];
+    const planEntries = planEntriesFor(category);
+    // Backfill runs once per distinct markRead value, so per-filter overrides
+    // get their own searchAndModify pass with the matching removals
+    const queriesByMarkRead = new Map();
+    const desired = [];
 
-    for (const filter of category.filters) {
+    for (const entry of planEntries) {
+      const markRead = Boolean(entry.markRead ?? category.markRead);
+      const removeIds = removalIdsFor(markRead);
       // Gmail rejects a filter action carrying more than one user label
       // ("Too many user labels in filter"), so each extra label needs its own
       // filter on the same query. messages.modify has no such limit, so the
       // backfill below still applies every label in a single pass.
-      let created = false;
       if (addIds.length === 0 && removeIds.length) {
         // Label-less category: archive/mark-read only
-        if (await createGmailFilter(gmail, { query: filter.query }, { removeLabelIds: removeIds })) created = true;
+        desired.push({
+          entryName: entry.name,
+          criteria: { query: entry.query },
+          action: { removeLabelIds: removeIds },
+        });
       }
       for (const [index, addId] of addIds.entries()) {
-        const action = {
-          addLabelIds: [addId],
-          // Only the first filter needs to move the message out of INBOX/UNREAD
-          ...(index === 0 && removeIds.length ? { removeLabelIds: removeIds } : {}),
-        };
-        if (await createGmailFilter(gmail, { query: filter.query }, action)) created = true;
+        desired.push({
+          entryName: entry.name,
+          criteria: { query: entry.query },
+          action: {
+            addLabelIds: [addId],
+            // Only the first filter needs to move the message out of INBOX/UNREAD
+            ...(index === 0 && removeIds.length ? { removeLabelIds: removeIds } : {}),
+          },
+        });
       }
-      console.log(`  ${created ? '✓' : '~'} ${filter.name}`);
-      if (created) totalFilters++;
-      filterQueries.push(`(${filter.query})`);
+      const group = queriesByMarkRead.get(markRead) ?? [];
+      group.push(`(${entry.query})`);
+      queriesByMarkRead.set(markRead, group);
     }
+
+    const { missing, stale, foreign } = diffFilters({ desired, liveAll: liveFilters, ownLabelId: labelId });
+
+    // Stale deletions run BEFORE creations: at Gmail's 1,000-filter cap there is
+    // no free slot until old filters go. Mail arriving in the gap lands unlabeled
+    // in the inbox; the backfill below sweeps it up.
+    for (const filter of stale) {
+      const summary = describeFilter(filter, labelNameById);
+      if (!prune) {
+        console.log(`  ! stale (rerun with --prune to delete): ${summary}`);
+      } else if (dryRun) {
+        console.log(`  - would delete stale: ${summary}`);
+      } else {
+        await deleteGmailFilter(gmail, filter.id);
+        console.log(`  - deleted stale: ${summary}`);
+        totalDeleted++;
+      }
+    }
+    for (const filter of foreign) {
+      console.log(`  ! unmatched filter also adds other labels — left alone: ${describeFilter(filter, labelNameById)}`);
+    }
+
+    for (const entry of planEntries) {
+      const toCreate = missing.filter(m => m.entryName === entry.name);
+      if (toCreate.length === 0) {
+        console.log(`  ~ ${entry.name}`);
+        continue;
+      }
+      if (dryRun) {
+        console.log(`  + would create ${entry.name}: ${entry.query}`);
+        continue;
+      }
+      let created = false;
+      for (const d of toCreate) {
+        if (await createGmailFilter(gmail, d.criteria, d.action)) created = true;
+      }
+      console.log(`  ${created ? '✓' : '~'} ${entry.name}`);
+      if (created) totalFilters++;
+    }
+
+    if (dryRun) continue;
 
     const labelClause = category.labelName && !category.archive ? ` -label:"${category.labelName}"` : '';
     const readClause = category.includeRead ? '' : ' is:unread';
-    const combinedQuery = `(${filterQueries.join(' OR ')})${readClause}${labelClause}`;
-    const modifications = {
-      ...(addIds.length ? { addLabelIds: addIds } : {}),
-      ...(removeIds.length ? { removeLabelIds: removeIds } : {}),
-    };
+    for (const [markRead, queries] of queriesByMarkRead) {
+      const removeIds = removalIdsFor(markRead);
+      const combinedQuery = `(${queries.join(' OR ')})${readClause}${labelClause}`;
+      const modifications = {
+        ...(addIds.length ? { addLabelIds: addIds } : {}),
+        ...(removeIds.length ? { removeLabelIds: removeIds } : {}),
+      };
 
-    const count = await searchAndModify(gmail, combinedQuery, modifications, category.maxResults);
-    if (count > 0) {
-      console.log(`  → ${count} existing emails processed`);
-      totalEmails += count;
+      const count = await searchAndModify(gmail, combinedQuery, modifications, category.maxResults);
+      if (count > 0) {
+        console.log(`  → ${count} existing emails processed`);
+        totalEmails += count;
+      }
     }
   }
 
   console.log('\n' + BANNER);
-  console.log(`Filters created: ${totalFilters} | Emails processed: ${totalEmails}`);
+  console.log(`Filters created: ${totalFilters} | Filters deleted: ${totalDeleted} | Emails processed: ${totalEmails}`);
   console.log(BANNER + '\n');
 }
 

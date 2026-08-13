@@ -1199,7 +1199,7 @@ const MAX_CONSOLIDATED_QUERY_LENGTH = 500;
 function describeFilter(filter, labelNameById) {
   const criteria = filter.criteria?.query ?? JSON.stringify(filter.criteria);
   const adds = (filter.action?.addLabelIds ?? []).map(id => labelNameById.get(id) ?? id);
-  const removes = filter.action?.removeLabelIds ?? [];
+  const removes = (filter.action?.removeLabelIds ?? []).map(id => labelNameById.get(id) ?? id);
   const parts = [];
   if (adds.length) parts.push(`+[${adds.join(', ')}]`);
   if (removes.length) parts.push(`-[${removes.join(', ')}]`);
@@ -1257,6 +1257,7 @@ async function run() {
   let totalFilters = 0;
   let totalDeleted = 0;
   let totalEmails = 0;
+  const failedBackfills = [];
 
   for (const category of CATEGORIES) {
     if (onlyPrefix && !(category.labelName ?? '').startsWith(onlyPrefix)) continue;
@@ -1371,16 +1372,26 @@ async function run() {
         ...(removeIds.length ? { removeLabelIds: removeIds } : {}),
       };
 
-      const count = await searchAndModify(gmail, combinedQuery, modifications, category.maxResults);
-      if (count > 0) {
-        console.log(`  → ${count} existing emails processed`);
-        totalEmails += count;
+      try {
+        const count = await searchAndModify(gmail, combinedQuery, modifications, category.maxResults);
+        if (count > 0) {
+          console.log(`  → ${count} existing emails processed`);
+          totalEmails += count;
+        }
+      } catch (error) {
+        console.error(`  ✗ Backfill failed: ${error.message}`);
+        failedBackfills.push(displayName);
       }
     }
   }
 
   console.log('\n' + BANNER);
   console.log(`Filters created: ${totalFilters} | Filters deleted: ${totalDeleted} | Emails processed: ${totalEmails}`);
+  if (failedBackfills.length > 0) {
+    console.error(`Backfill FAILED for ${failedBackfills.length} categor${failedBackfills.length === 1 ? 'y' : 'ies'}: ${failedBackfills.join(', ')}`);
+    console.error('Filters above may be created but existing mail in these categories was not relabeled — rerun to retry.');
+    process.exitCode = 1;
+  }
   console.log(BANNER + '\n');
 }
 

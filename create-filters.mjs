@@ -1257,7 +1257,7 @@ async function run() {
   let totalFilters = 0;
   let totalDeleted = 0;
   let totalEmails = 0;
-  const failedBackfills = [];
+  const failedBackfills = new Set();
 
   for (const category of CATEGORIES) {
     if (onlyPrefix && !(category.labelName ?? '').startsWith(onlyPrefix)) continue;
@@ -1380,15 +1380,15 @@ async function run() {
         }
       } catch (error) {
         console.error(`  ✗ Backfill failed: ${error.message}`);
-        failedBackfills.push(displayName);
+        failedBackfills.add(displayName);
       }
     }
   }
 
   console.log('\n' + BANNER);
   console.log(`Filters created: ${totalFilters} | Filters deleted: ${totalDeleted} | Emails processed: ${totalEmails}`);
-  if (failedBackfills.length > 0) {
-    console.error(`Backfill FAILED for ${failedBackfills.length} categor${failedBackfills.length === 1 ? 'y' : 'ies'}: ${failedBackfills.join(', ')}`);
+  if (failedBackfills.size > 0) {
+    console.error(`Backfill FAILED for ${failedBackfills.size} categor${failedBackfills.size === 1 ? 'y' : 'ies'}: ${[...failedBackfills].join(', ')}`);
     console.error('Filters above may be created but existing mail in these categories was not relabeled — rerun to retry.');
     process.exitCode = 1;
   }

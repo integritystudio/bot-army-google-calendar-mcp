@@ -107,7 +107,7 @@ import {
  *   archive       — remove from INBOX when applying (default true)
  *   markRead      — also strip UNREAD when applying (default false)
  *   includeRead   — backfill read mail too (default: unread only)
- *   maxResults    — cap the backfill page (default: searchAndModify's own 500)
+ *   maxResults    — cap the backfill sweep (default: page to exhaustion)
  *   consolidate   — merge the per-sender entries into OR-joined chunk filters
  *                   (Gmail caps accounts at 1,000 filters). Entries stay one per
  *                   sender in this config; only the live filters merge. APPEND new

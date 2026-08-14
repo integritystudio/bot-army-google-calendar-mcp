@@ -15,6 +15,7 @@ import {
   createGmailFilter,
   deleteGmailFilter,
   diffFilters,
+  filterKey,
   chunkQueries,
 } from './lib/gmail-filter-utils.mjs';
 import { searchAndModify } from './lib/gmail-batch-utils.mjs';
@@ -1317,6 +1318,78 @@ function planEntriesFor(category) {
   return chunks.map((query, i) => ({ name: `chunk ${i + 1}/${chunks.length}`, query }));
 }
 
+function removalIdsFor(category, markRead) {
+  return [
+    ...(category.archive ? [GMAIL_INBOX] : []),
+    ...(markRead ? [GMAIL_UNREAD] : []),
+  ];
+}
+
+/**
+ * The filters one plan entry wants live, with resolved label IDs.
+ *
+ * Gmail rejects a filter action carrying more than one user label ("Too many
+ * user labels in filter"), so each extra label needs its own filter on the
+ * same query. messages.modify has no such limit, so the backfill still applies
+ * every label in a single pass.
+ */
+function desiredFiltersForEntry(entry, category, addIds) {
+  const markRead = Boolean(entry.markRead ?? category.markRead);
+  const removeIds = removalIdsFor(category, markRead);
+  const desired = [];
+  if (addIds.length === 0 && removeIds.length) {
+    // Label-less category: archive/mark-read only
+    desired.push({
+      entryName: entry.name,
+      criteria: { query: entry.query },
+      action: { removeLabelIds: removeIds },
+    });
+  }
+  for (const [index, addId] of addIds.entries()) {
+    desired.push({
+      entryName: entry.name,
+      criteria: { query: entry.query },
+      action: {
+        addLabelIds: [addId],
+        // Only the first filter needs to move the message out of INBOX/UNREAD
+        ...(index === 0 && removeIds.length ? { removeLabelIds: removeIds } : {}),
+      },
+    });
+  }
+  return desired;
+}
+
+/**
+ * filterKey set for every filter the whole config wants, resolved against the
+ * label snapshot only (no label creation — a label that doesn't exist yet
+ * cannot have live filters, so skipping it changes nothing). Staleness is
+ * judged against this set rather than one category's: categories may share a
+ * label (Events has keep-in-inbox and archive-on-arrival blocks), and a
+ * category-scoped expectation set reads the sibling block's correct filters
+ * as stale, which --prune would then delete.
+ */
+function allDesiredFilterKeys(labelIdByName) {
+  const keys = new Set();
+  for (const category of CATEGORIES) {
+    const addIds = [];
+    if (category.labelName) {
+      const id = labelIdByName.get(category.labelName);
+      if (!id) continue;
+      addIds.push(id);
+    }
+    for (const extra of category.extraLabels ?? []) {
+      const id = labelIdByName.get(extra);
+      if (id) addIds.push(id);
+    }
+    for (const entry of planEntriesFor(category)) {
+      for (const d of desiredFiltersForEntry(entry, category, addIds)) {
+        keys.add(filterKey(d.criteria, d.action));
+      }
+    }
+  }
+  return keys;
+}
+
 async function run() {
   const onlyPrefix = argAfter('--only');
   const dryRun = hasFlag('--dry-run');
@@ -1352,6 +1425,10 @@ async function run() {
   let totalDeleted = 0;
   let totalEmails = 0;
   const failedBackfills = new Set();
+  const allDesiredKeys = allDesiredFilterKeys(labelIdByName);
+  // Two categories sharing a label both list the same stale filter; the first
+  // deletion succeeds, the second 404s and aborted the run before this guard.
+  const deletedFilterIds = new Set();
 
   for (const category of CATEGORIES) {
     if (onlyPrefix && !(category.labelName ?? '').startsWith(onlyPrefix)) continue;
@@ -1374,10 +1451,6 @@ async function run() {
     }
     const addIds = [...(labelId ? [labelId] : []), ...extraLabelIds];
 
-    const removalIdsFor = (markRead) => [
-      ...(category.archive ? [GMAIL_INBOX] : []),
-      ...(markRead ? [GMAIL_UNREAD] : []),
-    ];
     const planEntries = planEntriesFor(category);
     // Backfill runs once per distinct markRead value, so per-filter overrides
     // get their own searchAndModify pass with the matching removals
@@ -1385,42 +1458,25 @@ async function run() {
     const desired = [];
 
     for (const entry of planEntries) {
+      desired.push(...desiredFiltersForEntry(entry, category, addIds));
       const markRead = Boolean(entry.markRead ?? category.markRead);
-      const removeIds = removalIdsFor(markRead);
-      // Gmail rejects a filter action carrying more than one user label
-      // ("Too many user labels in filter"), so each extra label needs its own
-      // filter on the same query. messages.modify has no such limit, so the
-      // backfill below still applies every label in a single pass.
-      if (addIds.length === 0 && removeIds.length) {
-        // Label-less category: archive/mark-read only
-        desired.push({
-          entryName: entry.name,
-          criteria: { query: entry.query },
-          action: { removeLabelIds: removeIds },
-        });
-      }
-      for (const [index, addId] of addIds.entries()) {
-        desired.push({
-          entryName: entry.name,
-          criteria: { query: entry.query },
-          action: {
-            addLabelIds: [addId],
-            // Only the first filter needs to move the message out of INBOX/UNREAD
-            ...(index === 0 && removeIds.length ? { removeLabelIds: removeIds } : {}),
-          },
-        });
-      }
       const group = queriesByMarkRead.get(markRead) ?? [];
       group.push(`(${entry.query})`);
       queriesByMarkRead.set(markRead, group);
     }
 
-    const { missing, stale, foreign } = diffFilters({ desired, liveAll: liveFilters, ownLabelId: labelId });
+    const { missing, stale, foreign } = diffFilters({
+      desired,
+      liveAll: liveFilters,
+      ownLabelId: labelId,
+      allDesiredKeys,
+    });
 
     // Stale deletions run BEFORE creations: at Gmail's 1,000-filter cap there is
     // no free slot until old filters go. Mail arriving in the gap lands unlabeled
     // in the inbox; the backfill below sweeps it up.
     for (const filter of stale) {
+      if (deletedFilterIds.has(filter.id)) continue;
       const summary = describeFilter(filter, labelNameById);
       if (!prune) {
         console.log(`  ! stale (rerun with --prune to delete): ${summary}`);
@@ -1428,6 +1484,7 @@ async function run() {
         console.log(`  - would delete stale: ${summary}`);
       } else {
         await deleteGmailFilter(gmail, filter.id);
+        deletedFilterIds.add(filter.id);
         console.log(`  - deleted stale: ${summary}`);
         totalDeleted++;
       }

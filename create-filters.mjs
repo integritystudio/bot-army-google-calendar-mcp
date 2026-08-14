@@ -169,6 +169,7 @@ export const CATEGORIES = [
   {
     labelName: LABEL_BILLING,
     archive: true,
+    markRead: true,
     filters: [
       // e.usa.experian.com is marketing and routes to Product Updates/Credit Report;
       // bare experian.com already covers s.usa.experian.com as a subdomain

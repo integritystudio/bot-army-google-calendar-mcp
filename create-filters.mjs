@@ -48,6 +48,11 @@ import {
   LABEL_SERVICES_UTILITIES,
   LABEL_NEWSLETTERS,
   LABEL_JOB_SEARCH,
+  LABEL_JOB_SEARCH_LINKEDIN,
+  LABEL_JOB_SEARCH_GLASSDOOR,
+  LABEL_JOB_SEARCH_BACKSTAGE,
+  LABEL_JOB_SEARCH_INDEED,
+  LABEL_JOB_SEARCH_OTHER,
   LABEL_TRAVEL,
   LABEL_ADVOCACY,
   LABEL_ADVOCACY_POLITICAL,
@@ -351,7 +356,8 @@ export const CATEGORIES = [
   },
   {
     labelName: LABEL_JOB_SEARCH,
-    archive: false,
+    archive: true,
+    markRead: true,
     filters: [
       { name: 'Glassdoor Jobs', query: 'from:glassdoor.com' },
       // Excludes the social/newsletter senders routed to Forums/LinkedIn Social and
@@ -369,6 +375,48 @@ export const CATEGORIES = [
       { name: 'A.Team', query: 'from:a.team' },
       { name: 'Recruiter cold-email (Steneral)', query: 'from:steneral.com' },
       { name: 'College Contact', query: 'from:yourcollegecontact.com' },
+    ],
+  },
+  {
+    // Sub-labels existed only as live Gmail filters (no config entry, no markRead/archive)
+    // until 2026-08-13; brought under config so the sync doesn't leave them untracked.
+    labelName: LABEL_JOB_SEARCH_LINKEDIN,
+    archive: true,
+    markRead: true,
+    filters: [
+      { name: 'LinkedIn Job Alerts', query: 'from:(jobalerts-noreply@linkedin.com OR jobs-noreply@linkedin.com)' },
+    ],
+  },
+  {
+    labelName: LABEL_JOB_SEARCH_GLASSDOOR,
+    archive: true,
+    markRead: true,
+    filters: [
+      { name: 'Glassdoor Job Alerts', query: 'from:glassdoor.com subject:("new jobs" OR "apply now" OR hiring OR "job alert")' },
+    ],
+  },
+  {
+    labelName: LABEL_JOB_SEARCH_BACKSTAGE,
+    archive: true,
+    markRead: true,
+    filters: [
+      { name: 'Backstage', query: 'from:backstage.com' },
+    ],
+  },
+  {
+    labelName: LABEL_JOB_SEARCH_INDEED,
+    archive: true,
+    markRead: true,
+    filters: [
+      { name: 'Indeed', query: 'from:(indeed.com OR match.indeed.com)' },
+    ],
+  },
+  {
+    labelName: LABEL_JOB_SEARCH_OTHER,
+    archive: true,
+    markRead: true,
+    filters: [
+      { name: 'Other job boards', query: 'from:(email.virtualvocations.com OR alerts.virtualvocations.com OR postjobfree.com OR idealist.org)' },
     ],
   },
   {

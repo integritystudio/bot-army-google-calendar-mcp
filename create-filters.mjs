@@ -66,6 +66,7 @@ import {
   LABEL_PROMOTIONS_RETAIL,
   LABEL_PROMOTIONS_BEAUTY,
   LABEL_PROMOTIONS,
+  LABEL_COLD_OUTREACH,
   LABEL_PROMOTIONS_FOOD,
   LABEL_PROMOTIONS_HEALTH,
   LABEL_EVENTS_AI_MONTHLY,
@@ -1285,6 +1286,26 @@ export const CATEGORIES = [
       { name: 'Austin Gymnastics Club', query: 'from:austingymnasticsclub.com' },
     ],
   },
+  // Unsolicited vendor pitches and marketing sequences — label, archive, mark read.
+  // Address/subdomain-scoped where the domain is shared with wanted mail:
+  // lukak@/arthur@storylane.io and notifications.hubspot.com belong to Product
+  // Updates, so only the campaign senders route here. Nextdoor Ads is deliberately
+  // absent — from:email.nextdoor.com (Services & Alerts/Home) already matches its
+  // ms.email.nextdoor.com subdomain, and a second label would double-label it.
+  {
+    labelName: LABEL_COLD_OUTREACH,
+    archive: true,
+    markRead: true,
+    includeRead: true,
+    filters: [
+      { name: 'Rankaizone (GEO/SEO pitch)', query: 'from:rankaizone.com' },
+      { name: 'Viduli via aiclawflow', query: 'from:aiclawflow.co' },
+      { name: 'SlideForge via fissureview', query: 'from:fissureview.org' },
+      { name: 'Staalk Growth (lead gen)', query: 'from:staalkgrowth.co' },
+      { name: 'Storylane campaigns', query: 'from:madhav@storylane.io' },
+      { name: 'HubSpot marketing', query: 'from:growbetter.hubspot.com' },
+    ],
+  },
 ];
 
 // Gmail's per-filter query length limit is undocumented; 500 sits well inside
@@ -1516,7 +1537,7 @@ async function run() {
     const labelClause = category.labelName && !category.archive ? ` -label:"${category.labelName}"` : '';
     const readClause = category.includeRead ? '' : ' is:unread';
     for (const [markRead, queries] of queriesByMarkRead) {
-      const removeIds = removalIdsFor(markRead);
+      const removeIds = removalIdsFor(category, markRead);
       const combinedQuery = `(${queries.join(' OR ')})${readClause}${labelClause}`;
       const modifications = {
         ...(addIds.length ? { addLabelIds: addIds } : {}),

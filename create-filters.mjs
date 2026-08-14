@@ -929,6 +929,7 @@ export const CATEGORIES = [
   {
     labelName: LABEL_PROMOTIONS,
     archive: true,
+    markRead: true,
     filters: [
       { name: 'SolutionPeople book & LinkedIn-group promos', query: `${SOLUTIONMAN} ${SOLUTIONMAN_PROMOS}` },
     ],
@@ -949,6 +950,7 @@ export const CATEGORIES = [
     // which carries transactional patient mail that should stay visible
     labelName: LABEL_PROMOTIONS_HEALTH,
     archive: true,
+    markRead: true,
     filters: [
       { name: 'Sanova Dermatology', query: 'from:ccsend.com from:Sanova' },
       { name: 'Sleep Medicine Consultants', query: 'from:ccsend.com from:"Sleep Medicine"' },
@@ -957,6 +959,7 @@ export const CATEGORIES = [
   {
     labelName: LABEL_PROMOTIONS_BEAUTY,
     archive: true,
+    markRead: true,
     filters: [
       { name: 'LaserAway', query: 'from:laseraway.com' },
       { name: 'Saving Face Austin', query: 'from:savingfaceaustin.com' },
@@ -984,6 +987,7 @@ export const CATEGORIES = [
     // transactional mail and are left unrouted.
     labelName: LABEL_PROMOTIONS_ENTERTAINMENT,
     archive: true,
+    markRead: true,
     filters: [
       {
         name: 'Netflix Marketing',
@@ -996,6 +1000,7 @@ export const CATEGORIES = [
     // news@ is excluded — it routes to Newsletters — leaving blog@/learn@/events@ here.
     labelName: LABEL_PROMOTIONS_TECH,
     archive: true,
+    markRead: true,
     filters: [
       { name: 'Zapier Marketing', query: 'from:zapier.com -from:news@send.zapier.com' },
     ],
@@ -1005,11 +1010,10 @@ export const CATEGORIES = [
     // (o.sofi.org, notify.wellsfargo.com, transactional.vanguard.com) and must stay in inbox
     labelName: LABEL_PROMOTIONS_FINANCIAL,
     archive: true,
+    markRead: true,
     filters: [
       { name: 'NerdWallet', query: 'from:mail.nerdwallet.com' },
-      // e. subdomain only: marketing sender; a live-mortgage transactional thread
-      // would come from elsewhere and should not be auto-read
-      { name: 'Rocket Mortgage', query: 'from:e.rocketmortgage.com', markRead: true },
+      { name: 'Rocket Mortgage', query: 'from:e.rocketmortgage.com' },
       { name: 'SoFi Marketing', query: 'from:(m.sofi.org OR r.sofi.com)' },
       { name: 'USAA Offers', query: 'from:(Perks@mem.usaa.com OR exmac.usaa.com)' },
       { name: 'Boston Globe Offers', query: 'from:email.globe.com' },
@@ -1073,6 +1077,7 @@ export const CATEGORIES = [
   {
     labelName: LABEL_PROMOTIONS_FOOD,
     archive: true,
+    markRead: true,
     filters: [
       // Food/pharmacy delivery; .co and .mx send independently, so both are listed
       { name: 'Rappi', query: 'from:(rappi.com.co OR rappi.com.mx)' },

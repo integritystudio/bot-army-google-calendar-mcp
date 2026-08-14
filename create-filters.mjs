@@ -170,7 +170,9 @@ export const CATEGORIES = [
     labelName: LABEL_BILLING,
     archive: true,
     filters: [
-      { name: 'Experian', query: 'from:(e.usa.experian.com OR s.usa.experian.com OR experian.com)' },
+      // e.usa.experian.com is marketing and routes to Product Updates/Credit Report;
+      // bare experian.com already covers s.usa.experian.com as a subdomain
+      { name: 'Experian', query: 'from:experian.com -from:e.usa.experian.com' },
       { name: 'Equifax', query: 'from:(e.equifax.com OR equifax.com)' },
       { name: 'Credit Karma', query: 'from:(notifications.creditkarma.com OR mail.creditkarma.com)' },
       { name: 'Coinbase', query: 'from:mail.coinbase.com' },

@@ -168,20 +168,28 @@ export const CATEGORIES = [
       { name: 'Equifax', query: 'from:(e.equifax.com OR equifax.com)' },
       { name: 'Credit Karma', query: 'from:(notifications.creditkarma.com OR mail.creditkarma.com)' },
       { name: 'Coinbase', query: 'from:mail.coinbase.com' },
-      { name: 'Kraken', query: 'from:email.kraken.com' },
-      { name: 'Chase', query: 'from:(chase.com OR mcmap.chase.com)' },
-      { name: 'Ally', query: 'from:(email.ally.com OR email.ally-invest.com)' },
-      { name: 'Robinhood', query: 'from:robinhood.com' },
+      // mcmap.chase.com is Chase's marketing subdomain (preapproval/product-pitch mail);
+      // excluded here rather than routed by a second combined entry so a chase.com
+      // sender never needs listing twice — see the Netflix entry for the same idiom
+      { name: 'Chase', query: 'from:chase.com -from:mcmap.chase.com' },
       { name: 'Charles Schwab', query: 'from:(email.schwab.com OR mail.schwab.com)' },
-      { name: 'PayPal', query: 'from:news.paypal.com' },
-      { name: 'American Express', query: 'from:(member.americanexpress.com OR welcome.americanexpress.com)' },
-      { name: 'Wells Fargo', query: 'from:(notify.wellsfargo.com OR customerfeedback.wellsfargo.com OR mail2.wellsfargorewards.com OR mail.accountoffers.wellsfargo.com)' },
+      // member.americanexpress.com only: welcome.americanexpress.com (onboarding/card-arrived)
+      // is marketing and routes to Promotions/Financial
+      { name: 'American Express', query: 'from:member.americanexpress.com' },
+      // notify.wellsfargo.com and customerfeedback.wellsfargo.com send both transactional
+      // and marketing mail from the same address and can't be split by domain — subject-pin
+      // if that becomes worth doing (see Wells Fargo Statements below). mail2.wellsfargorewards.com
+      // and mail.accountoffers.wellsfargo.com are marketing-only and route to Promotions/Financial.
+      { name: 'Wells Fargo', query: 'from:(notify.wellsfargo.com OR customerfeedback.wellsfargo.com)' },
       { name: 'USAA', query: 'from:(omem.usaa.com OR mem.usaa.com OR mailcenter.usaa.com OR protect.usaa.com)' },
-      { name: 'Vanguard', query: 'from:(transactional.vanguard.com OR vanguard.com)' },
+      // transactional.vanguard.com only: bare vanguard.com (VBS@vanguard.com options-account
+      // pitches etc.) is marketing and routes to Promotions/Financial
+      { name: 'Vanguard', query: 'from:transactional.vanguard.com' },
       { name: 'Ally Alerts', query: 'from:(alert.ally.com OR alerts.ally.com)' },
       { name: 'PayPal Service', query: 'from:(service.paypal.com OR communications.paypal.com OR service@paypal.com)' },
-      { name: 'Wise', query: 'from:(wise.com OR info.wise.com)' },
-      { name: 'Amex Credit & Feedback', query: 'from:(notificationmycredit-guide.americanexpress.com OR feedbackemail.americanexpress.com OR email.americanexpress.com)' },
+      // notificationmycredit-guide/feedbackemail only: email.americanexpress.com's offer
+      // mail is marketing and routes to Promotions/Financial
+      { name: 'Amex Credit & Feedback', query: 'from:(notificationmycredit-guide.americanexpress.com OR feedbackemail.americanexpress.com)' },
       { name: 'Credit Karma Reminders', query: 'from:(reminder.creditkarma.com OR savings.creditkarma.com)' },
       { name: 'SoFi', query: 'from:o.sofi.org' },
       { name: 'E-Trade', query: 'from:etrade.com' },
@@ -1006,7 +1014,21 @@ export const CATEGORIES = [
       { name: 'USAA Offers', query: 'from:(Perks@mem.usaa.com OR exmac.usaa.com)' },
       { name: 'Boston Globe Offers', query: 'from:email.globe.com' },
       { name: 'Wells Fargo Offers', query: 'from:mail1.wellsfargo.com' },
+      // Rewards summaries and account offers — split out of Billing's Wells Fargo entry
+      { name: 'Wells Fargo Rewards & Offers', query: 'from:(mail2.wellsfargorewards.com OR mail.accountoffers.wellsfargo.com)' },
       { name: 'Vanguard Digital Advisor', query: 'from:e-vanguard.com' },
+      // Everything on vanguard.com except the transactional subdomain, which stays in
+      // Billing — same exclusion idiom as the Netflix/Chase entries
+      { name: 'Vanguard Marketing', query: 'from:vanguard.com -from:transactional.vanguard.com' },
+      { name: 'Chase Marketing', query: 'from:mcmap.chase.com' },
+      { name: 'Kraken', query: 'from:email.kraken.com' },
+      { name: 'Robinhood', query: 'from:robinhood.com' },
+      { name: 'Ally', query: 'from:(email.ally.com OR email.ally-invest.com)' },
+      { name: 'PayPal Marketing', query: 'from:news.paypal.com' },
+      { name: 'Wise', query: 'from:(wise.com OR info.wise.com)' },
+      // welcome.americanexpress.com (onboarding) and email.americanexpress.com (offers) —
+      // split out of Billing's American Express and Amex Credit & Feedback entries
+      { name: 'Amex Marketing', query: 'from:(welcome.americanexpress.com OR email.americanexpress.com)' },
       { name: 'CNN Subscriptions', query: 'from:email.cnn.com' },
       { name: 'Lemonade', query: 'from:lemonade.com' },
       { name: 'Better Cover', query: 'from:better.com' },

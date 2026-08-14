@@ -39,6 +39,7 @@ import {
   LABEL_PRODUCT_UPDATES,
   LABEL_PRODUCT_UPDATES_DEV_TOOLS,
   LABEL_PRODUCT_UPDATES_DATA,
+  LABEL_PRODUCT_UPDATES_CREDIT_REPORT,
   LABEL_EVENTS,
   LABEL_EVENTS_LUMA,
   LABEL_EVENTS_CALENDAR_NOTIFICATIONS,
@@ -212,6 +213,7 @@ export const CATEGORIES = [
     // dev tool proper, but it is used the same way and does not warrant a label of its own.
     labelName: LABEL_PRODUCT_UPDATES_DEV_TOOLS,
     archive: true,
+    markRead: true,
     filters: [
       { name: 'Vercel', query: 'from:vercel.com' },
       { name: 'GitKraken', query: 'from:gitkraken.com' },
@@ -225,6 +227,7 @@ export const CATEGORIES = [
   {
     labelName: LABEL_PRODUCT_UPDATES_DATA,
     archive: true,
+    markRead: true,
     filters: [
       { name: 'Databricks', query: 'from:mkt.databricks.com' },
       { name: 'Mixpanel', query: 'from:(support@mixpanel.com OR content@mixpanel.com)' },
@@ -235,6 +238,7 @@ export const CATEGORIES = [
   {
     labelName: LABEL_PRODUCT_UPDATES,
     archive: true,
+    markRead: true,
     filters: [
       { name: 'AI product announcements', query: 'from:(noreply@email.openai.com OR no-reply@email.claude.com OR googlecloud@google.com OR lukak@storylane.io)' },
       { name: 'Google Workspace', query: 'from:workspace-noreply@google.com' },
@@ -275,6 +279,17 @@ export const CATEGORIES = [
       { name: 'Apple', query: 'from:email.apple.com' },
       { name: 'WordPress.com', query: 'from:wordpress.com' },
       { name: 'Google Photos', query: 'from:noreply-photos@google.com' },
+    ],
+  },
+  {
+    // TurboTax and Experian existed as separate labels/live filters (Experian's already
+    // marked read; TurboTax was untracked) until 2026-08-13, when they merged into one.
+    labelName: LABEL_PRODUCT_UPDATES_CREDIT_REPORT,
+    archive: true,
+    markRead: true,
+    filters: [
+      { name: 'TurboTax', query: 'from:em1.turbotax.intuit.com' },
+      { name: 'Experian', query: 'from:e.usa.experian.com' },
     ],
   },
   {

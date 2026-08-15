@@ -9,9 +9,9 @@
  *   node mark-old-label-read.mjs --label "Newsletters"                     # default cutoff: one month back
  *   node mark-old-label-read.mjs --label "Job Search" --before 2026/06/01  # explicit cutoff (Gmail date format)
  */
+import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { modifyMessages } from './modify-messages.mjs';
-import { argAfter } from './lib/cli-utils.mjs';
 import { GMAIL_UNREAD } from './lib/constants.mjs';
 
 const DEFAULT_CUTOFF_DAYS = 30;
@@ -22,10 +22,26 @@ const defaultBefore = () => {
   return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const labelName = argAfter('--label');
-const before = argAfter('--before') || defaultBefore();
+const USAGE = 'Usage: node mark-old-label-read.mjs --label "<name>" [--before YYYY/MM/DD]';
+
+let values;
+try {
+  ({ values } = parseArgs({
+    options: {
+      label: { type: 'string' },
+      before: { type: 'string' },
+    },
+  }));
+} catch (error) {
+  console.error(error.message);
+  console.error(USAGE);
+  process.exit(1);
+}
+
+const labelName = values.label;
+const before = values.before || defaultBefore();
 if (!labelName) {
-  console.error('Usage: node mark-old-label-read.mjs --label "<name>" [--before YYYY/MM/DD]');
+  console.error(USAGE);
   process.exit(1);
 }
 

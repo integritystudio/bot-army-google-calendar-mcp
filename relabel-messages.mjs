@@ -8,19 +8,33 @@
  *   node relabel-messages.mjs --query "label:Legal before:2021/01/01" \
  *     --add "Services & Alerts/Health" --remove "Legal"
  */
+import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { DEFAULT_MAX_RESULTS } from './lib/constants.mjs';
 import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { BANNER } from './lib/console-utils.mjs';
-import { argAfter } from './lib/cli-utils.mjs';
 
-const query = argAfter('--query');
-const addName = argAfter('--add');
-const removeName = argAfter('--remove');
+const USAGE = 'Usage: node relabel-messages.mjs --query "<gmail-query>" [--add "<label>"] [--remove "<label>"]';
+
+let values;
+try {
+  ({ values } = parseArgs({ options: {
+    query: { type: 'string' },
+    add: { type: 'string' },
+    remove: { type: 'string' },
+  } }));
+} catch (error) {
+  console.error(error.message);
+  console.error(USAGE);
+  process.exit(1);
+}
+const query = values.query;
+const addName = values.add;
+const removeName = values.remove;
 
 if (!query || (!addName && !removeName)) {
-  console.error('Usage: node relabel-messages.mjs --query "<gmail-query>" [--add "<label>"] [--remove "<label>"]');
+  console.error(USAGE);
   process.exit(1);
 }
 

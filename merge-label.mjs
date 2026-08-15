@@ -15,13 +15,13 @@
  * Usage:
  *   node merge-label.mjs --from "A" --into "B" [--delete-source] [--dry-run]
  */
+import { parseArgs } from 'node:util';
 import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { withRetry } from './lib/gmail-retry.mjs';
 import { messagePages, countMessagesMatching } from './lib/gmail-message-utils.mjs';
 import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
-import { argAfter } from './lib/cli-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 
 async function labelMessageCount(gmail, labelId) {
@@ -93,13 +93,28 @@ export async function mergeLabel(gmail, fromName, intoName, { dryRun = false, de
   return { merged, before, after };
 }
 
+const USAGE = 'Usage: node merge-label.mjs --from "<name>" --into "<name>" [--delete-source] [--dry-run]';
+
 async function main() {
-  const fromName = argAfter('--from');
-  const intoName = argAfter('--into');
-  const dryRun = process.argv.includes('--dry-run');
-  const deleteSource = process.argv.includes('--delete-source');
+  let values;
+  try {
+    ({ values } = parseArgs({ options: {
+      from: { type: 'string' },
+      into: { type: 'string' },
+      'dry-run': { type: 'boolean', default: false },
+      'delete-source': { type: 'boolean', default: false },
+    } }));
+  } catch (error) {
+    console.error(error.message);
+    console.error(USAGE);
+    process.exit(1);
+  }
+  const fromName = values.from;
+  const intoName = values.into;
+  const dryRun = values['dry-run'];
+  const deleteSource = values['delete-source'];
   if (!fromName || !intoName) {
-    console.error('Usage: node merge-label.mjs --from "<name>" --into "<name>" [--delete-source] [--dry-run]');
+    console.error(USAGE);
     process.exit(1);
   }
   const gmail = createGmailClient();

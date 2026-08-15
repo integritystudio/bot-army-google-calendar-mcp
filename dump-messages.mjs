@@ -6,21 +6,33 @@
  *   node dump-messages.mjs "is:unread has:nouserlabels in:inbox"
  *   node dump-messages.mjs --max 100 "label:Newsletters newer_than:7d"
  */
+import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { countMessagesMatching, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 
 const DEFAULT_MAX_DUMP = 500;
+const USAGE = 'Usage: node dump-messages.mjs [--max N] "<gmail-query>"';
 
-const argAfter = flag => {
-  const i = process.argv.indexOf(flag);
-  return i !== -1 ? process.argv[i + 1] : null;
-};
+let values;
+let positionals;
+try {
+  ({ values, positionals } = parseArgs({
+    options: {
+      max: { type: 'string' },
+    },
+    allowPositionals: true,
+  }));
+} catch (error) {
+  console.error(error.message);
+  console.error(USAGE);
+  process.exit(1);
+}
 
-const maxDump = Number(argAfter('--max')) || DEFAULT_MAX_DUMP;
-const query = process.argv.slice(2).filter((a, i, args) => a !== '--max' && args[i - 1] !== '--max').join(' ').trim();
+const maxDump = Number(values.max) || DEFAULT_MAX_DUMP;
+const query = positionals.join(' ').trim();
 
 if (!query) {
-  console.error('Usage: node dump-messages.mjs [--max N] "<gmail-query>"');
+  console.error(USAGE);
   process.exit(1);
 }
 

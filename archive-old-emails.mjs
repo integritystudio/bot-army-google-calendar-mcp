@@ -8,20 +8,36 @@
  *   node archive-old-emails.mjs --label "Meeting Responses"
  *   node archive-old-emails.mjs --query "from:laseraway.co"
  */
+import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { GMAIL_INBOX, GMAIL_UNREAD, DEFAULT_MAX_RESULTS, MS_PER_DAY } from './lib/constants.mjs';
 import { searchAndModifyOlderThan } from './lib/gmail-batch-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { BANNER } from './lib/console-utils.mjs';
-import { argAfter } from './lib/cli-utils.mjs';
 
 const DAYS_AGO = 7;
 
-const labelName = argAfter('--label');
-const rawQuery = argAfter('--query');
+const USAGE = 'Usage: node archive-old-emails.mjs (--label "<label name>" | --query "<gmail-query>")';
+
+let values;
+try {
+  ({ values } = parseArgs({
+    options: {
+      label: { type: 'string' },
+      query: { type: 'string' },
+    },
+  }));
+} catch (error) {
+  console.error(error.message);
+  console.error(USAGE);
+  process.exit(1);
+}
+
+const labelName = values.label;
+const rawQuery = values.query;
 
 if (!labelName && !rawQuery) {
-  console.error('Usage: node archive-old-emails.mjs (--label "<label name>" | --query "<gmail-query>")');
+  console.error(USAGE);
   process.exit(1);
 }
 

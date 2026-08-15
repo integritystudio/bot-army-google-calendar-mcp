@@ -9,6 +9,7 @@
  *   node create-filters.mjs --prune               # also delete stale filters (see diffFilters)
  */
 import { pathToFileURL } from 'node:url';
+import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import {
   ensureLabelExists,
@@ -21,7 +22,6 @@ import {
 import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 import { withRetry } from './lib/gmail-retry.mjs';
 import { BANNER } from './lib/console-utils.mjs';
-import { argAfter, hasFlag } from './lib/cli-utils.mjs';
 import {
   GMAIL_INBOX,
   GMAIL_UNREAD,
@@ -1411,10 +1411,26 @@ function allDesiredFilterKeys(labelIdByName) {
   return keys;
 }
 
+const USAGE = 'Usage: node create-filters.mjs [--only <label-prefix>] [--dry-run] [--prune]';
+
 async function run() {
-  const onlyPrefix = argAfter('--only');
-  const dryRun = hasFlag('--dry-run');
-  const prune = hasFlag('--prune');
+  let values;
+  try {
+    ({ values } = parseArgs({
+      options: {
+        only: { type: 'string' },
+        'dry-run': { type: 'boolean', default: false },
+        prune: { type: 'boolean', default: false },
+      },
+    }));
+  } catch (error) {
+    console.error(error.message);
+    console.error(USAGE);
+    process.exit(1);
+  }
+  const onlyPrefix = values.only ?? null;
+  const dryRun = values['dry-run'];
+  const prune = values.prune;
   const gmail = createGmailClient();
 
   console.log(`CREATING CATEGORY FILTERS${dryRun ? ' (DRY RUN)' : ''}\n`);

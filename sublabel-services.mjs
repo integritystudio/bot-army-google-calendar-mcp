@@ -10,6 +10,7 @@
  *   node sublabel-services.mjs --all       # retro-label all parent-labeled mail, not just unread
  */
 import { pathToFileURL } from 'node:url';
+import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
@@ -40,8 +41,22 @@ const SUBLABEL_DOMAINS = [
   },
 ];
 
+const USAGE = 'Usage: node sublabel-services.mjs [--all]';
+
 async function run() {
-  const includeRead = process.argv.includes('--all');
+  let values;
+  try {
+    ({ values } = parseArgs({
+      options: {
+        all: { type: 'boolean', default: false },
+      },
+    }));
+  } catch (error) {
+    console.error(error.message);
+    console.error(USAGE);
+    process.exit(1);
+  }
+  const includeRead = values.all;
   const gmail = await createGmailClient();
   const labelMap = await buildLabelCache(gmail);
   const parentId = labelMap.get(LABEL_SERVICES);

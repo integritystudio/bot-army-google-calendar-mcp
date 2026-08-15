@@ -13,14 +13,29 @@
  *   node mark-spam.mjs "from:someone@example.com subject:Hello"        # preview
  *   node mark-spam.mjs "from:someone@example.com subject:Hello" --yes  # apply
  */
+import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { modifyMessages } from './modify-messages.mjs';
 import { GMAIL_SPAM, GMAIL_INBOX, GMAIL_UNREAD } from './lib/constants.mjs';
 
-const apply = process.argv.includes('--yes');
-const query = process.argv.slice(2).filter(arg => !arg.startsWith('--')).join(' ');
+const USAGE = 'Usage: node mark-spam.mjs "<gmail-query>" [--yes]';
+
+let values;
+let positionals;
+try {
+  ({ values, positionals } = parseArgs({
+    options: { yes: { type: 'boolean', default: false } },
+    allowPositionals: true,
+  }));
+} catch (error) {
+  console.error(error.message);
+  console.error(USAGE);
+  process.exit(1);
+}
+const apply = values.yes;
+const query = positionals.join(' ');
 if (!query) {
-  console.error('Usage: node mark-spam.mjs "<gmail-query>" [--yes]');
+  console.error(USAGE);
   process.exit(1);
 }
 

@@ -5,11 +5,11 @@
  * Usage:
  *   node audit-org-tag-coverage.mjs [--max N] [--query "<gmail-query>"]
  */
+import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { getHeader } from './lib/email-utils.mjs';
 import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import { mapWithConcurrency } from './lib/gmail-message-utils.mjs';
-import { argAfter } from './lib/cli-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 import { ORG_TAGS } from './create-org-tags.mjs';
 import { displayNameOf, shareLeadingToken } from './audit-sender-signals.mjs';
@@ -44,8 +44,21 @@ const isCovered = (domain, covered) => {
 };
 
 async function main() {
-  const max = Number(argAfter('--max') ?? DEFAULT_MAX);
-  const query = argAfter('--query') ?? 'is:unread';
+  let values;
+  try {
+    ({ values } = parseArgs({
+      options: {
+        max: { type: 'string' },
+        query: { type: 'string' },
+      },
+    }));
+  } catch (error) {
+    console.error(error.message);
+    console.error('Usage: node audit-org-tag-coverage.mjs [--max N] [--query "<gmail-query>"]');
+    process.exit(1);
+  }
+  const max = Number(values.max ?? DEFAULT_MAX);
+  const query = values.query ?? 'is:unread';
   const gmail = await createGmailClient();
 
   const { byName: labelCache, byId: idToName } = await buildLabelIndex(gmail);

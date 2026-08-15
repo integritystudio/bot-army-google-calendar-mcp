@@ -16,6 +16,7 @@
  *   --full    Print the full extracted body text instead of keyword windows
  */
 import { pathToFileURL } from 'node:url';
+import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { getHeader } from './lib/email-utils.mjs';
 import { extractBodyText } from './lib/gmail-message-utils.mjs';
@@ -54,14 +55,29 @@ export function extractDetailWindows(text) {
 }
 
 async function main() {
-  const args = process.argv.slice(2);
-  const fullMode = args.includes('--full');
-  const maxIdx = args.indexOf('--max');
-  const messagesPerQuery = maxIdx !== -1 ? Number(args[maxIdx + 1]) : DEFAULT_MESSAGES_PER_QUERY;
-  const queries = args.filter((a, i) => a !== '--full' && a !== '--max' && !(maxIdx !== -1 && i === maxIdx + 1));
+  const USAGE = 'Usage: node extract-event-details.mjs [--max N] [--full] <gmail-query> [query...]';
 
-  if (queries.length === 0 || (maxIdx !== -1 && !Number.isInteger(messagesPerQuery))) {
-    console.error('Usage: node extract-event-details.mjs [--max N] [--full] <gmail-query> [query...]');
+  let values, positionals;
+  try {
+    ({ values, positionals } = parseArgs({
+      options: {
+        max: { type: 'string' },
+        full: { type: 'boolean', default: false },
+      },
+      allowPositionals: true,
+    }));
+  } catch (error) {
+    console.error(error.message);
+    console.error(USAGE);
+    process.exit(1);
+  }
+
+  const fullMode = values.full;
+  const messagesPerQuery = values.max !== undefined ? Number(values.max) : DEFAULT_MESSAGES_PER_QUERY;
+  const queries = positionals;
+
+  if (queries.length === 0 || (values.max !== undefined && !Number.isInteger(messagesPerQuery))) {
+    console.error(USAGE);
     process.exit(1);
   }
 

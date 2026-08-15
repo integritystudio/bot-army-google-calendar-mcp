@@ -12,10 +12,10 @@
  *   node extract-platform-orgs.mjs --domain X --emit       # print ORG_TAGS entries
  */
 import { pathToFileURL } from 'node:url';
+import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { getHeader } from './lib/email-utils.mjs';
 import { listAllMessageIds, mapWithConcurrency } from './lib/gmail-message-utils.mjs';
-import { argAfter } from './lib/cli-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 import { localPartOf, displayNameOf, GENERIC_LOCAL_PARTS } from './audit-sender-signals.mjs';
 
@@ -105,12 +105,28 @@ function report(result, { emit }) {
   }
 }
 
+const USAGE = 'Usage: node extract-platform-orgs.mjs --domain <domain> [--max N] [--emit]';
+
 async function main() {
-  const domain = argAfter('--domain');
-  const maxMessages = Number(argAfter('--max') ?? DEFAULT_MAX_MESSAGES);
-  const emit = process.argv.includes('--emit');
+  let values;
+  try {
+    ({ values } = parseArgs({
+      options: {
+        domain: { type: 'string' },
+        max: { type: 'string' },
+        emit: { type: 'boolean', default: false },
+      },
+    }));
+  } catch (error) {
+    console.error(error.message);
+    console.error(USAGE);
+    process.exit(1);
+  }
+  const domain = values.domain;
+  const maxMessages = Number(values.max ?? DEFAULT_MAX_MESSAGES);
+  const emit = values.emit;
   if (!domain) {
-    console.error('Usage: node extract-platform-orgs.mjs --domain <domain> [--max N] [--emit]');
+    console.error(USAGE);
     process.exit(1);
   }
   const gmail = createGmailClient();

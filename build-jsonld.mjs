@@ -21,6 +21,7 @@
  *   node build-jsonld.mjs --check    # exit 1 if the committed file is stale
  */
 import { writeFileSync, readFileSync } from 'node:fs';
+import { parseArgs } from 'node:util';
 import { pathToFileURL } from 'node:url';
 import { VOCABULARIES } from './lib/vocabularies.mjs';
 import { ORG_TAGS } from './create-org-tags.mjs';
@@ -111,13 +112,25 @@ export function buildGraph() {
 export const serialize = (document) => `${JSON.stringify(document, null, JSON_INDENT)}\n`;
 
 function main() {
+  let values;
+  try {
+    ({ values } = parseArgs({
+      options: {
+        check: { type: 'boolean', default: false },
+      },
+    }));
+  } catch (error) {
+    console.error(error.message);
+    console.error('Usage: node build-jsonld.mjs [--check]');
+    process.exit(1);
+  }
   const document = buildGraph();
   const serialized = serialize(document);
   const nodes = document['@graph'];
   const summary = `${nodes.length} nodes (${nodes.filter((n) => n['@id']).length} identified, `
     + `${nodes.filter((n) => !n['@id']).length} anonymous)`;
 
-  if (process.argv.includes('--check')) {
+  if (values.check) {
     const committed = readFileSync(OUTPUT_PATH, 'utf8');
     if (committed !== serialized) {
       console.error(`${OUTPUT_PATH} is stale — run: node build-jsonld.mjs`);

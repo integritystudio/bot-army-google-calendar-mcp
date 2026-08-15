@@ -8,6 +8,7 @@
  *   node list-unread-emails.mjs --verify # spot-check label application on sample emails
  *   node list-unread-emails.mjs --schema # detect schema.org JSON-LD in unread emails (Phase 1 audit)
  */
+import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { BANNER, DIVIDER } from './lib/console-utils.mjs';
 import { extractDisplayName, getHeader } from './lib/email-utils.mjs';
@@ -109,10 +110,26 @@ import {
   LABEL_MEETING_NOTES,
 } from './lib/constants.mjs';
 
-const countOnly = process.argv.includes('--count');
-const statsMode = process.argv.includes('--stats');
-const verifyMode = process.argv.includes('--verify');
-const schemaMode = process.argv.includes('--schema');
+let values;
+try {
+  ({ values } = parseArgs({
+    options: {
+      count: { type: 'boolean', default: false },
+      stats: { type: 'boolean', default: false },
+      verify: { type: 'boolean', default: false },
+      schema: { type: 'boolean', default: false },
+    },
+  }));
+} catch (error) {
+  console.error(error.message);
+  console.error('Usage: node list-unread-emails.mjs [--count | --stats | --verify | --schema]');
+  process.exit(1);
+}
+
+const countOnly = values.count;
+const statsMode = values.stats;
+const verifyMode = values.verify;
+const schemaMode = values.schema;
 
 const CATEGORY_PRIORITY = [
   LABEL_KEEP_IMPORTANT, LABEL_EVENTS, LABEL_MONITORING,

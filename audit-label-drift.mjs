@@ -28,12 +28,12 @@
  *   node audit-label-drift.mjs --query "from:alphasignal.ai" --expect "Newsletters"
  *   node audit-label-drift.mjs --sample 10 --exact               # true counts, slow
  */
+import { parseArgs } from 'node:util';
 import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { getHeader } from './lib/email-utils.mjs';
 import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import { mapWithConcurrency, countMessagesMatching } from './lib/gmail-message-utils.mjs';
-import { argAfter } from './lib/cli-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 import { CATEGORIES } from './create-filters.mjs';
 import { ORG_TAGS } from './create-org-tags.mjs';
@@ -252,18 +252,35 @@ function report(results, { source, sample, exact }) {
 }
 
 async function main() {
-  const source = argAfter('--source') ?? SOURCE_ALL;
-  const only = argAfter('--only');
-  const adHocQuery = argAfter('--query');
-  const sample = Number(argAfter('--sample') ?? DEFAULT_SAMPLE);
-  const exact = process.argv.includes('--exact');
+  let values;
+  try {
+    ({ values } = parseArgs({
+      options: {
+        source: { type: 'string' },
+        only: { type: 'string' },
+        query: { type: 'string' },
+        expect: { type: 'string' },
+        sample: { type: 'string' },
+        exact: { type: 'boolean', default: false },
+      },
+    }));
+  } catch (error) {
+    console.error(error.message);
+    console.error('Usage: node audit-label-drift.mjs [--source filters|org-tags|country-tags|all] [--only <label-prefix>] [--query "<gmail-query>" [--expect "<label>"]] [--sample N] [--exact]');
+    process.exit(1);
+  }
+  const source = values.source ?? SOURCE_ALL;
+  const only = values.only;
+  const adHocQuery = values.query;
+  const sample = Number(values.sample ?? DEFAULT_SAMPLE);
+  const exact = values.exact;
 
   const withTokens = (rule) => ({ ...rule, tokens: fromTokens(rule.query) });
   // Expectations are always drawn from the WHOLE config, never the --source/--only subset:
   // a Newsletters-only run still has to know that org-tag rules explain the
   // Organization/* labels its mail carries, or every one reports as a stray.
   const allRules = adHocQuery
-    ? [withTokens({ source: AD_HOC_SOURCE, labelName: argAfter('--expect') ?? '', name: adHocQuery, query: adHocQuery })]
+    ? [withTokens({ source: AD_HOC_SOURCE, labelName: values.expect ?? '', name: adHocQuery, query: adHocQuery })]
     : loadRules(SOURCE_ALL).map(withTokens);
   const rules = adHocQuery
     ? allRules
@@ -294,7 +311,7 @@ async function main() {
 
   report(results, { source: adHocQuery ? AD_HOC_SOURCE : source, sample, exact });
 
-  if (adHocQuery && !argAfter('--expect')) {
+  if (adHocQuery && !values.expect) {
     const [{ observed, matchingFilters }] = results;
     console.log(`\nObserved on ${observed.sampled} sampled message(s) for: ${adHocQuery}`);
     for (const [name, count] of [...observed.labelCounts].sort((a, b) => b[1] - a[1])) {

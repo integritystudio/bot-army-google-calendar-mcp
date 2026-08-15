@@ -10,6 +10,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { homedir } from 'os';
+import { parseArgs } from 'node:util';
 
 const TOKEN_DIR = path.join(homedir(), '.config/google-calendar-mcp');
 const CALENDAR_TOKEN_PATH = path.join(TOKEN_DIR, 'tokens.json');
@@ -146,17 +147,28 @@ async function removeAccount(accountName) {
 }
 
 // CLI routing
-const args = process.argv.slice(2);
-
-if (args.length === 0) {
-  await listAccounts();
-} else if (args[0] === '--add' && args[1]) {
-  await addAccount(args[1]);
-} else if (args[0] === '--remove' && args[1]) {
-  await removeAccount(args[1]);
-} else if (args[0].startsWith('--')) {
+let values;
+let positionals;
+try {
+  ({ values, positionals } = parseArgs({
+    options: {
+      add: { type: 'string' },
+      remove: { type: 'string' },
+    },
+    allowPositionals: true,
+  }));
+} catch (error) {
+  console.error(error.message);
   console.error('Usage: node switch-account.mjs [account | --add <name> | --remove <name>]');
   process.exit(1);
+}
+
+if (values.add) {
+  await addAccount(values.add);
+} else if (values.remove) {
+  await removeAccount(values.remove);
+} else if (positionals.length > 0) {
+  await switchTo(positionals[0]);
 } else {
-  await switchTo(args[0]);
+  await listAccounts();
 }

@@ -9,12 +9,12 @@
  *   node audit-sender-signals.mjs --domains-file gaps.txt [--sample 3]
  *   node audit-sender-signals.mjs --domains a.com,b.com
  */
+import { parseArgs } from 'node:util';
 import { pathToFileURL } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { getHeader } from './lib/email-utils.mjs';
 import { extractBodyText, countMessagesMatching, mapWithConcurrency } from './lib/gmail-message-utils.mjs';
-import { argAfter } from './lib/cli-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 
 const DEFAULT_SAMPLE = 3;
@@ -171,14 +171,29 @@ export async function scanDomain(gmail, domain, sampleSize) {
 }
 
 async function main() {
-  const file = argAfter('--domains-file');
-  const inline = argAfter('--domains');
-  const sampleSize = Number(argAfter('--sample') ?? DEFAULT_SAMPLE);
+  const usage = 'Usage: node audit-sender-signals.mjs --domains-file <path> | --domains a.com,b.com [--sample N]';
+  let values;
+  try {
+    ({ values } = parseArgs({
+      options: {
+        'domains-file': { type: 'string' },
+        domains: { type: 'string' },
+        sample: { type: 'string' },
+      },
+    }));
+  } catch (error) {
+    console.error(error.message);
+    console.error(usage);
+    process.exit(1);
+  }
+  const file = values['domains-file'];
+  const inline = values.domains;
+  const sampleSize = Number(values.sample ?? DEFAULT_SAMPLE);
   const domains = file
     ? readFileSync(file, 'utf8').split('\n').map((l) => l.trim()).filter(Boolean)
     : (inline ?? '').split(',').map((s) => s.trim()).filter(Boolean);
   if (domains.length === 0) {
-    console.error('Usage: node audit-sender-signals.mjs --domains-file <path> | --domains a.com,b.com [--sample N]');
+    console.error(usage);
     process.exit(1);
   }
 

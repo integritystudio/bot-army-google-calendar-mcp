@@ -6,6 +6,7 @@
  *   node mark-read.mjs --archived-only  # restrict to emails no longer in inbox
  *   node mark-read.mjs --past-events    # mark only past-date event emails as read
  */
+import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import {
   USER_ID,
@@ -18,8 +19,20 @@ import { getHeader } from './lib/email-utils.mjs';
 import { batchModifyMessages, searchAndModify } from './lib/gmail-batch-utils.mjs';
 import { decodeMessageBody } from './lib/gmail-message-utils.mjs';
 
-const pastEventsMode = process.argv.includes('--past-events');
-const archivedOnly = process.argv.includes('--archived-only');
+let values;
+try {
+  ({ values } = parseArgs({
+    options: {
+      'past-events': { type: 'boolean', default: false },
+      'archived-only': { type: 'boolean', default: false },
+    },
+  }));
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
+const pastEventsMode = values['past-events'];
+const archivedOnly = values['archived-only'];
 
 const LABELED_LABELS = [LABEL_EVENTS, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING, LABEL_MONITORING];
 

@@ -18,12 +18,12 @@
  *   node modify-messages.mjs --label "Newsletters" --unread --before 2026/06/01 --remove UNREAD --yes
  *   node modify-messages.mjs --query "from:spammy.example" --add SPAM --remove INBOX,UNREAD --yes
  */
+import { parseArgs } from 'node:util';
 import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { listAllMessageIds, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
-import { argAfter } from './lib/cli-utils.mjs';
 import { GMAIL_UNREAD } from './lib/constants.mjs';
 
 /** How many matches to list before summarizing the rest. */
@@ -96,21 +96,39 @@ export async function modifyMessages(gmail, {
 }
 
 /** Splits a comma-separated flag value, e.g. --remove INBOX,UNREAD */
-const listArg = (flag) => (argAfter(flag) ?? '').split(',').map(s => s.trim()).filter(Boolean);
+const listArg = (value) => (value ?? '').split(',').map(s => s.trim()).filter(Boolean);
+
+const USAGE = 'Usage: node modify-messages.mjs (--label "<name>" | --query "<gmail-query>")'
+  + ' [--unread] [--before YYYY/MM/DD] [--add "<label>"] [--remove "<label>"] [--yes]';
 
 async function main() {
+  let values;
+  try {
+    ({ values } = parseArgs({ options: {
+      label: { type: 'string' },
+      query: { type: 'string' },
+      before: { type: 'string' },
+      unread: { type: 'boolean', default: false },
+      add: { type: 'string' },
+      remove: { type: 'string' },
+      yes: { type: 'boolean', default: false },
+    } }));
+  } catch (error) {
+    console.error(error.message);
+    console.error(USAGE);
+    process.exit(1);
+  }
   const options = {
-    labelName: argAfter('--label'),
-    query: argAfter('--query'),
-    before: argAfter('--before'),
-    unreadOnly: process.argv.includes('--unread'),
-    add: listArg('--add'),
-    remove: listArg('--remove'),
-    apply: process.argv.includes('--yes'),
+    labelName: values.label ?? null,
+    query: values.query ?? null,
+    before: values.before ?? null,
+    unreadOnly: values.unread,
+    add: listArg(values.add),
+    remove: listArg(values.remove),
+    apply: values.yes,
   };
   if (!options.labelName && !options.query) {
-    console.error('Usage: node modify-messages.mjs (--label "<name>" | --query "<gmail-query>")'
-      + ' [--unread] [--before YYYY/MM/DD] [--add "<label>"] [--remove "<label>"] [--yes]');
+    console.error(USAGE);
     process.exit(1);
   }
   const { modified } = await modifyMessages(await createGmailClient(), options);

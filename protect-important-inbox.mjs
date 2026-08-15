@@ -7,6 +7,7 @@
  *   node protect-important-inbox.mjs --billing --update       # add urgent billing alert filter
  *   node protect-important-inbox.mjs --billing --apply-only   # apply billing filters to unread emails only
  */
+import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { GMAIL_INBOX, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
@@ -14,7 +15,22 @@ import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 import { BANNER, printComplete } from './lib/console-utils.mjs';
 
-const billingMode = process.argv.includes('--billing');
+let values;
+try {
+  ({ values } = parseArgs({
+    options: {
+      billing: { type: 'boolean', default: false },
+      update: { type: 'boolean', default: false },
+      'apply-only': { type: 'boolean', default: false },
+    },
+  }));
+} catch (error) {
+  console.error(error.message);
+  console.error('Usage: node protect-important-inbox.mjs [--billing [--update | --apply-only]]');
+  process.exit(1);
+}
+
+const billingMode = values.billing;
 
 const IMPORTANT_FILTERS = [
   { name: 'Cloudflare Alerts', query: 'from:noreply@notify.cloudflare.com' },
@@ -78,9 +94,9 @@ async function resolveBillingLabelIds(gmail, mode) {
 async function runBillingFilters() {
   const gmail = createGmailClient();
 
-  const billingSubMode = process.argv.includes('--update')
+  const billingSubMode = values.update
     ? 'update'
-    : process.argv.includes('--apply-only')
+    : values['apply-only']
       ? 'apply-only'
       : 'create';
 

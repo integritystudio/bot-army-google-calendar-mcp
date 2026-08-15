@@ -2,8 +2,8 @@
 // a sender's mail may route to Billing, Promotions, or Purchases, but always carries
 // the same Organization label. Filters here are label-only — never archive/mark-read.
 import { pathToFileURL } from 'node:url';
+import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { argAfter } from './lib/cli-utils.mjs';
 import { applyTagSet } from './lib/gmail-tag-utils.mjs';
 import {
   LABEL_ORG_OPEN_SOURCE,
@@ -953,9 +953,22 @@ export const ORG_TAGS = [
 
 
 async function run() {
-  const skipBackfill = process.argv.includes('--filters-only');
-  const onlyLabel = argAfter('--only');
-  const onlyOrgs = argAfter('--orgs')?.split(',').map(s => s.trim().toLowerCase());
+  let values;
+  try {
+    ({ values } = parseArgs({
+      options: {
+        'filters-only': { type: 'boolean', default: false },
+        only: { type: 'string' },
+        orgs: { type: 'string' },
+      },
+    }));
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+  const skipBackfill = values['filters-only'];
+  const onlyLabel = values.only ?? null;
+  const onlyOrgs = values.orgs?.split(',').map(s => s.trim().toLowerCase());
   const gmail = createGmailClient();
   const tagSet = ORG_TAGS.map(({ labelName, orgs }) => ({ labelName, entries: orgs }));
   const filterCount = await applyTagSet(gmail, tagSet, {

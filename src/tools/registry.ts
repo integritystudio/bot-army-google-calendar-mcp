@@ -1,6 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import { BaseToolHandler } from "../handlers/core/BaseToolHandler.js";
 import { ALLOWED_EVENT_FIELDS } from "../utils/field-mask-builder.js";
 import { isValidISODate, isValidISODateTime } from "../utils/date-utils.js";
@@ -581,16 +580,20 @@ export class ToolRegistry {
 
   static getToolsWithSchemas() {
     return this.tools.map(tool => {
-      // zod-to-json-schema's typings pin a different zod release than the
-      // project's, so the runtime-compatible object needs a bridging cast
       const schemaWithAccount = z.object({
         ...this.extractSchemaShape(tool.schema),
         account: accountParameter
-      }) as unknown as Parameters<typeof zodToJsonSchema>[0];
+      });
       return {
         name: tool.name,
         description: tool.description,
-        inputSchema: zodToJsonSchema(schemaWithAccount)
+        // reused: "inline" — Claude Desktop rejects $ref, so shared sub-schemas must be
+        // expanded in place; io: "input" keeps defaulted fields optional for callers
+        inputSchema: z.toJSONSchema(schemaWithAccount, {
+          io: "input",
+          reused: "inline",
+          unrepresentable: "any"
+        })
       };
     });
   }

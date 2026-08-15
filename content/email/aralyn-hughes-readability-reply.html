@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Readability Review — Aralyn Hughes</title>
+<style>
+  /* ── Token layer ─────────────────────────────────────────────── */
+  :root {
+    --ground:      #F0F2F5;
+    --paper:       #FFFFFF;
+    --ink:         #1B2D3E;
+    --ink-light:   #6D7F8D;
+    --sage:        #527A5A;
+    --sage-faint:  #D4E4D7;
+    --rule:        #CBD5E0;
+    --shadow:      rgba(27, 45, 62, 0.08);
+
+    --font-serif:  'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
+    --font-body:   Georgia, 'Times New Roman', serif;
+    --font-sans:   -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #191E24;
+      --paper:       #222830;
+      --ink:         #E4DFD5;
+      --ink-light:   #9AABB8;
+      --sage:        #7FB889;
+      --sage-faint:  #2A3D2E;
+      --rule:        #374350;
+      --shadow:      rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #191E24;
+    --paper:       #222830;
+    --ink:         #E4DFD5;
+    --ink-light:   #9AABB8;
+    --sage:        #7FB889;
+    --sage-faint:  #2A3D2E;
+    --rule:        #374350;
+    --shadow:      rgba(0, 0, 0, 0.35);
+  }
+
+  /* ── Reset & base ────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 18px;
+    line-height: 1.75;
+    padding: 3rem 1.25rem 5rem;
+    min-height: 100vh;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  /* ── Letter shell ────────────────────────────────────────────── */
+  .letter {
+    background: var(--paper);
+    max-width: 660px;
+    margin: 0 auto;
+    box-shadow: 0 2px 24px var(--shadow), 0 0 0 1px var(--rule);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  /* ── Letterhead ──────────────────────────────────────────────── */
+  .letterhead {
+    padding: 2.5rem 3rem 2rem;
+    border-bottom: 1.5px solid var(--sage);
+  }
+
+  .letterhead-ornament {
+    font-family: var(--font-serif);
+    color: var(--sage);
+    font-size: 1.1rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .letterhead-ornament::before,
+  .letterhead-ornament::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--sage-faint);
+  }
+
+  .letterhead-from {
+    text-align: center;
+    font-family: var(--font-sans);
+    font-size: 0.72rem;
+    color: var(--ink-light);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* ── Body ────────────────────────────────────────────────────── */
+  .letter-body {
+    padding: 2.75rem 3rem 2.5rem;
+  }
+
+  .date-line {
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    color: var(--ink-light);
+    letter-spacing: 0.06em;
+    margin-bottom: 2.25rem;
+  }
+
+  .salutation {
+    font-family: var(--font-serif);
+    font-size: 1.2rem;
+    font-style: italic;
+    color: var(--ink);
+    margin-bottom: 1.5rem;
+  }
+
+  p {
+    margin-bottom: 1.25rem;
+    color: var(--ink);
+    hyphens: auto;
+  }
+
+  /* ── Finding sections ────────────────────────────────────────── */
+  .findings {
+    margin: 2.25rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .finding {
+    padding: 1.5rem 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .finding:last-child {
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .finding-label {
+    font-family: var(--font-serif);
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--sage);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .finding-label::after {
+    content: '';
+    display: inline-block;
+    width: 1.5rem;
+    height: 1px;
+    background: var(--sage);
+    vertical-align: middle;
+  }
+
+  .finding-heading {
+    font-family: var(--font-serif);
+    font-size: 1.08rem;
+    font-weight: normal;
+    color: var(--ink);
+    margin-bottom: 0.6rem;
+    text-wrap: balance;
+  }
+
+  .finding p {
+    font-size: 0.97rem;
+    line-height: 1.7;
+    margin-bottom: 0;
+  }
+
+  /* ── Callout ─────────────────────────────────────────────────── */
+  .callout {
+    background: var(--sage-faint);
+    border-left: 3px solid var(--sage);
+    padding: 1.25rem 1.5rem;
+    margin: 2rem 0;
+    border-radius: 0 2px 2px 0;
+  }
+
+  .callout p {
+    margin: 0;
+    font-size: 0.97rem;
+  }
+
+  /* ── Signature ───────────────────────────────────────────────── */
+  .sign-off {
+    margin-top: 2.5rem;
+  }
+
+  .sign-off p {
+    margin-bottom: 0.2rem;
+  }
+
+  .sign-name {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 1.25rem;
+    color: var(--ink);
+    margin-top: 0.75rem;
+    margin-bottom: 0;
+  }
+
+  .sign-title {
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    color: var(--ink-light);
+    letter-spacing: 0.06em;
+    margin-top: 0.2rem;
+  }
+
+  /* ── Appendix ────────────────────────────────────────────────── */
+  .appendix {
+    margin-top: 3rem;
+    padding-top: 1.75rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .appendix-note {
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    color: var(--ink-light);
+    margin-bottom: 1.25rem;
+  }
+
+  .appendix table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-sans);
+    font-size: 0.82rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .appendix th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--sage);
+    letter-spacing: 0.04em;
+    padding: 0.45rem 0.75rem 0.45rem 0;
+    border-bottom: 1.5px solid var(--sage-faint);
+  }
+
+  .appendix td {
+    padding: 0.45rem 0.75rem 0.45rem 0;
+    border-bottom: 1px solid var(--rule);
+    color: var(--ink);
+    vertical-align: top;
+  }
+
+  .appendix td:nth-child(2) {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Footer ──────────────────────────────────────────────────── */
+  .letter-footer {
+    padding: 1.25rem 3rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--font-sans);
+    font-size: 0.72rem;
+    color: var(--ink-light);
+    letter-spacing: 0.04em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* ── Responsive ──────────────────────────────────────────────── */
+  @media (max-width: 600px) {
+    body { padding: 1.5rem 0.75rem 3rem; }
+    .letterhead,
+    .letter-body,
+    .letter-footer { padding-left: 1.5rem; padding-right: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<article class="letter" role="main">
+
+  <!-- Letterhead -->
+  <header class="letterhead">
+    <div class="letterhead-ornament">◇</div>
+    <p class="letterhead-from">Manuscript Readability Review &nbsp;·&nbsp; Confidential</p>
+  </header>
+
+  <!-- Body -->
+  <div class="letter-body">
+
+    <p class="date-line">August 14, 2026</p>
+
+    <p class="salutation">Hi Aralyn,</p>
+
+    <p>I finally got to sit down with <em>An Unexpected Threesome</em> — what a treat. I ran the whole thing through the readability tools publishers use to gauge how a book will sit with readers, and I couldn't wait to tell you what came back: it's all good news.</p>
+
+    <p>Think of these tools as a second pair of eyes that count the things a reader feels but never tallies — sentence rhythm, word choice, how often the writing asks someone to stop and work. None of it says anything about the storytelling. It's just information, and yours is the kind writers hope for.</p>
+
+    <div class="findings">
+
+      <div class="finding">
+        <p class="finding-label">Reading Ease</p>
+        <p class="finding-heading">It's a genuinely easy, pleasant read.</p>
+        <p>The book scored <strong>71 out of 100</strong> on the classic reading-ease scale — higher means easier. Most popular memoirs land between 60 and 70, so you're actually a touch easier to read than the field. Nobody is putting this down because it made them work.</p>
+      </div>
+
+      <div class="finding">
+        <p class="finding-label">Accessibility</p>
+        <p class="finding-heading">Anyone who picks it up can read it — and yes, that's a compliment.</p>
+        <p>Several independent formulas agree the writing sits at about a <strong>sixth-to-seventh-grade level</strong>. Before you make a face: that's exactly where the most-loved books live, and plenty of writers sweat to get there. Your conversations sound like conversations, not like prose dressed up for company.</p>
+      </div>
+
+      <div class="finding">
+        <p class="finding-label">Sentence Rhythm</p>
+        <p class="finding-heading">The sentences move at the pace of good talk.</p>
+        <p><strong>60,544 words</strong>, about <strong>3,800 sentences</strong>, averaging just under <strong>16 words</strong> each — long enough to carry a thought, short enough that nobody gets lost in the middle. For a book built on conversations, that's exactly the rhythm you want.</p>
+      </div>
+
+      <div class="finding">
+        <p class="finding-label">Vocabulary</p>
+        <p class="finding-heading">Plain words carry the story; the distinctive ones give it flavor.</p>
+        <p>The everyday texture is simple — about <strong>1.4 syllables per word</strong>, which is conversational English at its most natural. The tools did flag around <strong>4,700 words</strong> as "unfamiliar," but that list is mostly names, places, and the particular language of your world — the words that make the book yours. Character, not difficulty.</p>
+      </div>
+
+      <div class="finding">
+        <p class="finding-label">One Thing to Watch</p>
+        <p class="finding-heading">A few stretches run denser than the rest.</p>
+        <p>The two fussier formulas — the ones that fret over long, many-syllabled sentences — came back around a <strong>tenth-grade level</strong>, which just means a few passages pack more into a sentence than your easy average. If an editor ever pokes at anything, it'll be there. Truly minor.</p>
+      </div>
+
+    </div>
+
+    <div class="callout">
+      <p><strong>The short version:</strong> the numbers say what the prose makes obvious — <em>An Unexpected Threesome</em> is warm, easy company, paced like good conversation. It sits right in the sweet spot where memoirs find their widest audience.</p>
+    </div>
+
+    <p>Don't let the jargon in the appendix below scare you — I put the raw numbers there in case you're curious, but these tools only measure the surface of writing. The part that makes a book worth reading isn't measurable, and you've got that part covered.</p>
+
+    <div class="sign-off">
+      <p>Warmly,</p>
+      <p class="sign-name">Alyshia</p>
+    </div>
+
+    <!-- Appendix -->
+    <div class="appendix">
+      <p class="finding-label">Appendix — The Raw Numbers</p>
+      <p class="appendix-note">Computed with the textstat library over the full manuscript text.</p>
+      <table>
+        <thead><tr><th>Readability score</th><th>Value</th><th>What it means</th></tr></thead>
+        <tbody>
+          <tr><td>Flesch Reading Ease</td><td>70.8</td><td>0–30 very hard, 60–70 standard, 90–100 very easy</td></tr>
+          <tr><td>Flesch-Kincaid Grade</td><td>7.3</td><td>US school grade level</td></tr>
+          <tr><td>Gunning Fog Index</td><td>9.7</td><td>Years of schooling needed</td></tr>
+          <tr><td>SMOG Index</td><td>10.2</td><td>Grade level, weights long words</td></tr>
+          <tr><td>Coleman-Liau Index</td><td>7.4</td><td>Grade level via character counts</td></tr>
+          <tr><td>Automated Readability Index</td><td>7.8</td><td>Grade level via characters per word</td></tr>
+          <tr><td>Dale-Chall Score</td><td>8.26</td><td>Vocabulary familiarity; under 5 = 5th grade, over 9 = college</td></tr>
+          <tr><td>Linsear Write</td><td>4.2</td><td>Grade level</td></tr>
+          <tr><td>Consensus estimate</td><td>6th–7th grade</td><td>Agreement across all formulas</td></tr>
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th>Corpus measure</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Words</td><td>60,544</td></tr>
+          <tr><td>Sentences</td><td>3,813</td></tr>
+          <tr><td>Syllables</td><td>85,819</td></tr>
+          <tr><td>Average words per sentence</td><td>15.9</td></tr>
+          <tr><td>Average syllables per word</td><td>1.42</td></tr>
+          <tr><td>"Difficult" words</td><td>4,651</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="letter-footer">
+    <span>Re: <em>An Unexpected Threesome</em> — Manuscript Review</span>
+    <span>Aralyn Hughes &nbsp;·&nbsp; August 2026</span>
+  </footer>
+
+</article>
+
+</body>
+</html>

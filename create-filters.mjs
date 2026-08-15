@@ -45,6 +45,8 @@ import {
   LABEL_EVENTS_LUMA,
   LABEL_EVENTS_CALENDAR_NOTIFICATIONS,
   LABEL_EVENTS_DANCE,
+  LABEL_EVENTS_WORKSHOPS,
+  LABEL_EVENTS_RECRUITING,
   LABEL_SERVICES_REAL_ESTATE,
   LABEL_SERVICES_UTILITIES,
   LABEL_NEWSLETTERS,
@@ -513,6 +515,7 @@ export const CATEGORIES = [
       { name: 'Congressman Doggett', query: 'from:mail.house.gov' },
       { name: 'Inside Books Project', query: 'from:insidebooksproject.org' },
       { name: 'Obama Foundation', query: 'from:email.obama.org' },
+      { name: 'Charter for Compassion', query: 'from:charterforcompassion.org' },
     ],
   },
   {
@@ -612,6 +615,7 @@ export const CATEGORIES = [
       { name: 'UT Austin Announcements', query: 'from:(econnect.utexas.edu OR austin.utexas.edu)' },
       { name: '10times', query: 'from:10times.com' },
       { name: 'Summit Series', query: 'from:summit.co' },
+      { name: 'Trek Bicycle (Lamar store)', query: 'from:trekbikes.com' },
     ],
   },
   {
@@ -649,6 +653,24 @@ export const CATEGORIES = [
     archive: false,
     filters: [
       { name: 'Broadway San Jose', query: 'from:response.broadwaysanjose.com' },
+    ],
+  },
+  {
+    // Recruiting-event invites — stay in inbox (RSVP-able, future-dated)
+    labelName: LABEL_EVENTS_RECRUITING,
+    archive: false,
+    filters: [
+      { name: 'Bain & Company Recruiting', query: 'from:bain.com' },
+    ],
+  },
+  {
+    // Course/webinar senders — stay in inbox like other future-event categories.
+    // organize-emails.mjs also routes subject:(workshop|conference|summit|webinar)
+    // here from any sender; this entry adds sender-based coverage.
+    labelName: LABEL_EVENTS_WORKSHOPS,
+    archive: false,
+    filters: [
+      { name: 'Texas McCombs AI Programs (Great Learning)', query: 'from:mygreatlearning.com' },
     ],
   },
   {
@@ -862,6 +884,8 @@ export const CATEGORIES = [
       { name: 'Venmo Security', query: 'from:security-alerts@venmo.com' },
       { name: 'Tesla Verification', query: 'from:tesla.com subject:verification' },
       { name: 'npm Tokens', query: 'from:npmjs.com' },
+      // Subject-scoped: no-reply@mail.nordvpn.com sends promos from the same brand
+      { name: 'NordVPN Dark Web Monitor', query: 'from:nordvpn.com subject:"Dark Web Monitor"' },
     ],
   },
   {
@@ -1000,6 +1024,9 @@ export const CATEGORIES = [
     markRead: true,
     filters: [
       { name: 'SolutionPeople book & LinkedIn-group promos', query: `${SOLUTIONMAN} ${SOLUTIONMAN_PROMOS}` },
+      { name: 'Bandai Namco', query: 'from:email.bandainamcoent.com' },
+      { name: 'Fitness Nerd', query: 'from:fitnessnerdonline.com' },
+      { name: 'FamilyTreeDNA', query: 'from:familytreedna.com' },
     ],
   },
   {

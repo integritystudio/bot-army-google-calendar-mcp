@@ -2,6 +2,7 @@ import { BaseToolHandler } from "../core/BaseToolHandler.js";
 import { OAuth2Client } from "google-auth-library";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { fetchMessageDetails } from "./gmailUtils.js";
+import { countMessagesMatching } from "../../shared/gmail-core.js";
 import { formatErrorMessage } from "../core/errorFormatting.js";
 
 export interface GmailSearchInput {
@@ -26,7 +27,8 @@ export class GmailSearchHandler extends BaseToolHandler {
       pageToken: input.pageToken,
     });
 
-    const messageCount = response.data.resultSizeEstimate || 0;
+    // resultSizeEstimate is an estimate, not a count, so total is paged exactly.
+    const { count: messageCount } = await countMessagesMatching(gmail, input.query);
     const messages = response.data.messages || [];
 
     const detailedMessages = await Promise.all(

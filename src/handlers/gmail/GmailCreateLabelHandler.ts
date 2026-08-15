@@ -2,6 +2,8 @@ import { BaseToolHandler } from "../core/BaseToolHandler.js";
 import { OAuth2Client } from "google-auth-library";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { formatErrorMessage } from "../core/errorFormatting.js";
+import { gmail_v1 } from "googleapis";
+import { getLabelByName, isAlreadyExistsError } from "../../shared/gmail-core.js";
 
 export interface GmailCreateLabelInput {
   name: string;
@@ -30,31 +32,42 @@ export class GmailCreateLabelHandler extends BaseToolHandler {
 
       return {
         success: true,
-        label: {
-          id: response.data.id,
-          name: response.data.name,
-          messageCount: response.data.messagesTotal || 0,
-          threadCount: response.data.threadsTotal || 0,
-          labelListVisibility: response.data.labelListVisibility,
-          messageListVisibility: response.data.messageListVisibility,
-        },
+        created: true,
+        label: this.formatLabel(response.data),
         message: `Label "${input.name}" created successfully`,
       };
     } catch (error) {
-      const errorMessage = formatErrorMessage(error);
+      // A label that already exists satisfies the caller's intent, so resolve it
+      // rather than failing: every caller of a failed create wants the existing id
+      // next, and returning an error makes each one re-implement the lookup.
+      if (isAlreadyExistsError(error)) {
+        const existing = await getLabelByName(gmail, input.name);
 
-      if (errorMessage.includes("already exists")) {
-        return {
-          success: false,
-          error: `Label "${input.name}" already exists`,
-          suggestion: "Use a different name or try to find the existing label",
-        };
+        if (existing) {
+          return {
+            success: true,
+            created: false,
+            label: this.formatLabel(existing),
+            message: `Label "${input.name}" already exists`,
+          };
+        }
       }
 
       return {
         success: false,
-        error: `Failed to create label: ${errorMessage}`,
+        error: `Failed to create label: ${formatErrorMessage(error)}`,
       };
     }
+  }
+
+  private formatLabel(label: gmail_v1.Schema$Label) {
+    return {
+      id: label.id,
+      name: label.name,
+      messageCount: label.messagesTotal || 0,
+      threadCount: label.threadsTotal || 0,
+      labelListVisibility: label.labelListVisibility,
+      messageListVisibility: label.messageListVisibility,
+    };
   }
 }

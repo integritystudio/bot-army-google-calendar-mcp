@@ -1,7 +1,8 @@
 import { BaseToolHandler } from "../core/BaseToolHandler.js";
 import { OAuth2Client } from "google-auth-library";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { buildSearchQuery, buildGmailModifyRequest } from "./gmailUtils.js";
+import { buildSearchQuery, buildLabelChange } from "./gmailUtils.js";
+import { listAllMessageIds, batchModifyMessages } from "../../shared/gmail-core.js";
 import { formatErrorMessage } from "../core/errorFormatting.js";
 
 export interface GmailApplyFiltersInput {
@@ -80,59 +81,49 @@ export class GmailApplyFiltersHandler extends BaseToolHandler {
       return;
     }
 
-    const messagesResponse = await gmail.users.messages.list({
-      userId: "me",
-      q: searchQuery,
-      maxResults: 500,
-    });
+    const modifyRequest = buildLabelChange(action);
 
-    const messages = messagesResponse.data.messages || [];
-
-    if (messages.length === 0) {
+    if (Object.keys(modifyRequest).length === 0) {
       results.appliedActions.push({
         filterId: filter.id,
         criteria,
         action,
         matchedMessages: 0,
+        processedMessages: 0,
+        summary: "Filter has no label action to apply",
+        dryRun: isDryRun,
+      });
+      return;
+    }
+
+    // Paged to exhaustion before any modify: the previous single 500-message page
+    // truncated every larger backlog while still reporting success.
+    const messageIds = await listAllMessageIds(gmail, searchQuery);
+
+    if (messageIds.length === 0) {
+      results.appliedActions.push({
+        filterId: filter.id,
+        criteria,
+        action,
+        matchedMessages: 0,
+        processedMessages: 0,
         summary: "No matching messages found",
         dryRun: isDryRun,
       });
       return;
     }
 
-    let processed = 0;
-    let failed = 0;
-
-    for (const message of messages) {
-      try {
-        if (isDryRun) {
-          processed++;
-          continue;
-        }
-
-        const modifyRequest = buildGmailModifyRequest(action);
-
-        if (Object.keys(modifyRequest).length > 0) {
-          await gmail.users.messages.modify({
-            userId: "me",
-            id: message.id!,
-            requestBody: modifyRequest,
-          });
-          processed++;
-        }
-      } catch (error) {
-        failed++;
-      }
-    }
+    const processed = isDryRun
+      ? 0
+      : await batchModifyMessages(gmail, messageIds, modifyRequest);
 
     results.appliedActions.push({
       filterId: filter.id,
       criteria,
       action,
-      matchedMessages: messages.length,
+      matchedMessages: messageIds.length,
       processedMessages: processed,
-      failedMessages: failed,
-      summary: `Applied ${action.addLabelIds?.length || 0} add labels, ${action.removeLabelIds?.length || 0} remove labels`,
+      summary: `Applied ${modifyRequest.addLabelIds?.length || 0} add labels, ${modifyRequest.removeLabelIds?.length || 0} remove labels`,
       dryRun: isDryRun,
     });
   }

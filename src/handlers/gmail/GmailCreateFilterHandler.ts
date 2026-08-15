@@ -1,7 +1,7 @@
 import { BaseToolHandler } from "../core/BaseToolHandler.js";
 import { OAuth2Client } from "google-auth-library";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { buildSearchQuery, validateInput } from "./gmailUtils.js";
+import { buildLabelChange, validateInput } from "./gmailUtils.js";
 import { formatErrorMessage } from "../core/errorFormatting.js";
 
 export interface GmailCreateFilterInput {
@@ -69,32 +69,11 @@ export class GmailCreateFilterHandler extends BaseToolHandler {
     );
   }
 
-  private buildAction(input: any): any {
-    const action: any = {};
+  private buildAction(input: GmailCreateFilterInput["action"]): any {
+    const action: any = buildLabelChange(input);
 
-    if (input.addLabelIds?.length) {
-      action.addLabelIds = input.addLabelIds;
-    }
-    if (input.removeLabelIds?.length) {
-      action.removeLabelIds = input.removeLabelIds;
-    }
-    if (input.archive) {
-      action.skip = true;
-    }
-    if (input.markAsRead) {
-      action.archive = true;
-    }
-    if (input.markAsSpam !== undefined) {
-      action.markAsSpam = input.markAsSpam;
-    }
-    if (input.markAsTrash !== undefined) {
-      action.markAsTrash = input.markAsTrash;
-    }
     if (input.forward) {
       action.forward = input.forward;
-    }
-    if (input.neverMarkAsSpam !== undefined) {
-      action.neverMarkAsSpam = input.neverMarkAsSpam;
     }
 
     return action;

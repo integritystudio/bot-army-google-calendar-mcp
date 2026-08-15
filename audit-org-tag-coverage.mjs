@@ -13,19 +13,25 @@ import { mapWithConcurrency } from './lib/gmail-message-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 import { ORG_TAGS } from './create-org-tags.mjs';
 import { displayNameOf, shareLeadingToken } from './audit-sender-signals.mjs';
+import { fromTokens } from './audit-label-drift.mjs';
 
 const DEFAULT_MAX = 500;
 const FETCH_CONCURRENCY = 20;
 const ORG_LABEL_PREFIX = 'Organization';
 const MIN_REPORT_COUNT = 1;
 
-/** Every bare domain named in an ORG_TAGS entry query, e.g. "from:github.com" -> github.com */
+/**
+ * Every sender token named in an ORG_TAGS entry query, e.g. "from:github.com"
+ * -> github.com. fromTokens also expands grouped `from:(a OR b)` queries, which
+ * a plain from: regex reads as zero senders (the audit then reported every
+ * domain written that way as unclaimed).
+ */
 function coveredDomains() {
   const domains = new Set();
   for (const tag of ORG_TAGS) {
     for (const entry of tag.orgs) {
-      for (const match of entry.query.matchAll(/from:([^\s()]+)/g)) {
-        domains.add(match[1].replace(/^\(/, '').toLowerCase());
+      for (const token of fromTokens(entry.query)) {
+        domains.add(token);
       }
     }
   }

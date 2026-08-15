@@ -327,10 +327,12 @@ first domain, not a partial. The config uses both spellings interchangeably
 ([`create-filters.mjs`](create-filters.mjs) has ~a dozen grouped ones), so a helper built
 on that regex silently treats those domains as unclaimed.
 
-`coveredDomains()` in [`audit-org-tag-coverage.mjs`](audit-org-tag-coverage.mjs) has this
-bug today and under-reports coverage as a result. `fromTokens()` in
-[`audit-label-drift.mjs`](audit-label-drift.mjs) handles both forms; extract from there
-rather than writing a third copy.
+`coveredDomains()` in [`audit-org-tag-coverage.mjs`](audit-org-tag-coverage.mjs) had this
+bug and under-reported coverage until it switched to `fromTokens()` from
+[`audit-label-drift.mjs`](audit-label-drift.mjs), which handles both forms — import from
+there rather than writing a third copy. The hazard is now larger, not smaller: consolidated
+categories (`consolidate: true` in `create-filters.mjs`) merge whole sender lists into
+OR-grouped chunk filters, so a plain-regex helper reads an entire category as unclaimed.
 
 The same helper class must also handle `from:"Display Name"` — a bare word with no dot
 never suffix-matches a domain, so filters written that way stay invisible to any

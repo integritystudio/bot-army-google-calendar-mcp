@@ -797,6 +797,9 @@ export const ORG_TAGS = [
       { name: 'Discord', query: 'from:(discord.com OR discordapp.com)' },
       { name: 'Spotify', query: 'from:spotify.com' },
       { name: 'WordPress / Automattic', query: 'from:(wordpress.com OR automattic.com)' },
+      // Management consulting; its mail here is all recruiting-events, which route to
+      // Events/Recruiting in create-filters.mjs — the tag stays bare-domain per the guide
+      { name: 'Bain & Company', query: 'from:bain.com' },
       // Bare domain, unlike the category filter: an org tag identifies the sender, so
       // account and security mail belongs under it too
       { name: 'OpenAI', query: 'from:openai.com' },
@@ -870,6 +873,11 @@ export const ORG_TAGS = [
       // d.school guest sessions). Audited against the Digital Nomads term: zero
       // location-independence signals in any of its mail, so no keywords entry.
       { name: 'Experience House', query: 'from:experiencehouse.co' },
+      // Ed-tech platform behind "Texas McCombs - AI Programs" mail — the McCombs
+      // branding is Great Learning's university partnership, and the bare domain
+      // also covers its own webinars and the lone MIT IDSS sender (294 msgs total,
+      // 247 McCombs-branded, per extract-platform-orgs).
+      { name: 'Great Learning (Texas McCombs AI Programs)', query: 'from:mygreatlearning.com' },
     ],
   },
   {

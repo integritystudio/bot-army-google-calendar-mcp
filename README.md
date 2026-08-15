@@ -494,7 +494,7 @@ Type definitions are aligned with [schema.org](https://schema.org/) for calendar
 - TypeScript, ES modules, 2-space indent, no magic strings
 
 **Code Quality Tools:**
-- Detect duplicated code blocks: `node scripts/check-duplicates.mjs src 6` (reports suspicious file pairs, overlapping logic)
+- Detect duplicated code blocks: `npm run check-duplicates` (jscpd, token-based clone detection over src/)
 - Consolidated: `GmailCreateHandler.ts` unifies filter and label creation logic (single source of truth)
 
 **Completed Roadmap:**

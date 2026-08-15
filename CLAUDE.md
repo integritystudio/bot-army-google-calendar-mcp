@@ -51,7 +51,7 @@ npm run repomix           # Regenerate docs/repomix/ artifacts (token tree, comp
 ## Script Development
 
 **Tools & Code Quality:**
-- `npm run check-duplicates` — Detect repeated code blocks (scans src/ with 6-line window)
+- `npm run check-duplicates` — Detect repeated code blocks via jscpd (scans src/ with 6-line window)
 - Avoid bash heredocs with pipes — use Write tool or `.mjs` files in project root (not `/tmp`)
 
 **Code Principles:**

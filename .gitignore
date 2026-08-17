@@ -52,3 +52,5 @@ Thumbs.db
 .cache/
 
 .claude/tsc-cache/
+# Per-session id written by the Claude Code session-start hook; runtime state.
+.claude/.current-session-id

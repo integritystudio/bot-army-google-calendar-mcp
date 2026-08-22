@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 // @ts-expect-error - plain .mjs utility with no type declarations
-import { batchModifyMessages } from '../../../../lib/gmail-batch-utils.mjs';
+import { batchModifyMessages, searchAndModify } from '../../../../lib/gmail-batch-utils.mjs';
 
 interface ModifyCall {
   ids: string[];
@@ -30,6 +30,36 @@ const gmailStub = (failures: unknown[] = []) => {
 };
 
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `m${i}`);
+
+/** Gmail stub paging messages.list in fixed-size pages, recording batchModify calls. */
+const listingStub = (total: number, pageSize = 2) => {
+  const calls: ModifyCall[] = [];
+  let listRequests = 0;
+  return {
+    calls,
+    get listRequests() { return listRequests; },
+    users: {
+      messages: {
+        list: async ({ pageToken }: { pageToken?: string }) => {
+          listRequests++;
+          const start = pageToken ? Number(pageToken) : 0;
+          const page = ids(total).slice(start, start + pageSize);
+          const next = start + pageSize;
+          return {
+            data: {
+              messages: page.map(id => ({ id })),
+              nextPageToken: next < total ? String(next) : undefined,
+            },
+          };
+        },
+        batchModify: async ({ requestBody }: { requestBody: ModifyCall }) => {
+          calls.push(requestBody);
+          return { data: {} };
+        },
+      },
+    },
+  };
+};
 
 afterEach(() => {
   vi.useRealTimers();
@@ -93,5 +123,33 @@ describe('batchModifyMessages', () => {
 
     await expect(batchModifyMessages(gmail, ids(2), { addLabelIds: ['nope'] }))
       .rejects.toThrow('Invalid label');
+  });
+});
+
+describe('searchAndModify', () => {
+  it('pages the query to exhaustion before modifying anything', async () => {
+    const gmail = listingStub(5);
+    const count = await searchAndModify(gmail, 'is:unread', { removeLabelIds: ['INBOX'] });
+
+    expect(count).toBe(5);
+    // One modify call, after all three pages: the modification changes whether later
+    // pages still match, so collecting first is what keeps the sweep complete.
+    expect(gmail.calls).toHaveLength(1);
+    expect(gmail.calls[0].ids).toEqual(['m0', 'm1', 'm2', 'm3', 'm4']);
+    expect(gmail.listRequests).toBe(3);
+  });
+
+  it('stops at maxResults, for a query too broad to sweep unbounded', async () => {
+    const gmail = listingStub(100);
+    const count = await searchAndModify(gmail, 'subject:receipt', { addLabelIds: ['Billing'] }, 3);
+
+    expect(count).toBe(3);
+    expect(gmail.calls[0].ids).toEqual(['m0', 'm1', 'm2']);
+  });
+
+  it('makes no modify request when the query matches nothing', async () => {
+    const gmail = listingStub(0);
+    expect(await searchAndModify(gmail, 'from:nobody.example', { addLabelIds: ['X'] })).toBe(0);
+    expect(gmail.calls).toHaveLength(0);
   });
 });

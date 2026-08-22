@@ -40,7 +40,7 @@ the wrong thing without erroring. Full detail in the
 |---|---|
 | `ORG_TAGS` must hold no time-varying data | Dated events rot silently; `schema.event` lists recurring programmes, not instances |
 | Parentheses break Gmail's `label:` operator | `label:"…(X)…"` returns 0 on a full label — strips, backfills and delete-guards all misread |
-| `searchAndModify()` does not page | `relabel-messages.mjs` caps at 100 and still prints success |
+| `searchAndModify()` truncates to its caller's `maxResults` | The lib pages; `relabel-messages.mjs` passes 100, caps there, and still prints success |
 | A filter can add only one user label | `Too many user labels in filter`; `messages.modify` has no such limit |
 | Domain names do not reveal org type | Every name-based guess so far has been wrong (tally in the main README); many domains are sending platforms, not orgs |
 

@@ -5,7 +5,7 @@ Example commands for the Gmail organization pipeline. All scripts run from the p
 ## 1. Authenticate
 
 ```bash
-node auth-gmail.mjs        # Create Gmail tokens (tokens-gmail.json)
+npm run auth:gmail         # Create Gmail tokens (tokens-gmail.json)
 node verify-tokens.mjs     # Verify Gmail token status
 ```
 

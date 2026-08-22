@@ -5,7 +5,8 @@ routing**. A sender's mail may route to `Billing`, `Promotions`, or `Purchases`
 and still carry the same `Organization/*` tag. Tag filters are **label-only** —
 they never archive and never mark read.
 
-Source of truth: `ORG_TAGS` in [`create-org-tags.mjs`](../create-org-tags.mjs).
+Source of truth: `ORG_TAGS` in [`config/org-tags.mjs`](../config/org-tags.mjs).
+(`create-org-tags.mjs` is the CLI that applies it.)
 Shared machinery: [`lib/gmail-tag-utils.mjs`](../lib/gmail-tag-utils.mjs).
 
 ## Naming: mirror schema.org
@@ -147,18 +148,18 @@ export const LABEL_ORG_LC_CLOTHING_STORE = 'Organization/LocalCommunity/LocalBus
 
 Adding entries to an *existing* tag group needs no new constant — skip to step 3.
 
-### 2. Import it in `create-org-tags.mjs`
+### 2. Import it in `config/org-tags.mjs`
 
-Add to the `from './lib/constants.mjs'` import block at the top.
+Add to the `from '../lib/constants.mjs'` import block at the top.
 
 ### 3. Add the entry to `ORG_TAGS`
 
-The field is **`orgs`**, not `entries`:
+The field is **`entries`**:
 
 ```js
 {
   labelName: LABEL_ORG_LC_CLOTHING_STORE,   // 'Organization/LocalCommunity/LocalBusiness/Store/ClothingStore'
-  orgs: [
+  entries: [
     { name: 'H&M', query: 'from:hm.com' },
     { name: 'Ruti', query: 'from:ruti.com' },
   ],
@@ -168,10 +169,9 @@ The field is **`orgs`**, not `entries`:
 Pick the label name by finding the schema.org type first — see
 [Naming](#naming-mirror-schemaorg) above.
 
-`run()` normalizes `orgs` → `entries` at the call site before handing the set to
-`applyTagSet()`, which iterates `tag.entries`. Both names are therefore "correct"
-depending on which file you're reading — **`ORG_TAGS` uses `orgs`**; a set built
-directly for `applyTagSet()` uses `entries` (as `create-country-tags.mjs` does).
+`applyTagSet()` iterates `tag.entries` directly, so `ORG_TAGS` is handed to it
+unchanged. `CATEGORIES` and `COUNTRY_TAGS` use the same field name — all three
+config sources agree, and nothing remaps between them.
 
 Use a **bare domain** (`from:uber.com`), not a specific sending subdomain. An org
 tag identifies the *sender*, so account and security mail belongs under it too,

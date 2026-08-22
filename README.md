@@ -175,7 +175,7 @@ To enable Gmail features, authenticate with Gmail scopes:
 
 ```bash
 # Using the provided auth script
-node auth-gmail.mjs
+npm run auth:gmail
 ```
 
 This will:
@@ -193,7 +193,7 @@ node check-gmail.mjs
 - Gmail and Calendar tokens are stored separately
 - Gmail scopes: `gmail.readonly`, `gmail.modify`
 - Tokens expire after 7 days in test mode
-- Re-authenticate as needed with `node auth-gmail.mjs`
+- Re-authenticate as needed with `npm run auth:gmail`
 
 ### Email Organization & Filtering Scripts
 
@@ -278,18 +278,33 @@ This silently breaks:
 Keep label names free of parentheses. An acronym belongs in schema `alternateName`, not
 in the path.
 
-### `searchAndModify()` does not page
+### `searchAndModify()` truncates to its caller's `maxResults`
 
-`searchAndModify()` in [`lib/gmail-batch-utils.mjs`](lib/gmail-batch-utils.mjs) issues
-one `messages.list` and never follows `nextPageToken`. `relabel-messages.mjs` calls it
-with `DEFAULT_MAX_RESULTS` (100), so on a 7,000-message label it moves **100** and prints
-`Total relabeled: 100` — which reads as success. The inner `Processed 50/61` lines come
-from batch chunking of that single page, not from list paging, so they give false
-reassurance of full coverage.
+`searchAndModify()` in [`lib/gmail-batch-utils.mjs`](lib/gmail-batch-utils.mjs) **does**
+page — it follows `nextPageToken` in a `do/while` loop at 500 per request. The cap is
+entirely the caller's optional fourth argument, `maxResults`, which breaks that loop
+early. **Fix the call site, not the library.**
+
+Callers that truncate today:
+
+| Call site | Cap | Deliberate? |
+|---|---|---|
+| `relabel-messages.mjs:63` | `DEFAULT_MAX_RESULTS` (100) | No — this is the bug |
+| `organize-emails.mjs:131,182` | `DEFAULT_MAX_RESULTS` (100) | No |
+| `protect-important-inbox.mjs` (6 sites) | bare literal `100` | No — also a magic number |
+| `create-filters.mjs:1591` | `category.maxResults` | **Yes** — opt-in per category, unset means page to exhaustion |
+| `mark-forums-read.mjs:12`, `mark-read.mjs:43` | *(omitted)* | **Correct** — pages fully |
+
+So `node relabel-messages.mjs --query 'label:"X"' --remove "X"` on a 7,000-message label
+moves **100** and prints `Total relabeled: 100` — which reads as success. The inner
+`Processed 50/61` lines come from batch chunking of one page, not from list paging, so
+they give false reassurance of full coverage. Dropping the argument is the whole fix.
 
 Use [`strip-label.mjs`](strip-label.mjs) for bulk removal; it pages until the label is
 empty, re-querying the first page each round because removing the label shrinks the
 result set and invalidates page tokens.
+[`modify-messages.mjs`](modify-messages.mjs) sidesteps the trap entirely by selecting
+with `listAllMessageIds` (unbounded) instead of `searchAndModify`.
 
 Never confirm a bulk relabel from a script's own count — re-query afterwards.
 
@@ -316,8 +331,31 @@ percentage, a "how much mail would this touch" check, a decision that a set is s
 to skip paging — is wrong in the direction that looks safe.
 
 Use `countMessagesMatching()` in [`lib/gmail-message-utils.mjs`](lib/gmail-message-utils.mjs),
-which pages to a true total and can return sample IDs in the same walk, or `labels.get`'s
-authoritative `messagesTotal`/`messagesUnread` when counting a whole label.
+which pages to a true total and can return sample IDs in the same walk. `labels.get` is the
+cheap way to count a whole label, but its counters are not exact either — see below.
+
+### `labels.get` counters are eventually consistent
+
+`labels.get` returns `messagesTotal`/`messagesUnread` in one cheap call, which is why
+`list-unread-emails.mjs --stats` reports every label that way. They are **not exact**: Gmail
+recomputes them asynchronously, and they can be wrong by orders of magnitude before settling.
+
+`--stats` reported `Travel: 5179 total, 1313 unread`. Three paging methods all said **13** —
+`labelIds: [Travel, UNREAD]`, `label:Travel is:unread`, and the same query with `in:anywhere`
+(so Spam and Trash were not the gap). Minutes later `labels.get` self-corrected to
+`5197 total, 13 unread` with nothing having touched the mailbox.
+
+The tell is **the same figure repeating across unrelated labels** — that run showed exactly
+`501 unread` on `Events`, `Events/Entertainment` and `Meetup Events` at once — and parent
+totals that bear no relation to the sum of their children. Note this is the *opposite*
+signature to [`resultSizeEstimate`](#resultsizeestimate-is-not-a-count), which pins to a
+ceiling and always under-reports; a stale label counter can err in either direction.
+
+It is not label-resolution drift: `resolveLabelId()` is an exact-name `Map` lookup over one
+`labels.list`, so a name always resolves to the same id. The bad numbers come from Google.
+
+Treat `--stats` as indicative. Confirm any count you are about to act on — especially one
+sizing a bulk operation — with `countMessagesMatching()`, which pages and is exact.
 
 ### Sender-matching helpers miss grouped `from:(a OR b)` queries
 

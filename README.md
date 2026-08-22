@@ -200,7 +200,8 @@ Automated scripts for organizing and filtering large volumes of Gmail with focus
 
 **Management Scripts:** (use shared `createGmailClient()` for OAuth, error handling, and multi-account support)
 - `list-unread-emails.mjs` - Categorize and summarize unread emails; `--stats` for per-label counts, `--verify` for label spot-checks, `--count` for quick total
-- `summarize-remaining.mjs` - Summary of uncategorized/remaining unread emails; parallel fetching
+- `report-messages.mjs` - The one read-only reporter: query -> page -> fetch headers -> project columns -> print. `dump-messages.mjs`, `list-unlabeled-unread.mjs`, `list-inbox.mjs`, `audit-unread.mjs` and `summarize-remaining.mjs` are presets over it
+- `summarize-remaining.mjs` - Summary of uncategorized/remaining unread emails
 - `apply-filters-to-unread.mjs` - Apply existing filters to current unread emails
 - `switch-account.mjs` - Switch active Google account (file-based resolution)
 

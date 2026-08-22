@@ -1,63 +1,58 @@
+/**
+ * Summarize the unread mail left in a handful of named buckets — the queries that
+ * matter enough to check by hand rather than route with a filter.
+ *
+ * A report-messages.mjs preset: the query list is the whole of this file, because the
+ * fetch-and-print shape lives there.
+ *
+ * Usage: node summarize-remaining.mjs
+ */
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { USER_ID } from './lib/constants.mjs';
-import { extractDisplayName, extractEmailAddress, getHeader } from './lib/email-utils.mjs';
+import { report } from './report-messages.mjs';
 import { BANNER } from './lib/console-utils.mjs';
 
-const MAX_RESULTS = 20;
 const INTERNAL_PREVIEW_COUNT = 2;
 const FORUM_PREVIEW_COUNT = 1;
-const SUBJECT_MAX_LENGTH = 60;
-const HEADER_SUBJECT = 'Subject';
-const HEADER_FROM = 'From';
+const MAX_PER_QUERY = 20;
 
-const internalQueries = [
-  { label: 'John Skelton (files)', q: 'from:john@integritystudio.ai' },
-  { label: 'Fellowship applications', q: 'subject:fellowship (subject:application OR subject:applications OR subject:deadline) newer_than:60d' },
-  { label: 'Project discussions (misc)', q: 'from:chandra@integritystudio.ai OR from:alex@integritystudio.ai' }
+const INTERNAL_QUERIES = [
+  { name: 'John Skelton (files)', query: 'from:john@integritystudio.ai is:unread' },
+  { name: 'Fellowship applications', query: 'subject:fellowship (subject:application OR subject:applications OR subject:deadline) newer_than:60d is:unread' },
+  { name: 'Project discussions (misc)', query: 'from:chandra@integritystudio.ai OR from:alex@integritystudio.ai is:unread' },
 ];
 
-const forumQueries = [
-  { label: 'Misc/sales', q: 'from:marcella@inmyteam.com' }
+const FORUM_QUERIES = [
+  { name: 'Misc/sales', query: 'from:marcella@inmyteam.com is:unread' },
 ];
-
-async function printQueryResults(gmail, query, label, previewCount) {
-  const resp = await gmail.users.messages.list({ userId: USER_ID, q: `${query.q} is:unread`, maxResults: MAX_RESULTS });
-  const messages = resp.data.messages || [];
-  if (messages.length === 0) return;
-
-  console.log(`${label}: ${messages.length}`);
-
-  const previews = await Promise.all(
-    messages.slice(0, previewCount).map(m =>
-      gmail.users.messages.get({ userId: USER_ID, id: m.id, format: 'metadata', metadataHeaders: [HEADER_SUBJECT, HEADER_FROM] })
-    )
-  );
-
-  for (const msg of previews) {
-    const headers = msg.data.payload?.headers || [];
-    const subject = getHeader(headers, HEADER_SUBJECT) ?? '(no subject)';
-    const from = getHeader(headers, HEADER_FROM) ?? '';
-    console.log(`  • ${subject.substring(0, SUBJECT_MAX_LENGTH)}`);
-    console.log(`    From: ${extractDisplayName(from) || extractEmailAddress(from)}\n`);
-  }
-}
 
 async function run() {
-  const gmail = createGmailClient();
+  const gmail = await createGmailClient();
 
   console.log('REMAINING UNREAD SUMMARY\n');
   console.log(BANNER + '\n');
 
   console.log('INTERNAL: Work file shares, project discussions\n');
-  await Promise.all(internalQueries.map(q => printQueryResults(gmail, q, q.label, INTERNAL_PREVIEW_COUNT)));
+  await report(gmail, INTERNAL_QUERIES, {
+    columns: ['subject', 'from'],
+    format: 'list',
+    max: MAX_PER_QUERY,
+    preview: INTERNAL_PREVIEW_COUNT,
+    skipEmpty: true,
+  });
 
   console.log('\nFORUMS: Technical summaries\n');
-  await Promise.all(forumQueries.map(q => printQueryResults(gmail, q, q.label, FORUM_PREVIEW_COUNT)));
+  await report(gmail, FORUM_QUERIES, {
+    columns: ['subject', 'from'],
+    format: 'list',
+    max: MAX_PER_QUERY,
+    preview: FORUM_PREVIEW_COUNT,
+    skipEmpty: true,
+  });
 
   console.log(BANNER + '\n');
 }
 
-run().catch(error => {
+run().catch((error) => {
   console.error('Error:', error.message);
   process.exit(1);
 });

@@ -11,7 +11,7 @@ import { getHeader } from './lib/email-utils.mjs';
 import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import { mapWithConcurrency } from './lib/gmail-message-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
-import { ORG_TAGS } from './create-org-tags.mjs';
+import { ORG_TAGS } from './config/org-tags.mjs';
 import { displayNameOf, shareLeadingToken } from './audit-sender-signals.mjs';
 import { fromTokens } from './audit-label-drift.mjs';
 
@@ -29,7 +29,7 @@ const MIN_REPORT_COUNT = 1;
 function coveredDomains() {
   const domains = new Set();
   for (const tag of ORG_TAGS) {
-    for (const entry of tag.orgs) {
+    for (const entry of tag.entries) {
       for (const token of fromTokens(entry.query)) {
         domains.add(token);
       }

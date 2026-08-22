@@ -45,23 +45,46 @@ export class TokenManager {
   }
 
   private async loadMultiAccountTokens(): Promise<MultiAccountTokens> {
+    let fileContent: string;
     try {
-      const fileContent = await fs.readFile(this.tokenPath, "utf-8");
-      const parsed = JSON.parse(fileContent);
-
-      if (parsed.access_token || parsed.refresh_token) {
-        const multiAccountTokens: MultiAccountTokens = { normal: parsed };
-        await this.saveMultiAccountTokens(multiAccountTokens);
-        return multiAccountTokens;
-      }
-
-      return parsed as MultiAccountTokens;
+      fileContent = await fs.readFile(this.tokenPath, "utf-8");
     } catch (error: unknown) {
       if (isNodeError(error, 'ENOENT')) {
         return {};
       }
       throw error;
     }
+
+    // An interrupted write leaves a 0-byte file. It is not ENOENT, so before this
+    // branch existed JSON.parse('') threw out of here — and because the save path
+    // loads-then-merges, that threw out of the save too. Auth could not complete,
+    // and re-running it could not repair the file it was tripping over.
+    if (fileContent.trim() === '') {
+      return {};
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(fileContent);
+    } catch (error: unknown) {
+      // Non-empty but unparseable: preserve it for inspection rather than letting a
+      // fresh write silently discard tokens, then continue as if absent so auth works.
+      const quarantinePath = `${this.tokenPath}.corrupt-${Date.now()}`;
+      await fs.rename(this.tokenPath, quarantinePath);
+      process.stderr.write(
+        `Token file was unreadable (${toErrorMessage(error)}); moved to ${quarantinePath}. Re-authenticate to recreate it.\n`
+      );
+      return {};
+    }
+
+    const credentials = parsed as Credentials;
+    if (credentials.access_token || credentials.refresh_token) {
+      const multiAccountTokens: MultiAccountTokens = { normal: credentials };
+      await this.saveMultiAccountTokens(multiAccountTokens);
+      return multiAccountTokens;
+    }
+
+    return parsed as MultiAccountTokens;
   }
 
   private async saveMultiAccountTokens(multiAccountTokens: MultiAccountTokens): Promise<void> {

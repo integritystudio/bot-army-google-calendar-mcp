@@ -100,17 +100,21 @@ async function switchTo(accountName) {
   if (hasCalendar) console.log(`  Calendar: ${tokenStatus(calendarTokens[accountName])}`);
   if (hasGmail) console.log(`  Gmail:    ${tokenStatus(gmailTokens[accountName])}`);
   if (!hasCalendar) console.log('  Calendar: not configured (run: npm run auth)');
-  if (!hasGmail) console.log('  Gmail:    not configured (run: node auth-gmail.mjs)');
+  if (!hasGmail) console.log('  Gmail:    not configured (run: npm run auth:gmail)');
 
-  console.log(`\nSet in your shell: export ACCOUNT_MODE=${accountName}`);
+  console.log(`\nSet in your shell: export ACCOUNT_MODE=${accountName} GOOGLE_ACCOUNT_MODE=${accountName}`);
+  console.log('  (Gmail .mjs reads ACCOUNT_MODE; calendar TS reads GOOGLE_ACCOUNT_MODE — set both.)');
 }
 
 async function addAccount(accountName) {
   console.log(`Adding account: ${accountName}\n`);
+  // Each side reads a DIFFERENT env var (ACCOUNT_MODE for Gmail .mjs,
+  // GOOGLE_ACCOUNT_MODE for the calendar TS) — the npm scripts below set the correct
+  // one, so prefer them over exporting a variable by hand.
   console.log('Step 1: Authenticate Gmail');
-  console.log(`  ACCOUNT_MODE=${accountName} node auth-gmail.mjs\n`);
+  console.log(`  ACCOUNT_MODE=${accountName} npm run auth:gmail\n`);
   console.log('Step 2: Authenticate Calendar');
-  console.log(`  ACCOUNT_MODE=${accountName} npm run auth\n`);
+  console.log(`  GOOGLE_ACCOUNT_MODE=${accountName} npm run auth\n`);
   console.log('Step 3: Switch to the new account');
   console.log(`  node switch-account.mjs ${accountName}`);
 

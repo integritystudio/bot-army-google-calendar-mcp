@@ -11,6 +11,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const DEFAULT_CREDENTIALS_PATH = 'gcp-oauth.keys.json';
 
+// Loopback port for the OAuth callback. Must be registered as an authorized redirect
+// URI on the OAuth client, and must be free — src/auth/server.ts's calendar flow scans
+// 3500-3505, and a running MCP server also binds 3500. Override when 3500 is occupied:
+//   GMAIL_AUTH_PORT=3505 npm run auth:gmail
+// Check what Google actually accepts with scripts/check-redirect-uris.sh.
+const DEFAULT_AUTH_PORT = 3500;
+const AUTH_PORT = Number(process.env.GMAIL_AUTH_PORT) || DEFAULT_AUTH_PORT;
+const REDIRECT_URI = `http://localhost:${AUTH_PORT}/oauth2callback`;
+
 const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/gmail.modify',
@@ -27,7 +36,7 @@ async function authGmail() {
     const oauth2Client = new OAuth2Client(
       cred.client_id,
       cred.client_secret,
-      'http://localhost:3500/oauth2callback'
+      REDIRECT_URI
     );
 
     const authUrl = oauth2Client.generateAuthUrl({
@@ -36,11 +45,10 @@ async function authGmail() {
       prompt: 'consent',
     });
 
-    console.log('Opening browser for Gmail authentication...');
     console.log('Auth URL:', authUrl);
 
     const server = createServer(async (req, res) => {
-      const urlObj = new URL(req.url, 'http://localhost:3500');
+      const urlObj = new URL(req.url, `http://localhost:${AUTH_PORT}`);
       const code = urlObj.searchParams.get('code');
 
       if (!code) {
@@ -87,7 +95,19 @@ async function authGmail() {
       }
     });
 
-    server.listen(3500, () => {
+    server.on('error', (error) => {
+      if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${AUTH_PORT} is already in use.`);
+        console.error('Free it, or pick another REGISTERED port: GMAIL_AUTH_PORT=<port> npm run auth:gmail');
+        console.error('Run scripts/check-redirect-uris.sh to see which ports Google accepts.');
+      } else {
+        console.error('Auth server error:', error.message);
+      }
+      process.exit(1);
+    });
+
+    server.listen(AUTH_PORT, () => {
+      console.log('Opening browser for Gmail authentication...');
       console.log('Waiting for authentication...');
       exec(`open "${authUrl}"`, (error) => {
         if (error) {

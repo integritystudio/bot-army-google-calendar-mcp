@@ -35,9 +35,9 @@ import { getHeader } from './lib/email-utils.mjs';
 import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import { mapWithConcurrency, countMessagesMatching } from './lib/gmail-message-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
-import { CATEGORIES } from './create-filters.mjs';
-import { ORG_TAGS } from './create-org-tags.mjs';
-import { COUNTRY_TAGS } from './create-country-tags.mjs';
+import { CATEGORIES } from './config/categories.mjs';
+import { ORG_TAGS } from './config/org-tags.mjs';
+import { COUNTRY_TAGS } from './config/country-tags.mjs';
 
 const DEFAULT_SAMPLE = 5;
 const RULE_CONCURRENCY = 8;
@@ -51,10 +51,11 @@ const SUMMARY_PAD = 46;
  * The three config sources disagree on what the entry array is called
  * (filters / orgs / entries), so each source names its own field.
  */
+// All three config sources expose their rules as `entries`, so no per-source field map.
 const RULE_SOURCES = {
-  filters: { groups: CATEGORIES, field: 'filters' },
-  'org-tags': { groups: ORG_TAGS, field: 'orgs' },
-  'country-tags': { groups: COUNTRY_TAGS, field: 'entries' },
+  filters: CATEGORIES,
+  'org-tags': ORG_TAGS,
+  'country-tags': COUNTRY_TAGS,
 };
 
 const FINDING = {
@@ -68,10 +69,10 @@ const FINDING = {
 export function loadRules(sourceName = SOURCE_ALL) {
   const names = sourceName === SOURCE_ALL ? Object.keys(RULE_SOURCES) : [sourceName];
   return names.flatMap((source) => {
-    const spec = RULE_SOURCES[source];
-    if (!spec) throw new Error(`Unknown --source "${source}" (expected: ${Object.keys(RULE_SOURCES).join(', ')}, ${SOURCE_ALL})`);
-    return spec.groups.flatMap((group) =>
-      (group[spec.field] ?? []).map((entry) => ({
+    const groups = RULE_SOURCES[source];
+    if (!groups) throw new Error(`Unknown --source "${source}" (expected: ${Object.keys(RULE_SOURCES).join(', ')}, ${SOURCE_ALL})`);
+    return groups.flatMap((group) =>
+      (group.entries ?? []).map((entry) => ({
         source,
         labelName: entry.label ?? group.labelName,
         name: entry.name,

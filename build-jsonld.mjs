@@ -24,7 +24,7 @@ import { writeFileSync, readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { pathToFileURL } from 'node:url';
 import { VOCABULARIES } from './lib/vocabularies.mjs';
-import { ORG_TAGS } from './create-org-tags.mjs';
+import { ORG_TAGS } from './config/org-tags.mjs';
 
 const OUTPUT_PATH = 'docs/mailbox.jsonld';
 const SCHEMA_CONTEXT = 'https://schema.org';
@@ -82,7 +82,7 @@ export function buildGraph() {
   }
 
   for (const tag of ORG_TAGS) {
-    for (const org of tag.orgs) {
+    for (const org of tag.entries) {
       const schema = org.schema ?? (tag.schema && !isEntity(tag.schema) ? tag.schema : null);
       if (!schema) continue;
       if (isEntity(schema)) {

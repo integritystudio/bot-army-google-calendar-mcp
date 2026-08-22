@@ -16,26 +16,7 @@ import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { applyTagSet } from './lib/gmail-tag-utils.mjs';
-import {
-  LABEL_COUNTRY_COLOMBIA,
-  LABEL_COUNTRY_MEXICO,
-} from './lib/constants.mjs';
-
-export const COUNTRY_TAGS = [
-  {
-    labelName: LABEL_COUNTRY_COLOMBIA,
-    entries: [
-      { name: 'Rappi', query: 'from:rappi.com.co' },
-    ],
-  },
-  {
-    labelName: LABEL_COUNTRY_MEXICO,
-    entries: [
-      { name: 'Rappi', query: 'from:rappi.com.mx' },
-      { name: 'Zen To Go', query: 'from:zentogo.com.mx' },
-    ],
-  },
-];
+import { COUNTRY_TAGS } from './config/country-tags.mjs';
 
 
 const USAGE = 'Usage: node create-country-tags.mjs [--filters-only] [--only <label>] [--countries a,b]';

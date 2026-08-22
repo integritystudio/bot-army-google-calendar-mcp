@@ -11,10 +11,11 @@
  *                   i.e. residue from a config the repo no longer describes
  *   NO_MAIL       - the rule matches nothing (dead sender, or a typo in the query)
  *
- * Rules are matched to each other by sender, so STRAY_LABEL over-reports labels applied by
- * SUBJECT rather than sender — organize-emails.mjs routes `subject:workshop` mail to Events
- * from any sender, and no sender-keyed rule here can account for that. Confirm a stray is
- * real (as Product Updates on AlphaSignal was) before stripping it.
+ * Rules are matched to each other by sender, so STRAY_LABEL over-reports any label applied by
+ * SUBJECT rather than sender: no sender-keyed rule here can account for one. organize-emails.mjs
+ * was the last source of sender-unconstrained subject rules and is gone, but live Gmail filters
+ * it created may outlast it. Confirm a stray is real (as Product Updates on AlphaSignal was)
+ * before stripping it.
  *
  * MISSING_LABEL needs --exact to be trusted. Without it the check reads a sample, and
  * messages.list returns NEWEST first while a backfill gap sits in the OLDEST mail — so the

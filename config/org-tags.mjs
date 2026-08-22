@@ -266,6 +266,7 @@ export const ORG_TAGS = [
       { name: 'Splitwise', query: 'from:splitwise.com' },
       { name: 'Lemonade', query: 'from:lemonade.com' },
       { name: 'Better', query: 'from:better.com' },
+      { name: 'Brex', query: 'from:brex.com' },
     ],
   },
   {

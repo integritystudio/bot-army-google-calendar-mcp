@@ -7,7 +7,7 @@
 
 ## Problem
 
-Current email categorization (`organize-emails.mjs`) relies on sender addresses, subject keywords, and Gmail label heuristics. This breaks when:
+Current email categorization (`create-filters.mjs`, driven by `config/categories.mjs`) relies on sender addresses, subject keywords, and Gmail label heuristics. This breaks when:
 - Senders change addresses or domains
 - Subject lines don't match keyword patterns
 - Emails contain structured data (reservations, orders, shipments) that keywords miss
@@ -155,7 +155,7 @@ const SCHEMA_CATEGORY_MAP = {
 
 ```
 list-unread-emails.mjs → categorize by sender/subject patterns → apply labels
-organize-emails.mjs    → batch label by Gmail search queries → create filters
+create-filters.mjs     → batch label by Gmail search queries → create filters
 ```
 
 ### Enhanced Flow (schema-aware)
@@ -241,7 +241,7 @@ organize-emails.mjs    → batch label by Gmail search queries → create filter
 
 **Goal**: Use extracted schema types as a first-pass categorizer before keyword fallback.
 
-- Add schema extraction to `organize-emails.mjs` pipeline
+- Add schema extraction to the `create-filters.mjs` pipeline
 - Schema match = high confidence, skip keyword rules
 - No schema = existing keyword/sender rules (unchanged)
 - New sub-labels derived from schema metadata:
@@ -326,4 +326,4 @@ GS1 food/nutrition (`gs1:FoodBeverageTobaccoProduct`, `gs1:AllergenDetails`, `gs
 - **Coverage**: % of categorized emails where schema.org markup was the signal (vs keyword fallback)
 - **Accuracy**: False positive rate of schema-based categorization (expect < 1%)
 - **New categories**: Email types that become categorizable only through schema (orders, shipping, travel)
-- **Rule reduction**: Fewer keyword patterns needed in `organize-emails.mjs` matchers
+- **Rule reduction**: Fewer keyword patterns needed in `config/categories.mjs` rules

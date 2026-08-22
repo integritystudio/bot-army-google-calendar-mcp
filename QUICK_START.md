@@ -35,10 +35,9 @@ node summarize-remaining.mjs           # Summarize what's left uncategorized
 ## 3. Label and organize
 
 ```bash
-node organize-emails.mjs --type events           # Label event emails
-node organize-emails.mjs --type newsletters      # Label newsletters
-node organize-emails.mjs --type event-sublabels  # Apply event sublabels
-node organize-emails.mjs --type organization     # Organization label hierarchy
+node create-filters.mjs --only Events            # Label event emails
+node create-filters.mjs --only Newsletters       # Label newsletters
+node create-org-tags.mjs                         # Organization/* label hierarchy
 ```
 
 ## 4. Create auto-label filters
@@ -80,8 +79,7 @@ node bulk-archive-unread.mjs                      # Archive ALL unread inbox mai
 ## Typical maintenance run
 
 ```bash
-node organize-emails.mjs --type events && \
-node organize-emails.mjs --type newsletters && \
+node create-filters.mjs && \
 node filter-events-by-date.mjs && \
 node mark-read.mjs --archived-only && \
 node list-unread-emails.mjs --count

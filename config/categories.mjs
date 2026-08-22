@@ -646,8 +646,11 @@ export const CATEGORIES = [
   },
   {
     // Course/webinar senders — stay in inbox like other future-event categories.
-    // organize-emails.mjs also routes subject:(workshop|conference|summit|webinar)
-    // here from any sender; this entry adds sender-based coverage.
+    // Coverage is sender-based by design. organize-emails.mjs used to also route
+    // subject:(workshop|conference|summit|webinar) here from ANY sender; that rule was
+    // dropped with the script rather than migrated, because every subject: rule in this
+    // config is sender-scoped and an unscoped one becomes a standing filter that labels
+    // any mail mentioning "workshop".
     labelName: LABEL_EVENTS_WORKSHOPS,
     archive: false,
     entries: [
@@ -1193,7 +1196,7 @@ export const CATEGORIES = [
     labelName: LABEL_COMMUNITY_EVENTS,
     archive: true,
     entries: [
-      { name: 'Austin community groups', query: 'from:("ATX - Awkwardly Zen" OR "Austin Cafe Drawing Group" OR "Austin Robotics & AI")' },
+      { name: 'Austin community groups', query: 'from:("ATX - Awkwardly Zen" OR "Austin Cafe Drawing Group" OR "Austin Robotics & AI" OR "International House")' },
     ],
   },
   {
@@ -1201,6 +1204,9 @@ export const CATEGORIES = [
     archive: true,
     entries: [
       { name: 'Calendly', query: 'from:teamcalendly@send.calendly.com' },
+      // Support/refund threads. protect-important-inbox.mjs independently tags this
+      // sender Keep Important, so it stays in the inbox despite archive: true.
+      { name: 'Calendly Support', query: 'from:support@calendly.zendesk.com' },
     ],
   },
   {

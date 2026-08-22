@@ -343,7 +343,7 @@ async function verifyLabels(gmail) {
     console.log(`Has 'Events' label: ${labels.some(id => labelMapById.get(id) === LABEL_EVENTS)}\n`);
   }
 
-  // AlphaSignal is a Newsletters sender in both create-filters.mjs and organize-emails.mjs.
+  // AlphaSignal is a Newsletters sender in config/categories.mjs.
   // This asserted 'Product Updates' until 2026-08-11 and so reported a miss on correctly
   // labeled mail — the label it was looking for came from an older config no filter applies.
   const { sampleIds: alphaIds } = await countMessagesMatching(

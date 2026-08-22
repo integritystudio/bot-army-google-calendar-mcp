@@ -1,6 +1,6 @@
 /**
  * Report unread emails that carry no user label — the mail the organization
- * pipeline (organize-emails.mjs, Gmail filters) hasn't categorized yet.
+ * pipeline (create-filters.mjs, Gmail filters) hasn't categorized yet.
  *
  * By default checks the inbox only. --all additionally counts unlabeled unread
  * across the whole mailbox (exact count: one API call per 500 matches, so slow

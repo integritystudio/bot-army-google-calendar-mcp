@@ -20,7 +20,6 @@ A Model Context Protocol (MCP) server that provides Google Calendar and Gmail in
 ## Recent Updates
 
 **Email Organization Pipeline:**
-- `organize-emails.mjs` — Full pipeline: label, filter, and conditionally archive emails with parallelized search/filter calls
 - `switch-account.mjs` — File-based active account switching for multi-account workflows
 
 **Schema.org Email Categorization:**
@@ -200,7 +199,6 @@ node check-gmail.mjs
 Automated scripts for organizing and filtering large volumes of Gmail with focus on correctness and efficiency.
 
 **Management Scripts:** (use shared `createGmailClient()` for OAuth, error handling, and multi-account support)
-- `organize-emails.mjs` - Full pipeline: label, filter, and conditionally archive with parallelized calls
 - `list-unread-emails.mjs` - Categorize and summarize unread emails; `--stats` for per-label counts, `--verify` for label spot-checks, `--count` for quick total
 - `summarize-remaining.mjs` - Summary of uncategorized/remaining unread emails; parallel fetching
 - `apply-filters-to-unread.mjs` - Apply existing filters to current unread emails
@@ -293,7 +291,6 @@ Callers that truncate today:
 | Call site | Cap | Deliberate? |
 |---|---|---|
 | `relabel-messages.mjs:63` | `DEFAULT_MAX_RESULTS` (100) | No — this is the bug |
-| `organize-emails.mjs:131,182` | `DEFAULT_MAX_RESULTS` (100) | No |
 | `protect-important-inbox.mjs` (6 sites) | `SUBJECT_SWEEP_CAP` | **Yes** — subject-only queries; `cappedSweep()` says when it truncates |
 | `create-filters.mjs:281` | `category.maxResults` | **Yes** — opt-in per category, unset means page to exhaustion |
 | `mark-forums-read.mjs:12`, `mark-read.mjs:43` | *(omitted)* | **Correct** — pages fully |
@@ -383,7 +380,7 @@ domain-only comparison.
 
 `list-unread-emails.mjs --verify` reported `AlphaSignal email has 'Product Updates' label:
 false` for months. The mail was labeled correctly — the *check* was stale: both
-[`create-filters.mjs`](create-filters.mjs) and [`organize-emails.mjs`](organize-emails.mjs)
+[`create-filters.mjs`](create-filters.mjs)
 route AlphaSignal to `Newsletters`, and no live filter applies `Product Updates` to it. The
 label it looked for was residue from an older config, still sitting on 321 messages.
 

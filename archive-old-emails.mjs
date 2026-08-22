@@ -18,7 +18,7 @@
  *   node archive-old-emails.mjs --query "from:laseraway.co" --yes  # apply
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { parseCli, exitWithUsage, runMain } from './lib/cli-utils.mjs';
+import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
 import { modifyMessages } from './modify-messages.mjs';
 import { GMAIL_INBOX, GMAIL_UNREAD, MS_PER_DAY } from './lib/constants.mjs';
 import { BANNER } from './lib/console-utils.mjs';
@@ -31,16 +31,16 @@ const gmailDate = (date) =>
 
 const USAGE = 'Usage: node archive-old-emails.mjs (--label "<label name>" | --query "<gmail-query>") [--yes]';
 
-const { values } = parseCli({
-  label: { type: 'string' },
-  query: { type: 'string' },
-  yes: { type: 'boolean', default: false },
-}, USAGE);
-
-const { label: labelName, query, yes: apply } = values;
-if (!labelName && !query) exitWithUsage(USAGE);
-
 async function main() {
+  const { values } = parseCli({
+    label: { type: 'string' },
+    query: { type: 'string' },
+    yes: { type: 'boolean', default: false },
+  }, USAGE);
+
+  const { label: labelName, query, yes: apply } = values;
+  if (!labelName && !query) exitWithUsage(USAGE);
+
   const before = gmailDate(new Date(Date.now() - DAYS_AGO * MS_PER_DAY));
   console.log(`ARCHIVING OLD EMAILS — ${query ? `query: ${query}` : `label: ${labelName}`}\n`);
   console.log(BANNER + '\n');
@@ -61,4 +61,4 @@ async function main() {
   }
 }
 
-runMain(main);
+runIfMain(import.meta.url, main);

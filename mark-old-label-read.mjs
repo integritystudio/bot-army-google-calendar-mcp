@@ -10,7 +10,7 @@
  *   node mark-old-label-read.mjs --label "Job Search" --before 2026/06/01  # explicit cutoff (Gmail date format)
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { parseCli, exitWithUsage, runMain } from './lib/cli-utils.mjs';
+import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
 import { modifyMessages } from './modify-messages.mjs';
 import { GMAIL_UNREAD } from './lib/constants.mjs';
 
@@ -24,16 +24,16 @@ const defaultBefore = () => {
 
 const USAGE = 'Usage: node mark-old-label-read.mjs --label "<name>" [--before YYYY/MM/DD]';
 
-const { values } = parseCli({
-  label: { type: 'string' },
-  before: { type: 'string' },
-}, USAGE);
-
-const labelName = values.label;
-const before = values.before || defaultBefore();
-if (!labelName) exitWithUsage(USAGE);
-
 async function main() {
+  const { values } = parseCli({
+    label: { type: 'string' },
+    before: { type: 'string' },
+  }, USAGE);
+
+  const labelName = values.label;
+  const before = values.before || defaultBefore();
+  if (!labelName) exitWithUsage(USAGE);
+
   console.log(`Unread "${labelName}" emails before ${before}:`);
   const { modified } = await modifyMessages(await createGmailClient(), {
     labelName,
@@ -46,4 +46,4 @@ async function main() {
   console.log(`Marked ${modified} as read.`);
 }
 
-runMain(main);
+runIfMain(import.meta.url, main);

@@ -8,7 +8,7 @@
  *   node protect-important-inbox.mjs --billing --apply-only   # apply billing filters to unread emails only
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { parseCli, runMain } from './lib/cli-utils.mjs';
+import { parseCli, runIfMain } from './lib/cli-utils.mjs';
 import { DEFAULT_MAX_RESULTS, GMAIL_INBOX, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
@@ -16,14 +16,6 @@ import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 import { BANNER, printComplete } from './lib/console-utils.mjs';
 
 const USAGE = 'Usage: node protect-important-inbox.mjs [--billing [--update | --apply-only]]';
-
-const { values } = parseCli({
-  billing: { type: 'boolean', default: false },
-  update: { type: 'boolean', default: false },
-  'apply-only': { type: 'boolean', default: false },
-}, USAGE);
-
-const billingMode = values.billing;
 
 const IMPORTANT_FILTERS = [
   { name: 'Cloudflare Alerts', query: 'from:noreply@notify.cloudflare.com' },
@@ -104,14 +96,8 @@ async function resolveBillingLabelIds(gmail, mode) {
   return { billingLabelId, keepImportantLabelId };
 }
 
-async function runBillingFilters() {
+async function runBillingFilters(billingSubMode) {
   const gmail = createGmailClient();
-
-  const billingSubMode = values.update
-    ? 'update'
-    : values['apply-only']
-      ? 'apply-only'
-      : 'create';
 
   console.log(BANNER + '\n');
   const { billingLabelId, keepImportantLabelId } = await resolveBillingLabelIds(gmail, billingSubMode);
@@ -187,4 +173,19 @@ async function runBillingFilters() {
   console.log(BANNER + '\n');
 }
 
-runMain(billingMode ? runBillingFilters : protectImportantItems);
+async function main() {
+  const { values } = parseCli({
+    billing: { type: 'boolean', default: false },
+    update: { type: 'boolean', default: false },
+    'apply-only': { type: 'boolean', default: false },
+  }, USAGE);
+
+  if (!values.billing) return protectImportantItems();
+  // The sub-mode was derived inside runBillingFilters from a module-scope `values`;
+  // passing it in keeps the parse and its consumer in one place.
+  return runBillingFilters(
+    values.update ? 'update' : values['apply-only'] ? 'apply-only' : 'create'
+  );
+}
+
+runIfMain(import.meta.url, main);

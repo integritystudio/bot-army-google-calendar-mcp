@@ -1,5 +1,5 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { runMain } from './lib/cli-utils.mjs';
+import { runIfMain } from './lib/cli-utils.mjs';
 import { USER_ID, GMAIL_INBOX, LABEL_EVENTS, LABEL_KEEP_IMPORTANT, DEFAULT_MAX_RESULTS } from './lib/constants.mjs';
 import { classifyEmail } from './lib/date-based-filter.mjs';
 import { getHeader } from './lib/email-utils.mjs';
@@ -72,4 +72,4 @@ async function filterEventsByDate() {
   console.log(BANNER + '\n');
 }
 
-runMain(filterEventsByDate);
+runIfMain(import.meta.url, filterEventsByDate);

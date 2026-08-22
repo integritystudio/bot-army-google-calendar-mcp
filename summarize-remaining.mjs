@@ -8,7 +8,7 @@
  * Usage: node summarize-remaining.mjs
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { runMain } from './lib/cli-utils.mjs';
+import { runIfMain } from './lib/cli-utils.mjs';
 import { report } from './report-messages.mjs';
 import { BANNER } from './lib/console-utils.mjs';
 
@@ -53,4 +53,4 @@ async function run() {
   console.log(BANNER + '\n');
 }
 
-runMain(run);
+runIfMain(import.meta.url, run);

@@ -6,7 +6,7 @@
  *   node audit-org-tag-coverage.mjs [--max N] [--query "<gmail-query>"]
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { parseCli, runMain } from './lib/cli-utils.mjs';
+import { parseCli, runIfMain } from './lib/cli-utils.mjs';
 import { extractDisplayName, extractDomain, shareLeadingToken } from './lib/email-utils.mjs';
 import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import { fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
@@ -117,4 +117,4 @@ async function main() {
   for (const n of missingLabels) console.log(`  ${n}`);
 }
 
-runMain(main);
+runIfMain(import.meta.url, main);

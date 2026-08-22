@@ -6,7 +6,7 @@ import { homedir } from 'os';
 import { createServer } from 'http';
 import { URL } from 'url';
 import { exec } from 'child_process';
-import { runMain } from './lib/cli-utils.mjs';
+import { runIfMain } from './lib/cli-utils.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -123,4 +123,4 @@ async function authGmail() {
   }
 }
 
-runMain(authGmail);
+runIfMain(import.meta.url, authGmail);

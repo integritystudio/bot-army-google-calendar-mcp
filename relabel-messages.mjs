@@ -19,23 +19,23 @@
  *   node relabel-messages.mjs --query "..." --add "..." --yes    # apply
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { parseCli, exitWithUsage, runMain } from './lib/cli-utils.mjs';
+import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
 import { modifyMessages } from './modify-messages.mjs';
 import { BANNER } from './lib/console-utils.mjs';
 
 const USAGE = 'Usage: node relabel-messages.mjs --query "<gmail-query>" [--add "<label>"] [--remove "<label>"] [--yes]';
 
-const { values } = parseCli({
-  query: { type: 'string' },
-  add: { type: 'string' },
-  remove: { type: 'string' },
-  yes: { type: 'boolean', default: false },
-}, USAGE);
-
-const { query, add: addName, remove: removeName, yes: apply } = values;
-if (!query || (!addName && !removeName)) exitWithUsage(USAGE);
-
 async function main() {
+  const { values } = parseCli({
+    query: { type: 'string' },
+    add: { type: 'string' },
+    remove: { type: 'string' },
+    yes: { type: 'boolean', default: false },
+  }, USAGE);
+
+  const { query, add: addName, remove: removeName, yes: apply } = values;
+  if (!query || (!addName && !removeName)) exitWithUsage(USAGE);
+
   console.log(`RELABELING — query: ${query}`);
   if (addName) console.log(`  + ${addName}`);
   if (removeName) console.log(`  - ${removeName}`);
@@ -55,4 +55,4 @@ async function main() {
   }
 }
 
-runMain(main);
+runIfMain(import.meta.url, main);

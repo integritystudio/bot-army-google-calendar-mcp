@@ -9,7 +9,7 @@
  *   node list-unread-emails.mjs --schema # detect schema.org JSON-LD in unread emails (Phase 1 audit)
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { parseCli, runMain } from './lib/cli-utils.mjs';
+import { parseCli, runIfMain } from './lib/cli-utils.mjs';
 import { BANNER, DIVIDER } from './lib/console-utils.mjs';
 import { extractDisplayName, extractEmailAddress, getHeader } from './lib/email-utils.mjs';
 import { buildLabelCache, buildLabelIndex } from './lib/gmail-label-utils.mjs';
@@ -112,18 +112,6 @@ import {
 
 const USAGE = 'Usage: node list-unread-emails.mjs [--count | --stats | --verify | --schema]';
 
-const { values } = parseCli({
-  count: { type: 'boolean', default: false },
-  stats: { type: 'boolean', default: false },
-  verify: { type: 'boolean', default: false },
-  schema: { type: 'boolean', default: false },
-}, USAGE);
-
-const countOnly = values.count;
-const statsMode = values.stats;
-const verifyMode = values.verify;
-const schemaMode = values.schema;
-
 const CATEGORY_PRIORITY = [
   LABEL_KEEP_IMPORTANT, LABEL_EVENTS, LABEL_MONITORING,
   LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING,
@@ -218,13 +206,12 @@ async function getLabelCounts(gmail, labelId) {
   return { total: res.data.messagesTotal || 0, unread: res.data.messagesUnread || 0 };
 }
 
-async function listUnreadEmails(gmail) {
-  if (countOnly) {
-    const { total } = await getLabelCounts(gmail, SYSTEM_LABEL_UNREAD);
-    console.log(`\nUnread messages: ${total}`);
-    return;
-  }
+async function showUnreadCount(gmail) {
+  const { total } = await getLabelCounts(gmail, SYSTEM_LABEL_UNREAD);
+  console.log(`\nUnread messages: ${total}`);
+}
 
+async function listUnreadEmails(gmail) {
   const searchResponse = await gmail.users.messages.list({ userId: USER_ID, q: 'is:unread', maxResults: 500 });
 
   const messageIds = searchResponse.data.messages || [];
@@ -428,11 +415,21 @@ async function auditSchemaMarkup(gmail) {
 }
 
 async function run() {
+  const { values } = parseCli({
+    count: { type: 'boolean', default: false },
+    stats: { type: 'boolean', default: false },
+    verify: { type: 'boolean', default: false },
+    schema: { type: 'boolean', default: false },
+  }, USAGE);
+
   const gmail = createGmailClient();
-  if (statsMode) return showStats(gmail);
-  if (verifyMode) return verifyLabels(gmail);
-  if (schemaMode) return auditSchemaMarkup(gmail);
+  // --count was a branch inside listUnreadEmails reading a module-scope flag; as its own
+  // mode all four read alike, and the flags stop outliving the parse that set them.
+  if (values.count) return showUnreadCount(gmail);
+  if (values.stats) return showStats(gmail);
+  if (values.verify) return verifyLabels(gmail);
+  if (values.schema) return auditSchemaMarkup(gmail);
   return listUnreadEmails(gmail);
 }
 
-runMain(run);
+runIfMain(import.meta.url, run);

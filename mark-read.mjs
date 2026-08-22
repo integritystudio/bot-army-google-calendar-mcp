@@ -16,7 +16,7 @@
  *   node mark-read.mjs --archived-only  # restrict to emails no longer in inbox
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { parseCli, runMain } from './lib/cli-utils.mjs';
+import { parseCli, runIfMain } from './lib/cli-utils.mjs';
 import { modifyMessages } from './modify-messages.mjs';
 import {
   GMAIL_UNREAD,
@@ -31,10 +31,10 @@ const LABELED_LABELS = [
 
 const USAGE = 'Usage: node mark-read.mjs [--archived-only]';
 
-const { values } = parseCli({ 'archived-only': { type: 'boolean', default: false } }, USAGE);
-const archivedOnly = values['archived-only'];
-
 async function main() {
+  const { values } = parseCli({ 'archived-only': { type: 'boolean', default: false } }, USAGE);
+  const archivedOnly = values['archived-only'];
+
   const gmail = await createGmailClient();
   let total = 0;
   for (const labelName of LABELED_LABELS) {
@@ -52,4 +52,4 @@ async function main() {
   console.log(`Total: ${total} ${archivedOnly ? 'archived ' : ''}emails marked as read`);
 }
 
-runMain(main);
+runIfMain(import.meta.url, main);

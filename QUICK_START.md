@@ -23,7 +23,8 @@ node switch-account.mjs --remove work  # Remove an account's tokens
 ## 2. Inspect the inbox
 
 ```bash
-node list-inbox.mjs                    # Current inbox contents
+node report-messages.mjs --format list --group-by category \
+  --columns unread,sender,subject --max 200 "in:inbox"   # Current inbox contents
 node list-unread-emails.mjs            # Full category breakdown with previews
 node list-unread-emails.mjs --count    # Just the total unread count
 node list-unread-emails.mjs --stats    # Per-label total/unread counts + mailbox profile

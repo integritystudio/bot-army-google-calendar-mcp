@@ -2,15 +2,19 @@
  * Report on the messages matching one or more Gmail queries.
  *
  * Six scripts had each hand-rolled the same shape — resolve a query, page the ids,
- * fetch headers, project a few fields, print. This is that shape once;
- * dump-messages.mjs, list-unlabeled-unread.mjs, list-inbox.mjs, audit-unread.mjs and
- * summarize-remaining.mjs are presets over it.
+ * fetch headers, project a few fields, print. This is that shape once.
+ * list-unlabeled-unread.mjs, audit-unread.mjs and summarize-remaining.mjs are presets
+ * over it, each carrying a fixed query set worth a name of its own.
  *
  * Usage:
  *   node report-messages.mjs "is:unread has:nouserlabels in:inbox"
  *   node report-messages.mjs --columns date,from,subject,labels --max 200 "label:Newsletters"
- *   node report-messages.mjs --format list --group-by category --columns unread,from,subject "in:inbox"
  *   node report-messages.mjs --total --count "is:unread"
+ *
+ * Replaces two scripts that added nothing but a default; their recipes:
+ *   dump-messages: node report-messages.mjs --total [--max N] "<gmail-query>"
+ *   list-inbox:    node report-messages.mjs --format list --group-by category \
+ *                    --columns unread,sender,subject --max 200 "in:inbox"
  */
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';

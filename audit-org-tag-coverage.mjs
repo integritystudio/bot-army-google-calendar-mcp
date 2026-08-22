@@ -2,6 +2,9 @@
  * Audit Organization tag coverage: which senders in the mailbox carry no
  * Organization/* label and are not matched by any ORG_TAGS entry.
  *
+ * --max bounds how many messages are read, paging to get there. It is a sample, and the
+ * report says so: a domain absent from it is not a domain absent from the mailbox.
+ *
  * Usage:
  *   node audit-org-tag-coverage.mjs [--max N] [--query "<gmail-query>"]
  */
@@ -9,8 +12,7 @@ import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, runIfMain } from './lib/cli-utils.mjs';
 import { extractDisplayName, extractDomain, shareLeadingToken } from './lib/email-utils.mjs';
 import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
-import { fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
-import { USER_ID } from './lib/constants.mjs';
+import { listAllMessageIds, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 import { ORG_TAGS } from './config/org-tags.mjs';
 import { fromTokens } from './audit-label-drift.mjs';
 
@@ -59,14 +61,16 @@ async function main() {
   const { byName: labelCache, byId: idToName } = await buildLabelIndex(gmail);
   const covered = coveredDomains();
 
-  const { data } = await gmail.users.messages.list({ userId: USER_ID, q: query, maxResults: max });
-  const messages = data.messages ?? [];
+  // Paged, not a single capped messages.list: Gmail caps maxResults at 500 per page, so
+  // asking for more silently sampled 500 and reported the number requested as though it
+  // were the number read. --max is now a real limit on how much is fetched.
+  const ids = await listAllMessageIds(gmail, query, { limit: max });
 
   // fetchMessageHeaders retries and warns about what it could not fetch. The
   // hand-rolled fan-out this replaces had no retry, and a dropped message is one
   // fewer sender in the sample — so a rate-limited run under-reported the gaps it
   // exists to find.
-  const rows = (await fetchMessageHeaders(gmail, messages.map((m) => m.id)))
+  const rows = (await fetchMessageHeaders(gmail, ids))
     .map(({ from, subject, labelIds }) => {
       const names = labelIds.map((lid) => idToName.get(lid)).filter(Boolean);
       return {

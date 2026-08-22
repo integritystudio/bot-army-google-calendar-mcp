@@ -45,13 +45,20 @@ if (!labelName) {
   process.exit(1);
 }
 
-console.log(`Unread "${labelName}" emails before ${before}:`);
-const { modified } = await modifyMessages(await createGmailClient(), {
-  labelName,
-  unreadOnly: true,
-  before,
-  remove: [GMAIL_UNREAD],
-  apply: true,
-});
+async function main() {
+  console.log(`Unread "${labelName}" emails before ${before}:`);
+  const { modified } = await modifyMessages(await createGmailClient(), {
+    labelName,
+    unreadOnly: true,
+    before,
+    remove: [GMAIL_UNREAD],
+    apply: true,
+  });
 
-console.log(`Marked ${modified} as read.`);
+  console.log(`Marked ${modified} as read.`);
+}
+
+main().catch((error) => {
+  console.error('Error:', error.message);
+  process.exit(1);
+});

@@ -210,8 +210,8 @@ Automated scripts for organizing and filtering large volumes of Gmail with focus
 - `filter-events-by-date.mjs` - Classify event emails as future (label + keep) or past (label + archive)
 
 **Archive & Processing Scripts:**
-- `archive-old-emails.mjs` - Batch archive old emails using Gmail batch API
-- `mark-read.mjs` - Mark emails as read in bulk
+- `archive-old-emails.mjs` - Archive mail older than 7 days under a label or query; a `modify-messages.mjs` preset, previews without `--yes`
+- `mark-read.mjs` - Mark unread mail under the routine categories as read; a `modify-messages.mjs` preset
 
 **Utilities:**
 - `lib/gmail-client.mjs` - Authenticated Gmail API client factory. Centralizes OAuth2 init, token validation, and multi-account support:
@@ -291,21 +291,25 @@ Callers that truncate today:
 
 | Call site | Cap | Deliberate? |
 |---|---|---|
-| `relabel-messages.mjs:63` | `DEFAULT_MAX_RESULTS` (100) | No — this is the bug |
 | `protect-important-inbox.mjs` (6 sites) | `SUBJECT_SWEEP_CAP` | **Yes** — subject-only queries; `cappedSweep()` says when it truncates |
 | `create-filters.mjs:281` | `category.maxResults` | **Yes** — opt-in per category, unset means page to exhaustion |
-| `mark-forums-read.mjs:12`, `mark-read.mjs:43` | *(omitted)* | **Correct** — pages fully |
 
-So `node relabel-messages.mjs --query 'label:"X"' --remove "X"` on a 7,000-message label
-moves **100** and prints `Total relabeled: 100` — which reads as success. The inner
-`Processed 50/61` lines come from batch chunking of one page, not from list paging, so
-they give false reassurance of full coverage. Dropping the argument is the whole fix.
+No accidental truncation remains. `relabel-messages.mjs` used to head this table: it
+passed `DEFAULT_MAX_RESULTS`, so on a 7,000-message label it moved **100** and printed
+`Total relabeled: 100` — which reads as success. The inner `Processed 50/61` lines came
+from batch chunking of one page, not from list paging, so they gave false reassurance of
+full coverage. It is now a [`modify-messages.mjs`](modify-messages.mjs) preset, which
+selects with `listAllMessageIds` (unbounded) instead of `searchAndModify`. Because
+lifting the cap makes an unbounded relabel a far bigger action than the capped one it
+replaces, it now previews unless `--yes`.
+
+`archive-old-emails.mjs` had the same cap by a different route — `searchAndModifyOlderThan`
+*defaulted* `maxResults`, so dropping the argument would not have lifted it. That helper
+had no other caller once the script migrated, and has been deleted.
 
 Use [`strip-label.mjs`](strip-label.mjs) for bulk removal; it pages until the label is
 empty, re-querying the first page each round because removing the label shrinks the
 result set and invalidates page tokens.
-[`modify-messages.mjs`](modify-messages.mjs) sidesteps the trap entirely by selecting
-with `listAllMessageIds` (unbounded) instead of `searchAndModify`.
 
 Never confirm a bulk relabel from a script's own count — re-query afterwards.
 

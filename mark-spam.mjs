@@ -39,11 +39,18 @@ if (!query) {
   process.exit(1);
 }
 
-const { modified } = await modifyMessages(await createGmailClient(), {
-  query,
-  add: [GMAIL_SPAM],
-  remove: [GMAIL_INBOX, GMAIL_UNREAD],
-  apply,
-});
+async function main() {
+  const { modified } = await modifyMessages(await createGmailClient(), {
+    query,
+    add: [GMAIL_SPAM],
+    remove: [GMAIL_INBOX, GMAIL_UNREAD],
+    apply,
+  });
 
-if (apply) console.log(`Moved ${modified} to Spam.`);
+  if (apply) console.log(`Moved ${modified} to Spam.`);
+}
+
+main().catch((error) => {
+  console.error('Error:', error.message);
+  process.exit(1);
+});

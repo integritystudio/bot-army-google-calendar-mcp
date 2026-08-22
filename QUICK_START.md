@@ -63,7 +63,8 @@ node protect-important-inbox.mjs --billing --apply-only # Apply billing filters 
 
 ```bash
 node filter-events-by-date.mjs                    # Keep future events, archive past ones
-node archive-old-emails.mjs --label "Meeting Responses"  # Archive old emails under a label
+node archive-old-emails.mjs --label "Meeting Responses"        # Preview
+node archive-old-emails.mjs --label "Meeting Responses" --yes  # Apply
 node mark-read.mjs                                # Mark all labeled emails as read
 node mark-read.mjs --archived-only                # Restrict to emails no longer in inbox
 node mark-forums-read.mjs                         # Mark Forums emails older than 5 days as read

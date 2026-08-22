@@ -1,9 +1,9 @@
 /**
  * Remove a label from every message carrying it, paging until none remain.
  *
- * relabel-messages.mjs cannot do this at scale: it calls searchAndModify with
- * DEFAULT_MAX_RESULTS (100), which truncates that function's paging loop — so on
- * a 7k-message label it strips 100 and reports success.
+ * relabel-messages.mjs now pages too (it is a modify-messages.mjs preset), so the
+ * 100-message truncation that made this script necessary is gone. It still earns its
+ * place: removing a label shrinks the result set, and this handles that directly.
  *
  * Paging here re-queries the first page each round instead of using pageToken:
  * removing the label shrinks the result set as we go, which invalidates tokens.

@@ -4,20 +4,32 @@
  * A query targets senders that should stay in the inbox briefly but not linger —
  * Gmail filters run only on arrival, so age-based archiving has to happen here.
  *
+ * Selection and batching live in modify-messages.mjs; this is the age-cutoff
+ * archive preset of it.
+ *
+ * Two changes from the hand-rolled version this replaces. It no longer stops at
+ * DEFAULT_MAX_RESULTS — searchAndModifyOlderThan defaults that cap, so dropping the
+ * argument would not have lifted it — and so it previews unless --yes. And the age
+ * test is now Gmail's own `before:`, which costs one query rather than a
+ * messages.get per candidate to read internalDate client-side.
+ *
  * Usage:
- *   node archive-old-emails.mjs --label "Meeting Responses"
- *   node archive-old-emails.mjs --query "from:laseraway.co"
+ *   node archive-old-emails.mjs --label "Meeting Responses"        # preview
+ *   node archive-old-emails.mjs --query "from:laseraway.co" --yes  # apply
  */
 import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { GMAIL_INBOX, GMAIL_UNREAD, DEFAULT_MAX_RESULTS, MS_PER_DAY } from './lib/constants.mjs';
-import { searchAndModifyOlderThan } from './lib/gmail-batch-utils.mjs';
-import { buildLabelCache } from './lib/gmail-label-utils.mjs';
+import { modifyMessages } from './modify-messages.mjs';
+import { GMAIL_INBOX, GMAIL_UNREAD, MS_PER_DAY } from './lib/constants.mjs';
 import { BANNER } from './lib/console-utils.mjs';
 
 const DAYS_AGO = 7;
 
-const USAGE = 'Usage: node archive-old-emails.mjs (--label "<label name>" | --query "<gmail-query>")';
+/** Gmail's before: wants YYYY/MM/DD. */
+const gmailDate = (date) =>
+  `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
+
+const USAGE = 'Usage: node archive-old-emails.mjs (--label "<label name>" | --query "<gmail-query>") [--yes]';
 
 let values;
 try {
@@ -25,6 +37,7 @@ try {
     options: {
       label: { type: 'string' },
       query: { type: 'string' },
+      yes: { type: 'boolean', default: false },
     },
   }));
 } catch (error) {
@@ -33,47 +46,34 @@ try {
   process.exit(1);
 }
 
-const labelName = values.label;
-const rawQuery = values.query;
-
-if (!labelName && !rawQuery) {
+const { label: labelName, query, yes: apply } = values;
+if (!labelName && !query) {
   console.error(USAGE);
   process.exit(1);
 }
 
-async function archiveOldEmails() {
-  const gmail = createGmailClient();
+async function main() {
+  const before = gmailDate(new Date(Date.now() - DAYS_AGO * MS_PER_DAY));
+  console.log(`ARCHIVING OLD EMAILS — ${query ? `query: ${query}` : `label: ${labelName}`}\n`);
+  console.log(BANNER + '\n');
+  console.log(`Archiving emails before ${before}\n`);
 
-  if (labelName) {
-    const labelCache = await buildLabelCache(gmail);
-    if (!labelCache.get(labelName)) {
-      console.error(`Label not found: "${labelName}"`);
-      process.exit(1);
-    }
+  const { modified } = await modifyMessages(await createGmailClient(), {
+    labelName: labelName ?? null,
+    query: query ?? null,
+    before,
+    remove: [GMAIL_UNREAD, GMAIL_INBOX],
+    apply,
+  });
+
+  if (apply) {
+    console.log(BANNER);
+    console.log(`COMPLETE\n\nTotal archived: ${modified} emails\n`);
+    console.log(BANNER + '\n');
   }
-
-  const searchQuery = rawQuery ?? `label:"${labelName}"`;
-  console.log(`ARCHIVING OLD EMAILS — ${rawQuery ? `query: ${rawQuery}` : `label: ${labelName}`}\n`);
-  console.log(BANNER + '\n');
-
-  const cutoffDate = new Date(Date.now() - DAYS_AGO * MS_PER_DAY).toISOString().split('T')[0];
-  console.log(`Archiving emails before ${cutoffDate}\n`);
-
-  const archivedIds = await searchAndModifyOlderThan(
-    gmail,
-    searchQuery,
-    DAYS_AGO,
-    { removeLabelIds: [GMAIL_UNREAD, GMAIL_INBOX] },
-    DEFAULT_MAX_RESULTS
-  );
-
-  console.log(BANNER);
-  console.log('COMPLETE\n');
-  console.log(`Total archived: ${archivedIds.length} emails\n`);
-  console.log(BANNER + '\n');
 }
 
-archiveOldEmails().catch(error => {
+main().catch((error) => {
   console.error('Error:', error.message);
   process.exit(1);
 });

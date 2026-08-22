@@ -1,7 +1,7 @@
 /**
  * Apply a label change to every message matching a selection.
  *
- * Generalizes what mark-spam.mjs and mark-old-label-read.mjs each hand-rolled:
+ * Generalizes what six scripts each hand-rolled:
  * resolve labels, build a selector, page it, batch-modify the result. Both now
  * delegate here, and any new "select some mail and relabel it" task is a flag
  * combination rather than another script.
@@ -40,6 +40,8 @@ const PREVIEW_LIMIT = 25;
  * @param {string[]} [options.remove] - Label names to remove
  * @param {boolean} [options.apply] - Modify for real; otherwise preview and change nothing
  * @param {number} [options.previewLimit]
+ * @param {boolean} [options.quiet] - Suppress the match count and progress lines, for
+ *   presets that loop and print their own per-iteration summary
  * @returns {Promise<{matched: number, modified: number}>}
  */
 export async function modifyMessages(gmail, {
@@ -51,6 +53,7 @@ export async function modifyMessages(gmail, {
   remove = [],
   apply = false,
   previewLimit = PREVIEW_LIMIT,
+  quiet = false,
 } = {}) {
   if (!labelName && !query) throw new Error('Nothing selected: pass --label or --query');
   if (!add.length && !remove.length) throw new Error('No change requested: pass --add or --remove');
@@ -77,7 +80,7 @@ export async function modifyMessages(gmail, {
   if (remove.length) modifications.removeLabelIds = remove.map(resolve);
 
   const ids = await listAllMessageIds(gmail, selector);
-  console.log(`Matches: ${ids.length}`);
+  if (!quiet) console.log(`Matches: ${ids.length}`);
   if (!ids.length) return { matched: 0, modified: 0 };
 
   if (!apply) {
@@ -90,7 +93,7 @@ export async function modifyMessages(gmail, {
   }
 
   const modified = await batchModifyMessages(gmail, ids, modifications, {
-    onProgress: (done, total) => { if (done < total) console.log(`  ${done}/${total}`); },
+    onProgress: quiet ? undefined : (done, total) => { if (done < total) console.log(`  ${done}/${total}`); },
   });
   return { matched: ids.length, modified };
 }

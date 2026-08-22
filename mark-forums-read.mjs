@@ -1,13 +1,31 @@
 /**
  * Mark Forums emails older than 5 days as read.
+ *
+ * A modify-messages.mjs preset. Applies immediately rather than previewing: the
+ * selection is one label, and removing UNREAD is idempotent and reversible.
+ *
  * Usage: node mark-forums-read.mjs
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { modifyMessages } from './modify-messages.mjs';
 import { GMAIL_UNREAD, LABEL_FORUMS } from './lib/constants.mjs';
-import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 
-const gmail = createGmailClient();
-const query = `label:"${LABEL_FORUMS}" is:unread older_than:5d`;
+const CUTOFF_DAYS = 5;
 
-const count = await searchAndModify(gmail, query, { removeLabelIds: [GMAIL_UNREAD] });
-console.log(`Marked ${count} Forums emails as read.`);
+async function main() {
+  const { modified } = await modifyMessages(await createGmailClient(), {
+    labelName: LABEL_FORUMS,
+    unreadOnly: true,
+    query: `older_than:${CUTOFF_DAYS}d`,
+    remove: [GMAIL_UNREAD],
+    apply: true,
+    quiet: true,
+  });
+
+  console.log(`Marked ${modified} Forums emails as read.`);
+}
+
+main().catch((error) => {
+  console.error('Error:', error.message);
+  process.exit(1);
+});

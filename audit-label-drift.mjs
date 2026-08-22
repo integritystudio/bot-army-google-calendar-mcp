@@ -29,12 +29,10 @@
  *   node audit-label-drift.mjs --query "from:alphasignal.ai" --expect "Newsletters"
  *   node audit-label-drift.mjs --sample 10 --exact               # true counts, slow
  */
-import { parseArgs } from 'node:util';
-import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { getHeader } from './lib/email-utils.mjs';
+import { parseCli, runIfMain } from './lib/cli-utils.mjs';
 import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
-import { mapWithConcurrency, countMessagesMatching } from './lib/gmail-message-utils.mjs';
+import { mapWithConcurrency, countMessagesMatching, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 import { CATEGORIES } from './config/categories.mjs';
 import { ORG_TAGS } from './config/org-tags.mjs';
@@ -172,25 +170,22 @@ async function inspectRule(gmail, rule, { sample, exact, nameById, idByName }) {
     ? (await countMessagesMatching(gmail, { q: rule.query, labelIds: [labelId] })).count
     : null;
 
-  const messages = await mapWithConcurrency(ids, (id) =>
-    gmail.users.messages
-      .get({ userId: USER_ID, id, format: 'metadata', metadataHeaders: ['From'] })
-      .then(({ data }) => data)
-      .catch(() => null),
-  );
+  // fetchMessageHeaders retries and reports what it could not fetch. The hand-rolled
+  // fan-out this replaces dropped a failure to null, so a rate-limited run shrank the
+  // sample instead of erroring — and a smaller sample reads as less drift, not as a
+  // failed audit.
+  const messages = await fetchMessageHeaders(gmail, ids);
 
   const labelCounts = new Map();
   const senders = new Set();
-  let sampled = 0;
-  for (const msg of messages.filter(Boolean)) {
-    sampled++;
-    const from = getHeader(msg.payload?.headers ?? [], 'From') || '';
-    if (from) senders.add(from.replace(/\s+/g, ' ').trim());
-    for (const id of msg.labelIds ?? []) {
+  for (const { from, labelIds } of messages) {
+    senders.add(from.replace(/\s+/g, ' ').trim());
+    for (const id of labelIds) {
       const name = nameById.get(id) ?? id;
       labelCounts.set(name, (labelCounts.get(name) ?? 0) + 1);
     }
   }
+  const sampled = messages.length;
   return { sampled, total, labeled, labelCounts, senders: [...senders] };
 }
 
@@ -253,24 +248,18 @@ function report(results, { source, sample, exact }) {
   }
 }
 
+const USAGE = 'Usage: node audit-label-drift.mjs [--source filters|org-tags|country-tags|all]'
+  + ' [--only <label-prefix>] [--query "<gmail-query>" [--expect "<label>"]] [--sample N] [--exact]';
+
 async function main() {
-  let values;
-  try {
-    ({ values } = parseArgs({
-      options: {
-        source: { type: 'string' },
-        only: { type: 'string' },
-        query: { type: 'string' },
-        expect: { type: 'string' },
-        sample: { type: 'string' },
-        exact: { type: 'boolean', default: false },
-      },
-    }));
-  } catch (error) {
-    console.error(error.message);
-    console.error('Usage: node audit-label-drift.mjs [--source filters|org-tags|country-tags|all] [--only <label-prefix>] [--query "<gmail-query>" [--expect "<label>"]] [--sample N] [--exact]');
-    process.exit(1);
-  }
+  const { values } = parseCli({
+    source: { type: 'string' },
+    only: { type: 'string' },
+    query: { type: 'string' },
+    expect: { type: 'string' },
+    sample: { type: 'string' },
+    exact: { type: 'boolean', default: false },
+  }, USAGE);
   const source = values.source ?? SOURCE_ALL;
   const only = values.only;
   const adHocQuery = values.query;
@@ -325,6 +314,4 @@ async function main() {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main();
-}
+runIfMain(import.meta.url, main);

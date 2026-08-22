@@ -5,17 +5,16 @@
  * Usage:
  *   node audit-org-tag-coverage.mjs [--max N] [--query "<gmail-query>"]
  */
-import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { getHeader, extractDisplayName, extractDomain, shareLeadingToken } from './lib/email-utils.mjs';
+import { parseCli, runMain } from './lib/cli-utils.mjs';
+import { extractDisplayName, extractDomain, shareLeadingToken } from './lib/email-utils.mjs';
 import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
-import { mapWithConcurrency } from './lib/gmail-message-utils.mjs';
+import { fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 import { ORG_TAGS } from './config/org-tags.mjs';
 import { fromTokens } from './audit-label-drift.mjs';
 
 const DEFAULT_MAX = 500;
-const FETCH_CONCURRENCY = 20;
 const ORG_LABEL_PREFIX = 'Organization';
 const MIN_REPORT_COUNT = 1;
 
@@ -46,20 +45,13 @@ const isCovered = (domain, covered) => {
   return false;
 };
 
+const USAGE = 'Usage: node audit-org-tag-coverage.mjs [--max N] [--query "<gmail-query>"]';
+
 async function main() {
-  let values;
-  try {
-    ({ values } = parseArgs({
-      options: {
-        max: { type: 'string' },
-        query: { type: 'string' },
-      },
-    }));
-  } catch (error) {
-    console.error(error.message);
-    console.error('Usage: node audit-org-tag-coverage.mjs [--max N] [--query "<gmail-query>"]');
-    process.exit(1);
-  }
+  const { values } = parseCli({
+    max: { type: 'string' },
+    query: { type: 'string' },
+  }, USAGE);
   const max = Number(values.max ?? DEFAULT_MAX);
   const query = values.query ?? 'is:unread';
   const gmail = await createGmailClient();
@@ -70,19 +62,20 @@ async function main() {
   const { data } = await gmail.users.messages.list({ userId: USER_ID, q: query, maxResults: max });
   const messages = data.messages ?? [];
 
-  const rows = await mapWithConcurrency(messages, async ({ id }) => {
-    const { data: msg } = await gmail.users.messages.get({
-      userId: USER_ID, id, format: 'metadata', metadataHeaders: ['From', 'Subject'],
+  // fetchMessageHeaders retries and warns about what it could not fetch. The
+  // hand-rolled fan-out this replaces had no retry, and a dropped message is one
+  // fewer sender in the sample — so a rate-limited run under-reported the gaps it
+  // exists to find.
+  const rows = (await fetchMessageHeaders(gmail, messages.map((m) => m.id)))
+    .map(({ from, subject, labelIds }) => {
+      const names = labelIds.map((lid) => idToName.get(lid)).filter(Boolean);
+      return {
+        domain: extractDomain(from),
+        from: from.replace(/\s+/g, ' ').trim(),
+        subject: subject.replace(/\s+/g, ' ').trim(),
+        orgLabels: names.filter((n) => n.startsWith(ORG_LABEL_PREFIX)),
+      };
     });
-    const from = getHeader(msg.payload.headers, 'From') || '';
-    const names = (msg.labelIds ?? []).map((lid) => idToName.get(lid)).filter(Boolean);
-    return {
-      domain: extractDomain(from),
-      from: from.replace(/\s+/g, ' ').trim(),
-      subject: (getHeader(msg.payload.headers, 'Subject') || '').replace(/\s+/g, ' ').trim(),
-      orgLabels: names.filter((n) => n.startsWith(ORG_LABEL_PREFIX)),
-    };
-  }, FETCH_CONCURRENCY);
 
   // A domain is a gap only if NO message from it carries an Organization label
   // and no ORG_TAGS entry claims it.
@@ -124,4 +117,4 @@ async function main() {
   for (const n of missingLabels) console.log(`  ${n}`);
 }
 
-main();
+runMain(main);

@@ -8,12 +8,12 @@
  *   node list-unread-emails.mjs --verify # spot-check label application on sample emails
  *   node list-unread-emails.mjs --schema # detect schema.org JSON-LD in unread emails (Phase 1 audit)
  */
-import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { parseCli, runMain } from './lib/cli-utils.mjs';
 import { BANNER, DIVIDER } from './lib/console-utils.mjs';
 import { extractDisplayName, extractEmailAddress, getHeader } from './lib/email-utils.mjs';
 import { buildLabelCache, buildLabelIndex } from './lib/gmail-label-utils.mjs';
-import { mapWithConcurrency, countMessagesMatching } from './lib/gmail-message-utils.mjs';
+import { mapWithConcurrency, countMessagesMatching, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 import { extractSchemaMarkupFromGmailPayload, categorizeBySchema, extractHtmlFromPayload } from './lib/schema-extractor.mjs';
 import {
   USER_ID,
@@ -110,21 +110,14 @@ import {
   LABEL_MEETING_NOTES,
 } from './lib/constants.mjs';
 
-let values;
-try {
-  ({ values } = parseArgs({
-    options: {
-      count: { type: 'boolean', default: false },
-      stats: { type: 'boolean', default: false },
-      verify: { type: 'boolean', default: false },
-      schema: { type: 'boolean', default: false },
-    },
-  }));
-} catch (error) {
-  console.error(error.message);
-  console.error('Usage: node list-unread-emails.mjs [--count | --stats | --verify | --schema]');
-  process.exit(1);
-}
+const USAGE = 'Usage: node list-unread-emails.mjs [--count | --stats | --verify | --schema]';
+
+const { values } = parseCli({
+  count: { type: 'boolean', default: false },
+  stats: { type: 'boolean', default: false },
+  verify: { type: 'boolean', default: false },
+  schema: { type: 'boolean', default: false },
+}, USAGE);
 
 const countOnly = values.count;
 const statsMode = values.stats;
@@ -247,18 +240,15 @@ async function listUnreadEmails(gmail) {
 
   const { byId: labelMap } = await buildLabelIndex(gmail);
 
-  const fullMsgs = await mapWithConcurrency(messageIds, msg =>
-    gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'metadata', metadataHeaders: ['Subject', 'From'] })
-  );
-
-  const emails = fullMsgs.map(fullMsg => {
-    const headers = fullMsg.data.payload?.headers || [];
-    return {
-      subject: getHeader(headers, 'Subject', '(no subject)'),
-      from: getHeader(headers, 'From', '(unknown)'),
-      labels: (fullMsg.data.labelIds || []).map(id => labelMap.get(id)).filter(Boolean),
-    };
-  });
+  // fetchMessageHeaders retries and warns about what it could not fetch. The unretried
+  // fan-out this replaces let a 429 reject the whole run, and the categories below are
+  // reported as counts — a short fetch would have read as a quieter mailbox.
+  const emails = (await fetchMessageHeaders(gmail, messageIds.map(m => m.id)))
+    .map(({ subject, from, labelIds }) => ({
+      subject,
+      from,
+      labels: labelIds.map(id => labelMap.get(id)).filter(Boolean),
+    }));
 
   const categories = Object.fromEntries([...CATEGORY_PRIORITY, LABEL_SENTRY, 'Other'].map(k => [k, []]));
 
@@ -445,7 +435,4 @@ async function run() {
   return listUnreadEmails(gmail);
 }
 
-run().catch(error => {
-  console.error('Error:', error.message);
-  process.exit(1);
-});
+runMain(run);

@@ -11,19 +11,15 @@
  *   node extract-platform-orgs.mjs --domain X --max 2000   # raise the refusal threshold
  *   node extract-platform-orgs.mjs --domain X --emit       # print ORG_TAGS entries
  */
-import { pathToFileURL } from 'node:url';
-import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
 import {
-  getHeader,
   extractDisplayName,
   extractLocalPart,
   GENERIC_LOCAL_PARTS,
 } from './lib/email-utils.mjs';
-import { listAllMessageIds, mapWithConcurrency } from './lib/gmail-message-utils.mjs';
-import { USER_ID } from './lib/constants.mjs';
+import { listAllMessageIds, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 
-const FETCH_CONCURRENCY = 15;
 /** Above this, a domain is too fragmented to tag per-org (substack.com is ~8,900). */
 const DEFAULT_MAX_MESSAGES = 400;
 /** A local part carrying more distinct names than this is a parent brand, not one org. */
@@ -38,15 +34,13 @@ export async function extractPlatformOrgs(gmail, domain, { maxMessages = DEFAULT
     return { domain, total: ids.length, tooFragmented: true, orgs: [] };
   }
 
-  const froms = await mapWithConcurrency(ids, async (id) => {
-    const { data } = await gmail.users.messages.get({
-      userId: USER_ID, id, format: 'metadata', metadataHeaders: ['From'],
-    });
-    return getHeader(data.payload?.headers ?? [], 'From') ?? '';
-  }, FETCH_CONCURRENCY);
+  // fetchMessageHeaders retries and warns about what it could not fetch. Enumeration is
+  // the whole point here — a silently dropped message is a missing org, which is the
+  // failure sampling already caused (3 of 20 on express.medallia.com).
+  const headers = await fetchMessageHeaders(gmail, ids);
 
   const byLocalPart = new Map();
-  for (const from of froms) {
+  for (const { from } of headers) {
     const lp = extractLocalPart(from);
     if (!lp) continue;
     const entry = byLocalPart.get(lp) ?? { count: 0, names: new Map() };
@@ -112,34 +106,17 @@ function report(result, { emit }) {
 const USAGE = 'Usage: node extract-platform-orgs.mjs --domain <domain> [--max N] [--emit]';
 
 async function main() {
-  let values;
-  try {
-    ({ values } = parseArgs({
-      options: {
-        domain: { type: 'string' },
-        max: { type: 'string' },
-        emit: { type: 'boolean', default: false },
-      },
-    }));
-  } catch (error) {
-    console.error(error.message);
-    console.error(USAGE);
-    process.exit(1);
-  }
+  const { values } = parseCli({
+    domain: { type: 'string' },
+    max: { type: 'string' },
+    emit: { type: 'boolean', default: false },
+  }, USAGE);
   const domain = values.domain;
   const maxMessages = Number(values.max ?? DEFAULT_MAX_MESSAGES);
   const emit = values.emit;
-  if (!domain) {
-    console.error(USAGE);
-    process.exit(1);
-  }
+  if (!domain) exitWithUsage(USAGE);
   const gmail = createGmailClient();
   report(await extractPlatformOrgs(gmail, domain, { maxMessages }), { emit });
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((error) => {
-    console.error('Error:', error.message);
-    process.exit(1);
-  });
-}
+runIfMain(import.meta.url, main);

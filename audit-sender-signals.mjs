@@ -9,10 +9,9 @@
  *   node audit-sender-signals.mjs --domains-file gaps.txt [--sample 3]
  *   node audit-sender-signals.mjs --domains a.com,b.com
  */
-import { parseArgs } from 'node:util';
-import { pathToFileURL } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
 import {
   getHeader,
   extractDisplayName,
@@ -20,7 +19,12 @@ import {
   GENERIC_LOCAL_PARTS,
   shareLeadingToken,
 } from './lib/email-utils.mjs';
-import { extractBodyText, countMessagesMatching, mapWithConcurrency } from './lib/gmail-message-utils.mjs';
+import {
+  extractBodyText,
+  countMessagesMatching,
+  fetchMessageHeaders,
+  mapWithConcurrency,
+} from './lib/gmail-message-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 
 const DEFAULT_SAMPLE = 3;
@@ -65,19 +69,17 @@ export async function scanSenders(gmail, domain) {
     userId: USER_ID, q: `from:${domain}`, maxResults: HEADER_SAMPLE,
   });
   const byLocalPart = new Map();
-  await mapWithConcurrency((data.messages ?? []), async ({ id }) => {
-    const { data: msg } = await gmail.users.messages.get({
-      userId: USER_ID, id, format: 'metadata', metadataHeaders: ['From'],
-    });
-    const from = getHeader(msg.payload?.headers ?? [], 'From') ?? '';
+  // fetchMessageHeaders retries; the hand-rolled fan-out this replaces did not, and a
+  // dropped message is one fewer local part — which is what decides [PLATFORM].
+  for (const { from } of await fetchMessageHeaders(gmail, (data.messages ?? []).map((m) => m.id))) {
     const lp = extractLocalPart(from);
-    if (!lp) return;
+    if (!lp) continue;
     const entry = byLocalPart.get(lp) ?? { names: new Set(), count: 0 };
     entry.count++;
     const dn = extractDisplayName(from);
     if (dn) entry.names.add(dn);
     byLocalPart.set(lp, entry);
-  }, 10);
+  }
   return byLocalPart;
 }
 
@@ -157,30 +159,18 @@ export async function scanDomain(gmail, domain, sampleSize) {
 
 async function main() {
   const usage = 'Usage: node audit-sender-signals.mjs --domains-file <path> | --domains a.com,b.com [--sample N]';
-  let values;
-  try {
-    ({ values } = parseArgs({
-      options: {
-        'domains-file': { type: 'string' },
-        domains: { type: 'string' },
-        sample: { type: 'string' },
-      },
-    }));
-  } catch (error) {
-    console.error(error.message);
-    console.error(usage);
-    process.exit(1);
-  }
+  const { values } = parseCli({
+    'domains-file': { type: 'string' },
+    domains: { type: 'string' },
+    sample: { type: 'string' },
+  }, usage);
   const file = values['domains-file'];
   const inline = values.domains;
   const sampleSize = Number(values.sample ?? DEFAULT_SAMPLE);
   const domains = file
     ? readFileSync(file, 'utf8').split('\n').map((l) => l.trim()).filter(Boolean)
     : (inline ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-  if (domains.length === 0) {
-    console.error(usage);
-    process.exit(1);
-  }
+  if (domains.length === 0) exitWithUsage(usage);
 
   const gmail = createGmailClient();
   const results = await mapWithConcurrency(
@@ -206,9 +196,4 @@ async function main() {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((error) => {
-    console.error('Error:', error.message);
-    process.exit(1);
-  });
-}
+runIfMain(import.meta.url, main);

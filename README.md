@@ -231,7 +231,10 @@ Automated scripts for organizing and filtering large volumes of Gmail with focus
 - `lib/gmail-message-utils.mjs` - Message header/body extraction, `decodeBase64Payload()`
 - `lib/gmail-filter-utils.mjs` - Filter creation helpers
 - `lib/schema-extractor.mjs` - Schema.org type extraction from email HTML (htmlparser2)
-- `lib/email-analyzer.mjs` / `lib/email-utils.mjs` - Email parsing and categorization helpers
+- `lib/email-analyzer.mjs` / `lib/email-utils.mjs` - Email parsing and categorization helpers.
+  `email-utils.mjs` is the only home for sender parsing: `extractDisplayName()`,
+  `extractEmailAddress()`, `extractLocalPart()`, `extractDomain()`, `GENERIC_LOCAL_PARTS`,
+  `shareLeadingToken()`
 - `lib/constants.mjs` - Shared constants (DEFAULT_MAX_RESULTS, category definitions)
 - `lib/console-utils.mjs` - Formatted console output helpers
 - `lib/date-based-filter.mjs` - Pure utility for date-based email classification: extracts dates (ISO, US format, text dates, weekday patterns), compares to today, classifies as past/future/unknown. Does not mutate input.
@@ -291,8 +294,8 @@ Callers that truncate today:
 |---|---|---|
 | `relabel-messages.mjs:63` | `DEFAULT_MAX_RESULTS` (100) | No — this is the bug |
 | `organize-emails.mjs:131,182` | `DEFAULT_MAX_RESULTS` (100) | No |
-| `protect-important-inbox.mjs` (6 sites) | bare literal `100` | No — also a magic number |
-| `create-filters.mjs:1591` | `category.maxResults` | **Yes** — opt-in per category, unset means page to exhaustion |
+| `protect-important-inbox.mjs` (6 sites) | `SUBJECT_SWEEP_CAP` | **Yes** — subject-only queries; `cappedSweep()` says when it truncates |
+| `create-filters.mjs:281` | `category.maxResults` | **Yes** — opt-in per category, unset means page to exhaustion |
 | `mark-forums-read.mjs:12`, `mark-read.mjs:43` | *(omitted)* | **Correct** — pages fully |
 
 So `node relabel-messages.mjs --query 'label:"X"' --remove "X"` on a 7,000-message label

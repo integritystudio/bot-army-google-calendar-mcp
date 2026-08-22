@@ -7,12 +7,11 @@
  */
 import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { getHeader } from './lib/email-utils.mjs';
+import { getHeader, extractDisplayName, extractDomain, shareLeadingToken } from './lib/email-utils.mjs';
 import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import { mapWithConcurrency } from './lib/gmail-message-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 import { ORG_TAGS } from './config/org-tags.mjs';
-import { displayNameOf, shareLeadingToken } from './audit-sender-signals.mjs';
 import { fromTokens } from './audit-label-drift.mjs';
 
 const DEFAULT_MAX = 500;
@@ -37,8 +36,6 @@ function coveredDomains() {
   }
   return domains;
 }
-
-const senderDomain = (from) => (from.match(/@([^>\s]+)/)?.[1] ?? '').toLowerCase().replace(/[>,;]$/, '');
 
 /** A tag entry for "meetup.com" should also cover mail from "info@email.meetup.com". */
 const isCovered = (domain, covered) => {
@@ -80,7 +77,7 @@ async function main() {
     const from = getHeader(msg.payload.headers, 'From') || '';
     const names = (msg.labelIds ?? []).map((lid) => idToName.get(lid)).filter(Boolean);
     return {
-      domain: senderDomain(from),
+      domain: extractDomain(from),
       from: from.replace(/\s+/g, ' ').trim(),
       subject: (getHeader(msg.payload.headers, 'Subject') || '').replace(/\s+/g, ' ').trim(),
       orgLabels: names.filter((n) => n.startsWith(ORG_LABEL_PREFIX)),
@@ -98,7 +95,7 @@ async function main() {
     // Free platform detection: the From headers are already fetched above, so distinct
     // display names cost nothing extra. A platform gap must not be tagged by domain —
     // express.medallia.com is 20 orgs (Airbnb, CVS, Marriott...), not one.
-    const dn = displayNameOf(r.from);
+    const dn = extractDisplayName(r.from);
     if (dn) acc.names.add(dn);
     if (acc.samples.length < 2) acc.samples.push(`${r.from} — ${r.subject.slice(0, 62)}`);
     byDomain.set(r.domain, acc);

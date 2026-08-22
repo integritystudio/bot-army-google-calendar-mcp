@@ -11,7 +11,7 @@
 import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { BANNER, DIVIDER } from './lib/console-utils.mjs';
-import { extractDisplayName, getHeader } from './lib/email-utils.mjs';
+import { extractDisplayName, extractEmailAddress, getHeader } from './lib/email-utils.mjs';
 import { buildLabelCache, buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import { mapWithConcurrency, countMessagesMatching } from './lib/gmail-message-utils.mjs';
 import { extractSchemaMarkupFromGmailPayload, categorizeBySchema, extractHtmlFromPayload } from './lib/schema-extractor.mjs';
@@ -279,7 +279,7 @@ async function listUnreadEmails(gmail) {
     console.log(DIVIDER);
     items.slice(0, PREVIEW_LIMIT).forEach(email => {
       console.log(`  • ${email.subject.substring(0, SUBJECT_MAX_LENGTH)}`);
-      console.log(`    From: ${extractDisplayName(email.from).substring(0, 50)}`);
+      console.log(`    From: ${(extractDisplayName(email.from) || extractEmailAddress(email.from)).substring(0, 50)}`);
     });
     if (items.length > PREVIEW_LIMIT) console.log(`  ... and ${items.length - PREVIEW_LIMIT} more`);
   }
@@ -399,7 +399,7 @@ async function auditSchemaMarkup(gmail) {
       categoryCounts[category] = (categoryCounts[category] || 0) + 1;
     }
 
-    samples.push({ subject, from: extractDisplayName(from), types, category, metadata });
+    samples.push({ subject, from: extractDisplayName(from) || extractEmailAddress(from), types, category, metadata });
   }
 
   const withSchema = samples.length;

@@ -1,6 +1,6 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { USER_ID } from './lib/constants.mjs';
-import { extractDisplayName, getHeader } from './lib/email-utils.mjs';
+import { extractDisplayName, extractEmailAddress, getHeader } from './lib/email-utils.mjs';
 import { BANNER } from './lib/console-utils.mjs';
 
 const MAX_RESULTS = 20;
@@ -38,7 +38,7 @@ async function printQueryResults(gmail, query, label, previewCount) {
     const subject = getHeader(headers, HEADER_SUBJECT) ?? '(no subject)';
     const from = getHeader(headers, HEADER_FROM) ?? '';
     console.log(`  • ${subject.substring(0, SUBJECT_MAX_LENGTH)}`);
-    console.log(`    From: ${extractDisplayName(from)}\n`);
+    console.log(`    From: ${extractDisplayName(from) || extractEmailAddress(from)}\n`);
   }
 }
 

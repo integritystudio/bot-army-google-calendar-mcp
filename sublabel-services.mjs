@@ -12,6 +12,7 @@
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { extractDomain } from './lib/email-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
 import { listAllMessageIds, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
@@ -94,7 +95,7 @@ async function run() {
   // whole chunk, and since labeling happens after the scan, the run discarded
   // every message it had already classified.
   for (const { id, from } of await fetchMessageHeaders(gmail, ids)) {
-    const domain = (from.match(/@([\w.-]+)/) || [])[1] || '';
+    const domain = extractDomain(from);
     const sublabel = domainToSublabel.get(domain);
     if (!sublabel) { unmatched++; continue; }
     if (!idsBySublabel.has(sublabel)) idsBySublabel.set(sublabel, []);

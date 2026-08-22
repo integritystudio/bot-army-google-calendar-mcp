@@ -9,7 +9,7 @@
  */
 import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { GMAIL_INBOX, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
+import { DEFAULT_MAX_RESULTS, GMAIL_INBOX, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { searchAndModify } from './lib/gmail-batch-utils.mjs';
@@ -42,6 +42,26 @@ const IMPORTANT_FILTERS = [
 const BILLING_KEYWORDS = '(invoice OR billing OR payment OR charge OR receipt OR statement)';
 const URGENT_KEYWORDS = '(late fee OR overdue OR "missed payment")';
 
+/**
+ * Every sweep below matches on subject words rather than senders, so an unbounded run
+ * would relabel and archive any mail that merely says "statement" or "receipt". The cap
+ * is deliberate — searchAndModify pages to exhaustion without one.
+ */
+const SUBJECT_SWEEP_CAP = DEFAULT_MAX_RESULTS;
+
+/**
+ * A capped sweep that says when it stopped short. The bare count cannot distinguish
+ * "that was all of them" from "there are more behind the cap", so a truncated run used
+ * to report exactly like a complete one.
+ */
+async function cappedSweep(gmail, query, modifications, description) {
+  const count = await searchAndModify(gmail, query, modifications, SUBJECT_SWEEP_CAP);
+  if (count >= SUBJECT_SWEEP_CAP) {
+    console.log(`  Note: ${description} hit the ${SUBJECT_SWEEP_CAP}-message cap; re-run to continue.`);
+  }
+  return count;
+}
+
 async function protectImportantItems() {
   const gmail = createGmailClient();
 
@@ -60,7 +80,7 @@ async function protectImportantItems() {
   console.log('\nSTEP 2: Labeling existing important emails\n');
 
   const queryCounts = await Promise.all(
-    IMPORTANT_FILTERS.map(({ query }) => searchAndModify(gmail, query, { addLabelIds: [importantLabelId] }, 100))
+    IMPORTANT_FILTERS.map(({ name, query }) => cappedSweep(gmail, query, { addLabelIds: [importantLabelId] }, name))
   );
 
   const totalLabeled = queryCounts.reduce((sum, n) => sum + n, 0);
@@ -119,10 +139,10 @@ async function runBillingFilters() {
 
     console.log('\nSTEP 2: Applying to existing emails\n');
 
-    const rateLimitCount = await searchAndModify(gmail, `subject:${BILLING_KEYWORDS} subject:"rate limit"`, { addLabelIds: rateLimitLabelIds }, 100);
+    const rateLimitCount = await cappedSweep(gmail, `subject:${BILLING_KEYWORDS} subject:"rate limit"`, { addLabelIds: rateLimitLabelIds }, 'rate limit billing');
     if (rateLimitCount > 0) console.log(`Applied to ${rateLimitCount} rate limit emails (kept in inbox)`);
 
-    const regularCount = await searchAndModify(gmail, `subject:${BILLING_KEYWORDS} -"rate limit"`, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] }, 100);
+    const regularCount = await cappedSweep(gmail, `subject:${BILLING_KEYWORDS} -"rate limit"`, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] }, 'regular billing');
     if (regularCount > 0) console.log(`Applied to ${regularCount} regular billing emails (archived)`);
 
     printComplete(`Rate limit billing: ${rateLimitCount} | Regular billing: ${regularCount}\n`);
@@ -149,7 +169,7 @@ async function runBillingFilters() {
     }
 
     console.log('STEP 2: Applying to existing urgent billing emails\n');
-    const urgentCount = await searchAndModify(gmail, `subject:${BILLING_KEYWORDS} subject:${URGENT_KEYWORDS}`, { addLabelIds: [billingLabelId, keepImportantLabelId] }, 100);
+    const urgentCount = await cappedSweep(gmail, `subject:${BILLING_KEYWORDS} subject:${URGENT_KEYWORDS}`, { addLabelIds: [billingLabelId, keepImportantLabelId] }, 'urgent billing');
     if (urgentCount > 0) {
       console.log(`Applied to ${urgentCount} urgent billing emails (kept in inbox)\n`);
     } else {
@@ -162,10 +182,10 @@ async function runBillingFilters() {
   if (billingSubMode === 'apply-only') {
     console.log('APPLYING BILLING FILTER TO UNREAD EMAILS\n');
 
-    const urgentCount = await searchAndModify(gmail, `is:unread subject:${BILLING_KEYWORDS} subject:${URGENT_KEYWORDS}`, { addLabelIds: [billingLabelId, keepImportantLabelId] }, 100);
+    const urgentCount = await cappedSweep(gmail, `is:unread subject:${BILLING_KEYWORDS} subject:${URGENT_KEYWORDS}`, { addLabelIds: [billingLabelId, keepImportantLabelId] }, 'unread urgent billing');
     console.log(`Found ${urgentCount} unread urgent billing emails`);
 
-    const regularCount = await searchAndModify(gmail, `is:unread subject:${BILLING_KEYWORDS} -"late fee" -overdue -"missed payment"`, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] }, 100);
+    const regularCount = await cappedSweep(gmail, `is:unread subject:${BILLING_KEYWORDS} -"late fee" -overdue -"missed payment"`, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] }, 'unread regular billing');
     console.log(`Found ${regularCount} unread regular billing emails`);
 
     printComplete(`Urgent billing (kept in inbox): ${urgentCount}\nRegular billing (archived): ${regularCount}\nTotal processed: ${urgentCount + regularCount} emails\n`);

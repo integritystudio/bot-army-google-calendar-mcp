@@ -14,10 +14,14 @@
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { getHeader } from './lib/email-utils.mjs';
+import {
+  getHeader,
+  extractDisplayName,
+  extractLocalPart,
+  GENERIC_LOCAL_PARTS,
+} from './lib/email-utils.mjs';
 import { listAllMessageIds, mapWithConcurrency } from './lib/gmail-message-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
-import { localPartOf, displayNameOf, GENERIC_LOCAL_PARTS } from './audit-sender-signals.mjs';
 
 const FETCH_CONCURRENCY = 15;
 /** Above this, a domain is too fragmented to tag per-org (substack.com is ~8,900). */
@@ -43,11 +47,11 @@ export async function extractPlatformOrgs(gmail, domain, { maxMessages = DEFAULT
 
   const byLocalPart = new Map();
   for (const from of froms) {
-    const lp = localPartOf(from);
+    const lp = extractLocalPart(from);
     if (!lp) continue;
     const entry = byLocalPart.get(lp) ?? { count: 0, names: new Map() };
     entry.count++;
-    const dn = displayNameOf(from);
+    const dn = extractDisplayName(from);
     if (dn) entry.names.set(dn, (entry.names.get(dn) ?? 0) + 1);
     byLocalPart.set(lp, entry);
   }

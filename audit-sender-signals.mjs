@@ -13,7 +13,13 @@ import { parseArgs } from 'node:util';
 import { pathToFileURL } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { getHeader } from './lib/email-utils.mjs';
+import {
+  getHeader,
+  extractDisplayName,
+  extractLocalPart,
+  GENERIC_LOCAL_PARTS,
+  shareLeadingToken,
+} from './lib/email-utils.mjs';
 import { extractBodyText, countMessagesMatching, mapWithConcurrency } from './lib/gmail-message-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 
@@ -24,29 +30,11 @@ const MIN_SCORE = 2;
 const MAX_ORGS_SHOWN = 4;
 
 /**
- * Local parts that identify nothing. A bare `from:noreply` reaches 58k messages and
- * `from:emails` 3.4k, so these must never be offered as a match — only a distinctive,
- * org-specific local part (austinwestieacademy@) can stand in for a domain.
- */
-export const GENERIC_LOCAL_PARTS = new Set([
-  'noreply', 'no-reply', 'donotreply', 'do-not-reply', 'info', 'hello', 'emails', 'email',
-  'support', 'notifications', 'notification', 'mail', 'newsletter', 'newsletters', 'admin',
-  'contact', 'team', 'marketing', 'offers', 'news', 'updates', 'reply', 'service', 'help',
-  'sales', 'billing', 'account', 'accounts', 'alerts', 'members', 'membership', 'shop', 'cs',
-]);
-
-/**
  * A stand-in local part must not reach far beyond the domain it replaces. Austin Westie
  * Academy's reaches 40 vs 30 (1.3x) and is a real win; axios.com's `austin@` reaches
  * 21,191 vs 662 (32x) because "austin" is a common word, not an identifier.
  */
 const MAX_LOCAL_PART_REACH_RATIO = 2;
-
-/** "Axios Austin" and "Axios Partners" are one org; Airbnb / CVS / Marriott are three. */
-export const shareLeadingToken = (names) => {
-  const first = names.map((n) => n.toLowerCase().split(/[\s|,–-]+/)[0]).filter(Boolean);
-  return first.length > 0 && first.every((t) => t === first[0]);
-};
 
 /** Signal terms per candidate schema.org type. Order is report order. */
 const SIGNALS = {
@@ -67,9 +55,6 @@ const SIGNALS = {
   PerformingGroup: /\b(performance|ensemble|cast|rehearsal|our dancers|troupe|on tour|choreograph\w+)\b/gi,
 };
 
-export const localPartOf = (from) => (from.match(/([^<\s@]+)@/)?.[1] ?? '').toLowerCase();
-export const displayNameOf = (from) => (from.match(/^\s*"?([^"<]*?)"?\s*</)?.[1] ?? '').trim();
-
 /**
  * Distinct local parts on one domain mean the domain is a sending platform, not an
  * organization: express.medallia.com carries Airbnb, secure-booker.com a nail salon.
@@ -85,11 +70,11 @@ export async function scanSenders(gmail, domain) {
       userId: USER_ID, id, format: 'metadata', metadataHeaders: ['From'],
     });
     const from = getHeader(msg.payload?.headers ?? [], 'From') ?? '';
-    const lp = localPartOf(from);
+    const lp = extractLocalPart(from);
     if (!lp) return;
     const entry = byLocalPart.get(lp) ?? { names: new Set(), count: 0 };
     entry.count++;
-    const dn = displayNameOf(from);
+    const dn = extractDisplayName(from);
     if (dn) entry.names.add(dn);
     byLocalPart.set(lp, entry);
   }, 10);

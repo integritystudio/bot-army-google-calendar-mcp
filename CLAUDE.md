@@ -142,7 +142,15 @@ import from `config/`, never from the `create-*.mjs` entrypoint.
 - `defined-terms.mjs` / `vocabularies.mjs` — schema.org `DefinedTerm`/`DefinedTermSet` builders + `validateVocabulary()`, and the vocabularies `ORG_TAGS` points at (`VOCABULARIES` lists all five). A tag group's `schema` field is **documentation only** — `applyTagSet()` never reads it, so adding a term changes no mail. **See [docs/DEFINED-TERMS-GUIDE.md](docs/DEFINED-TERMS-GUIDE.md) before adding a term or set**
 - `date-based-filter.mjs` — Date parsing utility (ISO, US, text formats; no mutations)
 - `schema-extractor.mjs` — Schema.org type extraction from email HTML (htmlparser2)
-- `email-analyzer.mjs` / `email-utils.mjs` — Email parsing, categorization helpers
+- `email-analyzer.mjs` / `email-utils.mjs` — Email parsing, categorization helpers. **All sender
+  parsing lives in `email-utils.mjs`** — `extractDisplayName()` (strict: `''`, not the address,
+  when the header has no display name, so grouping by name can tell those apart; write
+  `extractDisplayName(f) || extractEmailAddress(f)` to print), `extractEmailAddress()`,
+  `extractLocalPart()`, `extractDomain()` (lowercased — the domain→label configs are lower
+  case, so an unnormalized compare silently misses), plus `GENERIC_LOCAL_PARTS` and
+  `shareLeadingToken()`. These were duplicated across `audit-sender-signals.mjs`,
+  `audit-org-tag-coverage.mjs` and `sublabel-services.mjs`, with two scripts importing them
+  *from a CLI entrypoint*; don't re-add a local regex variant
 - `constants.mjs` — Shared constants (DEFAULT_MAX_RESULTS, category definitions)
 - `console-utils.mjs` — Formatted console output helpers
 

@@ -66,7 +66,6 @@ node filter-events-by-date.mjs                    # Keep future events, archive 
 node archive-old-emails.mjs --label "Meeting Responses"  # Archive old emails under a label
 node mark-read.mjs                                # Mark all labeled emails as read
 node mark-read.mjs --archived-only                # Restrict to emails no longer in inbox
-node mark-read.mjs --past-events                  # Mark only past-date event emails as read
 node mark-forums-read.mjs                         # Mark Forums emails older than 5 days as read
 node mark-old-label-read.mjs --label "Newsletters"                     # Mark label's emails older than 30 days as read
 node mark-old-label-read.mjs --label "Job Search" --before 2026/06/01  # Explicit cutoff date

@@ -1,29 +1,28 @@
 /**
- * Mark emails as read based on label membership or past-event date detection.
+ * Mark emails as read based on label membership.
+ *
+ * The --past-events mode this used to carry is gone: mark-past-events-read.mjs does
+ * the same job and does it better. That mode loaded 500 full bodies in one
+ * Promise.all and issued a single modify at the end, so any failure discarded every
+ * classification already completed.
  *
  * Usage:
  *   node mark-read.mjs                  # mark all labeled emails as read
  *   node mark-read.mjs --archived-only  # restrict to emails no longer in inbox
- *   node mark-read.mjs --past-events    # mark only past-date event emails as read
  */
 import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import {
-  USER_ID,
   GMAIL_UNREAD,
   LABEL_EVENTS, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES,
   LABEL_SERVICES, LABEL_BILLING, LABEL_MONITORING,
 } from './lib/constants.mjs';
-import { extractEventDate, isPastEvent } from './lib/date-based-filter.mjs';
-import { getHeader } from './lib/email-utils.mjs';
-import { batchModifyMessages, searchAndModify } from './lib/gmail-batch-utils.mjs';
-import { decodeMessageBody } from './lib/gmail-message-utils.mjs';
+import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 
 let values;
 try {
   ({ values } = parseArgs({
     options: {
-      'past-events': { type: 'boolean', default: false },
       'archived-only': { type: 'boolean', default: false },
     },
   }));
@@ -31,7 +30,6 @@ try {
   console.error(error.message);
   process.exit(1);
 }
-const pastEventsMode = values['past-events'];
 const archivedOnly = values['archived-only'];
 
 const LABELED_LABELS = [LABEL_EVENTS, LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING, LABEL_MONITORING];
@@ -48,45 +46,8 @@ async function markLabeledRead(gmail) {
   console.log(`Total: ${total} ${qualifier}emails marked as read`);
 }
 
-async function markPastEventsRead(gmail) {
-  const searchResponse = await gmail.users.messages.list({
-    userId: USER_ID,
-    q: `label:${LABEL_EVENTS} is:unread`,
-    maxResults: 500,
-  });
-
-  const messageIds = searchResponse.data.messages || [];
-  console.log(`Found ${messageIds.length} unread event emails`);
-  if (messageIds.length === 0) return;
-
-  const fullMsgs = await Promise.all(
-    messageIds.map(msg =>
-      gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'full' })
-    )
-  );
-
-  const pastIds = fullMsgs
-    .filter(fullMsg => {
-      const headers = fullMsg.data.payload?.headers || [];
-      const subject = getHeader(headers, 'Subject');
-      const body = decodeMessageBody(fullMsg.data.payload);
-      // Anchor year-less dates to arrival, not to now (see date-based-filter.mjs).
-      const eventDate = extractEventDate(subject + '\n' + body, new Date(Number(fullMsg.data.internalDate)));
-      return eventDate && isPastEvent(eventDate);
-    })
-    .map(fullMsg => fullMsg.data.id);
-
-  console.log(`Identified ${pastIds.length} past events`);
-  if (pastIds.length === 0) return;
-
-  await batchModifyMessages(gmail, pastIds, { removeLabelIds: [GMAIL_UNREAD] });
-  console.log(`Past events marked as read: ${pastIds.length}`);
-  console.log(`Future events remaining unread: ${messageIds.length - pastIds.length}`);
-}
-
 const gmail = createGmailClient();
-const action = pastEventsMode ? markPastEventsRead : markLabeledRead;
-action(gmail).catch(error => {
+markLabeledRead(gmail).catch(error => {
   console.error('Error:', error.message);
   process.exit(1);
 });

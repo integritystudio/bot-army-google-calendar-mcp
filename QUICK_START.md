@@ -74,7 +74,7 @@ node mark-past-events-read.mjs                    # Mark past-dated Events email
 node mark-past-events-read.mjs --label "Travel" --dry-run  # Preview date split for another label
 node extract-event-details.mjs 'subject:"Registration confirmed for Hack AI"'      # Print when/where fragments for matches
 node extract-event-details.mjs --max 5 --full 'label:Events is:unread from:luma-mail.com'  # Full body text, 5 msgs per query
-node bulk-archive-unread.mjs                      # Archive ALL unread inbox mail except "Keep Important" (stays unread; resumable)
+node modify-messages.mjs --query "is:unread in:inbox" --exclude-label "Keep Important" --remove INBOX --yes   # Archive ALL unread inbox mail except "Keep Important" (stays unread; resumable)
 ```
 
 ## Typical maintenance run

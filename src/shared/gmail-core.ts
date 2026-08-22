@@ -20,6 +20,16 @@ const MAX_RETRIES = 4;
 const RETRY_DELAY_MS = 3000;
 const TRANSIENT_STATUS_CODES = [429, 500, 503];
 const TRANSIENT_MESSAGE = 'Precondition';
+/** googleapis surfaces the same condition as a typed cause rather than in the message. */
+const TRANSIENT_CAUSE_STATUS = 'FAILED_PRECONDITION';
+
+/**
+ * Floor for the bisect in batchModifyMessages: below this, a failing batch is skipped
+ * rather than split further. Bisecting to a single id would isolate the one bad message
+ * exactly, but at log2(1000) ≈ 10 extra round trips per failure — this trades a few
+ * skipped messages for the run finishing.
+ */
+const MIN_SPLIT_BATCH = 25;
 
 export type MessageSelector = string | gmail_v1.Params$Resource$Users$Messages$List;
 
@@ -35,8 +45,10 @@ export async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
       return await fn();
     } catch (error) {
       const code = (error as { code?: unknown })?.code;
+      const causeStatus = (error as { cause?: { status?: unknown } })?.cause?.status;
       const transient =
         (error instanceof Error && error.message.includes(TRANSIENT_MESSAGE)) ||
+        causeStatus === TRANSIENT_CAUSE_STATUS ||
         (typeof code === 'number' && TRANSIENT_STATUS_CODES.includes(code));
       if (!transient || attempt >= MAX_RETRIES) throw error;
       await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * attempt));
@@ -129,13 +141,60 @@ export async function listAllMessageIds(
 }
 
 /**
+ * One batchModify request, bisecting on a failure the retries could not absorb.
+ *
+ * Without `onSkipped` a persistent failure propagates, which is what a caller applying
+ * a specific label wants: a 400 "Invalid label" is permanent and every batch will hit
+ * it. With it, the batch is halved until the failure is cornered in at most
+ * MIN_SPLIT_BATCH ids, and those are skipped — so one message Gmail refuses to modify
+ * costs a handful of skips instead of ending a 12,000-message run partway through.
+ */
+async function modifyOneBatch(
+  gmail: gmail_v1.Gmail,
+  ids: string[],
+  modifications: GmailLabelChange,
+  onSkipped?: (skipped: string[], error: unknown) => void
+): Promise<number> {
+  try {
+    // Retried here rather than at each call site: a 429 partway through a bulk
+    // modify leaves the run half-applied, and four of the six callers had no
+    // retry at all.
+    await withRetry(() =>
+      gmail.users.messages.batchModify({
+        userId: GMAIL_USER_ID,
+        requestBody: { ids, ...modifications },
+      })
+    );
+    return ids.length;
+  } catch (error) {
+    if (!onSkipped) throw error;
+    if (ids.length <= MIN_SPLIT_BATCH) {
+      onSkipped(ids, error);
+      return 0;
+    }
+    const mid = Math.ceil(ids.length / 2);
+    return (
+      (await modifyOneBatch(gmail, ids.slice(0, mid), modifications, onSkipped)) +
+      (await modifyOneBatch(gmail, ids.slice(mid), modifications, onSkipped))
+    );
+  }
+}
+
+/**
  * Apply one label change to many messages, batched at Gmail's own cap rather than a
  * smaller round number: six scripts hand-rolled this loop because a small default
  * turned one request into twenty. Progress reporting is opt-in for the same reason —
  * an unconditional log made the helper unusable anywhere the caller prints its own
  * totals, which is every caller.
  *
+ * `onSkipped` both enables the bisect-and-skip in modifyOneBatch and is how the caller
+ * hears about it. Those are deliberately the same switch: skipping is only acceptable
+ * when it is reported, and this module cannot report it itself — it is loaded by the
+ * MCP server, where a stray console write corrupts the stdio transport.
+ *
  * @param messages Message ids, or message objects carrying an id
+ * @returns The number of messages actually modified, which is below the selection size
+ *   when `onSkipped` fired
  */
 export async function batchModifyMessages(
   gmail: gmail_v1.Gmail,
@@ -144,26 +203,26 @@ export async function batchModifyMessages(
   {
     batchSize = GMAIL_BATCH_MODIFY_LIMIT,
     onProgress,
-  }: { batchSize?: number; onProgress?: (done: number, total: number) => void } = {}
+    onSkipped,
+  }: {
+    batchSize?: number;
+    onProgress?: (done: number, total: number) => void;
+    onSkipped?: (skipped: string[], error: unknown) => void;
+  } = {}
 ): Promise<number> {
   const ids = messages
     .map((m) => (typeof m === 'string' ? m : m.id))
     .filter((id): id is string => Boolean(id));
 
+  let modified = 0;
   for (let i = 0; i < ids.length; i += batchSize) {
-    // Retried here rather than at each call site: a 429 partway through a bulk
-    // modify leaves the run half-applied, and four of the six callers had no
-    // retry at all.
-    await withRetry(() =>
-      gmail.users.messages.batchModify({
-        userId: GMAIL_USER_ID,
-        requestBody: { ids: ids.slice(i, i + batchSize), ...modifications },
-      })
-    );
+    modified += await modifyOneBatch(gmail, ids.slice(i, i + batchSize), modifications, onSkipped);
+    // Progress is position in the selection, not the modified count: a caller printing
+    // "600/1000" means it has been through 600, whatever Gmail refused along the way.
     onProgress?.(Math.min(i + batchSize, ids.length), ids.length);
   }
 
-  return ids.length;
+  return modified;
 }
 
 /** Gmail reports a duplicate label as 409, but not always with a typed code. */

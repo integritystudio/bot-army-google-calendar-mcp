@@ -14,9 +14,16 @@
  * rather than silently selecting nothing or creating a label, and system names
  * (UNREAD, INBOX, SPAM) resolve through the same lookup as user labels.
  *
+ * --exclude-label subtracts a protected set from the selection, which no Gmail query can
+ * express safely: `-label:"Keep Important"` relies on how search tokenizes a name with a
+ * space in it. It is resolved to a label id and subtracted client-side instead. This is
+ * what bulk-archive-unread.mjs existed for; it is now the last line below.
+ *
  * Usage:
  *   node modify-messages.mjs --label "Newsletters" --unread --before 2026/06/01 --remove UNREAD --yes
  *   node modify-messages.mjs --query "from:spammy.example" --add SPAM --remove INBOX,UNREAD --yes
+ *   node modify-messages.mjs --query "is:unread in:inbox" --exclude-label "Keep Important" \
+ *     --remove INBOX --yes                     # replaces bulk-archive-unread.mjs
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
@@ -33,6 +40,8 @@ const PREVIEW_LIMIT = 25;
  * @param {Object} options
  * @param {string} [options.labelName] - Restrict to messages carrying this label
  * @param {string} [options.query] - Gmail search query, ANDed with the label restriction
+ * @param {string} [options.excludeLabel] - Drop messages carrying this label from the
+ *   selection, resolved by id rather than a `-label:"..."` query
  * @param {boolean} [options.unreadOnly] - Restrict to unread messages
  * @param {string} [options.before] - Gmail-format cutoff date (YYYY/MM/DD)
  * @param {string[]} [options.add] - Label names to add
@@ -46,6 +55,7 @@ const PREVIEW_LIMIT = 25;
 export async function modifyMessages(gmail, {
   labelName = null,
   query = null,
+  excludeLabel = null,
   unreadOnly = false,
   before = null,
   add = [],
@@ -78,7 +88,18 @@ export async function modifyMessages(gmail, {
   if (add.length) modifications.addLabelIds = add.map(resolve);
   if (remove.length) modifications.removeLabelIds = remove.map(resolve);
 
-  const ids = await listAllMessageIds(gmail, selector);
+  let ids = await listAllMessageIds(gmail, selector);
+  if (excludeLabel) {
+    // The same selector plus the protected label: messages.list ANDs labelIds, so this
+    // is exactly the part of the selection to leave alone.
+    const protectedIds = new Set(await listAllMessageIds(gmail, {
+      ...selector,
+      labelIds: [...(selector.labelIds ?? []), resolve(excludeLabel)],
+    }));
+    const before = ids.length;
+    ids = ids.filter((id) => !protectedIds.has(id));
+    if (!quiet) console.log(`Protected by "${excludeLabel}": ${before - ids.length}`);
+  }
   if (!quiet) console.log(`Matches: ${ids.length}`);
   if (!ids.length) return { matched: 0, modified: 0 };
 
@@ -93,6 +114,14 @@ export async function modifyMessages(gmail, {
 
   const modified = await batchModifyMessages(gmail, ids, modifications, {
     onProgress: quiet ? undefined : (done, total) => { if (done < total) console.log(`  ${done}/${total}`); },
+    // Gmail persistently refuses to modify the occasional message. Skipping those beats
+    // ending the run: a 12,500-message archive used to die partway and leave the operator
+    // guessing how much had applied. onSkipped is what enables the bisect AND what makes
+    // the skip visible — the count below is then honestly short of `matched`.
+    onSkipped: (skipped, error) => {
+      const reason = error?.cause?.status ?? error?.code ?? error?.message ?? 'unknown';
+      console.warn(`  skipped ${skipped.length} message(s) Gmail would not modify (${reason})`);
+    },
   });
   return { matched: ids.length, modified };
 }
@@ -101,12 +130,14 @@ export async function modifyMessages(gmail, {
 const listArg = (value) => (value ?? '').split(',').map(s => s.trim()).filter(Boolean);
 
 const USAGE = 'Usage: node modify-messages.mjs (--label "<name>" | --query "<gmail-query>")'
-  + ' [--unread] [--before YYYY/MM/DD] [--add "<label>"] [--remove "<label>"] [--yes]';
+  + ' [--unread] [--before YYYY/MM/DD] [--exclude-label "<label>"]'
+  + ' [--add "<label>"] [--remove "<label>"] [--yes]';
 
 async function main() {
   const { values } = parseCli({
     label: { type: 'string' },
     query: { type: 'string' },
+    'exclude-label': { type: 'string' },
     before: { type: 'string' },
     unread: { type: 'boolean', default: false },
     add: { type: 'string' },
@@ -116,6 +147,7 @@ async function main() {
   const options = {
     labelName: values.label ?? null,
     query: values.query ?? null,
+    excludeLabel: values['exclude-label'] ?? null,
     before: values.before ?? null,
     unreadOnly: values.unread,
     add: listArg(values.add),

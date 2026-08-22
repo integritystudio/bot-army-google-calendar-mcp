@@ -31,6 +31,29 @@ const gmailStub = (failures: unknown[] = []) => {
 
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `m${i}`);
 
+/**
+ * Gmail stub whose batchModify rejects any batch containing `poison`, however small.
+ * Stands in for the message Gmail persistently refuses to modify — the failure the
+ * bisect exists for, as opposed to a transient one withRetry absorbs.
+ */
+const poisonedStub = (poison: string) => {
+  const applied: string[] = [];
+  return {
+    applied,
+    users: {
+      messages: {
+        batchModify: async ({ requestBody }: { requestBody: ModifyCall }) => {
+          if (requestBody.ids.includes(poison)) {
+            throw Object.assign(new Error('Invalid message'), { code: 400 });
+          }
+          applied.push(...requestBody.ids);
+          return { data: {} };
+        },
+      },
+    },
+  };
+};
+
 /** Gmail stub paging messages.list in fixed-size pages, recording batchModify calls. */
 const listingStub = (total: number, pageSize = 2) => {
   const calls: ModifyCall[] = [];
@@ -123,6 +146,66 @@ describe('batchModifyMessages', () => {
 
     await expect(batchModifyMessages(gmail, ids(2), { addLabelIds: ['nope'] }))
       .rejects.toThrow('Invalid label');
+  });
+
+  // googleapis surfaces FAILED_PRECONDITION as a typed cause, not in the message, so
+  // the message-substring check alone read it as permanent and gave up on the batch.
+  it('retries a FAILED_PRECONDITION carried on error.cause', async () => {
+    vi.useFakeTimers();
+    const gmail = gmailStub([Object.assign(new Error('Bad Request'), {
+      code: 400,
+      cause: { status: 'FAILED_PRECONDITION' },
+    })]);
+
+    const pending = batchModifyMessages(gmail, ids(2), { removeLabelIds: ['INBOX'] });
+    await vi.runAllTimersAsync();
+
+    expect(await pending).toBe(2);
+    expect(gmail.calls).toHaveLength(1);
+  });
+
+  describe('with onSkipped', () => {
+    it('bisects around the messages Gmail refuses and applies the rest', async () => {
+      const gmail = poisonedStub('m0');
+      const skipped: string[] = [];
+
+      const modified = await batchModifyMessages(gmail, ids(100), { removeLabelIds: ['INBOX'] }, {
+        batchSize: 100,
+        onSkipped: (batch: string[]) => skipped.push(...batch),
+      });
+
+      // 100 -> 50 -> 25, which is the floor, so the poisoned quarter is skipped whole.
+      expect(skipped).toHaveLength(25);
+      expect(skipped).toContain('m0');
+      expect(modified).toBe(75);
+      expect(gmail.applied).toHaveLength(75);
+      expect(gmail.applied).not.toContain('m0');
+    });
+
+    // The count is what callers print. Reporting the selection size would say a run
+    // succeeded on messages it never touched.
+    it('returns what applied, not what was selected', async () => {
+      const gmail = poisonedStub('m0');
+      const modified = await batchModifyMessages(gmail, ids(30), { addLabelIds: ['X'] }, {
+        batchSize: 30,
+        onSkipped: () => {},
+      });
+
+      expect(modified).toBeLessThan(30);
+      expect(modified).toBe(gmail.applied.length);
+    });
+
+    it('reports the failure alongside the ids it gave up on', async () => {
+      const gmail = poisonedStub('m0');
+      const seen: unknown[] = [];
+      await batchModifyMessages(gmail, ids(30), { addLabelIds: ['X'] }, {
+        batchSize: 30,
+        onSkipped: (_batch: string[], error: unknown) => seen.push(error),
+      });
+
+      expect(seen).toHaveLength(1);
+      expect((seen[0] as Error).message).toBe('Invalid message');
+    });
   });
 });
 

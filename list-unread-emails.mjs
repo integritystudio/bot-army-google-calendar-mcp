@@ -213,8 +213,13 @@ const SUBJECT_MAX_LENGTH = 60;
 const SYSTEM_LABEL_UNREAD = 'UNREAD';
 const SYSTEM_LABEL_INBOX = 'INBOX';
 
-// labels.get returns authoritative messagesTotal/messagesUnread; messages.list's
-// resultSizeEstimate is an estimate Gmail caps at ~201 and cannot be trusted.
+// Cheap per-label counts: one labels.get rather than paging every message. Neither number
+// Gmail offers here is exact, in different ways. messages.list's resultSizeEstimate is an
+// estimate (201 reported against a true 433). labels.get's messagesTotal/messagesUnread are
+// eventually consistent and can be wrong by orders of magnitude — Travel reported 1313
+// unread against a true 13, then self-corrected minutes later; the tell is the same figure
+// repeating across unrelated labels. So this summary is indicative only: confirm any count
+// you are about to act on with countMessagesMatching(), which pages and is exact.
 async function getLabelCounts(gmail, labelId) {
   const res = await gmail.users.labels.get({ userId: USER_ID, id: labelId });
   return { total: res.data.messagesTotal || 0, unread: res.data.messagesUnread || 0 };

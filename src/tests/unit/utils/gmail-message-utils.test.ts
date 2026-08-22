@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 // @ts-expect-error - plain .mjs utility with no type declarations
-import { htmlToText, extractBodyText, decodeMessageBody, countMessagesMatching, fetchMessageHeaders, listAllMessageIds, messagePages } from '../../../../lib/gmail-message-utils.mjs';
+import { htmlToText, extractBodyText, decodeMessageBody, countMessagesMatching, fetchMessageHeaders, listAllMessageIds, messagePages, createPacer, mapWithConcurrency } from '../../../../lib/gmail-message-utils.mjs';
 
 /** Gmail stub returning the given pages of message ids, one per list() call. */
 const gmailWithPages = (pages: string[][]) => {
@@ -252,5 +252,50 @@ describe('messagePages', () => {
     const pages = [];
     for await (const page of messagePages(gmailWithPages([['a'], ['b', 'c']]), 'q')) pages.push(page);
     expect(pages.map((p) => p.map((m: { id: string }) => m.id))).toEqual([['a'], ['b', 'c']]);
+  });
+});
+
+// setTimeout can fire a millisecond early, so exact lower bounds flake. The point of
+// these assertions is that pacing happened at all — unpaced runs finish in ~0ms.
+const TIMER_SLACK_MS = 5;
+
+describe('createPacer', () => {
+  const CALLS_PER_SECOND = 50;
+  const INTERVAL_MS = 1000 / CALLS_PER_SECOND;
+
+  it('spaces successive slots by the interval', async () => {
+    const pacer = createPacer(CALLS_PER_SECOND);
+    const startedAt = Date.now();
+    for (let i = 0; i < 4; i++) await pacer();
+    // First slot is immediate, so four calls cost three intervals.
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(INTERVAL_MS * 3 - TIMER_SLACK_MS);
+  });
+
+  it('paces concurrent claimers too, rather than letting them share a slot', async () => {
+    const pacer = createPacer(CALLS_PER_SECOND);
+    const startedAt = Date.now();
+    await Promise.all(Array.from({ length: 4 }, () => pacer()));
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(INTERVAL_MS * 3 - TIMER_SLACK_MS);
+  });
+});
+
+describe('mapWithConcurrency', () => {
+  it('preserves input order regardless of completion order', async () => {
+    const out = await mapWithConcurrency(
+      [30, 0, 10],
+      async (ms: number) => { await new Promise((r) => setTimeout(r, ms)); return ms; },
+      3,
+      { callsPerSecond: 1000 }
+    );
+    expect(out).toEqual([30, 0, 10]);
+  });
+
+  it('holds the pool to the requested rate', async () => {
+    const callsPerSecond = 100;
+    const items = Array.from({ length: 6 }, (_, i) => i);
+    const startedAt = Date.now();
+    await mapWithConcurrency(items, async (i: number) => i, items.length, { callsPerSecond });
+    // Without pacing all six would run at once and finish in ~0ms.
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual((1000 / callsPerSecond) * 5 - TIMER_SLACK_MS);
   });
 });

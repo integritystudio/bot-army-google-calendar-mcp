@@ -232,6 +232,10 @@ export const CATEGORIES = [
     labelName: LABEL_PRODUCT_UPDATES,
     archive: true,
     markRead: true,
+    // Chunked rather than one filter per sender, to stay clear of Gmail's 1,000-filter
+    // cap. APPEND new senders — a mid-list insert shifts every later chunk boundary,
+    // so the next sync deletes and recreates chunks that did not change.
+    consolidate: true,
     entries: [
       { name: 'AI product announcements', query: 'from:(noreply@email.openai.com OR no-reply@email.claude.com OR googlecloud@google.com OR lukak@storylane.io)' },
       { name: 'Google Workspace', query: 'from:workspace-noreply@google.com' },
@@ -312,6 +316,10 @@ export const CATEGORIES = [
     labelName: LABEL_PROMOTIONS_TRAVEL,
     archive: true,
     markRead: true,
+    // Chunked rather than one filter per sender, to stay clear of Gmail's 1,000-filter
+    // cap. APPEND new senders — a mid-list insert shifts every later chunk boundary,
+    // so the next sync deletes and recreates chunks that did not change.
+    consolidate: true,
     entries: [
       { name: 'Southwest Airlines', query: 'from:iluv.southwest.com' },
       { name: 'Hertz', query: 'from:emails.hertz.com' },
@@ -411,6 +419,10 @@ export const CATEGORIES = [
     labelName: LABEL_NEWSLETTERS,
     archive: true,
     markRead: true,
+    // 40 senders as individual filters cost 40 of Gmail's 1,000-filter budget; chunked
+    // they cost 3. APPEND new senders — a mid-list insert shifts every later chunk
+    // boundary, so the next sync deletes and recreates chunks that did not change.
+    consolidate: true,
     entries: [
       // Zapier's news@ is product-update marketing, not a service alert; the
       // Promotions/Tech block below excludes it to avoid double-labeling.
@@ -699,6 +711,10 @@ export const CATEGORIES = [
     // Medical/appointment mail — must stay in inbox (visit links, confirmations)
     labelName: LABEL_SERVICES_HEALTH,
     archive: false,
+    // Chunked rather than one filter per sender, to stay clear of Gmail's 1,000-filter
+    // cap. APPEND new senders — a mid-list insert shifts every later chunk boundary,
+    // so the next sync deletes and recreates chunks that did not change.
+    consolidate: true,
     entries: [
       { name: 'Dogwood Therapy ATX', query: 'from:dogwoodtherapyatx.com' },
       { name: 'OptumRx', query: 'from:optumrx.com' },

@@ -46,11 +46,7 @@ const MAX_SENDERS_SHOWN = 3;
 const MAX_FILTERS_SHOWN = 4;
 const SUMMARY_PAD = 46;
 
-/**
- * The three config sources disagree on what the entry array is called
- * (filters / orgs / entries), so each source names its own field.
- */
-// All three config sources expose their rules as `entries`, so no per-source field map.
+/** All three config sources expose their rules as `entries`, so no per-source field map. */
 const RULE_SOURCES = {
   filters: CATEGORIES,
   'org-tags': ORG_TAGS,

@@ -9,8 +9,8 @@
  *   node mark-old-label-read.mjs --label "Newsletters"                     # default cutoff: one month back
  *   node mark-old-label-read.mjs --label "Job Search" --before 2026/06/01  # explicit cutoff (Gmail date format)
  */
-import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { parseCli, exitWithUsage, runMain } from './lib/cli-utils.mjs';
 import { modifyMessages } from './modify-messages.mjs';
 import { GMAIL_UNREAD } from './lib/constants.mjs';
 
@@ -24,26 +24,14 @@ const defaultBefore = () => {
 
 const USAGE = 'Usage: node mark-old-label-read.mjs --label "<name>" [--before YYYY/MM/DD]';
 
-let values;
-try {
-  ({ values } = parseArgs({
-    options: {
-      label: { type: 'string' },
-      before: { type: 'string' },
-    },
-  }));
-} catch (error) {
-  console.error(error.message);
-  console.error(USAGE);
-  process.exit(1);
-}
+const { values } = parseCli({
+  label: { type: 'string' },
+  before: { type: 'string' },
+}, USAGE);
 
 const labelName = values.label;
 const before = values.before || defaultBefore();
-if (!labelName) {
-  console.error(USAGE);
-  process.exit(1);
-}
+if (!labelName) exitWithUsage(USAGE);
 
 async function main() {
   console.log(`Unread "${labelName}" emails before ${before}:`);
@@ -58,7 +46,4 @@ async function main() {
   console.log(`Marked ${modified} as read.`);
 }
 
-main().catch((error) => {
-  console.error('Error:', error.message);
-  process.exit(1);
-});
+runMain(main);

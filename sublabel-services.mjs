@@ -9,9 +9,8 @@
  *   node sublabel-services.mjs             # retro-label unread + ensure filters
  *   node sublabel-services.mjs --all       # retro-label all parent-labeled mail, not just unread
  */
-import { pathToFileURL } from 'node:url';
-import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { parseCli, runIfMain } from './lib/cli-utils.mjs';
 import { extractDomain } from './lib/email-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
@@ -45,18 +44,7 @@ const SUBLABEL_DOMAINS = [
 const USAGE = 'Usage: node sublabel-services.mjs [--all]';
 
 async function run() {
-  let values;
-  try {
-    ({ values } = parseArgs({
-      options: {
-        all: { type: 'boolean', default: false },
-      },
-    }));
-  } catch (error) {
-    console.error(error.message);
-    console.error(USAGE);
-    process.exit(1);
-  }
+  const { values } = parseCli({ all: { type: 'boolean', default: false } }, USAGE);
   const includeRead = values.all;
   const gmail = await createGmailClient();
   const labelMap = await buildLabelCache(gmail);
@@ -109,9 +97,4 @@ async function run() {
   console.log(`  Unmatched (left on parent only): ${unmatched}`);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  run().catch(error => {
-    console.error('Error:', error.message);
-    process.exit(1);
-  });
-}
+runIfMain(import.meta.url, run);

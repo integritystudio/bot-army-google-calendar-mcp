@@ -1,27 +1,20 @@
 // Organization tags are an informational dimension, orthogonal to category routing:
 // a sender's mail may route to Billing, Promotions, or Purchases, but always carries
 // the same Organization label. Filters here are label-only — never archive/mark-read.
-import { pathToFileURL } from 'node:url';
-import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { parseCli, runIfMain } from './lib/cli-utils.mjs';
 import { applyTagSet } from './lib/gmail-tag-utils.mjs';
 import { ORG_TAGS } from './config/org-tags.mjs';
 
 
+const USAGE = 'Usage: node create-org-tags.mjs [--filters-only] [--only <label-prefix>] [--orgs a,b]';
+
 async function run() {
-  let values;
-  try {
-    ({ values } = parseArgs({
-      options: {
-        'filters-only': { type: 'boolean', default: false },
-        only: { type: 'string' },
-        orgs: { type: 'string' },
-      },
-    }));
-  } catch (error) {
-    console.error(error.message);
-    process.exit(1);
-  }
+  const { values } = parseCli({
+    'filters-only': { type: 'boolean', default: false },
+    only: { type: 'string' },
+    orgs: { type: 'string' },
+  }, USAGE);
   const skipBackfill = values['filters-only'];
   const onlyLabel = values.only ?? null;
   const onlyOrgs = values.orgs?.split(',').map(s => s.trim().toLowerCase());
@@ -35,9 +28,4 @@ async function run() {
   console.log(`\nFilters created: ${filterCount}`);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  run().catch(error => {
-    console.error('Error:', error.message);
-    process.exit(1);
-  });
-}
+runIfMain(import.meta.url, run);

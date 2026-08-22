@@ -17,8 +17,8 @@
  *   node archive-old-emails.mjs --label "Meeting Responses"        # preview
  *   node archive-old-emails.mjs --query "from:laseraway.co" --yes  # apply
  */
-import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { parseCli, exitWithUsage, runMain } from './lib/cli-utils.mjs';
 import { modifyMessages } from './modify-messages.mjs';
 import { GMAIL_INBOX, GMAIL_UNREAD, MS_PER_DAY } from './lib/constants.mjs';
 import { BANNER } from './lib/console-utils.mjs';
@@ -31,26 +31,14 @@ const gmailDate = (date) =>
 
 const USAGE = 'Usage: node archive-old-emails.mjs (--label "<label name>" | --query "<gmail-query>") [--yes]';
 
-let values;
-try {
-  ({ values } = parseArgs({
-    options: {
-      label: { type: 'string' },
-      query: { type: 'string' },
-      yes: { type: 'boolean', default: false },
-    },
-  }));
-} catch (error) {
-  console.error(error.message);
-  console.error(USAGE);
-  process.exit(1);
-}
+const { values } = parseCli({
+  label: { type: 'string' },
+  query: { type: 'string' },
+  yes: { type: 'boolean', default: false },
+}, USAGE);
 
 const { label: labelName, query, yes: apply } = values;
-if (!labelName && !query) {
-  console.error(USAGE);
-  process.exit(1);
-}
+if (!labelName && !query) exitWithUsage(USAGE);
 
 async function main() {
   const before = gmailDate(new Date(Date.now() - DAYS_AGO * MS_PER_DAY));
@@ -73,7 +61,4 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error('Error:', error.message);
-  process.exit(1);
-});
+runMain(main);

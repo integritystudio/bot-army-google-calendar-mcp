@@ -12,9 +12,8 @@
 //   node create-country-tags.mjs --filters-only       # skip backfill
 //   node create-country-tags.mjs --only Country/Mexico
 //   node create-country-tags.mjs --countries rappi
-import { pathToFileURL } from 'node:url';
-import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { parseCli, runIfMain } from './lib/cli-utils.mjs';
 import { applyTagSet } from './lib/gmail-tag-utils.mjs';
 import { COUNTRY_TAGS } from './config/country-tags.mjs';
 
@@ -22,20 +21,11 @@ import { COUNTRY_TAGS } from './config/country-tags.mjs';
 const USAGE = 'Usage: node create-country-tags.mjs [--filters-only] [--only <label>] [--countries a,b]';
 
 async function run() {
-  let values;
-  try {
-    ({ values } = parseArgs({
-      options: {
-        'filters-only': { type: 'boolean', default: false },
-        only: { type: 'string' },
-        countries: { type: 'string' },
-      },
-    }));
-  } catch (error) {
-    console.error(error.message);
-    console.error(USAGE);
-    process.exit(1);
-  }
+  const { values } = parseCli({
+    'filters-only': { type: 'boolean', default: false },
+    only: { type: 'string' },
+    countries: { type: 'string' },
+  }, USAGE);
   const skipBackfill = values['filters-only'];
   const onlyLabel = values.only ?? null;
   const onlyCountries = values.countries?.split(',').map(s => s.trim().toLowerCase());
@@ -49,9 +39,4 @@ async function run() {
   console.log(`\nFilters created: ${filterCount}`);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  run().catch(error => {
-    console.error('Error:', error.message);
-    process.exit(1);
-  });
-}
+runIfMain(import.meta.url, run);

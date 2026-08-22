@@ -12,9 +12,8 @@
  *   node strip-label.mjs --label "Organization/BigTech" [--dry-run]
  *   node strip-label.mjs --label "X" --query "from:foo.com"   # only foo.com's copies
  */
-import { parseArgs } from 'node:util';
-import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { withRetry } from './lib/gmail-retry.mjs';
 import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
@@ -50,34 +49,19 @@ export async function stripLabel(gmail, labelName, { dryRun = false, scopeQuery 
 const USAGE = 'Usage: node strip-label.mjs --label "<name>" [--dry-run]';
 
 async function main() {
-  let values;
-  try {
-    ({ values } = parseArgs({ options: {
-      label: { type: 'string' },
-      query: { type: 'string' },
-      'dry-run': { type: 'boolean', default: false },
-    } }));
-  } catch (error) {
-    console.error(error.message);
-    console.error(USAGE);
-    process.exit(1);
-  }
+  const { values } = parseCli({
+    label: { type: 'string' },
+    query: { type: 'string' },
+    'dry-run': { type: 'boolean', default: false },
+  }, USAGE);
   const labelName = values.label;
   const scopeQuery = values.query ?? null;
   const dryRun = values['dry-run'];
-  if (!labelName) {
-    console.error(USAGE);
-    process.exit(1);
-  }
+  if (!labelName) exitWithUsage(USAGE);
   const gmail = createGmailClient();
   const n = await stripLabel(gmail, labelName, { dryRun, scopeQuery });
   const scope = scopeQuery ? ` matching ${scopeQuery}` : '';
   console.log(`${dryRun ? 'Would strip' : 'Stripped'} ${n} messages from "${labelName}"${scope}`);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((error) => {
-    console.error('Error:', error.message);
-    process.exit(1);
-  });
-}
+runIfMain(import.meta.url, main);

@@ -7,6 +7,7 @@
  * Usage: node mark-forums-read.mjs
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { runMain } from './lib/cli-utils.mjs';
 import { modifyMessages } from './modify-messages.mjs';
 import { GMAIL_UNREAD, LABEL_FORUMS } from './lib/constants.mjs';
 
@@ -25,7 +26,4 @@ async function main() {
   console.log(`Marked ${modified} Forums emails as read.`);
 }
 
-main().catch((error) => {
-  console.error('Error:', error.message);
-  process.exit(1);
-});
+runMain(main);

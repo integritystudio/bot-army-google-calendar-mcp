@@ -18,9 +18,8 @@
  *   node modify-messages.mjs --label "Newsletters" --unread --before 2026/06/01 --remove UNREAD --yes
  *   node modify-messages.mjs --query "from:spammy.example" --add SPAM --remove INBOX,UNREAD --yes
  */
-import { parseArgs } from 'node:util';
-import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { listAllMessageIds, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
@@ -105,22 +104,15 @@ const USAGE = 'Usage: node modify-messages.mjs (--label "<name>" | --query "<gma
   + ' [--unread] [--before YYYY/MM/DD] [--add "<label>"] [--remove "<label>"] [--yes]';
 
 async function main() {
-  let values;
-  try {
-    ({ values } = parseArgs({ options: {
-      label: { type: 'string' },
-      query: { type: 'string' },
-      before: { type: 'string' },
-      unread: { type: 'boolean', default: false },
-      add: { type: 'string' },
-      remove: { type: 'string' },
-      yes: { type: 'boolean', default: false },
-    } }));
-  } catch (error) {
-    console.error(error.message);
-    console.error(USAGE);
-    process.exit(1);
-  }
+  const { values } = parseCli({
+    label: { type: 'string' },
+    query: { type: 'string' },
+    before: { type: 'string' },
+    unread: { type: 'boolean', default: false },
+    add: { type: 'string' },
+    remove: { type: 'string' },
+    yes: { type: 'boolean', default: false },
+  }, USAGE);
   const options = {
     labelName: values.label ?? null,
     query: values.query ?? null,
@@ -130,17 +122,9 @@ async function main() {
     remove: listArg(values.remove),
     apply: values.yes,
   };
-  if (!options.labelName && !options.query) {
-    console.error(USAGE);
-    process.exit(1);
-  }
+  if (!options.labelName && !options.query) exitWithUsage(USAGE);
   const { modified } = await modifyMessages(await createGmailClient(), options);
   if (options.apply) console.log(`Modified ${modified} messages.`);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((error) => {
-    console.error('Error:', error.message);
-    process.exit(1);
-  });
-}
+runIfMain(import.meta.url, main);

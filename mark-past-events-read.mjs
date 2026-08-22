@@ -9,8 +9,8 @@
  * classifyEmail (lib/date-based-filter.mjs), and removes UNREAD from messages
  * whose event date has passed. Future and undatable messages are left unread.
  */
-import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { parseCli, exitWithUsage } from './lib/cli-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { classifyEmail } from './lib/date-based-filter.mjs';
 import { getHeader } from './lib/email-utils.mjs';
@@ -29,27 +29,15 @@ const STATUS_FUTURE = 'future';
 
 const USAGE = 'Usage: node mark-past-events-read.mjs [--label "Events"] [--dry-run]';
 
-let values;
-try {
-  ({ values } = parseArgs({
-    options: {
-      label: { type: 'string', default: LABEL_EVENTS },
-      'dry-run': { type: 'boolean', default: false },
-    },
-  }));
-} catch (error) {
-  console.error(error.message);
-  console.error(USAGE);
-  process.exit(1);
-}
+const { values } = parseCli({
+  label: { type: 'string', default: LABEL_EVENTS },
+  'dry-run': { type: 'boolean', default: false },
+}, USAGE);
 
 const labelName = values.label;
 const dryRun = values['dry-run'];
 
-if (!labelName) {
-  console.error(USAGE);
-  process.exit(1);
-}
+if (!labelName) exitWithUsage(USAGE);
 
 const gmail = await createGmailClient();
 const labelMap = await buildLabelCache(gmail);

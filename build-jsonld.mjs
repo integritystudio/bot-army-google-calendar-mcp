@@ -21,9 +21,8 @@
  *   node build-jsonld.mjs --check    # exit 1 if the committed file is stale
  */
 import { writeFileSync, readFileSync } from 'node:fs';
-import { parseArgs } from 'node:util';
-import { pathToFileURL } from 'node:url';
 import { VOCABULARIES } from './lib/vocabularies.mjs';
+import { parseCli, runIfMain } from './lib/cli-utils.mjs';
 import { ORG_TAGS } from './config/org-tags.mjs';
 
 const OUTPUT_PATH = 'docs/mailbox.jsonld';
@@ -111,19 +110,10 @@ export function buildGraph() {
 
 export const serialize = (document) => `${JSON.stringify(document, null, JSON_INDENT)}\n`;
 
+const USAGE = 'Usage: node build-jsonld.mjs [--check]';
+
 function main() {
-  let values;
-  try {
-    ({ values } = parseArgs({
-      options: {
-        check: { type: 'boolean', default: false },
-      },
-    }));
-  } catch (error) {
-    console.error(error.message);
-    console.error('Usage: node build-jsonld.mjs [--check]');
-    process.exit(1);
-  }
+  const { values } = parseCli({ check: { type: 'boolean', default: false } }, USAGE);
   const document = buildGraph();
   const serialized = serialize(document);
   const nodes = document['@graph'];
@@ -144,6 +134,4 @@ function main() {
   console.log(`Wrote ${OUTPUT_PATH} — ${summary}`);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main();
-}
+runIfMain(import.meta.url, main);

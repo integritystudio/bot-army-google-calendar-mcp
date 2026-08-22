@@ -12,27 +12,20 @@
  *   node list-unlabeled-unread.mjs --preview all  # every inbox match, no count to guess
  *   node list-unlabeled-unread.mjs --all          # include mailbox-wide count
  */
-import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { parseCli } from './lib/cli-utils.mjs';
 import { report } from './report-messages.mjs';
 
 const DEFAULT_PREVIEW_COUNT = 10;
 const PREVIEW_ALL = 'all';
 const UNLABELED_UNREAD_QUERY = 'is:unread has:nouserlabels';
 
-let values;
-try {
-  ({ values } = parseArgs({
-    options: {
-      preview: { type: 'string' },
-      all: { type: 'boolean', default: false },
-    },
-  }));
-} catch (error) {
-  console.error(error.message);
-  console.error('Usage: node list-unlabeled-unread.mjs [--preview N|all] [--all]');
-  process.exit(1);
-}
+const USAGE = 'Usage: node list-unlabeled-unread.mjs [--preview N|all] [--all]';
+
+const { values } = parseCli({
+  preview: { type: 'string' },
+  all: { type: 'boolean', default: false },
+}, USAGE);
 
 // Previews always come from the inbox query, so 'all' stays bounded by inbox size.
 const preview = values.preview === PREVIEW_ALL

@@ -16,9 +16,8 @@
  *   list-inbox:    node report-messages.mjs --format list --group-by category \
  *                    --columns unread,sender,subject --max 200 "in:inbox"
  */
-import { pathToFileURL } from 'node:url';
-import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
 import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import {
   countMessagesMatching,
@@ -207,32 +206,18 @@ const USAGE = `Usage: node report-messages.mjs [options] "<gmail-query>" ["<gmai
   --count           counts only, no rows`;
 
 async function main() {
-  let values;
-  let positionals;
-  try {
-    ({ values, positionals } = parseArgs({
-      options: {
-        columns: { type: 'string' },
-        format: { type: 'string', default: 'tsv' },
-        'group-by': { type: 'string', default: 'none' },
-        max: { type: 'string' },
-        preview: { type: 'string' },
-        total: { type: 'boolean', default: false },
-        count: { type: 'boolean', default: false },
-      },
-      allowPositionals: true,
-    }));
-  } catch (error) {
-    console.error(error.message);
-    console.error(USAGE);
-    process.exit(1);
-  }
+  const { values, positionals } = parseCli({
+    columns: { type: 'string' },
+    format: { type: 'string', default: 'tsv' },
+    'group-by': { type: 'string', default: 'none' },
+    max: { type: 'string' },
+    preview: { type: 'string' },
+    total: { type: 'boolean', default: false },
+    count: { type: 'boolean', default: false },
+  }, USAGE, { allowPositionals: true });
 
   const queries = positionals.map((q) => q.trim()).filter(Boolean).map((query) => ({ query }));
-  if (queries.length === 0) {
-    console.error(USAGE);
-    process.exit(1);
-  }
+  if (queries.length === 0) exitWithUsage(USAGE);
 
   const gmail = await createGmailClient();
   await report(gmail, queries, {
@@ -246,9 +231,4 @@ async function main() {
   });
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((error) => {
-    console.error('Error:', error.message);
-    process.exit(1);
-  });
-}
+runIfMain(import.meta.url, main);

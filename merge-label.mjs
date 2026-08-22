@@ -15,9 +15,8 @@
  * Usage:
  *   node merge-label.mjs --from "A" --into "B" [--delete-source] [--dry-run]
  */
-import { parseArgs } from 'node:util';
-import { pathToFileURL } from 'node:url';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { withRetry } from './lib/gmail-retry.mjs';
 import { messagePages, countMessagesMatching } from './lib/gmail-message-utils.mjs';
@@ -96,27 +95,17 @@ export async function mergeLabel(gmail, fromName, intoName, { dryRun = false, de
 const USAGE = 'Usage: node merge-label.mjs --from "<name>" --into "<name>" [--delete-source] [--dry-run]';
 
 async function main() {
-  let values;
-  try {
-    ({ values } = parseArgs({ options: {
-      from: { type: 'string' },
-      into: { type: 'string' },
-      'dry-run': { type: 'boolean', default: false },
-      'delete-source': { type: 'boolean', default: false },
-    } }));
-  } catch (error) {
-    console.error(error.message);
-    console.error(USAGE);
-    process.exit(1);
-  }
+  const { values } = parseCli({
+    from: { type: 'string' },
+    into: { type: 'string' },
+    'dry-run': { type: 'boolean', default: false },
+    'delete-source': { type: 'boolean', default: false },
+  }, USAGE);
   const fromName = values.from;
   const intoName = values.into;
   const dryRun = values['dry-run'];
   const deleteSource = values['delete-source'];
-  if (!fromName || !intoName) {
-    console.error(USAGE);
-    process.exit(1);
-  }
+  if (!fromName || !intoName) exitWithUsage(USAGE);
   const gmail = createGmailClient();
   const { merged, after } = await mergeLabel(gmail, fromName, intoName, { dryRun, deleteSource });
   if (!dryRun) {
@@ -124,9 +113,4 @@ async function main() {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((error) => {
-    console.error('Error:', error.message);
-    process.exit(1);
-  });
-}
+runIfMain(import.meta.url, main);

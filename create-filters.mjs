@@ -8,9 +8,8 @@
  *   node create-filters.mjs --dry-run             # print the create/delete plan without mutating
  *   node create-filters.mjs --prune               # also delete stale filters (see diffFilters)
  */
-import { pathToFileURL } from 'node:url';
-import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { parseCli, runIfMain } from './lib/cli-utils.mjs';
 import {
   ensureLabelExists,
   createGmailFilter,
@@ -131,20 +130,11 @@ function allDesiredFilterKeys(labelIdByName) {
 const USAGE = 'Usage: node create-filters.mjs [--only <label-prefix>] [--dry-run] [--prune]';
 
 async function run() {
-  let values;
-  try {
-    ({ values } = parseArgs({
-      options: {
-        only: { type: 'string' },
-        'dry-run': { type: 'boolean', default: false },
-        prune: { type: 'boolean', default: false },
-      },
-    }));
-  } catch (error) {
-    console.error(error.message);
-    console.error(USAGE);
-    process.exit(1);
-  }
+  const { values } = parseCli({
+    only: { type: 'string' },
+    'dry-run': { type: 'boolean', default: false },
+    prune: { type: 'boolean', default: false },
+  }, USAGE);
   const onlyPrefix = values.only ?? null;
   const dryRun = values['dry-run'];
   const prune = values.prune;
@@ -300,9 +290,4 @@ async function run() {
   console.log(BANNER + '\n');
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  run().catch(error => {
-    console.error('Error:', error?.message ?? String(error));
-    process.exit(1);
-  });
-}
+runIfMain(import.meta.url, run);

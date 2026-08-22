@@ -18,32 +18,22 @@
  *     --add "Services & Alerts/Health" --remove "Legal"          # preview
  *   node relabel-messages.mjs --query "..." --add "..." --yes    # apply
  */
-import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { parseCli, exitWithUsage, runMain } from './lib/cli-utils.mjs';
 import { modifyMessages } from './modify-messages.mjs';
 import { BANNER } from './lib/console-utils.mjs';
 
 const USAGE = 'Usage: node relabel-messages.mjs --query "<gmail-query>" [--add "<label>"] [--remove "<label>"] [--yes]';
 
-let values;
-try {
-  ({ values } = parseArgs({ options: {
-    query: { type: 'string' },
-    add: { type: 'string' },
-    remove: { type: 'string' },
-    yes: { type: 'boolean', default: false },
-  } }));
-} catch (error) {
-  console.error(error.message);
-  console.error(USAGE);
-  process.exit(1);
-}
+const { values } = parseCli({
+  query: { type: 'string' },
+  add: { type: 'string' },
+  remove: { type: 'string' },
+  yes: { type: 'boolean', default: false },
+}, USAGE);
 
 const { query, add: addName, remove: removeName, yes: apply } = values;
-if (!query || (!addName && !removeName)) {
-  console.error(USAGE);
-  process.exit(1);
-}
+if (!query || (!addName && !removeName)) exitWithUsage(USAGE);
 
 async function main() {
   console.log(`RELABELING — query: ${query}`);
@@ -65,7 +55,4 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error('Error:', error.message);
-  process.exit(1);
-});
+runMain(main);

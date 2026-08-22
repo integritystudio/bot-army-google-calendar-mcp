@@ -7,28 +7,21 @@
  *   node protect-important-inbox.mjs --billing --update       # add urgent billing alert filter
  *   node protect-important-inbox.mjs --billing --apply-only   # apply billing filters to unread emails only
  */
-import { parseArgs } from 'node:util';
 import { createGmailClient } from './lib/gmail-client.mjs';
+import { parseCli, runMain } from './lib/cli-utils.mjs';
 import { DEFAULT_MAX_RESULTS, GMAIL_INBOX, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 import { BANNER, printComplete } from './lib/console-utils.mjs';
 
-let values;
-try {
-  ({ values } = parseArgs({
-    options: {
-      billing: { type: 'boolean', default: false },
-      update: { type: 'boolean', default: false },
-      'apply-only': { type: 'boolean', default: false },
-    },
-  }));
-} catch (error) {
-  console.error(error.message);
-  console.error('Usage: node protect-important-inbox.mjs [--billing [--update | --apply-only]]');
-  process.exit(1);
-}
+const USAGE = 'Usage: node protect-important-inbox.mjs [--billing [--update | --apply-only]]';
+
+const { values } = parseCli({
+  billing: { type: 'boolean', default: false },
+  update: { type: 'boolean', default: false },
+  'apply-only': { type: 'boolean', default: false },
+}, USAGE);
 
 const billingMode = values.billing;
 
@@ -194,8 +187,4 @@ async function runBillingFilters() {
   console.log(BANNER + '\n');
 }
 
-const action = billingMode ? runBillingFilters : protectImportantItems;
-action().catch(error => {
-  console.error('Error:', error.message);
-  process.exit(1);
-});
+runMain(billingMode ? runBillingFilters : protectImportantItems);

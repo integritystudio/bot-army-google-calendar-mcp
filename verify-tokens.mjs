@@ -2,6 +2,7 @@
 import { initializeOAuth2Client } from './src/auth/client.js';
 import { TokenManager } from './src/auth/tokenManager.js';
 import fs from 'fs/promises';
+import { runMain } from './lib/cli-utils.mjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -56,7 +57,4 @@ async function verifyAndRefreshTokens() {
   }
 }
 
-verifyAndRefreshTokens().catch(error => {
-  console.error('Error:', error.message);
-  process.exit(1);
-});
+runMain(verifyAndRefreshTokens);

@@ -155,6 +155,13 @@ import from `config/`, never from the `create-*.mjs` entrypoint.
   *from a CLI entrypoint*; don't re-add a local regex variant
 - `constants.mjs` — Shared constants (DEFAULT_MAX_RESULTS, category definitions)
 - `console-utils.mjs` — Formatted console output helpers
+- `cli-utils.mjs` — CLI plumbing every root script shares: `parseCli(options, usage, {allowPositionals})`
+  (parseArgs, reporting a bad flag as a usage error), `exitWithUsage()`, `runMain()` and
+  `runIfMain(import.meta.url, main)`. **Use these rather than a local `parseArgs` try/catch or
+  `import.meta.url === pathToFileURL(...)` footer** — those were 21 of jscpd's 21 clone pairs
+  across the root `.mjs` files, and hand-rolling them is how scripts drifted into printing a
+  parse error with no usage line. `runMain` invokes through `Promise.resolve().then` so a
+  synchronous `main` works too
 
 **Patterns:**
 - Use `Promise.all` for concurrent fetches (not serial loops)

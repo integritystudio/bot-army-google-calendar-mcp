@@ -5,27 +5,18 @@
  * Usage:
  *   node mark-past-events-read.mjs [--label "Events"] [--dry-run]
  *
- * Walks the label's unread messages, extracts event dates from subject/body via
- * classifyEmail (lib/date-based-filter.mjs), and removes UNREAD from messages
- * whose event date has passed. Future and undatable messages are left unread.
+ * Walks the label's unread messages and removes UNREAD from those whose event date has
+ * passed; future and undatable messages are left unread. Fetching and classification
+ * live in lib/event-classifier.mjs, shared with filter-events-by-date.mjs — including
+ * the chunking, so a crash costs at most one chunk rather than every verdict so far.
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
-import { classifyEmail } from './lib/date-based-filter.mjs';
-import { getHeader } from './lib/email-utils.mjs';
-import { listAllMessageIds, extractBodyText, mapWithConcurrency } from './lib/gmail-message-utils.mjs';
+import { classifyByEventDate } from './lib/event-classifier.mjs';
+import { listAllMessageIds } from './lib/gmail-message-utils.mjs';
 import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
-import { withRetry } from './lib/gmail-retry.mjs';
-import { USER_ID, GMAIL_UNREAD, LABEL_EVENTS } from './lib/constants.mjs';
-
-// Classify and mark in chunks rather than classifying the whole label first: a run that
-// accumulates every verdict for one modify at the end loses all of it if anything throws
-// partway, which is exactly how a 12.5k-message run discarded 4,161 completed
-// classifications. A crash now costs at most one chunk.
-const CHUNK_SIZE = 500;
-const STATUS_PAST = 'past';
-const STATUS_FUTURE = 'future';
+import { GMAIL_UNREAD, LABEL_EVENTS } from './lib/constants.mjs';
 
 const USAGE = 'Usage: node mark-past-events-read.mjs [--label "Events"] [--dry-run]';
 
@@ -51,53 +42,22 @@ async function main() {
   const ids = await listAllMessageIds(gmail, { labelIds: [labelId, GMAIL_UNREAD] });
   console.log(`Unread "${labelName}" emails: ${ids.length}`);
 
-  let failed = 0;
-  let pastCount = 0;
-  let futureCount = 0;
-  let unknownCount = 0;
+  let pastSoFar = 0;
   let markedCount = 0;
+  const totals = await classifyByEventDate(gmail, ids, {
+    onChunk: async ({ past, done, total }) => {
+      pastSoFar += past.length;
+      if (!dryRun && past.length > 0) {
+        markedCount += await batchModifyMessages(gmail, past, { removeLabelIds: [GMAIL_UNREAD] });
+      }
+      console.log(`  ${done}/${total} classified — past ${pastSoFar}, marked ${markedCount}`);
+    },
+  });
 
-  for (let offset = 0; offset < ids.length; offset += CHUNK_SIZE) {
-    const chunk = ids.slice(offset, offset + CHUNK_SIZE);
-
-    const verdicts = await mapWithConcurrency(chunk, async (id) => {
-      // Retried rather than swallowed with .catch(() => null): a dropped message is
-      // simply never classified, so a rate-limited run reported a smaller label
-      // instead of an error.
-      const msg = await withRetry(() =>
-        gmail.users.messages.get({ userId: USER_ID, id, format: 'full' })
-      ).catch(() => { failed++; return null; });
-
-      if (!msg) return null;
-
-      const headers = msg.data.payload?.headers || [];
-      const subject = getHeader(headers, 'Subject', '');
-      const body = extractBodyText(msg.data.payload);
-      // Anchor year-less dates to when the mail arrived, not to now: a 2025 email saying
-      // "March 25" means March 2025, and resolving it against today would date every
-      // backfilled message to whenever this script happens to run.
-      const { status } = classifyEmail(subject, body, new Date(Number(msg.data.internalDate)));
-      // Only the verdict survives the mapper — retaining every full body would hold
-      // hundreds of MB on a label the size of Events/Meetup.
-      return { id: msg.data.id, status };
-    });
-
-    const pastIds = verdicts.filter(v => v?.status === STATUS_PAST).map(v => v.id);
-    pastCount += pastIds.length;
-    futureCount += verdicts.filter(v => v?.status === STATUS_FUTURE).length;
-    unknownCount += verdicts.filter(
-      v => v && v.status !== STATUS_PAST && v.status !== STATUS_FUTURE
-    ).length;
-
-    if (!dryRun && pastIds.length > 0) {
-      markedCount += await batchModifyMessages(gmail, pastIds, { removeLabelIds: [GMAIL_UNREAD] });
-    }
-
-    console.log(`  ${offset + chunk.length}/${ids.length} classified — past ${pastCount}, marked ${markedCount}`);
+  console.log(`Past: ${totals.past} | Future: ${totals.future} | Unknown (left unread): ${totals.unknown}`);
+  if (totals.failed > 0) {
+    console.warn(`${totals.failed} message(s) could not be fetched and were left unread.`);
   }
-
-  console.log(`Past: ${pastCount} | Future: ${futureCount} | Unknown (left unread): ${unknownCount}`);
-  if (failed > 0) console.warn(`${failed} message(s) could not be fetched and were left unread.`);
 
   if (dryRun) {
     console.log('Dry run - no changes made.');

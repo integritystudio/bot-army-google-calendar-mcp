@@ -1,12 +1,23 @@
+/**
+ * Label event mail found by keyword, archiving the events that have already happened.
+ *
+ * Unlike mark-past-events-read.mjs this finds candidates by subject/sender keyword
+ * rather than by an existing label, and it labels rather than marking read. The
+ * classification itself is shared: lib/event-classifier.mjs.
+ *
+ * The sweep stays capped. The query matches on keywords rather than senders, so an
+ * unbounded run would label and archive any mail merely mentioning a workshop.
+ *
+ * Usage: node filter-events-by-date.mjs
+ */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { runIfMain } from './lib/cli-utils.mjs';
-import { USER_ID, GMAIL_INBOX, LABEL_EVENTS, LABEL_KEEP_IMPORTANT, DEFAULT_MAX_RESULTS } from './lib/constants.mjs';
-import { classifyEmail } from './lib/date-based-filter.mjs';
-import { getHeader } from './lib/email-utils.mjs';
+import { GMAIL_INBOX, LABEL_EVENTS, LABEL_KEEP_IMPORTANT, DEFAULT_MAX_RESULTS } from './lib/constants.mjs';
+import { classifyByEventDate } from './lib/event-classifier.mjs';
+import { listAllMessageIds } from './lib/gmail-message-utils.mjs';
 import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
-import { BANNER } from './lib/console-utils.mjs';
-import { decodeMessageBody } from './lib/gmail-message-utils.mjs';
+import { BANNER, printComplete } from './lib/console-utils.mjs';
 
 const EVENT_KEYWORDS = '(event OR meeting OR conference OR workshop OR seminar OR webinar OR presentation OR summit OR expo OR networking OR panel OR forum OR gathering OR ceremony OR celebration)';
 const EVENT_SENDERS = '(meetup OR eventbrite OR "international house" OR calendly OR calendar)';
@@ -27,49 +38,39 @@ async function filterEventsByDate() {
   }
 
   const searchQuery = `is:unread (subject:${EVENT_KEYWORDS} OR from:${EVENT_SENDERS}) ${keepImportantLabelId ? `-label:"${LABEL_KEEP_IMPORTANT}"` : ''}`;
-  const searchResponse = await gmail.users.messages.list({ userId: USER_ID, q: searchQuery, maxResults: DEFAULT_MAX_RESULTS });
-  const messageIds = searchResponse.data.messages || [];
-  console.log(`Found ${messageIds.length} event-like emails\n`);
+  const ids = await listAllMessageIds(gmail, searchQuery, { limit: DEFAULT_MAX_RESULTS });
+  console.log(`Found ${ids.length} event-like emails\n`);
 
-  if (messageIds.length === 0) {
+  if (ids.length === 0) {
     console.log('No event emails to process\n');
     return;
   }
 
-  const fullMsgs = await Promise.all(
-    messageIds.map(msg =>
-      gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'full' })
-        .catch(error => { console.log(`Error processing email: ${error.message}`); return null; })
-    )
-  );
+  // Applied per chunk rather than once at the end, so a failure partway keeps the
+  // classifications already acted on. Past events are archived as well as labeled;
+  // future ones keep their place in the inbox.
+  let labeled = 0;
+  let archived = 0;
+  const totals = await classifyByEventDate(gmail, ids, {
+    onChunk: async ({ past, future }) => {
+      if (future.length > 0) {
+        labeled += await batchModifyMessages(gmail, future, { addLabelIds: [eventsLabelId] });
+      }
+      if (past.length > 0) {
+        archived += await batchModifyMessages(gmail, past, {
+          addLabelIds: [eventsLabelId],
+          removeLabelIds: [GMAIL_INBOX],
+        });
+      }
+    },
+  });
 
-  const futureIds = [];
-  const pastIds = [];
-
-  for (const fullMsg of fullMsgs.filter(Boolean)) {
-    const headers = fullMsg.data.payload?.headers || [];
-    const subject = getHeader(headers, 'Subject');
-    const body = decodeMessageBody(fullMsg.data.payload);
-    // Anchor year-less dates to arrival, not to now (see date-based-filter.mjs).
-    const classification = classifyEmail(subject, body, new Date(Number(fullMsg.data.internalDate)));
-    if (classification.status === 'future') futureIds.push(fullMsg.data.id);
-    else if (classification.status === 'past') pastIds.push(fullMsg.data.id);
+  console.log(`Future events: ${totals.future} | Past events: ${totals.past} | Unknown: ${totals.unknown}\n`);
+  if (totals.failed > 0) {
+    console.warn(`${totals.failed} message(s) could not be fetched and were left alone.\n`);
   }
 
-  const unknownCount = messageIds.length - futureIds.length - pastIds.length;
-  console.log(`Future events: ${futureIds.length} | Past events: ${pastIds.length} | Unknown: ${unknownCount}\n`);
-
-  if (futureIds.length > 0) {
-    await batchModifyMessages(gmail, futureIds, { addLabelIds: [eventsLabelId] });
-  }
-  if (pastIds.length > 0) {
-    await batchModifyMessages(gmail, pastIds, { addLabelIds: [eventsLabelId], removeLabelIds: [GMAIL_INBOX] });
-  }
-
-  console.log(BANNER);
-  console.log('COMPLETE\n');
-  console.log(`Future events labeled: ${futureIds.length} | Past events archived: ${pastIds.length} | Unknown: ${unknownCount}\n`);
-  console.log(BANNER + '\n');
+  printComplete(`Future events labeled: ${labeled} | Past events archived: ${archived} | Unknown: ${totals.unknown}\n`);
 }
 
 runIfMain(import.meta.url, filterEventsByDate);

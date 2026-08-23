@@ -18,7 +18,8 @@
  * --schema became audit-schema-markup.mjs; it shared no code with either mode here.
  *
  * Usage:
- *   node list-unread-emails.mjs          # category breakdown with previews
+ *   node list-unread-emails.mjs          # category breakdown of the 500 newest unread
+ *   node list-unread-emails.mjs --total  # also count the whole mailbox exactly (slow)
  *   node list-unread-emails.mjs --stats  # per-label total/unread counts + mailbox profile
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
@@ -26,14 +27,29 @@ import { parseCli, runIfMain } from './lib/cli-utils.mjs';
 import { BANNER, DIVIDER } from './lib/console-utils.mjs';
 import { extractDisplayName, extractEmailAddress } from './lib/email-utils.mjs';
 import { buildLabelCache, buildLabelIndex } from './lib/gmail-label-utils.mjs';
-import { mapWithConcurrency, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
+import { mapWithConcurrency, countMessagesMatching, listAllMessageIds, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 import { USER_ID, LABEL_SENTRY } from './lib/constants.mjs';
 import { CATEGORY_PRIORITY, TRACKED_LABELS } from './config/tracked-labels.mjs';
 
-const USAGE = 'Usage: node list-unread-emails.mjs [--stats]';
+const USAGE = 'Usage: node list-unread-emails.mjs [--stats] [--total]';
 
 const PREVIEW_LIMIT = 5;
 const SUBJECT_MAX_LENGTH = 60;
+
+const UNREAD_QUERY = 'is:unread';
+/**
+ * How many messages the category breakdown reads headers for.
+ *
+ * This used to be a bare `maxResults: 500`, and the length of that one page WAS the
+ * reported total — so a mailbox past 500 unread printed exactly 500 and read as a hard
+ * number. It measured 147,970 the day this was fixed.
+ *
+ * The sample is still bounded (the breakdown is a shape, not a census), but it is now
+ * labeled as one. `--total` adds the exact figure, and is opt-in because it pages the
+ * whole match set: one request per 500 matches, 82s at 148k unread. Same tradeoff, and
+ * the same reason, as `list-unlabeled-unread.mjs --all`.
+ */
+const BREAKDOWN_SAMPLE = 500;
 
 const SYSTEM_LABEL_UNREAD = 'UNREAD';
 const SYSTEM_LABEL_INBOX = 'INBOX';
@@ -50,18 +66,33 @@ async function getLabelCounts(gmail, labelId) {
   return { total: res.data.messagesTotal || 0, unread: res.data.messagesUnread || 0 };
 }
 
-async function listUnreadEmails(gmail) {
-  const searchResponse = await gmail.users.messages.list({ userId: USER_ID, q: 'is:unread', maxResults: 500 });
+async function listUnreadEmails(gmail, { exactTotal = false } = {}) {
+  // With --total, one paged walk yields both the exact count and the sample. Without it,
+  // fetch one id past the sample so a full page can be reported as "at least N" rather
+  // than as a total — the length of a capped page is not a count.
+  const { totalUnread, sampleIds } = exactTotal
+    ? await countMessagesMatching(gmail, UNREAD_QUERY, { sampleSize: BREAKDOWN_SAMPLE })
+        .then(({ count, sampleIds: ids }) => ({ totalUnread: count, sampleIds: ids }))
+    : await listAllMessageIds(gmail, UNREAD_QUERY, { limit: BREAKDOWN_SAMPLE + 1 })
+        .then((ids) => ({ totalUnread: null, sampleIds: ids.slice(0, BREAKDOWN_SAMPLE) }));
 
-  const messageIds = searchResponse.data.messages || [];
+  const truncated = exactTotal
+    ? sampleIds.length < totalUnread
+    : sampleIds.length === BREAKDOWN_SAMPLE;
 
   console.log('LISTING UNREAD EMAILS\n');
   console.log(BANNER + '\n');
-  console.log(`Total unread: ${messageIds.length}\n`);
+  console.log(totalUnread !== null
+    ? `Total unread: ${totalUnread}\n`
+    : `Unread: ${truncated ? `more than ${BREAKDOWN_SAMPLE} — rerun with --total for the exact count` : sampleIds.length}\n`);
 
-  if (messageIds.length === 0) {
+  if (sampleIds.length === 0) {
     console.log('Inbox is clean!\n');
     return;
+  }
+
+  if (truncated) {
+    console.log(`Breakdown covers the ${sampleIds.length} newest; counts below are of that sample.\n`);
   }
 
   const { byId: labelMap } = await buildLabelIndex(gmail);
@@ -69,7 +100,7 @@ async function listUnreadEmails(gmail) {
   // fetchMessageHeaders retries and warns about what it could not fetch. The unretried
   // fan-out this replaces let a 429 reject the whole run, and the categories below are
   // reported as counts — a short fetch would have read as a quieter mailbox.
-  const emails = (await fetchMessageHeaders(gmail, messageIds.map(m => m.id)))
+  const emails = (await fetchMessageHeaders(gmail, sampleIds))
     .map(({ subject, from, labelIds }) => ({
       subject,
       from,
@@ -105,7 +136,13 @@ async function listUnreadEmails(gmail) {
   for (const [category, items] of Object.entries(categories)) {
     if (items.length > 0) console.log(`  ${category}: ${items.length}`);
   }
-  console.log(`\nTotal: ${messageIds.length}`);
+  if (!truncated) {
+    console.log(`\nTotal: ${sampleIds.length}`);
+  } else if (totalUnread !== null) {
+    console.log(`\nCategorized: ${emails.length} of ${totalUnread} unread`);
+  } else {
+    console.log(`\nCategorized: the ${emails.length} newest — rerun with --total for the mailbox count`);
+  }
   console.log(BANNER + '\n');
 }
 
@@ -141,9 +178,12 @@ async function showStats(gmail) {
 }
 
 async function run() {
-  const { values } = parseCli({ stats: { type: 'boolean', default: false } }, USAGE);
+  const { values } = parseCli({
+    stats: { type: 'boolean', default: false },
+    total: { type: 'boolean', default: false },
+  }, USAGE);
   const gmail = createGmailClient();
-  return values.stats ? showStats(gmail) : listUnreadEmails(gmail);
+  return values.stats ? showStats(gmail) : listUnreadEmails(gmail, { exactTotal: values.total });
 }
 
 runIfMain(import.meta.url, run);

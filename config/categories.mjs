@@ -138,16 +138,10 @@ export const CATEGORIES = [
       { name: 'Link', query: 'from:notifications@link.com' },
       { name: 'Heroku', query: 'from:bot@notifications.heroku.com' },
       { name: 'American Best', query: 'from:upcoming@americanbestech.com' },
-      { name: 'Zillow', query: 'from:mail.zillow.com' },
-      { name: 'Zillow Rental Manager', query: 'from:zillowrentals.com' },
-      { name: 'Redfin', query: 'from:redfin.com' },
-      { name: 'Realtor.com', query: 'from:e.mail.realtor.com' },
-      { name: 'Apartment List', query: 'from:emp.apartmentlist.com' },
       // Texas Gas Service and City of Austin Utilities moved to Services & Alerts/Utilities,
-      // which keeps bills in the inbox instead of archiving them here
-      { name: 'Quest Diagnostics', query: 'from:e.questdiagnostics.com' },
-      { name: 'Ascension Seton', query: 'from:communication.ascension.org' },
-      { name: 'One Medical', query: 'from:access.onemedical.com' },
+      // which keeps bills in the inbox instead of archiving them here. The listing-alert and
+      // health-notification senders that used to sit here moved to the archive-on-arrival
+      // blocks beside their sublabel siblings below, which apply this label as an extraLabel.
       { name: 'Texas.gov Notifications', query: 'from:(txt.texas.gov OR dps.texas.gov)' },
     ],
   },
@@ -749,6 +743,32 @@ export const CATEGORIES = [
     ],
   },
   {
+    // Health mail that is notification rather than correspondence — portal-access pings
+    // and lab-result notices, each superseded by the next. Archived on arrival, unlike
+    // the block above, which holds visit links and confirmations that must stay visible.
+    //
+    // These were entries on the parent Services & Alerts label, with the sublabel applied
+    // separately by sublabel-services.mjs; that script described the same routing a second
+    // time and is gone. extraLabels keeps both labels on the mail, as before.
+    //
+    // access.onemedical.com is also matched by the block above's bare `from:onemedical.com`
+    // (Gmail's from: matches subdomains), so that sender carries both dispositions and
+    // archives — which is what it did before this block existed. Left as-is deliberately:
+    // changing it is a routing decision, not part of folding the duplicate in.
+    labelName: LABEL_SERVICES_HEALTH,
+    archive: true,
+    extraLabels: [LABEL_SERVICES],
+    // Read mail too: the historical archive already carries the parent label, so an
+    // unread-only backfill would leave every past message without the sublabel. This is
+    // what `sublabel-services.mjs --all` existed to do.
+    includeRead: true,
+    entries: [
+      { name: 'Quest Diagnostics', query: 'from:e.questdiagnostics.com' },
+      { name: 'Ascension Seton', query: 'from:communication.ascension.org' },
+      { name: 'One Medical (portal access)', query: 'from:access.onemedical.com' },
+    ],
+  },
+  {
     // Rental/apartment inquiry follow-ups & listing alerts — stay in inbox (active correspondence)
     labelName: LABEL_SERVICES_REAL_ESTATE,
     archive: false,
@@ -763,6 +783,29 @@ export const CATEGORIES = [
       { name: 'PAMCO HOA', query: 'from:pamcotx.com' },
       { name: 'Listing alerts (Ylopo/McGuire)', query: 'from:(ylopo-email.com OR mcguireatx.com)' },
       { name: 'Kindred', query: 'from:(m.livekindred.com OR t.livekindred.com)' },
+    ],
+  },
+  {
+    // Listing alerts and portal marketing — archived on arrival, unlike the block above,
+    // which holds active leasing correspondence. Two blocks on one label with opposite
+    // dispositions is the supported shape; create-filters.mjs judges staleness against
+    // the whole config for exactly this reason (see allDesiredFilterKeys).
+    //
+    // Folded in from sublabel-services.mjs, which described this routing a second time and
+    // disagreed with it. That script also matched bare `from:apartmentlist.com`, which
+    // Gmail expands to the subdomains — so it archived the nurture./explore. inquiry
+    // follow-ups the block above keeps in the inbox. Only the marketing subdomain is
+    // listed here; the bare domain is deliberately not.
+    labelName: LABEL_SERVICES_REAL_ESTATE,
+    archive: true,
+    extraLabels: [LABEL_SERVICES],
+    includeRead: true,
+    entries: [
+      { name: 'Zillow (listing alerts)', query: 'from:mail.zillow.com' },
+      { name: 'Zillow Rental Manager', query: 'from:zillowrentals.com' },
+      { name: 'Redfin', query: 'from:redfin.com' },
+      { name: 'Realtor.com', query: 'from:e.mail.realtor.com' },
+      { name: 'Apartment List (marketing)', query: 'from:emp.apartmentlist.com' },
     ],
   },
   {

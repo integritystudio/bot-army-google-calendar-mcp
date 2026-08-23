@@ -53,10 +53,10 @@ node sublabel-services.mjs --all           # Also retro-label already-read Servi
 ## 5. Protect important mail
 
 ```bash
-node protect-important-inbox.mjs                        # Keep important items in inbox
-node protect-important-inbox.mjs --billing              # Smart billing filters with rate-limit detection
-node protect-important-inbox.mjs --billing --update     # Add urgent billing alert filter
-node protect-important-inbox.mjs --billing --apply-only # Apply billing filters to unread emails only
+node protect-important-inbox.mjs             # Keep important items in inbox
+node route-billing-mail.mjs                  # Billing filters with rate-limit detection
+node route-billing-mail.mjs --update         # Add urgent billing alert filter
+node route-billing-mail.mjs --apply-only     # Apply billing rules to unread emails only
 ```
 
 ## 6. Archive and mark read

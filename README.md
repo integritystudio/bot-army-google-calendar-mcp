@@ -207,7 +207,7 @@ Automated scripts for organizing and filtering large volumes of Gmail with focus
 - `switch-account.mjs` - Switch active Google account (file-based resolution)
 
 **Specialized Filters:**
-- `protect-important-inbox.mjs --billing` - Smart billing filter with conditional rate-limit detection
+- `route-billing-mail.mjs` - Billing filters with conditional rate-limit detection; urgent alerts stay in the inbox, routine billing is archived (was `protect-important-inbox.mjs --billing`)
 - `filter-events-by-date.mjs` - Classify event emails as future (label + keep) or past (label + archive)
 
 **Archive & Processing Scripts:**
@@ -292,7 +292,7 @@ Callers that truncate today:
 
 | Call site | Cap | Deliberate? |
 |---|---|---|
-| `protect-important-inbox.mjs` (6 sites) | `SUBJECT_SWEEP_CAP` | **Yes** — subject-only queries; `cappedSweep()` says when it truncates |
+| `protect-important-inbox.mjs`, `route-billing-mail.mjs` (6 sites) | `SUBJECT_SWEEP_CAP` | **Yes** — subject-only queries; `cappedSweep()` (in `lib/gmail-batch-utils.mjs`) says when it truncates |
 | `create-filters.mjs:281` | `category.maxResults` | **Yes** — opt-in per category, unset means page to exhaustion |
 
 No accidental truncation remains. `relabel-messages.mjs` used to head this table: it

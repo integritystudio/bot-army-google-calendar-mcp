@@ -1,21 +1,20 @@
 /**
- * Protect important emails in inbox and manage billing filters.
+ * Keep a hand-picked set of senders in the inbox, labeled "Keep Important".
  *
- * Usage:
- *   node protect-important-inbox.mjs               # create filters to keep important items in inbox
- *   node protect-important-inbox.mjs --billing      # create smart billing filters with rate-limit detection
- *   node protect-important-inbox.mjs --billing --update       # add urgent billing alert filter
- *   node protect-important-inbox.mjs --billing --apply-only   # apply billing filters to unread emails only
+ * The --billing modes that used to live here are route-billing-mail.mjs. The two shared
+ * only cappedSweep (now in lib/gmail-batch-utils.mjs): one names four senders and keeps
+ * their mail, the other matches billing keywords and archives most of what it finds.
+ *
+ * Usage: node protect-important-inbox.mjs
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, runIfMain } from './lib/cli-utils.mjs';
-import { DEFAULT_MAX_RESULTS, GMAIL_INBOX, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
+import { LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
-import { buildLabelCache } from './lib/gmail-label-utils.mjs';
-import { searchAndModify } from './lib/gmail-batch-utils.mjs';
+import { cappedSweep } from './lib/gmail-batch-utils.mjs';
 import { BANNER, printComplete } from './lib/console-utils.mjs';
 
-const USAGE = 'Usage: node protect-important-inbox.mjs [--billing [--update | --apply-only]]';
+const USAGE = 'Usage: node protect-important-inbox.mjs';
 
 const IMPORTANT_FILTERS = [
   { name: 'Cloudflare Alerts', query: 'from:noreply@notify.cloudflare.com' },
@@ -23,29 +22,6 @@ const IMPORTANT_FILTERS = [
   { name: 'Investment Banking Meetings', query: 'from:notification@calendly.com subject:"Introductory Meeting"' },
   { name: 'Capital City Village Services', query: 'from:(capitalcity@a.helpfulvillage.com OR info@capitalcityvillage.org)' },
 ];
-
-const BILLING_KEYWORDS = '(invoice OR billing OR payment OR charge OR receipt OR statement)';
-const URGENT_KEYWORDS = '(late fee OR overdue OR "missed payment")';
-
-/**
- * Every sweep below matches on subject words rather than senders, so an unbounded run
- * would relabel and archive any mail that merely says "statement" or "receipt". The cap
- * is deliberate — searchAndModify pages to exhaustion without one.
- */
-const SUBJECT_SWEEP_CAP = DEFAULT_MAX_RESULTS;
-
-/**
- * A capped sweep that says when it stopped short. The bare count cannot distinguish
- * "that was all of them" from "there are more behind the cap", so a truncated run used
- * to report exactly like a complete one.
- */
-async function cappedSweep(gmail, query, modifications, description) {
-  const count = await searchAndModify(gmail, query, modifications, SUBJECT_SWEEP_CAP);
-  if (count >= SUBJECT_SWEEP_CAP) {
-    console.log(`  Note: ${description} hit the ${SUBJECT_SWEEP_CAP}-message cap; re-run to continue.`);
-  }
-  return count;
-}
 
 async function protectImportantItems() {
   const gmail = createGmailClient();
@@ -73,119 +49,9 @@ async function protectImportantItems() {
 
   printComplete();
 }
-
-async function resolveBillingLabelIds(gmail, mode) {
-  if (mode === 'apply-only') {
-    const labelCache = await buildLabelCache(gmail);
-    const billingLabelId = labelCache.get(LABEL_BILLING);
-    const keepImportantLabelId = labelCache.get(LABEL_KEEP_IMPORTANT);
-    if (!billingLabelId || !keepImportantLabelId) {
-      console.log('Required labels not found\n');
-      process.exit(1);
-    }
-    return { billingLabelId, keepImportantLabelId };
-  }
-
-  const billingLabelId = await ensureLabelExists(gmail, LABEL_BILLING);
-  let keepImportantLabelId;
-  try {
-    keepImportantLabelId = await ensureLabelExists(gmail, LABEL_KEEP_IMPORTANT);
-  } catch {
-    console.log('Keep Important label not found\n');
-  }
-  return { billingLabelId, keepImportantLabelId };
-}
-
-async function runBillingFilters(billingSubMode) {
-  const gmail = createGmailClient();
-
-  console.log(BANNER + '\n');
-  const { billingLabelId, keepImportantLabelId } = await resolveBillingLabelIds(gmail, billingSubMode);
-
-  if (billingSubMode === 'create') {
-    console.log('CREATING BILLING FILTER WITH SMART RULES\n');
-
-    const rateLimitLabelIds = keepImportantLabelId
-      ? [billingLabelId, keepImportantLabelId]
-      : [billingLabelId];
-
-    console.log('STEP 1: Creating filters\n');
-    const f1 = await createGmailFilter(gmail, { query: `subject:${BILLING_KEYWORDS} subject:"rate limit"` }, { addLabelIds: rateLimitLabelIds });
-    console.log(f1 ? 'Filter 1: Billing + Rate Limit (KEEP IN INBOX)' : 'Filter 1 already exists');
-
-    const f2 = await createGmailFilter(gmail, { query: `subject:${BILLING_KEYWORDS} -"rate limit"` }, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] });
-    console.log(f2 ? 'Filter 2: Billing Only (SKIP INBOX)' : 'Filter 2 already exists');
-
-    console.log('\nSTEP 2: Applying to existing emails\n');
-
-    const rateLimitCount = await cappedSweep(gmail, `subject:${BILLING_KEYWORDS} subject:"rate limit"`, { addLabelIds: rateLimitLabelIds }, 'rate limit billing');
-    if (rateLimitCount > 0) console.log(`Applied to ${rateLimitCount} rate limit emails (kept in inbox)`);
-
-    const regularCount = await cappedSweep(gmail, `subject:${BILLING_KEYWORDS} -"rate limit"`, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] }, 'regular billing');
-    if (regularCount > 0) console.log(`Applied to ${regularCount} regular billing emails (archived)`);
-
-    printComplete(`Rate limit billing: ${rateLimitCount} | Regular billing: ${regularCount}\n`);
-  }
-
-  if (billingSubMode === 'update') {
-    console.log('UPDATING BILLING FILTER - PROTECT URGENT ALERTS\n');
-
-    if (!keepImportantLabelId) {
-      console.log('Keep Important label not found.\n');
-      process.exit(1);
-    }
-
-    console.log('STEP 1: Creating urgent billing alert filter\n');
-    try {
-      const filterId = await createGmailFilter(gmail, { query: `subject:${BILLING_KEYWORDS} subject:${URGENT_KEYWORDS}` }, { addLabelIds: [billingLabelId, keepImportantLabelId] });
-      console.log(filterId ? 'Filter created: Urgent billing alerts (KEEP IN INBOX)\n' : 'Filter already exists\n');
-    } catch (error) {
-      if (error.message.includes('Too many')) {
-        console.log('Gmail label limit reached, using simplified approach\n');
-      } else {
-        throw error;
-      }
-    }
-
-    console.log('STEP 2: Applying to existing urgent billing emails\n');
-    const urgentCount = await cappedSweep(gmail, `subject:${BILLING_KEYWORDS} subject:${URGENT_KEYWORDS}`, { addLabelIds: [billingLabelId, keepImportantLabelId] }, 'urgent billing');
-    if (urgentCount > 0) {
-      console.log(`Applied to ${urgentCount} urgent billing emails (kept in inbox)\n`);
-    } else {
-      console.log('No urgent billing emails found\n');
-    }
-
-    printComplete();
-  }
-
-  if (billingSubMode === 'apply-only') {
-    console.log('APPLYING BILLING FILTER TO UNREAD EMAILS\n');
-
-    const urgentCount = await cappedSweep(gmail, `is:unread subject:${BILLING_KEYWORDS} subject:${URGENT_KEYWORDS}`, { addLabelIds: [billingLabelId, keepImportantLabelId] }, 'unread urgent billing');
-    console.log(`Found ${urgentCount} unread urgent billing emails`);
-
-    const regularCount = await cappedSweep(gmail, `is:unread subject:${BILLING_KEYWORDS} -"late fee" -overdue -"missed payment"`, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] }, 'unread regular billing');
-    console.log(`Found ${regularCount} unread regular billing emails`);
-
-    printComplete(`Urgent billing (kept in inbox): ${urgentCount}\nRegular billing (archived): ${regularCount}\nTotal processed: ${urgentCount + regularCount} emails\n`);
-  }
-
-  console.log(BANNER + '\n');
-}
-
 async function main() {
-  const { values } = parseCli({
-    billing: { type: 'boolean', default: false },
-    update: { type: 'boolean', default: false },
-    'apply-only': { type: 'boolean', default: false },
-  }, USAGE);
-
-  if (!values.billing) return protectImportantItems();
-  // The sub-mode was derived inside runBillingFilters from a module-scope `values`;
-  // passing it in keeps the parse and its consumer in one place.
-  return runBillingFilters(
-    values.update ? 'update' : values['apply-only'] ? 'apply-only' : 'create'
-  );
+  parseCli({}, USAGE);
+  return protectImportantItems();
 }
 
 runIfMain(import.meta.url, main);

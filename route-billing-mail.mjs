@@ -27,7 +27,34 @@ import { BANNER, printComplete } from './lib/console-utils.mjs';
 const USAGE = 'Usage: node route-billing-mail.mjs [--update | --apply-only]';
 
 const BILLING_KEYWORDS = '(invoice OR billing OR payment OR charge OR receipt OR statement)';
-const URGENT_KEYWORDS = '(late fee OR overdue OR "missed payment")';
+
+/**
+ * A multi-word term inside an OR group MUST be quoted.
+ *
+ * Written unquoted, `(late fee OR overdue OR "missed payment")` does not mean what it
+ * reads as: Gmail collapses it to `late AND fee`, so `overdue` and `"missed payment"`
+ * contributed nothing. Measured 2026-08-22 — the unquoted spelling matched 8 messages
+ * where this one matches 100. Every urgent rule below is built from this constant, so
+ * the whole urgent-billing protection was running on a third of its terms.
+ */
+const URGENT_KEYWORDS = '("late fee" OR overdue OR "missed payment")';
+const RATE_LIMIT = '"rate limit"';
+
+/**
+ * Each partition is written once, as a `subject:` test and its exact `-subject:`
+ * complement, so the two halves cannot drift apart.
+ *
+ * The hand-expanded negation this replaces — `-"late fee" -overdue -"missed payment"` —
+ * was wrong twice over. It restated the terms, so editing URGENT_KEYWORDS silently left
+ * it behind; and it negated them ANYWHERE in the message rather than in the subject, which
+ * held 149 billing messages out of the archive sweep because their bodies happened to
+ * mention an urgent word. A message must fall on exactly one side of each partition.
+ */
+const BILLING = `subject:${BILLING_KEYWORDS}`;
+const RATE_LIMIT_KEEP = `${BILLING} subject:${RATE_LIMIT}`;
+const RATE_LIMIT_REST = `${BILLING} -subject:${RATE_LIMIT}`;
+const URGENT_KEEP = `${BILLING} subject:${URGENT_KEYWORDS}`;
+const REGULAR = `${BILLING} -subject:${URGENT_KEYWORDS}`;
 
 async function resolveBillingLabelIds(gmail, mode) {
   if (mode === 'apply-only') {
@@ -65,18 +92,18 @@ async function runBillingFilters(billingSubMode) {
       : [billingLabelId];
 
     console.log('STEP 1: Creating filters\n');
-    const f1 = await createGmailFilter(gmail, { query: `subject:${BILLING_KEYWORDS} subject:"rate limit"` }, { addLabelIds: rateLimitLabelIds });
+    const f1 = await createGmailFilter(gmail, { query: RATE_LIMIT_KEEP }, { addLabelIds: rateLimitLabelIds });
     console.log(f1 ? 'Filter 1: Billing + Rate Limit (KEEP IN INBOX)' : 'Filter 1 already exists');
 
-    const f2 = await createGmailFilter(gmail, { query: `subject:${BILLING_KEYWORDS} -"rate limit"` }, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] });
+    const f2 = await createGmailFilter(gmail, { query: RATE_LIMIT_REST }, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] });
     console.log(f2 ? 'Filter 2: Billing Only (SKIP INBOX)' : 'Filter 2 already exists');
 
     console.log('\nSTEP 2: Applying to existing emails\n');
 
-    const rateLimitCount = await cappedSweep(gmail, `subject:${BILLING_KEYWORDS} subject:"rate limit"`, { addLabelIds: rateLimitLabelIds }, 'rate limit billing');
+    const rateLimitCount = await cappedSweep(gmail, RATE_LIMIT_KEEP, { addLabelIds: rateLimitLabelIds }, 'rate limit billing');
     if (rateLimitCount > 0) console.log(`Applied to ${rateLimitCount} rate limit emails (kept in inbox)`);
 
-    const regularCount = await cappedSweep(gmail, `subject:${BILLING_KEYWORDS} -"rate limit"`, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] }, 'regular billing');
+    const regularCount = await cappedSweep(gmail, RATE_LIMIT_REST, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] }, 'regular billing');
     if (regularCount > 0) console.log(`Applied to ${regularCount} regular billing emails (archived)`);
 
     printComplete(`Rate limit billing: ${rateLimitCount} | Regular billing: ${regularCount}\n`);
@@ -92,7 +119,7 @@ async function runBillingFilters(billingSubMode) {
 
     console.log('STEP 1: Creating urgent billing alert filter\n');
     try {
-      const filterId = await createGmailFilter(gmail, { query: `subject:${BILLING_KEYWORDS} subject:${URGENT_KEYWORDS}` }, { addLabelIds: [billingLabelId, keepImportantLabelId] });
+      const filterId = await createGmailFilter(gmail, { query: URGENT_KEEP }, { addLabelIds: [billingLabelId, keepImportantLabelId] });
       console.log(filterId ? 'Filter created: Urgent billing alerts (KEEP IN INBOX)\n' : 'Filter already exists\n');
     } catch (error) {
       if (error.message.includes('Too many')) {
@@ -103,7 +130,7 @@ async function runBillingFilters(billingSubMode) {
     }
 
     console.log('STEP 2: Applying to existing urgent billing emails\n');
-    const urgentCount = await cappedSweep(gmail, `subject:${BILLING_KEYWORDS} subject:${URGENT_KEYWORDS}`, { addLabelIds: [billingLabelId, keepImportantLabelId] }, 'urgent billing');
+    const urgentCount = await cappedSweep(gmail, URGENT_KEEP, { addLabelIds: [billingLabelId, keepImportantLabelId] }, 'urgent billing');
     if (urgentCount > 0) {
       console.log(`Applied to ${urgentCount} urgent billing emails (kept in inbox)\n`);
     } else {
@@ -116,10 +143,10 @@ async function runBillingFilters(billingSubMode) {
   if (billingSubMode === 'apply-only') {
     console.log('APPLYING BILLING FILTER TO UNREAD EMAILS\n');
 
-    const urgentCount = await cappedSweep(gmail, `is:unread subject:${BILLING_KEYWORDS} subject:${URGENT_KEYWORDS}`, { addLabelIds: [billingLabelId, keepImportantLabelId] }, 'unread urgent billing');
+    const urgentCount = await cappedSweep(gmail, `is:unread ${URGENT_KEEP}`, { addLabelIds: [billingLabelId, keepImportantLabelId] }, 'unread urgent billing');
     console.log(`Found ${urgentCount} unread urgent billing emails`);
 
-    const regularCount = await cappedSweep(gmail, `is:unread subject:${BILLING_KEYWORDS} -"late fee" -overdue -"missed payment"`, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] }, 'unread regular billing');
+    const regularCount = await cappedSweep(gmail, `is:unread ${REGULAR}`, { addLabelIds: [billingLabelId], removeLabelIds: [GMAIL_INBOX] }, 'unread regular billing');
     console.log(`Found ${regularCount} unread regular billing emails`);
 
     printComplete(`Urgent billing (kept in inbox): ${urgentCount}\nRegular billing (archived): ${regularCount}\nTotal processed: ${urgentCount + regularCount} emails\n`);

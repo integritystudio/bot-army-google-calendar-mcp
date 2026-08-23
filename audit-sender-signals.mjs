@@ -17,7 +17,7 @@ import {
   extractDisplayName,
   extractLocalPart,
   GENERIC_LOCAL_PARTS,
-  shareLeadingToken,
+  looksLikePlatform,
 } from './lib/email-utils.mjs';
 import {
   extractBodyText,
@@ -130,8 +130,7 @@ export async function scanDomain(gmail, domain, sampleSize) {
   // One distinctive local part is one org however many display names it signs with —
   // Austin Westie Academy also mails as "Liz" from austinwestieacademy@.
   const singleDistinctiveSender = orgs.length === 1 && localPartIsDistinctive;
-  const isPlatform = !singleDistinctiveSender
-    && allNames.length > 1 && !shareLeadingToken(allNames);
+  const isPlatform = !singleDistinctiveSender && looksLikePlatform(allNames);
   const localPartWins = !isPlatform
     && localPartIsDistinctive
     && localPartReach > total

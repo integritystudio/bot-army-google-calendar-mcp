@@ -10,7 +10,7 @@
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, runIfMain } from './lib/cli-utils.mjs';
-import { extractDisplayName, extractDomain, shareLeadingToken } from './lib/email-utils.mjs';
+import { extractDisplayName, extractDomain, looksLikePlatform } from './lib/email-utils.mjs';
 import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import { listAllMessageIds, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 import { ORG_TAGS } from './config/org-tags.mjs';
@@ -110,7 +110,7 @@ async function main() {
 
   for (const [domain, a] of gaps) {
     const names = [...a.names];
-    const isPlatform = names.length > 1 && !shareLeadingToken(names);
+    const isPlatform = looksLikePlatform(names);
     console.log(`${String(a.count).padStart(3)}  ${domain}${isPlatform ? '  [PLATFORM — run extract-platform-orgs.mjs]' : ''}`);
     for (const s of a.samples) console.log(`     ${s}`);
   }

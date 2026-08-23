@@ -159,8 +159,10 @@ import from `config/`, never from the `create-*.mjs` entrypoint.
   when the header has no display name, so grouping by name can tell those apart; write
   `extractDisplayName(f) || extractEmailAddress(f)` to print), `extractEmailAddress()`,
   `extractLocalPart()`, `extractDomain()` (lowercased — the domain→label configs are lower
-  case, so an unnormalized compare silently misses), plus `GENERIC_LOCAL_PARTS` and
-  `shareLeadingToken()`. These were duplicated across `audit-sender-signals.mjs`,
+  case, so an unnormalized compare silently misses), plus `GENERIC_LOCAL_PARTS`,
+  `shareLeadingToken()` and `looksLikePlatform()` (several unrelated display names on one
+  domain = a sending platform, not an org — both coverage audits must agree on this, so it
+  is one function, not an inline expression in each). These were duplicated across `audit-sender-signals.mjs`,
   `audit-org-tag-coverage.mjs` and `sublabel-services.mjs`, with two scripts importing them
   *from a CLI entrypoint*; don't re-add a local regex variant
 - `constants.mjs` — Shared constants (DEFAULT_MAX_RESULTS, category definitions)

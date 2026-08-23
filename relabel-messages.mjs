@@ -21,7 +21,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
 import { modifyMessages } from './modify-messages.mjs';
-import { BANNER } from './lib/console-utils.mjs';
+import { BANNER, printComplete } from './lib/console-utils.mjs';
 
 const USAGE = 'Usage: node relabel-messages.mjs --query "<gmail-query>" [--add "<label>"] [--remove "<label>"] [--yes]';
 
@@ -48,11 +48,7 @@ async function main() {
     apply,
   });
 
-  if (apply) {
-    console.log(BANNER);
-    console.log(`COMPLETE\n\nTotal relabeled: ${modified} messages\n`);
-    console.log(BANNER + '\n');
-  }
+  if (apply) printComplete(`Total relabeled: ${modified} messages\n`);
 }
 
 runIfMain(import.meta.url, main);

@@ -22,7 +22,7 @@ import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
 import { modifyMessages } from './modify-messages.mjs';
 import { GMAIL_INBOX, GMAIL_UNREAD } from './lib/constants.mjs';
 import { gmailDateDaysAgo } from './lib/date-based-filter.mjs';
-import { BANNER } from './lib/console-utils.mjs';
+import { BANNER, printComplete } from './lib/console-utils.mjs';
 
 const DAYS_AGO = 7;
 
@@ -51,11 +51,7 @@ async function main() {
     apply,
   });
 
-  if (apply) {
-    console.log(BANNER);
-    console.log(`COMPLETE\n\nTotal archived: ${modified} emails\n`);
-    console.log(BANNER + '\n');
-  }
+  if (apply) printComplete(`Total archived: ${modified} emails\n`);
 }
 
 runIfMain(import.meta.url, main);

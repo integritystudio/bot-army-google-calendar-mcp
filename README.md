@@ -273,7 +273,6 @@ Gmail's query parser cannot match `(` or `)` in a label name **even inside quote
 demonstrably holds mail (confirmed via `labelIds`, which bypasses the parser).
 
 This silently breaks:
-- `strip-label.mjs` — reports `Stripped 0` against a full label
 - `applyTagSet()`'s `-label:"…"` backfill clause — re-tags everything on every run
 - **any emptiness check guarding a label deletion** — a parenthesised label reads as
   empty and gets deleted with mail still on it
@@ -308,9 +307,10 @@ replaces, it now previews unless `--yes`.
 *defaulted* `maxResults`, so dropping the argument would not have lifted it. That helper
 had no other caller once the script migrated, and has been deleted.
 
-Use [`strip-label.mjs`](strip-label.mjs) for bulk removal; it pages until the label is
-empty, re-querying the first page each round because removing the label shrinks the
-result set and invalidates page tokens.
+Use [`strip-label.mjs`](strip-label.mjs) for bulk removal; it is a
+[`modify-messages.mjs`](modify-messages.mjs) preset, so it selects by `labelIds` and
+collects every id before modifying anything — no page token is held across a mutation,
+which is what its old re-query-the-first-page loop existed to avoid.
 
 Never confirm a bulk relabel from a script's own count — re-query afterwards.
 

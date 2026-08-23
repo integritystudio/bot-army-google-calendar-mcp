@@ -199,7 +199,7 @@ node check-gmail.mjs
 Automated scripts for organizing and filtering large volumes of Gmail with focus on correctness and efficiency.
 
 **Management Scripts:** (use shared `createGmailClient()` for OAuth, error handling, and multi-account support)
-- `list-unread-emails.mjs` - Categorize and summarize unread emails; `--stats` for per-label counts. Its `--count` and `--verify` modes are gone: `report-messages.mjs --total --count "is:unread"` is exact where `--count` was not, and `audit-label-drift.mjs --query ... --expect ...` draws the expectation from the config rather than hardcoding it
+- `list-unread-emails.mjs` - Categorize and summarize the 500 newest unread emails; `--total` for the exact mailbox-wide count (slow — pages every match), `--stats` for per-label counts. Its `--count` and `--verify` modes are gone: `report-messages.mjs --total --count "is:unread"` is exact where `--count` was not, and `audit-label-drift.mjs --query ... --expect ...` draws the expectation from the config rather than hardcoding it
 - `audit-schema-markup.mjs` - How much unread mail carries schema.org JSON-LD, and which types (was `list-unread-emails.mjs --schema`)
 - `report-messages.mjs` - The one read-only reporter: query -> page -> fetch headers -> project columns -> print. `list-unlabeled-unread.mjs`, `audit-unread.mjs` and `summarize-remaining.mjs` are presets over it
 - `summarize-remaining.mjs` - Summary of uncategorized/remaining unread emails

@@ -25,7 +25,8 @@ node switch-account.mjs --remove work  # Remove an account's tokens
 ```bash
 node report-messages.mjs --format list --group-by category \
   --columns unread,sender,subject --max 200 "in:inbox"   # Current inbox contents
-node list-unread-emails.mjs            # Full category breakdown with previews
+node list-unread-emails.mjs            # Category breakdown of the 500 newest unread
+node list-unread-emails.mjs --total    # Also count the whole mailbox exactly (slow)
 node list-unread-emails.mjs --stats    # Per-label total/unread counts + mailbox profile (indicative, see README)
 node report-messages.mjs --total --count "is:unread"                                  # Exact total unread count
 node audit-label-drift.mjs --query "from:news@alphasignal.ai" --expect "Newsletters"  # Spot-check one sender's labels

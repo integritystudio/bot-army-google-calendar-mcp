@@ -280,6 +280,32 @@ This silently breaks:
 Keep label names free of parentheses. An acronym belongs in schema `alternateName`, not
 in the path.
 
+### An unquoted multi-word term breaks its whole `OR` group
+
+`subject:(late fee OR overdue OR "missed payment")` does not mean what it reads as.
+Gmail collapses it to `late AND fee`: it matched **8** messages where the quoted
+spelling `subject:("late fee" OR overdue OR "missed payment")` matches **100**. The
+`overdue` and `"missed payment"` arms contributed nothing, silently — the query is
+valid, returns results, and looks like it works.
+
+Quote every multi-word term inside an `OR` group. A bare two-word term is two ANDed
+tokens, and the `OR` binds to the second one.
+
+This is how `route-billing-mail.mjs` ran its entire urgent-billing protection on one
+of its three terms.
+
+### A negation must be scoped like the test it complements
+
+`subject:X` and `-"X"` are not complements. The first tests the subject; the second
+negates the term **anywhere in the message**, body included. A partition built from the
+two leaks: a message can fall through both halves.
+
+`route-billing-mail.mjs` paired `subject:(...urgent...)` with a hand-expanded
+`-"late fee" -overdue -"missed payment"`, and **149** billing messages matched neither
+side — held out of the archive sweep because their bodies happened to mention an urgent
+word. Write the complement as `-subject:(...)`, from the same constant as the test, and
+assert the two halves sum to the unpartitioned total.
+
 ### `searchAndModify()` truncates to its caller's `maxResults`
 
 `searchAndModify()` in [`lib/gmail-batch-utils.mjs`](lib/gmail-batch-utils.mjs) **does**

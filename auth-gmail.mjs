@@ -2,15 +2,19 @@ import { OAuth2Client } from 'google-auth-library';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { homedir } from 'os';
 import { createServer } from 'http';
 import { URL } from 'url';
 import { exec } from 'child_process';
 import { runIfMain } from './lib/cli-utils.mjs';
+import { saveAccountTokens } from './lib/token-store.mjs';
+// The token path and the read-merge-write at 0600 were hardcoded here and again in
+// switch-account.mjs, so the file's location and layout were each described twice.
+import { getGmailTokenPath } from './src/auth/paths.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const DEFAULT_CREDENTIALS_PATH = 'gcp-oauth.keys.json';
+const DEFAULT_ACCOUNT_MODE = 'normal';
 
 // Loopback port for the OAuth callback. Must be registered as an authorized redirect
 // URI on the OAuth client, and must be free — src/auth/server.ts's calendar flow scans
@@ -62,25 +66,9 @@ async function authGmail() {
         const { tokens } = await oauth2Client.getToken(code);
         oauth2Client.setCredentials(tokens);
 
-        // Save tokens
-        const tokenDir = path.join(homedir(), '.config/google-calendar-mcp');
-        await fs.mkdir(tokenDir, { recursive: true });
-
-        const accountMode = process.env.ACCOUNT_MODE || 'normal';
-        const tokenPath = path.join(tokenDir, 'tokens-gmail.json');
-
-        let multiAccountTokens = {};
-        try {
-          const content = await fs.readFile(tokenPath, 'utf-8');
-          multiAccountTokens = JSON.parse(content);
-        } catch {
-          // File doesn't exist yet
-        }
-
-        multiAccountTokens[accountMode] = tokens;
-        await fs.writeFile(tokenPath, JSON.stringify(multiAccountTokens, null, 2), {
-          mode: 0o600
-        });
+        const accountMode = process.env.ACCOUNT_MODE || DEFAULT_ACCOUNT_MODE;
+        const tokenPath = getGmailTokenPath();
+        await saveAccountTokens(tokenPath, accountMode, tokens);
 
         console.log(`\nGmail tokens saved for account: ${accountMode}`);
         console.log(`Token path: ${tokenPath}`);

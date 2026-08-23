@@ -9,39 +9,21 @@
  */
 import fs from 'fs/promises';
 import path from 'path';
-import { homedir } from 'os';
 import { parseCli, runIfMain } from './lib/cli-utils.mjs';
+import { readAccountTokens, writeAccountTokens, tokenStatus } from './lib/token-store.mjs';
+// The calendar side's canonical paths, imported rather than re-derived: this script used
+// to hardcode the directory and so ignored CALENDARMCP_TOKEN_PATH and XDG_CONFIG_HOME,
+// reporting "not configured" for tokens that were sitting where those pointed.
+import { getSecureTokenPath, getGmailTokenPath, getActiveAccountFile } from './src/auth/paths.js';
 
-const TOKEN_DIR = path.join(homedir(), '.config/google-calendar-mcp');
-const CALENDAR_TOKEN_PATH = path.join(TOKEN_DIR, 'tokens.json');
-const GMAIL_TOKEN_PATH = path.join(TOKEN_DIR, 'tokens-gmail.json');
-
-const ACCOUNT_ENV_FILE = path.join(TOKEN_DIR, '.active-account');
-
-async function readJsonSafe(filePath) {
-  try {
-    return JSON.parse(await fs.readFile(filePath, 'utf-8'));
-  } catch {
-    return {};
-  }
-}
-
-async function writeJson(filePath, data) {
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), { mode: 0o600 });
-}
-
-function tokenStatus(tokens) {
-  if (!tokens) return 'not configured';
-  if (!tokens.expiry_date) return 'no expiry set';
-  const expiry = new Date(tokens.expiry_date);
-  const now = new Date();
-  if (expiry < now) return `expired ${expiry.toLocaleDateString()}`;
-  return `valid until ${expiry.toLocaleDateString()} ${expiry.toLocaleTimeString()}`;
-}
+const CALENDAR_TOKEN_PATH = getSecureTokenPath();
+const GMAIL_TOKEN_PATH = getGmailTokenPath();
+const ACCOUNT_ENV_FILE = getActiveAccountFile();
+const ACCOUNT_FILE_MODE = 0o600;
 
 async function listAccounts() {
-  const calendarTokens = await readJsonSafe(CALENDAR_TOKEN_PATH);
-  const gmailTokens = await readJsonSafe(GMAIL_TOKEN_PATH);
+  const calendarTokens = await readAccountTokens(CALENDAR_TOKEN_PATH);
+  const gmailTokens = await readAccountTokens(GMAIL_TOKEN_PATH);
 
   const allAccounts = new Set([
     ...Object.keys(calendarTokens),
@@ -77,8 +59,8 @@ async function listAccounts() {
 }
 
 async function switchTo(accountName) {
-  const calendarTokens = await readJsonSafe(CALENDAR_TOKEN_PATH);
-  const gmailTokens = await readJsonSafe(GMAIL_TOKEN_PATH);
+  const calendarTokens = await readAccountTokens(CALENDAR_TOKEN_PATH);
+  const gmailTokens = await readAccountTokens(GMAIL_TOKEN_PATH);
 
   const hasCalendar = accountName in calendarTokens;
   const hasGmail = accountName in gmailTokens;
@@ -93,8 +75,8 @@ async function switchTo(accountName) {
     process.exit(1);
   }
 
-  await fs.mkdir(TOKEN_DIR, { recursive: true });
-  await fs.writeFile(ACCOUNT_ENV_FILE, accountName, { mode: 0o600 });
+  await fs.mkdir(path.dirname(ACCOUNT_ENV_FILE), { recursive: true });
+  await fs.writeFile(ACCOUNT_ENV_FILE, accountName, { mode: ACCOUNT_FILE_MODE });
 
   console.log(`Switched to account: ${accountName}`);
   if (hasCalendar) console.log(`  Calendar: ${tokenStatus(calendarTokens[accountName])}`);
@@ -119,27 +101,27 @@ async function addAccount(accountName) {
   console.log(`  node switch-account.mjs ${accountName}`);
 
   // Pre-create the active account file so switch works after auth
-  await fs.mkdir(TOKEN_DIR, { recursive: true });
-  await fs.writeFile(ACCOUNT_ENV_FILE, accountName, { mode: 0o600 });
+  await fs.mkdir(path.dirname(ACCOUNT_ENV_FILE), { recursive: true });
+  await fs.writeFile(ACCOUNT_ENV_FILE, accountName, { mode: ACCOUNT_FILE_MODE });
   console.log(`\nActive account set to: ${accountName}`);
 }
 
 async function removeAccount(accountName) {
-  const calendarTokens = await readJsonSafe(CALENDAR_TOKEN_PATH);
-  const gmailTokens = await readJsonSafe(GMAIL_TOKEN_PATH);
+  const calendarTokens = await readAccountTokens(CALENDAR_TOKEN_PATH);
+  const gmailTokens = await readAccountTokens(GMAIL_TOKEN_PATH);
 
   let removed = false;
 
   if (accountName in calendarTokens) {
     delete calendarTokens[accountName];
-    await writeJson(CALENDAR_TOKEN_PATH, calendarTokens);
+    await writeAccountTokens(CALENDAR_TOKEN_PATH, calendarTokens);
     console.log(`Removed Calendar tokens for: ${accountName}`);
     removed = true;
   }
 
   if (accountName in gmailTokens) {
     delete gmailTokens[accountName];
-    await writeJson(GMAIL_TOKEN_PATH, gmailTokens);
+    await writeAccountTokens(GMAIL_TOKEN_PATH, gmailTokens);
     console.log(`Removed Gmail tokens for: ${accountName}`);
     removed = true;
   }

@@ -149,7 +149,10 @@ import from `config/`, never from the `create-*.mjs` entrypoint.
 - `gmail-filter-utils.mjs` — Filter creation helpers
 - `gmail-tag-utils.mjs` — Label-only tag sets shared by `create-org-tags.mjs` / `create-country-tags.mjs`: `withRetry()`, `labelAllMatching()`, `applyTagSet()`
 - `defined-terms.mjs` / `vocabularies.mjs` — schema.org `DefinedTerm`/`DefinedTermSet` builders + `validateVocabulary()`, and the vocabularies `ORG_TAGS` points at (`VOCABULARIES` lists all five). A tag group's `schema` field is **documentation only** — `applyTagSet()` never reads it, so adding a term changes no mail. **See [docs/DEFINED-TERMS-GUIDE.md](docs/DEFINED-TERMS-GUIDE.md) before adding a term or set**
-- `date-based-filter.mjs` — Date parsing utility (ISO, US, text formats; no mutations)
+- `date-based-filter.mjs` — Date parsing utility (ISO, US, text formats; no mutations), plus
+  `toGmailDate()` / `gmailDateDaysAgo()` for `before:`/`after:` values. Those read **local**
+  date components, never `toISOString()` — Gmail interprets the operator in the mailbox's
+  timezone, so a UTC conversion shifts the cutoff a day west of it
 - `schema-extractor.mjs` — Schema.org type extraction from email HTML (htmlparser2)
 - `email-analyzer.mjs` / `email-utils.mjs` — Email parsing, categorization helpers. **All sender
   parsing lives in `email-utils.mjs`** — `extractDisplayName()` (strict: `''`, not the address,
@@ -161,7 +164,19 @@ import from `config/`, never from the `create-*.mjs` entrypoint.
   `audit-org-tag-coverage.mjs` and `sublabel-services.mjs`, with two scripts importing them
   *from a CLI entrypoint*; don't re-add a local regex variant
 - `constants.mjs` — Shared constants (DEFAULT_MAX_RESULTS, category definitions)
-- `console-utils.mjs` — Formatted console output helpers
+- `console-utils.mjs` — Formatted console output helpers; `printComplete(summary)` is the
+  BANNER/COMPLETE/summary footer — don't hand-roll it
+- `token-store.mjs` — Multi-account OAuth token files: `readAccountTokens()`,
+  `writeAccountTokens()`, `saveAccountTokens()` (read-modify-write, so authenticating one
+  account cannot sign the others out), `tokenStatus()`. **Paths come from
+  `src/auth/paths.js`** — `getSecureTokenPath()` / `getGmailTokenPath()` /
+  `getActiveAccountFile()`. That file is real `.js`, so the root `.mjs` scripts import it
+  directly; hardcoding the directory (as they used to) ignores `CALENDARMCP_TOKEN_PATH`
+  and `XDG_CONFIG_HOME`
+- `event-classifier.mjs` — `classifyByEventDate()`: fetch messages, read the event date out
+  of subject+body, and hand each chunk's past/future/undatable ids to the caller. Shared by
+  `mark-past-events-read.mjs` and `filter-events-by-date.mjs`; chunked so a crash costs one
+  chunk, not every verdict so far
 - `cli-utils.mjs` — CLI plumbing every root script shares: `parseCli(options, usage, {allowPositionals})`
   (parseArgs, reporting a bad flag as a usage error), `exitWithUsage()`, `runMain()` and
   `runIfMain(import.meta.url, main)`. **Use these rather than a local `parseArgs` try/catch or

@@ -9,7 +9,17 @@ import path from 'path';
 import { readFileSync } from 'fs';
 import { homedir } from 'os';
 
-const ACTIVE_ACCOUNT_FILE = path.join(homedir(), '.config/google-calendar-mcp', '.active-account');
+const APP_DIR_NAME = 'google-calendar-mcp';
+const GMAIL_TOKEN_FILE = 'tokens-gmail.json';
+const ACTIVE_ACCOUNT_FILE_NAME = '.active-account';
+
+/** ~/.config/google-calendar-mcp, or the XDG equivalent. */
+function configDir() {
+  const base = process.env.XDG_CONFIG_HOME || path.join(homedir(), '.config');
+  return path.join(base, APP_DIR_NAME);
+}
+
+const ACTIVE_ACCOUNT_FILE = path.join(configDir(), ACTIVE_ACCOUNT_FILE_NAME);
 
 /**
  * Get the secure token storage path
@@ -21,8 +31,30 @@ export function getSecureTokenPath() {
     return process.env.CALENDARMCP_TOKEN_PATH;
   }
 
-  const configDir = process.env.XDG_CONFIG_HOME || path.join(homedir(), '.config');
-  return path.join(configDir, 'google-calendar-mcp', 'tokens.json');
+  return path.join(configDir(), 'tokens.json');
+}
+
+/**
+ * Get the Gmail token storage path.
+ *
+ * The root .mjs Gmail scripts each hardcoded this, so the directory was written in three
+ * places and honoured XDG_CONFIG_HOME in none of them. There is deliberately no
+ * env override of its own: CALENDARMCP_TOKEN_PATH names the calendar token FILE, and
+ * deriving a sibling from its dirname would relocate Gmail's tokens as a side effect of
+ * moving the calendar's.
+ */
+export function getGmailTokenPath() {
+  return path.join(configDir(), GMAIL_TOKEN_FILE);
+}
+
+/**
+ * The file recording which account is active, written by switch-account.mjs and read by
+ * getAccountMode below. It was defined here and again in switch-account.mjs; if the two
+ * had ever drifted, switching an account would have silently stopped taking effect on
+ * the calendar side.
+ */
+export function getActiveAccountFile() {
+  return ACTIVE_ACCOUNT_FILE;
 }
 
 /**

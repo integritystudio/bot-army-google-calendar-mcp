@@ -46,8 +46,7 @@ node create-org-tags.mjs                         # Organization/* label hierarch
 ```bash
 node create-filters.mjs                     # Create all category filters + backfill
 node create-filters.mjs --only "Promotions" # Only categories whose label starts with the prefix
-node sublabel-services.mjs                 # Sub-categorize Services & Alerts (Real Estate/Health/Utilities) + auto-label filters
-node sublabel-services.mjs --all           # Also retro-label already-read Services & Alerts mail
+node create-filters.mjs --only "Services & Alerts"  # Just the Services & Alerts tree, sublabels included
 ```
 
 ## 5. Protect important mail

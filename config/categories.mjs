@@ -758,10 +758,10 @@ export const CATEGORIES = [
     labelName: LABEL_SERVICES_HEALTH,
     archive: true,
     extraLabels: [LABEL_SERVICES],
-    // Read mail too: the historical archive already carries the parent label, so an
-    // unread-only backfill would leave every past message without the sublabel. This is
-    // what `sublabel-services.mjs --all` existed to do.
-    includeRead: true,
+    // Unread-only, like every other archiving block. The one-time sweep over read mail
+    // that `sublabel-services.mjs --all` did has been run (478 messages, 2026-08-22);
+    // leaving includeRead on would re-modify them on every sync, because an archiving
+    // block gets no `-label:"…"` exclusion clause (see create-filters.mjs, labelClause).
     entries: [
       { name: 'Quest Diagnostics', query: 'from:e.questdiagnostics.com' },
       { name: 'Ascension Seton', query: 'from:communication.ascension.org' },
@@ -799,7 +799,9 @@ export const CATEGORIES = [
     labelName: LABEL_SERVICES_REAL_ESTATE,
     archive: true,
     extraLabels: [LABEL_SERVICES],
-    includeRead: true,
+    // Unread-only — see the Health block above. The one-time read-mail sweep has been run
+    // (38,344 messages, 2026-08-22; redfin.com alone is 28k). An archiving block's backfill
+    // query carries no label exclusion, so includeRead here re-modifies all 38k per sync.
     entries: [
       { name: 'Zillow (listing alerts)', query: 'from:mail.zillow.com' },
       { name: 'Zillow Rental Manager', query: 'from:zillowrentals.com' },

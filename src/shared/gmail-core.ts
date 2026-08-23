@@ -121,13 +121,25 @@ export async function countMessagesMatching(
  *
  * Collect before mutating, never interleaved: an action that removes INBOX or UNREAD
  * can change whether later pages still match the selector that found them.
+ *
+ * `limit` is tested BEFORE each id is taken, not after. Testing after meant a limit of 0
+ * returned one id, and a NaN limit — `Number('abc')` from a --max flag — compared false
+ * forever and swept the entire mailbox. Both are rejected rather than interpreted: a
+ * caller whose arithmetic produced one of them would otherwise get a sweep that looks
+ * like a clean run over nothing, or over everything.
  */
 export async function listAllMessageIds(
   gmail: gmail_v1.Gmail,
   selector: MessageSelector,
   { limit = Infinity }: { limit?: number } = {}
 ): Promise<string[]> {
+  if (Number.isNaN(limit) || limit < 0) {
+    throw new Error(`listAllMessageIds: limit must be a non-negative number, got ${limit}`);
+  }
+
   const ids: string[] = [];
+  // A limit of 0 is a coherent request for nothing, and costs no API call to honour.
+  if (limit === 0) return ids;
 
   for await (const messages of messagePages(gmail, selector)) {
     for (const message of messages) {

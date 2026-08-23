@@ -245,6 +245,35 @@ describe('listAllMessageIds', () => {
     await listAllMessageIds(gmail, { labelIds: ['L1'] });
     expect(seen[0]).toMatchObject({ labelIds: ['L1'] });
   });
+
+  // The limit used to be tested after taking an id, so 0 yielded one.
+  it('takes nothing, and makes no request, for a limit of 0', async () => {
+    let listCalls = 0;
+    const gmail = { users: { messages: { list: async () => {
+      listCalls++;
+      return { data: { messages: [{ id: 'a' }], nextPageToken: undefined } };
+    } } } };
+
+    expect(await listAllMessageIds(gmail, 'q', { limit: 0 })).toEqual([]);
+    expect(listCalls).toBe(0);
+  });
+
+  // Number('abc') from a --max flag. `ids.length >= NaN` is false forever, so this
+  // paged the whole mailbox while the caller believed it had asked for a sample.
+  it('rejects a NaN limit instead of sweeping everything', async () => {
+    await expect(listAllMessageIds(gmailWithPages([['a', 'b']]), 'q', { limit: Number('abc') }))
+      .rejects.toThrow('limit must be a non-negative number');
+  });
+
+  it('rejects a negative limit instead of taking one id', async () => {
+    await expect(listAllMessageIds(gmailWithPages([['a', 'b']]), 'q', { limit: -5 }))
+      .rejects.toThrow('limit must be a non-negative number');
+  });
+
+  it('still treats Infinity as no limit', async () => {
+    const ids = await listAllMessageIds(gmailWithPages([['a'], ['b']]), 'q', { limit: Infinity });
+    expect(ids).toEqual(['a', 'b']);
+  });
 });
 
 describe('messagePages', () => {

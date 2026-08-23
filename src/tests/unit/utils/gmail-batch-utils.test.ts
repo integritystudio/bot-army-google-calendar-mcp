@@ -235,4 +235,19 @@ describe('searchAndModify', () => {
     expect(await searchAndModify(gmail, 'from:nobody.example', { addLabelIds: ['X'] })).toBe(0);
     expect(gmail.calls).toHaveLength(0);
   });
+
+  // A cap of 0 used to modify one message: listAllMessageIds tested the limit after
+  // taking an id. A sweep asked for nothing must touch nothing.
+  it('modifies nothing for a cap of 0', async () => {
+    const gmail = listingStub(100);
+    expect(await searchAndModify(gmail, 'subject:receipt', { addLabelIds: ['X'] }, 0)).toBe(0);
+    expect(gmail.calls).toHaveLength(0);
+  });
+
+  it('refuses a cap that is not a number rather than sweeping the mailbox', async () => {
+    const gmail = listingStub(100);
+    await expect(searchAndModify(gmail, 'subject:receipt', { addLabelIds: ['X'] }, Number('abc')))
+      .rejects.toThrow('limit must be a non-negative number');
+    expect(gmail.calls).toHaveLength(0);
+  });
 });

@@ -48,6 +48,9 @@ const PREVIEW_LIMIT = 25;
  * @param {string[]} [options.remove] - Label names to remove
  * @param {boolean} [options.apply] - Modify for real; otherwise preview and change nothing
  * @param {number} [options.previewLimit]
+ * @param {string} [options.previewHint] - How the preview tells the caller to apply for
+ *   real. Presets gated on --dry-run rather than --yes must pass their own, or the
+ *   preview names a flag their CLI does not have.
  * @param {boolean} [options.quiet] - Suppress the match count and progress lines, for
  *   presets that loop and print their own per-iteration summary
  * @returns {Promise<{matched: number, modified: number}>}
@@ -62,6 +65,7 @@ export async function modifyMessages(gmail, {
   remove = [],
   apply = false,
   previewLimit = PREVIEW_LIMIT,
+  previewHint = 're-run with --yes to apply',
   quiet = false,
 } = {}) {
   if (!labelName && !query) throw new Error('Nothing selected: pass --label or --query');
@@ -108,7 +112,7 @@ export async function modifyMessages(gmail, {
       console.log(`  • ${from} | ${subject}`);
     }
     if (ids.length > previewLimit) console.log(`  … and ${ids.length - previewLimit} more`);
-    console.log('\nPreview only — re-run with --yes to apply.');
+    console.log(`\nPreview only — ${previewHint}.`);
     return { matched: ids.length, modified: 0 };
   }
 

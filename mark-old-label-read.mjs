@@ -13,14 +13,9 @@ import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
 import { modifyMessages } from './modify-messages.mjs';
 import { GMAIL_UNREAD } from './lib/constants.mjs';
+import { gmailDateDaysAgo } from './lib/date-based-filter.mjs';
 
 const DEFAULT_CUTOFF_DAYS = 30;
-
-const defaultBefore = () => {
-  const d = new Date();
-  d.setDate(d.getDate() - DEFAULT_CUTOFF_DAYS);
-  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
-};
 
 const USAGE = 'Usage: node mark-old-label-read.mjs --label "<name>" [--before YYYY/MM/DD]';
 
@@ -31,7 +26,7 @@ async function main() {
   }, USAGE);
 
   const labelName = values.label;
-  const before = values.before || defaultBefore();
+  const before = values.before || gmailDateDaysAgo(DEFAULT_CUTOFF_DAYS);
   if (!labelName) exitWithUsage(USAGE);
 
   console.log(`Unread "${labelName}" emails before ${before}:`);

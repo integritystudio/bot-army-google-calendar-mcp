@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 // @ts-expect-error - plain .mjs utility with no type declarations
-import { eventTitleFromSubject, windowAfterTitle, classifyEmail, extractEventDate, isPastEvent } from '../../../../lib/date-based-filter.mjs';
+import { eventTitleFromSubject, windowAfterTitle, classifyEmail, extractEventDate, isPastEvent, toGmailDate, gmailDateDaysAgo } from '../../../../lib/date-based-filter.mjs';
 
 const FAR_FUTURE_YEAR = new Date().getFullYear() + 2;
 const FAR_PAST_YEAR = new Date().getFullYear() - 2;
@@ -145,5 +145,47 @@ describe('classifyEmail date source', () => {
     const result = classifyEmail('📅 Just scheduled: Trivia Night', '');
     expect(result.status).toBe('unknown');
     expect(result.source).toBeNull();
+  });
+});
+
+describe('toGmailDate', () => {
+  it.each([
+    [new Date(2026, 0, 5), '2026/01/05'],
+    [new Date(2026, 11, 31), '2026/12/31'],
+    [new Date(2026, 8, 9), '2026/09/09'],
+  ])('renders %s as %s', (date: Date, expected: string) => {
+    expect(toGmailDate(date)).toBe(expected);
+  });
+
+  // Gmail reads before:/after: in the mailbox's timezone. toISOString would convert to
+  // UTC first and shift the cutoff by a day for anyone west of it — this date is the
+  // 31st locally and the 1st in UTC.
+  it('uses local components, not the UTC date', () => {
+    const lateEvening = new Date(2026, 11, 31, 23, 30);
+    expect(toGmailDate(lateEvening)).toBe('2026/12/31');
+  });
+});
+
+describe('gmailDateDaysAgo', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('counts back the given number of days', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 22, 12, 0));
+    expect(gmailDateDaysAgo(30)).toBe('2026/07/23');
+  });
+
+  it('crosses a month boundary', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 2, 3, 12, 0));
+    expect(gmailDateDaysAgo(7)).toBe('2026/02/24');
+  });
+
+  it('is today for 0 days', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 2, 3, 12, 0));
+    expect(gmailDateDaysAgo(0)).toBe('2026/03/03');
   });
 });

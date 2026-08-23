@@ -20,14 +20,11 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
 import { modifyMessages } from './modify-messages.mjs';
-import { GMAIL_INBOX, GMAIL_UNREAD, MS_PER_DAY } from './lib/constants.mjs';
+import { GMAIL_INBOX, GMAIL_UNREAD } from './lib/constants.mjs';
+import { gmailDateDaysAgo } from './lib/date-based-filter.mjs';
 import { BANNER } from './lib/console-utils.mjs';
 
 const DAYS_AGO = 7;
-
-/** Gmail's before: wants YYYY/MM/DD. */
-const gmailDate = (date) =>
-  `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
 
 const USAGE = 'Usage: node archive-old-emails.mjs (--label "<label name>" | --query "<gmail-query>") [--yes]';
 
@@ -41,7 +38,7 @@ async function main() {
   const { label: labelName, query, yes: apply } = values;
   if (!labelName && !query) exitWithUsage(USAGE);
 
-  const before = gmailDate(new Date(Date.now() - DAYS_AGO * MS_PER_DAY));
+  const before = gmailDateDaysAgo(DAYS_AGO);
   console.log(`ARCHIVING OLD EMAILS — ${query ? `query: ${query}` : `label: ${labelName}`}\n`);
   console.log(BANNER + '\n');
   console.log(`Archiving emails before ${before}\n`);

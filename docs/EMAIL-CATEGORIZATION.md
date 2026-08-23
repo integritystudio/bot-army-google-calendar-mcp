@@ -231,7 +231,7 @@ create-filters.mjs     → batch label by Gmail search queries → create filter
 **Goal**: Parse schema.org from emails without modifying labels. Report what structured data exists.
 
 - Build `lib/schema-extractor.mjs` (HTML parsing, JSON-LD extraction)
-- Add `--schema` flag to `list-unread-emails.mjs` to show detected schema types
+- Build `audit-schema-markup.mjs` to show detected schema types (originally a `--schema` flag on `list-unread-emails.mjs`)
 - Output: count of emails with schema markup, type distribution, sample metadata
 - No label changes — observation only
 

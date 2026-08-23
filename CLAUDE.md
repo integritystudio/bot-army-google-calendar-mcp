@@ -95,7 +95,8 @@ Core pattern: Label → conditional archive (keep future events, important items
 
 **Key Scripts:**
 - `report-messages.mjs [--columns a,b,c] [--format tsv|list] [--group-by category] [--max N] [--preview N|all] [--total] [--count] "<gmail-query>" [...]` — **The one read-only reporter.** Resolve queries, page ids, fetch headers, project columns, print. Columns: `date,from,sender,subject,labels,category,inbox,unread,unsub`. `--total` pages the whole match set for an exact count (one request per 500 matches); without it the sweep stops at `--max` and the figure is the sample size, not the mailbox. TSV sends counts to stderr so stdout pipes clean. `list-unlabeled-unread.mjs`, `audit-unread.mjs` and `summarize-remaining.mjs` are presets over it, each carrying a named query set. `dump-messages.mjs` and `list-inbox.mjs` were deleted rather than kept as presets — they added only a default. Their recipes: `report-messages.mjs --total [--max N] "<query>"` and `report-messages.mjs --format list --group-by category --columns unread,sender,subject --max 200 "in:inbox"`
-- `list-unread-emails.mjs` — Unread category breakdown, `--stats`, `--verify`, `--schema`. **Not a `report-messages.mjs` preset**: it groups by a hardcoded `TRACKED_LABELS` taxonomy and audits schema.org markup, neither of which is a query-and-print
+- `list-unread-emails.mjs [--stats]` — Unread category breakdown. **Not a `report-messages.mjs` preset**: it files each message under the **first** label it carries from an ordered priority list, and `--stats` reports per-label totals — neither is a query-and-print. The taxonomy is `config/tracked-labels.mjs`. `--count` and `--verify` are **gone**: `report-messages.mjs --total --count "is:unread"` is exact where `--count` read `labels.get` (1,313 reported against a true 13), and `audit-label-drift.mjs --query "<sender>" --expect "<label>"` draws the expectation from the config, where the two hardcoded spot-checks drifted from it. `--schema` is now `audit-schema-markup.mjs`
+- `audit-schema-markup.mjs` — Share of unread mail carrying schema.org JSON-LD, and which `@type`s. Split out of `list-unread-emails.mjs`: different library, different data shape (full bodies, not headers), different question
 - `list-unlabeled-unread.mjs [--preview N|all] [--all]` — Count/preview unread emails with no user label (inbox by default; `--preview all` lists every inbox match; `--all` adds an exact mailbox-wide count, slow on large archives)
 - `summarize-remaining.mjs` — Unread counts for a hand-maintained list of named buckets, skipping empty ones; a `report-messages.mjs` preset whose query list is the whole file
 - `audit-unread.mjs` — TSV audit of unread mail (date, from, subject, inbox-vs-archived, Gmail category, user labels, whether a `List-Unsubscribe` header is present); `total`/`unlabeled`/`inbox` summary to stderr. A `report-messages.mjs` preset. Takes no flags and deliberately omits `--total`: it reads the 500 newest unread, so it is a sample, not a mailbox-wide count; use `list-unlabeled-unread.mjs --all` for the exact figure
@@ -137,6 +138,10 @@ All three export their rule array as `entries`.
 - `categories.mjs` — `CATEGORIES`, category routing; applied by `create-filters.mjs`
 - `org-tags.mjs` — `ORG_TAGS`, Organization/* sender tags; applied by `create-org-tags.mjs`
 - `country-tags.mjs` — `COUNTRY_TAGS`, Country/* tags; applied by `create-country-tags.mjs`
+- `tracked-labels.mjs` — `CATEGORY_PRIORITY` (**ordered** — the breakdown files a message under
+  the first of these it carries) and `TRACKED_LABELS` (flat, for per-label counts); read by
+  `list-unread-emails.mjs`. Was defined inside that CLI entrypoint, making it a fourth routing
+  taxonomy living outside `config/`
 
 Consumers (`audit-label-drift.mjs`, `audit-org-tag-coverage.mjs`, `build-jsonld.mjs`)
 import from `config/`, never from the `create-*.mjs` entrypoint.

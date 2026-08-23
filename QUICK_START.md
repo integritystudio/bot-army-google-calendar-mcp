@@ -26,10 +26,10 @@ node switch-account.mjs --remove work  # Remove an account's tokens
 node report-messages.mjs --format list --group-by category \
   --columns unread,sender,subject --max 200 "in:inbox"   # Current inbox contents
 node list-unread-emails.mjs            # Full category breakdown with previews
-node list-unread-emails.mjs --count    # Just the total unread count
-node list-unread-emails.mjs --stats    # Per-label total/unread counts + mailbox profile
-node list-unread-emails.mjs --verify   # Spot-check label application on sample emails
-node list-unread-emails.mjs --schema   # Detect schema.org JSON-LD in unread emails
+node list-unread-emails.mjs --stats    # Per-label total/unread counts + mailbox profile (indicative, see README)
+node report-messages.mjs --total --count "is:unread"                                  # Exact total unread count
+node audit-label-drift.mjs --query "from:news@alphasignal.ai" --expect "Newsletters"  # Spot-check one sender's labels
+node audit-schema-markup.mjs           # Detect schema.org JSON-LD in unread emails
 node summarize-remaining.mjs           # Summarize what's left uncategorized
 ```
 
@@ -83,7 +83,7 @@ node modify-messages.mjs --query "is:unread in:inbox" --exclude-label "Keep Impo
 node create-filters.mjs && \
 node filter-events-by-date.mjs && \
 node mark-read.mjs --archived-only && \
-node list-unread-emails.mjs --count
+node report-messages.mjs --total --count "is:unread"
 ```
 
 ## Category policy

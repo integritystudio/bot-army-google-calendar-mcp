@@ -199,7 +199,8 @@ node check-gmail.mjs
 Automated scripts for organizing and filtering large volumes of Gmail with focus on correctness and efficiency.
 
 **Management Scripts:** (use shared `createGmailClient()` for OAuth, error handling, and multi-account support)
-- `list-unread-emails.mjs` - Categorize and summarize unread emails; `--stats` for per-label counts, `--verify` for label spot-checks, `--count` for quick total
+- `list-unread-emails.mjs` - Categorize and summarize unread emails; `--stats` for per-label counts. Its `--count` and `--verify` modes are gone: `report-messages.mjs --total --count "is:unread"` is exact where `--count` was not, and `audit-label-drift.mjs --query ... --expect ...` draws the expectation from the config rather than hardcoding it
+- `audit-schema-markup.mjs` - How much unread mail carries schema.org JSON-LD, and which types (was `list-unread-emails.mjs --schema`)
 - `report-messages.mjs` - The one read-only reporter: query -> page -> fetch headers -> project columns -> print. `list-unlabeled-unread.mjs`, `audit-unread.mjs` and `summarize-remaining.mjs` are presets over it
 - `summarize-remaining.mjs` - Summary of uncategorized/remaining unread emails
 - `apply-filters-to-unread.mjs` - Apply existing filters to current unread emails
@@ -384,7 +385,8 @@ domain-only comparison.
 ### A verification check can assert a label the config never produces
 
 `list-unread-emails.mjs --verify` reported `AlphaSignal email has 'Product Updates' label:
-false` for months. The mail was labeled correctly — the *check* was stale: both
+false` for months. (That mode is now deleted for this reason; use
+`audit-label-drift.mjs --query "from:news@alphasignal.ai" --expect "Newsletters"`.) The mail was labeled correctly — the *check* was stale: both
 [`create-filters.mjs`](create-filters.mjs)
 route AlphaSignal to `Newsletters`, and no live filter applies `Product Updates` to it. The
 label it looked for was residue from an older config, still sitting on 321 messages.

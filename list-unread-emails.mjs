@@ -1,192 +1,36 @@
 /**
- * Inspect unread emails and label health.
+ * Inspect unread mail and label health, grouped by the tracked label taxonomy.
+ *
+ * Not a report-messages.mjs preset: it files each message under the FIRST label it
+ * carries from an ordered priority list, and reports per-label totals — neither of which
+ * is a query-and-print. The taxonomy itself lives in config/tracked-labels.mjs.
+ *
+ * Two modes were removed rather than kept, because a better tool already answered them:
+ *   --count  -> node report-messages.mjs --total --count "is:unread"
+ *               Exact. This read labels.get's messagesUnread, which is eventually
+ *               consistent and reported 1,313 against a true 13.
+ *   --verify -> node audit-label-drift.mjs --query "from:info@email.meetup.com" --expect Events
+ *               node audit-label-drift.mjs --query "from:news@alphasignal.ai" --expect Newsletters
+ *               Spot-checking two hardcoded senders drifts from the config it means to
+ *               verify: this asserted 'Product Updates' on AlphaSignal until 2026-08-11
+ *               and so reported a miss on correctly labeled mail. audit-label-drift
+ *               draws the expectation from the config instead.
+ * --schema became audit-schema-markup.mjs; it shared no code with either mode here.
  *
  * Usage:
- *   node list-unread-emails.mjs          # full category breakdown with previews
- *   node list-unread-emails.mjs --count  # just print total unread count
+ *   node list-unread-emails.mjs          # category breakdown with previews
  *   node list-unread-emails.mjs --stats  # per-label total/unread counts + mailbox profile
- *   node list-unread-emails.mjs --verify # spot-check label application on sample emails
- *   node list-unread-emails.mjs --schema # detect schema.org JSON-LD in unread emails (Phase 1 audit)
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, runIfMain } from './lib/cli-utils.mjs';
 import { BANNER, DIVIDER } from './lib/console-utils.mjs';
-import { extractDisplayName, extractEmailAddress, getHeader } from './lib/email-utils.mjs';
+import { extractDisplayName, extractEmailAddress } from './lib/email-utils.mjs';
 import { buildLabelCache, buildLabelIndex } from './lib/gmail-label-utils.mjs';
-import { mapWithConcurrency, countMessagesMatching, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
-import { extractSchemaMarkupFromGmailPayload, categorizeBySchema, extractHtmlFromPayload } from './lib/schema-extractor.mjs';
-import {
-  USER_ID,
-  LABEL_SENTRY,
-  LABEL_KEEP_IMPORTANT,
-  LABEL_EVENTS,
-  LABEL_EVENTS_MEETUP,
-  LABEL_EVENTS_APA,
-  LABEL_EVENTS_LUMA,
-  LABEL_EVENTS_CALENDAR_NOTIFICATIONS,
-  LABEL_EVENTS_PERSONAL,
-  LABEL_EVENTS_EVENTBRITE,
-  LABEL_EVENTS_IMPORTANT,
-  LABEL_MONITORING,
-  LABEL_PRODUCT_UPDATES,
-  LABEL_PRODUCT_UPDATES_CHATGPT,
-  LABEL_PRODUCT_UPDATES_DEV_TOOLS,
-  LABEL_PRODUCT_UPDATES_DATA,
-  LABEL_COMMUNITIES,
-  LABEL_SERVICES,
-  LABEL_SERVICES_REAL_ESTATE,
-  LABEL_SERVICES_HEALTH,
-  LABEL_SERVICES_UTILITIES,
-  LABEL_BILLING,
-  LABEL_BILLING_CREDIT_MONITORING,
-  LABEL_BILLING_MARKET_ALERTS,
-  LABEL_BILLING_ACCOUNT_SECURITY,
-  LABEL_FORUMS,
-  LABEL_FORUMS_LINKEDIN_SOCIAL,
-  LABEL_FORUMS_GLASSDOOR,
-  LABEL_NEWSLETTERS,
-  LABEL_NEWSLETTERS_LINKEDIN,
-  LABEL_JOB_SEARCH,
-  LABEL_JOB_SEARCH_LINKEDIN,
-  LABEL_JOB_SEARCH_GLASSDOOR,
-  LABEL_JOB_SEARCH_BACKSTAGE,
-  LABEL_JOB_SEARCH_INDEED,
-  LABEL_JOB_SEARCH_OTHER,
-  LABEL_TRAVEL,
-  LABEL_TRAVEL_AIRBNB_RESERVATIONS,
-  LABEL_TRAVEL_AIRBNB_SUPPORT,
-  LABEL_PROMOTIONS_TRAVEL,
-  LABEL_PROMOTIONS_TRAVEL_DISCOUNTS,
-  LABEL_ADVOCACY,
-  LABEL_ADVOCACY_POLITICAL,
-  LABEL_ADVOCACY_NONPROFIT,
-  LABEL_TIME_SENSITIVE,
-  LABEL_SECURITY_ACCOUNT,
-  LABEL_VOICEMAIL,
-  LABEL_NETWORKING,
-  LABEL_PURCHASES_AMAZON,
-  LABEL_PROMOTIONS_RETAIL,
-  LABEL_PROMOTIONS_BEAUTY,
-  LABEL_PROMOTIONS_FOOD,
-  LABEL_PROMOTIONS_FINANCIAL,
-  LABEL_AUTOMOTIVE_SHOPPING,
-  LABEL_AUTOMOTIVE_INSURANCE,
-  LABEL_EVENTS_LOCAL,
-  LABEL_EVENTS_PERFORMANCES,
-  LABEL_EVENTS_ENTERTAINMENT,
-  LABEL_SERVICES_HOME,
-  LABEL_BILLING_RECEIPTS,
-  LABEL_BILLING_STATEMENTS,
-  LABEL_BILLING_INVOICES,
-  LABEL_NEWSLETTERS_CIVIC_AUSTIN,
-  LABEL_NEWSLETTERS_DEVELOPER,
-  LABEL_NEWSLETTERS_NEWS,
-  LABEL_NEWSLETTERS_LEGAL,
-  LABEL_NEWSLETTERS_PERSONAL_DEV,
-  LABEL_EVENTS_DANCE,
-  LABEL_ADVOCACY_CCV_BOARD,
-  LABEL_PERSONAL_CORRESPONDENCE,
-  LABEL_PERSONAL_SELF_CORRESPONDENCE,
-  LABEL_LEGAL,
-  LABEL_PROMOTIONS,
-  LABEL_PROMOTIONS_ENTERTAINMENT,
-  LABEL_PROMOTIONS_HEALTH,
-  LABEL_PROMOTIONS_TECH,
-  LABEL_SERVICES_USPS,
-  LABEL_SERVICES_RENTAL_OPS,
-  LABEL_PRODUCT_UPDATES_CREDIT_REPORT,
-  LABEL_EVENTS_COMMUNITY,
-  LABEL_EVENTS_WORKSHOPS,
-  LABEL_EVENTS_INVITATIONS,
-  LABEL_EVENTS_CONVENTIONS_TECH,
-  LABEL_EVENTS_CALENDLY,
-  LABEL_EVENTS_TECH,
-  LABEL_EVENTS_AI_MONTHLY,
-  LABEL_KEEP_REFUNDS,
-  LABEL_COMMUNITY_EVENTS,
-  LABEL_LINKEDIN_UPDATES,
-  LABEL_CALENDLY_NOTIFICATIONS,
-  LABEL_DMARC_REPORTS,
-  LABEL_MEETING_NOTES,
-} from './lib/constants.mjs';
+import { mapWithConcurrency, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
+import { USER_ID, LABEL_SENTRY } from './lib/constants.mjs';
+import { CATEGORY_PRIORITY, TRACKED_LABELS } from './config/tracked-labels.mjs';
 
-const USAGE = 'Usage: node list-unread-emails.mjs [--count | --stats | --verify | --schema]';
-
-const CATEGORY_PRIORITY = [
-  LABEL_KEEP_IMPORTANT, LABEL_EVENTS, LABEL_MONITORING,
-  LABEL_PRODUCT_UPDATES, LABEL_COMMUNITIES, LABEL_SERVICES, LABEL_BILLING,
-];
-
-const OTHER_CATEGORY_LABELS = [
-  LABEL_FORUMS, LABEL_NEWSLETTERS, LABEL_JOB_SEARCH, LABEL_TRAVEL, LABEL_ADVOCACY,
-];
-
-const PRODUCT_UPDATES_SUBLABELS = [
-  LABEL_PRODUCT_UPDATES_CHATGPT, LABEL_PRODUCT_UPDATES_CREDIT_REPORT,
-  LABEL_PRODUCT_UPDATES_DEV_TOOLS, LABEL_PRODUCT_UPDATES_DATA,
-];
-
-const EVENTS_SUBLABELS = [
-  LABEL_EVENTS_MEETUP, LABEL_EVENTS_APA, LABEL_EVENTS_LUMA,
-  LABEL_EVENTS_CALENDAR_NOTIFICATIONS, LABEL_EVENTS_DANCE,
-  LABEL_EVENTS_PERSONAL, LABEL_EVENTS_EVENTBRITE, LABEL_EVENTS_IMPORTANT,
-  LABEL_EVENTS_LOCAL, LABEL_EVENTS_PERFORMANCES, LABEL_EVENTS_ENTERTAINMENT,
-  LABEL_EVENTS_COMMUNITY, LABEL_EVENTS_WORKSHOPS, LABEL_EVENTS_INVITATIONS,
-  LABEL_EVENTS_CONVENTIONS_TECH, LABEL_EVENTS_CALENDLY, LABEL_EVENTS_TECH,
-  LABEL_EVENTS_AI_MONTHLY,
-];
-
-const KEEP_IMPORTANT_SUBLABELS = [LABEL_KEEP_REFUNDS];
-
-const STANDALONE_LABELS = [
-  LABEL_COMMUNITY_EVENTS, LABEL_LINKEDIN_UPDATES,
-  LABEL_CALENDLY_NOTIFICATIONS, LABEL_DMARC_REPORTS, LABEL_MEETING_NOTES,
-];
-
-const SERVICES_SUBLABELS = [
-  LABEL_SERVICES_REAL_ESTATE, LABEL_SERVICES_HEALTH, LABEL_SERVICES_UTILITIES,
-  LABEL_SERVICES_HOME, LABEL_SERVICES_USPS, LABEL_SERVICES_RENTAL_OPS,
-];
-
-const BILLING_SUBLABELS = [
-  LABEL_BILLING_CREDIT_MONITORING, LABEL_BILLING_MARKET_ALERTS, LABEL_BILLING_ACCOUNT_SECURITY,
-  LABEL_BILLING_RECEIPTS, LABEL_BILLING_STATEMENTS, LABEL_BILLING_INVOICES,
-];
-
-const FORUMS_SUBLABELS = [LABEL_FORUMS_LINKEDIN_SOCIAL, LABEL_FORUMS_GLASSDOOR];
-
-const NEWSLETTERS_SUBLABELS = [
-  LABEL_NEWSLETTERS_LINKEDIN, LABEL_NEWSLETTERS_CIVIC_AUSTIN, LABEL_NEWSLETTERS_DEVELOPER,
-  LABEL_NEWSLETTERS_NEWS, LABEL_NEWSLETTERS_LEGAL, LABEL_NEWSLETTERS_PERSONAL_DEV,
-];
-
-const JOB_SEARCH_SUBLABELS = [
-  LABEL_JOB_SEARCH_LINKEDIN, LABEL_JOB_SEARCH_GLASSDOOR, LABEL_JOB_SEARCH_BACKSTAGE,
-  LABEL_JOB_SEARCH_INDEED, LABEL_JOB_SEARCH_OTHER,
-];
-
-const TRAVEL_SUBLABELS = [LABEL_TRAVEL_AIRBNB_RESERVATIONS, LABEL_TRAVEL_AIRBNB_SUPPORT];
-
-const PROMOTIONS_LABELS = [
-  LABEL_PROMOTIONS, LABEL_PROMOTIONS_TRAVEL, LABEL_PROMOTIONS_TRAVEL_DISCOUNTS,
-  LABEL_PROMOTIONS_RETAIL, LABEL_PROMOTIONS_BEAUTY, LABEL_PROMOTIONS_FOOD, LABEL_PROMOTIONS_FINANCIAL,
-  LABEL_PROMOTIONS_ENTERTAINMENT, LABEL_PROMOTIONS_HEALTH, LABEL_PROMOTIONS_TECH,
-];
-
-const ATTENTION_LABELS = [LABEL_TIME_SENSITIVE, LABEL_SECURITY_ACCOUNT, LABEL_VOICEMAIL, LABEL_NETWORKING];
-
-const AUTOMOTIVE_LABELS = [LABEL_AUTOMOTIVE_SHOPPING, LABEL_AUTOMOTIVE_INSURANCE];
-
-const ADVOCACY_SUBLABELS = [LABEL_ADVOCACY_POLITICAL, LABEL_ADVOCACY_NONPROFIT, LABEL_ADVOCACY_CCV_BOARD];
-
-const PERSONAL_LABELS = [LABEL_PERSONAL_CORRESPONDENCE, LABEL_PERSONAL_SELF_CORRESPONDENCE, LABEL_LEGAL];
-
-const TRACKED_LABELS = [
-  LABEL_SENTRY, ...CATEGORY_PRIORITY, ...PRODUCT_UPDATES_SUBLABELS, ...EVENTS_SUBLABELS, ...SERVICES_SUBLABELS, ...BILLING_SUBLABELS,
-  ...OTHER_CATEGORY_LABELS, ...FORUMS_SUBLABELS, ...NEWSLETTERS_SUBLABELS, ...JOB_SEARCH_SUBLABELS,
-  ...TRAVEL_SUBLABELS, ...PROMOTIONS_LABELS, ...ATTENTION_LABELS, ...AUTOMOTIVE_LABELS, ...ADVOCACY_SUBLABELS, ...PERSONAL_LABELS, LABEL_PURCHASES_AMAZON,
-  ...KEEP_IMPORTANT_SUBLABELS, ...STANDALONE_LABELS,
-];
+const USAGE = 'Usage: node list-unread-emails.mjs [--stats]';
 
 const PREVIEW_LIMIT = 5;
 const SUBJECT_MAX_LENGTH = 60;
@@ -204,11 +48,6 @@ const SYSTEM_LABEL_INBOX = 'INBOX';
 async function getLabelCounts(gmail, labelId) {
   const res = await gmail.users.labels.get({ userId: USER_ID, id: labelId });
   return { total: res.data.messagesTotal || 0, unread: res.data.messagesUnread || 0 };
-}
-
-async function showUnreadCount(gmail) {
-  const { total } = await getLabelCounts(gmail, SYSTEM_LABEL_UNREAD);
-  console.log(`\nUnread messages: ${total}`);
 }
 
 async function listUnreadEmails(gmail) {
@@ -301,135 +140,10 @@ async function showStats(gmail) {
   }
 }
 
-async function verifyLabels(gmail) {
-  const { byId: labelMapById } = await buildLabelIndex(gmail);
-
-  console.log('Checking if labels were applied...\n');
-
-  // Counted by paging, not read from resultSizeEstimate: Gmail caps that estimate at ~201,
-  // so it reported the same 201 for this sender and for AlphaSignal's true 433.
-  const { count: meetupCount, sampleIds: meetupIds } = await countMessagesMatching(
-    gmail, 'from:info@email.meetup.com', { sampleSize: 1 },
-  );
-  console.log(`Meetup emails found: ${meetupCount}`);
-
-  if (meetupIds.length > 0) {
-    const msg = await gmail.users.messages.get({ userId: USER_ID, id: meetupIds[0] });
-    const labels = msg.data.labelIds || [];
-    console.log(`Labels on first Meetup email: ${labels.map(id => labelMapById.get(id)).filter(Boolean).join(', ')}`);
-    console.log(`Has 'Events' label: ${labels.some(id => labelMapById.get(id) === LABEL_EVENTS)}\n`);
-  }
-
-  // AlphaSignal is a Newsletters sender in config/categories.mjs.
-  // This asserted 'Product Updates' until 2026-08-11 and so reported a miss on correctly
-  // labeled mail — the label it was looking for came from an older config no filter applies.
-  const { sampleIds: alphaIds } = await countMessagesMatching(
-    gmail, 'from:news@alphasignal.ai', { sampleSize: 1 },
-  );
-  if (alphaIds.length > 0) {
-    const msg2 = await gmail.users.messages.get({ userId: USER_ID, id: alphaIds[0] });
-    const labels2 = msg2.data.labelIds || [];
-    console.log(`AlphaSignal email has '${LABEL_NEWSLETTERS}' label: ${labels2.some(id => labelMapById.get(id) === LABEL_NEWSLETTERS)}`);
-  }
-}
-
-const SCHEMA_SAMPLE_SIZE = 50;
-
-async function auditSchemaMarkup(gmail) {
-  console.log('SCHEMA.ORG JSON-LD AUDIT\n');
-  console.log(BANNER + '\n');
-
-  const searchResponse = await gmail.users.messages.list({
-    userId: USER_ID,
-    q: 'is:unread',
-    maxResults: SCHEMA_SAMPLE_SIZE,
-  });
-
-  const messageIds = searchResponse.data.messages || [];
-  console.log(`Scanning ${messageIds.length} unread emails for schema.org markup...\n`);
-
-  if (messageIds.length === 0) return;
-
-  const fullMsgs = await mapWithConcurrency(messageIds, msg =>
-    gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'full' })
-  );
-
-  const typeCounts = {};
-  const categoryCounts = {};
-  const samples = [];
-
-  for (const fullMsg of fullMsgs) {
-    const headers = fullMsg.data.payload?.headers || [];
-    const subject = getHeader(headers, 'Subject', '(no subject)');
-    const from = getHeader(headers, 'From', '(unknown)');
-
-    const html = extractHtmlFromPayload(fullMsg.data.payload);
-    const schemaObjects = extractSchemaMarkupFromGmailPayload(html);
-    if (schemaObjects.length === 0) continue;
-
-    const { category, types, metadata } = categorizeBySchema(schemaObjects);
-
-    for (const type of types) {
-      typeCounts[type] = (typeCounts[type] || 0) + 1;
-    }
-    if (category) {
-      categoryCounts[category] = (categoryCounts[category] || 0) + 1;
-    }
-
-    samples.push({ subject, from: extractDisplayName(from) || extractEmailAddress(from), types, category, metadata });
-  }
-
-  const withSchema = samples.length;
-  const withoutSchema = messageIds.length - withSchema;
-
-  console.log(`Emails with schema.org markup: ${withSchema}/${messageIds.length} (${Math.round(withSchema / messageIds.length * 100)}%)`);
-  console.log(`Emails without: ${withoutSchema}\n`);
-
-  if (Object.keys(typeCounts).length > 0) {
-    console.log('Type Distribution:');
-    for (const [type, count] of Object.entries(typeCounts).sort((a, b) => b[1] - a[1])) {
-      console.log(`  ${type}: ${count}`);
-    }
-  }
-
-  if (Object.keys(categoryCounts).length > 0) {
-    console.log('\nCategory Mapping:');
-    for (const [cat, count] of Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])) {
-      console.log(`  ${cat}: ${count}`);
-    }
-  }
-
-  if (samples.length > 0) {
-    console.log('\nSample Matches:\n');
-    for (const sample of samples.slice(0, 10)) {
-      console.log(`  • ${sample.subject.substring(0, SUBJECT_MAX_LENGTH)}`);
-      console.log(`    From: ${sample.from}`);
-      console.log(`    Types: ${sample.types.join(', ')} → ${sample.category || 'unmapped'}`);
-      if (Object.keys(sample.metadata).length > 0) {
-        console.log(`    Metadata: ${JSON.stringify(sample.metadata)}`);
-      }
-    }
-  }
-
-  console.log('\n' + BANNER + '\n');
-}
-
 async function run() {
-  const { values } = parseCli({
-    count: { type: 'boolean', default: false },
-    stats: { type: 'boolean', default: false },
-    verify: { type: 'boolean', default: false },
-    schema: { type: 'boolean', default: false },
-  }, USAGE);
-
+  const { values } = parseCli({ stats: { type: 'boolean', default: false } }, USAGE);
   const gmail = createGmailClient();
-  // --count was a branch inside listUnreadEmails reading a module-scope flag; as its own
-  // mode all four read alike, and the flags stop outliving the parse that set them.
-  if (values.count) return showUnreadCount(gmail);
-  if (values.stats) return showStats(gmail);
-  if (values.verify) return verifyLabels(gmail);
-  if (values.schema) return auditSchemaMarkup(gmail);
-  return listUnreadEmails(gmail);
+  return values.stats ? showStats(gmail) : listUnreadEmails(gmail);
 }
 
 runIfMain(import.meta.url, run);

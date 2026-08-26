@@ -5,6 +5,18 @@
  * only cappedSweep (now in lib/gmail-batch-utils.mjs): one names four senders and keeps
  * their mail, the other matches billing keywords and archives most of what it finds.
  *
+ * This is shaped like a single-label tag set (lib/gmail-tag-utils.mjs's applyTagSet) —
+ * one label, a flat {name, query} list, no archive — but is NOT one, deliberately.
+ * applyTagSet's backfill (labelAllMatching) pages every match with no cap, which is
+ * safe only when every query is sender-scoped. This file's queries are not: "Calendly
+ * Refunds & Support" ORs a sender clause with `subject:(refund OR "Added to a team")`,
+ * and that subject clause alone accounts for the query's entire match count — Amazon
+ * returns, Airbnb refunds, Experian marketing, all unrelated to Calendly (measured
+ * 2026-08-27; see README.md#known-issues before adding another entry). cappedSweep
+ * caps a sweep like that at SUBJECT_SWEEP_CAP and says when it truncated, which is
+ * exactly why route-billing-mail.mjs — the other subject-word sweeper — uses it too.
+ * Converting this file to applyTagSet would trade that cap for full-mailbox paging.
+ *
  * Usage: node protect-important-inbox.mjs
  */
 import { createGmailClient } from './lib/gmail-client.mjs';

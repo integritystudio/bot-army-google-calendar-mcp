@@ -280,6 +280,29 @@ This silently breaks:
 Keep label names free of parentheses. An acronym belongs in schema `alternateName`, not
 in the path.
 
+### A subject clause ORed onto a sender clause is unconstrained by that sender
+
+`protect-important-inbox.mjs`'s "Calendly Refunds & Support" entry reads as
+Calendly-scoped:
+
+```
+from:(support@calendly.zendesk.com OR invoice+statements@calendly.com)
+  OR subject:(refund OR "Added to a team")
+```
+
+It is not. The `OR` means the subject clause matches on its own, with no sender
+constraint at all — measured 410/410 of the query's matches come from the subject
+half alone, and the sender half contributes 0. It labels Amazon returns, Airbnb
+refunds, and Experian marketing "Keep Important", none of which mention Calendly.
+134 already-labeled messages carry the label for exactly this reason (measured
+2026-08-27).
+
+Not yet fixed — the query is live, so narrowing it is a mailbox-mutating decision
+(drop the subject clause? scope it with an explicit sender `AND`?), not a
+refactor. `cappedSweep`'s truncation cap is protecting against exactly this shape
+of query, which is why this file cannot be safely folded into `applyTagSet()`'s
+unbounded backfill — see the comment above `IMPORTANT_FILTERS` in the script.
+
 ### An unquoted multi-word term breaks its whole `OR` group
 
 `subject:(late fee OR overdue OR "missed payment")` does not mean what it reads as.

@@ -8,14 +8,13 @@
  * This is shaped like a single-label tag set (lib/gmail-tag-utils.mjs's applyTagSet) —
  * one label, a flat {name, query} list, no archive — but is NOT one, deliberately.
  * applyTagSet's backfill (labelAllMatching) pages every match with no cap, which is
- * safe only when every query is sender-scoped. This file's queries are not: "Calendly
- * Refunds & Support" ORs a sender clause with `subject:(refund OR "Added to a team")`,
- * and that subject clause alone accounts for the query's entire match count — Amazon
- * returns, Airbnb refunds, Experian marketing, all unrelated to Calendly (measured
- * 2026-08-26; see README.md#known-issues before adding another entry). cappedSweep
- * caps a sweep like that at SUBJECT_SWEEP_CAP and says when it truncated, which is
- * exactly why route-billing-mail.mjs — the other subject-word sweeper — uses it too.
- * Converting this file to applyTagSet would trade that cap for full-mailbox paging.
+ * safe only when every query is sender-scoped. Not every query here is: "Calendly
+ * Refunds & Support"'s subject clause is intentionally sender-scoped for exactly this
+ * reason (see its own comment below), but a future entry copying its old, unscoped
+ * shape would again be the class of query cappedSweep's SUBJECT_SWEEP_CAP exists to
+ * bound. Converting this file to applyTagSet would trade that cap for full-mailbox
+ * paging — see the other subject-word sweeper, route-billing-mail.mjs, for why that cap
+ * matters.
  *
  * Usage: node protect-important-inbox.mjs
  */
@@ -30,7 +29,13 @@ const USAGE = 'Usage: node protect-important-inbox.mjs';
 
 const IMPORTANT_FILTERS = [
   { name: 'Cloudflare Alerts', query: 'from:noreply@notify.cloudflare.com' },
-  { name: 'Calendly Refunds & Support', query: 'from:(support@calendly.zendesk.com OR invoice+statements@calendly.com) OR subject:(refund OR "Added to a team")' },
+  // The subject clause used to be OR'd onto the sender clause with no sender constraint
+  // of its own, so `subject:(refund OR "Added to a team")` matched anywhere in the
+  // mailbox: 410 messages, all Amazon returns / Airbnb refunds / Experian marketing,
+  // none from Calendly. 134 were already labeled Keep Important for it (found and fixed
+  // 2026-08-26 — see README.md#known-issues). Now AND'd with a Calendly sender clause,
+  // so it can only ever narrow the sender clause's own matches, never reach past them.
+  { name: 'Calendly Refunds & Support', query: 'from:(support@calendly.zendesk.com OR invoice+statements@calendly.com) OR (from:calendly.com subject:(refund OR "Added to a team"))' },
   { name: 'Investment Banking Meetings', query: 'from:notification@calendly.com subject:"Introductory Meeting"' },
   { name: 'Capital City Village Services', query: 'from:(capitalcity@a.helpfulvillage.com OR info@capitalcityvillage.org)' },
 ];

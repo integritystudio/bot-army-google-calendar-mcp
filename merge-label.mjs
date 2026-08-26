@@ -23,14 +23,12 @@ import { messagePages, countMessagesMatching } from './lib/gmail-message-utils.m
 import { batchModifyMessages } from './lib/gmail-batch-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 
-async function labelMessageCount(gmail, labelId) {
-  const res = await withRetry(() => gmail.users.labels.get({ userId: USER_ID, id: labelId }));
-  return res.data.messagesTotal;
-}
-
 /**
  * Counts messages carrying ALL of the given labels — messages.list ANDs labelIds.
- * Counted by paging rather than read from resultSizeEstimate, which is approximate.
+ * Paged rather than read from labels.get's messagesTotal, which is eventually
+ * consistent and can be wrong by orders of magnitude (1,313 reported against a true
+ * 13 elsewhere in this repo) — a plausible-looking number an operator would otherwise
+ * decide a merge from. resultSizeEstimate has the same problem, capped around 201.
  */
 async function countMessagesWithLabels(gmail, labelIds) {
   return (await countMessagesMatching(gmail, { labelIds })).count;
@@ -46,8 +44,8 @@ export async function mergeLabel(gmail, fromName, intoName, { dryRun = false, de
   if (fromId === intoId) throw new Error('Source and target are the same label');
 
   const before = {
-    from: await labelMessageCount(gmail, fromId),
-    into: await labelMessageCount(gmail, intoId),
+    from: await countMessagesWithLabels(gmail, [fromId]),
+    into: await countMessagesWithLabels(gmail, [intoId]),
   };
   console.log(`  "${fromName}": ${before.from} messages`);
   console.log(`  "${intoName}": ${before.into} messages`);
@@ -66,17 +64,18 @@ export async function mergeLabel(gmail, fromName, intoName, { dryRun = false, de
     if (messages.length) console.log(`  merged ${merged}...`);
   }
 
-  const after = {
-    from: await labelMessageCount(gmail, fromId),
-    into: await labelMessageCount(gmail, intoId),
-  };
   // Deleting the source is lossy for any message that does not also carry the target,
   // so verify the leftover set is empty rather than comparing totals. Totals cannot
   // express this: the two labels usually overlap, so the target's net gain is legitimately
   // smaller than the number merged (it was 0 of 3758 for the Food merge), and mail
   // arriving mid-run via a filter can add source-only messages after we paged past them.
-  const sourceOnly = await countMessagesWithLabels(gmail, [fromId])
-    - await countMessagesWithLabels(gmail, [fromId, intoId]);
+  // afterFrom is reused as after.from below rather than counted twice.
+  const afterFrom = await countMessagesWithLabels(gmail, [fromId]);
+  const after = {
+    from: afterFrom,
+    into: await countMessagesWithLabels(gmail, [intoId]),
+  };
+  const sourceOnly = afterFrom - await countMessagesWithLabels(gmail, [fromId, intoId]);
   if (sourceOnly > 0) {
     throw new Error(
       `Refusing to delete "${fromName}": ${sourceOnly} of its messages do not carry `

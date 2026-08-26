@@ -13,19 +13,18 @@ import { readFileSync } from 'node:fs';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
 import {
-  getHeader,
   extractDisplayName,
   extractLocalPart,
   GENERIC_LOCAL_PARTS,
   looksLikePlatform,
 } from './lib/email-utils.mjs';
 import {
-  extractBodyText,
   countMessagesMatching,
+  listAllMessageIds,
   fetchMessageHeaders,
+  fetchFullMessages,
   mapWithConcurrency,
 } from './lib/gmail-message-utils.mjs';
-import { USER_ID } from './lib/constants.mjs';
 
 const DEFAULT_SAMPLE = 3;
 const HEADER_SAMPLE = 25;
@@ -65,13 +64,11 @@ const SIGNALS = {
  * Tagging those by domain files the mail under the ESP's name.
  */
 export async function scanSenders(gmail, domain) {
-  const { data } = await gmail.users.messages.list({
-    userId: USER_ID, q: `from:${domain}`, maxResults: HEADER_SAMPLE,
-  });
+  const ids = await listAllMessageIds(gmail, `from:${domain}`, { limit: HEADER_SAMPLE });
   const byLocalPart = new Map();
   // fetchMessageHeaders retries; the hand-rolled fan-out this replaces did not, and a
   // dropped message is one fewer local part — which is what decides [PLATFORM].
-  for (const { from } of await fetchMessageHeaders(gmail, (data.messages ?? []).map((m) => m.id))) {
+  for (const { from } of await fetchMessageHeaders(gmail, ids)) {
     const lp = extractLocalPart(from);
     if (!lp) continue;
     const entry = byLocalPart.get(lp) ?? { names: new Set(), count: 0 };
@@ -94,20 +91,17 @@ export async function scanDomain(gmail, domain, sampleSize) {
   if (dominant) {
     ({ count: localPartReach } = await countMessagesMatching(gmail, `from:${dominant[0]}`));
   }
-  const { data } = await gmail.users.messages.list({
-    userId: USER_ID, q: `from:${domain}`, maxResults: sampleSize,
-  });
-  const ids = (data.messages ?? []).map((m) => m.id);
+  const ids = await listAllMessageIds(gmail, `from:${domain}`, { limit: sampleSize });
+  // fetchFullMessages retries and is concurrency-bounded. The sequential one-at-a-time
+  // loop this replaces had neither — no retry, and each fetch waited on the last.
+  const fullMsgs = await fetchFullMessages(gmail, ids);
   let text = '';
   let sender = '';
   const subjects = [];
-  for (const id of ids) {
-    const { data: msg } = await gmail.users.messages.get({ userId: USER_ID, id, format: 'full' });
-    const headers = msg.payload?.headers ?? [];
-    sender ||= getHeader(headers, 'From') ?? '';
-    const subject = getHeader(headers, 'Subject') ?? '';
+  for (const { subject, from, bodyText } of fullMsgs) {
+    sender ||= from;
     subjects.push(subject.replace(/\s+/g, ' ').trim());
-    text += ` ${subject} ${extractBodyText(msg.payload)}`;
+    text += ` ${subject} ${bodyText}`;
   }
   text = text.replace(/\s+/g, ' ');
 
@@ -150,7 +144,9 @@ export async function scanDomain(gmail, domain, sampleSize) {
   }
 
   return {
-    domain, total, sampled: ids.length, subjects, scores,
+    // fullMsgs.length, not ids.length — a message fetchFullMessages dropped after
+    // retrying was not sampled, and counting it would overstate the evidence for scores.
+    domain, total, sampled: fullMsgs.length, subjects, scores,
     sender: sender.replace(/\s+/g, ' ').trim(),
     orgs, isPlatform, localPartReach, localPartWins, suggestedQuery,
   };

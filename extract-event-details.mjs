@@ -17,9 +17,7 @@
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
-import { getHeader } from './lib/email-utils.mjs';
-import { extractBodyText } from './lib/gmail-message-utils.mjs';
-import { USER_ID } from './lib/constants.mjs';
+import { listAllMessageIds, fetchFullMessages } from './lib/gmail-message-utils.mjs';
 
 const DEFAULT_MESSAGES_PER_QUERY = 1;
 const WINDOW_BEFORE_CHARS = 80;
@@ -71,17 +69,17 @@ async function main() {
 
   const gmail = await createGmailClient();
   for (const q of queries) {
-    const res = await gmail.users.messages.list({ userId: USER_ID, q, maxResults: messagesPerQuery });
-    const found = res.data.messages || [];
-    if (found.length === 0) {
+    const ids = await listAllMessageIds(gmail, q, { limit: messagesPerQuery });
+    if (ids.length === 0) {
       console.log(`=== NOT FOUND: ${q}\n`);
       continue;
     }
-    for (const { id } of found) {
-      const msg = await gmail.users.messages.get({ userId: USER_ID, id, format: 'full' });
-      const headers = msg.data.payload?.headers || [];
-      console.log(`=== ${getHeader(headers, 'Subject', '(no subject)')}`);
-      const text = extractBodyText(msg.data.payload).replace(/\s+/g, ' ');
+    // fetchFullMessages retries and preserves the order of ids, so print order matches
+    // the sequential per-id fetch this replaces. A message it could not fetch after
+    // retrying is dropped (with its own warning) rather than aborting the whole query.
+    for (const { subject, bodyText } of await fetchFullMessages(gmail, ids)) {
+      console.log(`=== ${subject}`);
+      const text = bodyText.replace(/\s+/g, ' ');
       const output = fullMode ? text : extractDetailWindows(text).join(WINDOW_SEPARATOR);
       console.log(output.substring(0, OUTPUT_CAP_CHARS));
       console.log('\n');

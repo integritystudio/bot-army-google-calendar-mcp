@@ -32,7 +32,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, runIfMain } from './lib/cli-utils.mjs';
 import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
-import { mapWithConcurrency, countMessagesMatching, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
+import { mapWithConcurrency, countMessagesMatching, listAllMessageIds, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 import { fromTokens, criteriaTokens, tokensOverlap } from './lib/gmail-query-tokens.mjs';
 import { USER_ID } from './lib/constants.mjs';
 import { CATEGORIES } from './config/categories.mjs';
@@ -102,8 +102,7 @@ async function loadFilters(gmail, nameById) {
 
 /** Sample a rule's mail and record which labels it actually carries. */
 async function inspectRule(gmail, rule, { sample, exact, nameById, idByName }) {
-  const listed = await gmail.users.messages.list({ userId: USER_ID, q: rule.query, maxResults: sample });
-  const ids = (listed.data.messages ?? []).map((m) => m.id);
+  const ids = await listAllMessageIds(gmail, rule.query, { limit: sample });
   // resultSizeEstimate is not a count — Gmail caps it at ~201, so any larger sender
   // reports that same ceiling. A true total costs a full paged walk.
   const total = exact ? (await countMessagesMatching(gmail, rule.query)).count : null;

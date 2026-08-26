@@ -11,14 +11,13 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, runIfMain } from './lib/cli-utils.mjs';
 import { BANNER } from './lib/console-utils.mjs';
-import { extractDisplayName, extractEmailAddress, getHeader } from './lib/email-utils.mjs';
-import { mapWithConcurrency } from './lib/gmail-message-utils.mjs';
+import { extractDisplayName, extractEmailAddress } from './lib/email-utils.mjs';
+import { listAllMessageIds, fetchFullMessages } from './lib/gmail-message-utils.mjs';
 import {
   extractSchemaMarkupFromGmailPayload,
   categorizeBySchema,
   extractHtmlFromPayload,
 } from './lib/schema-extractor.mjs';
-import { USER_ID } from './lib/constants.mjs';
 
 const USAGE = 'Usage: node audit-schema-markup.mjs';
 const SUBJECT_MAX_LENGTH = 60;
@@ -29,31 +28,22 @@ async function auditSchemaMarkup(gmail) {
   console.log('SCHEMA.ORG JSON-LD AUDIT\n');
   console.log(BANNER + '\n');
 
-  const searchResponse = await gmail.users.messages.list({
-    userId: USER_ID,
-    q: 'is:unread',
-    maxResults: SCHEMA_SAMPLE_SIZE,
-  });
-
-  const messageIds = searchResponse.data.messages || [];
+  const messageIds = await listAllMessageIds(gmail, 'is:unread', { limit: SCHEMA_SAMPLE_SIZE });
   console.log(`Scanning ${messageIds.length} unread emails for schema.org markup...\n`);
 
   if (messageIds.length === 0) return;
 
-  const fullMsgs = await mapWithConcurrency(messageIds, msg =>
-    gmail.users.messages.get({ userId: USER_ID, id: msg.id, format: 'full' })
-  );
+  // fetchFullMessages retries and warns about what it could not fetch. The hand-rolled
+  // mapWithConcurrency call this replaces had no retry, and a single failed fetch
+  // rejected the whole batch — one 429 aborted the audit rather than shrinking the sample.
+  const fullMsgs = await fetchFullMessages(gmail, messageIds);
 
   const typeCounts = {};
   const categoryCounts = {};
   const samples = [];
 
-  for (const fullMsg of fullMsgs) {
-    const headers = fullMsg.data.payload?.headers || [];
-    const subject = getHeader(headers, 'Subject', '(no subject)');
-    const from = getHeader(headers, 'From', '(unknown)');
-
-    const html = extractHtmlFromPayload(fullMsg.data.payload);
+  for (const { subject, from, payload } of fullMsgs) {
+    const html = extractHtmlFromPayload(payload);
     const schemaObjects = extractSchemaMarkupFromGmailPayload(html);
     if (schemaObjects.length === 0) continue;
 
@@ -70,9 +60,11 @@ async function auditSchemaMarkup(gmail) {
   }
 
   const withSchema = samples.length;
-  const withoutSchema = messageIds.length - withSchema;
+  // Denominator is what was actually fetched, not what was requested — a message
+  // fetchFullMessages dropped after retrying is not evidence it lacks schema markup.
+  const withoutSchema = fullMsgs.length - withSchema;
 
-  console.log(`Emails with schema.org markup: ${withSchema}/${messageIds.length} (${Math.round(withSchema / messageIds.length * 100)}%)`);
+  console.log(`Emails with schema.org markup: ${withSchema}/${fullMsgs.length} (${Math.round(withSchema / fullMsgs.length * 100)}%)`);
   console.log(`Emails without: ${withoutSchema}\n`);
 
   if (Object.keys(typeCounts).length > 0) {

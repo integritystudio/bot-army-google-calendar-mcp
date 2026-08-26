@@ -295,7 +295,7 @@ constraint at all — measured 410/410 of the query's matches come from the subj
 half alone, and the sender half contributes 0. It labels Amazon returns, Airbnb
 refunds, and Experian marketing "Keep Important", none of which mention Calendly.
 134 already-labeled messages carry the label for exactly this reason (measured
-2026-08-27).
+2026-08-26).
 
 Not yet fixed — the query is live, so narrowing it is a mailbox-mutating decision
 (drop the subject clause? scope it with an explicit sender `AND`?), not a

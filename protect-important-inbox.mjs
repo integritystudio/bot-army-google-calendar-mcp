@@ -12,7 +12,7 @@
  * Refunds & Support" ORs a sender clause with `subject:(refund OR "Added to a team")`,
  * and that subject clause alone accounts for the query's entire match count — Amazon
  * returns, Airbnb refunds, Experian marketing, all unrelated to Calendly (measured
- * 2026-08-27; see README.md#known-issues before adding another entry). cappedSweep
+ * 2026-08-26; see README.md#known-issues before adding another entry). cappedSweep
  * caps a sweep like that at SUBJECT_SWEEP_CAP and says when it truncated, which is
  * exactly why route-billing-mail.mjs — the other subject-word sweeper — uses it too.
  * Converting this file to applyTagSet would trade that cap for full-mailbox paging.

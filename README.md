@@ -421,9 +421,11 @@ first domain, not a partial. The config uses both spellings interchangeably
 on that regex silently treats those domains as unclaimed.
 
 `coveredDomains()` in [`audit-org-tag-coverage.mjs`](audit-org-tag-coverage.mjs) had this
-bug and under-reported coverage until it switched to `fromTokens()` from
-[`audit-label-drift.mjs`](audit-label-drift.mjs), which handles both forms — import from
-there rather than writing a third copy. The hazard is now larger, not smaller: consolidated
+bug and under-reported coverage until it switched to `fromTokens()`, which handles both
+forms — import it from [`lib/gmail-query-tokens.mjs`](lib/gmail-query-tokens.mjs) rather
+than writing a third copy. (It briefly lived inside `audit-label-drift.mjs`, a CLI
+entrypoint, so importing it dragged in that script's own config loading; moved out once a
+second consumer needed it.) The hazard is now larger, not smaller: consolidated
 categories (`consolidate: true` in `create-filters.mjs`) merge whole sender lists into
 OR-grouped chunk filters, so a plain-regex helper reads an entire category as unclaimed.
 

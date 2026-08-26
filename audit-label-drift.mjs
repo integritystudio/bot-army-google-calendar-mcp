@@ -33,6 +33,7 @@ import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, runIfMain } from './lib/cli-utils.mjs';
 import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import { mapWithConcurrency, countMessagesMatching, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
+import { fromTokens, criteriaTokens, tokensOverlap } from './lib/gmail-query-tokens.mjs';
 import { USER_ID } from './lib/constants.mjs';
 import { CATEGORIES } from './config/categories.mjs';
 import { ORG_TAGS } from './config/org-tags.mjs';
@@ -75,60 +76,6 @@ export function loadRules(sourceName = SOURCE_ALL) {
       })),
     );
   });
-}
-
-const normalizeToken = (raw) => raw.trim().replace(/^["'(]+|["')]+$/g, '').toLowerCase();
-
-/**
- * Every sender token a query names. Handles both spellings the config uses:
- * `from:a.com OR from:b.com` and the grouped `from:(a.com OR b.com)` — a plain
- * /from:([^\s()]+)/ sweep silently returns nothing for the grouped form.
- */
-export function fromTokens(query = '') {
-  const tokens = new Set();
-  const grouped = /from:\(([^)]*)\)/gi;
-  for (const match of query.matchAll(grouped)) {
-    for (const part of match[1].split(/\s+OR\s+/i)) {
-      const token = normalizeToken(part);
-      if (token) tokens.add(token);
-    }
-  }
-  for (const match of query.replace(grouped, ' ').matchAll(/from:([^\s()]+)/gi)) {
-    const token = normalizeToken(match[1]);
-    if (token) tokens.add(token);
-  }
-  return tokens;
-}
-
-/** Sender tokens a live Gmail filter keys on; criteria carry either `from` or a raw `query`. */
-export function criteriaTokens(criteria = {}) {
-  const tokens = fromTokens(criteria.query ?? '');
-  for (const part of (criteria.from ?? '').split(/\s+OR\s+/i)) {
-    const token = normalizeToken(part);
-    if (token) tokens.add(token);
-  }
-  return tokens;
-}
-
-const domainOf = (token) => token.split('@').pop();
-
-/**
- * The config also matches senders by display name (`from:"AlphaSignal"`), which carries no
- * dot and so never suffix-matches a domain. Treat a bare word as naming a sender when it is
- * one of the domain's own segments, or the filter that uses that spelling looks absent.
- */
-const namesDomain = (word, domain) => !word.includes('.') && domain.split('.').includes(word);
-
-/** news@alphasignal.ai, alphasignal.ai and mail.alphasignal.ai all name the same sender. */
-export function tokensOverlap(a, b) {
-  for (const left of a) {
-    for (const right of b) {
-      const [x, y] = [domainOf(left), domainOf(right)];
-      if (x === y || x.endsWith(`.${y}`) || y.endsWith(`.${x}`)) return true;
-      if (namesDomain(x, y) || namesDomain(y, x)) return true;
-    }
-  }
-  return false;
 }
 
 /**

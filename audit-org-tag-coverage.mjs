@@ -14,7 +14,7 @@ import { extractDisplayName, extractDomain, looksLikePlatform } from './lib/emai
 import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import { listAllMessageIds, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 import { ORG_TAGS } from './config/org-tags.mjs';
-import { fromTokens } from './audit-label-drift.mjs';
+import { fromTokens } from './lib/gmail-query-tokens.mjs';
 
 const DEFAULT_MAX = 500;
 const ORG_LABEL_PREFIX = 'Organization';
@@ -38,7 +38,19 @@ function coveredDomains() {
   return domains;
 }
 
-/** A tag entry for "meetup.com" should also cover mail from "info@email.meetup.com". */
+/**
+ * A tag entry for "meetup.com" should also cover mail from "info@email.meetup.com".
+ *
+ * Deliberately narrower than lib/gmail-query-tokens.mjs's tokensOverlap(), which this
+ * looks like a duplicate of — both do domain-suffix matching. tokensOverlap also treats
+ * one address on a shared platform as covering the whole domain, which is right for
+ * comparing two ROUTING RULES against each other but wrong here: express.medallia.com
+ * sends for ~20 orgs (Airbnb, CVS, Marriott...), so an entry for
+ * `marriott@express.medallia.com` covering the bare domain would hide the other 19 as
+ * false negatives — exactly the platform-gap case looksLikePlatform() below exists to
+ * catch. isCovered only matches a domain against itself or a suffix of another domain,
+ * never against the domain half of an address token.
+ */
 const isCovered = (domain, covered) => {
   if (!domain) return false;
   for (const c of covered) {

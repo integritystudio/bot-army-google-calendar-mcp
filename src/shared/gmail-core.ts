@@ -61,6 +61,11 @@ export interface GmailLabelChangeFlags extends GmailLabelChange {
  * The MCP filter handlers (src/handlers/gmail) and create-filters.mjs each grew this same
  * archive/mark-read -> label-change mapping independently, under different flag names
  * (markAsRead here, markRead there) — this is the one copy.
+ *
+ * Key order below is significant: create-filters.mjs's removalIdsFor() depends on
+ * archive's INBOX removal coming before markAsRead's UNREAD removal (both flags set is
+ * the common case there), and does not sort before comparing. See
+ * src/tests/unit/utils/gmail-core.test.ts's "flag-declaration order" test.
  */
 type LabelChangeFlagName = 'archive' | 'markAsRead' | 'markAsSpam' | 'markAsTrash' | 'neverMarkAsSpam';
 

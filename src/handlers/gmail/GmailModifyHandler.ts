@@ -3,12 +3,7 @@ import { OAuth2Client } from "google-auth-library";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { formatErrorMessage } from "../core/errorFormatting.js";
 import { GMAIL_LABEL_INBOX, GMAIL_LABEL_UNREAD } from "./gmailUtils.js";
-
-export interface GmailModifyInput {
-  messageIds: string[];
-  action: "markRead" | "markUnread" | "archive" | "delete" | "addLabel" | "removeLabel";
-  labelId?: string;
-}
+import { GmailModifyInput } from "../../tools/registry.js";
 
 const ACTION_LABELS: Record<string, { addLabelIds?: string[]; removeLabelIds?: string[] }> = {
   markRead: { removeLabelIds: [GMAIL_LABEL_UNREAD] },

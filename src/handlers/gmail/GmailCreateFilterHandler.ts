@@ -3,27 +3,7 @@ import { OAuth2Client } from "google-auth-library";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { buildLabelChange, validateInput } from "./gmailUtils.js";
 import { formatErrorMessage } from "../core/errorFormatting.js";
-
-export interface GmailCreateFilterInput {
-  criteria: {
-    from?: string;
-    to?: string;
-    subject?: string;
-    query?: string;
-    hasAttachment?: boolean;
-    excludeChats?: boolean;
-  };
-  action: {
-    addLabelIds?: string[];
-    removeLabelIds?: string[];
-    archive?: boolean;
-    markAsRead?: boolean;
-    markAsSpam?: boolean;
-    markAsTrash?: boolean;
-    forward?: string;
-    neverMarkAsSpam?: boolean;
-  };
-}
+import { GmailCreateFilterInput } from "../../tools/registry.js";
 
 export class GmailCreateFilterHandler extends BaseToolHandler {
   async runTool(args: GmailCreateFilterInput, oauth2Client: OAuth2Client): Promise<CallToolResult> {

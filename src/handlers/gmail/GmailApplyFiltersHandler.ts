@@ -4,10 +4,7 @@ import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { buildSearchQuery, buildLabelChange } from "./gmailUtils.js";
 import { listAllMessageIds, batchModifyMessages } from "../../shared/gmail-core.js";
 import { formatErrorMessage } from "../core/errorFormatting.js";
-
-export interface GmailApplyFiltersInput {
-  dryRun?: boolean;
-}
+import { GmailApplyFiltersInput } from "../../tools/registry.js";
 
 export class GmailApplyFiltersHandler extends BaseToolHandler {
   async runTool(args: GmailApplyFiltersInput, oauth2Client: OAuth2Client): Promise<CallToolResult> {

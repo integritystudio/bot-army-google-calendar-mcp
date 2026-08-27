@@ -4,12 +4,7 @@ import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { formatErrorMessage } from "../core/errorFormatting.js";
 import { gmail_v1 } from "googleapis";
 import { getLabelByName, isAlreadyExistsError } from "../../shared/gmail-core.js";
-
-export interface GmailCreateLabelInput {
-  name: string;
-  labelListVisibility?: "labelShow" | "labelHide";
-  messageListVisibility?: "show" | "hide";
-}
+import { GmailCreateLabelInput } from "../../tools/registry.js";
 
 export class GmailCreateLabelHandler extends BaseToolHandler {
   async runTool(args: GmailCreateLabelInput, oauth2Client: OAuth2Client): Promise<CallToolResult> {

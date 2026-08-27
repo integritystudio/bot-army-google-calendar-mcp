@@ -4,12 +4,7 @@ import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { fetchMessageDetails } from "./gmailUtils.js";
 import { countMessagesMatching } from "../../shared/gmail-core.js";
 import { formatErrorMessage } from "../core/errorFormatting.js";
-
-export interface GmailSearchInput {
-  query: string;
-  maxResults?: number;
-  pageToken?: string;
-}
+import { GmailSearchInput } from "../../tools/registry.js";
 
 export class GmailSearchHandler extends BaseToolHandler {
   async runTool(args: GmailSearchInput, oauth2Client: OAuth2Client): Promise<CallToolResult> {

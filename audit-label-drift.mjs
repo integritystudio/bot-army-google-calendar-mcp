@@ -34,6 +34,7 @@ import { parseCli, runIfMain } from './lib/cli-utils.mjs';
 import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import { mapWithConcurrency, countMessagesMatching, listAllMessageIds, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 import { fromTokens, criteriaTokens, tokensOverlap } from './lib/gmail-query-tokens.mjs';
+import { normalizeWhitespace } from './lib/email-utils.mjs';
 import { USER_ID } from './lib/constants.mjs';
 import { CATEGORIES } from './config/categories.mjs';
 import { ORG_TAGS } from './config/org-tags.mjs';
@@ -121,7 +122,7 @@ async function inspectRule(gmail, rule, { sample, exact, nameById, idByName }) {
   const labelCounts = new Map();
   const senders = new Set();
   for (const { from, labelIds } of messages) {
-    senders.add(from.replace(/\s+/g, ' ').trim());
+    senders.add(normalizeWhitespace(from));
     for (const id of labelIds) {
       const name = nameById.get(id) ?? id;
       labelCounts.set(name, (labelCounts.get(name) ?? 0) + 1);

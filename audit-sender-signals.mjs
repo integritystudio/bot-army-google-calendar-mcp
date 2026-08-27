@@ -17,6 +17,7 @@ import {
   extractLocalPart,
   GENERIC_LOCAL_PARTS,
   looksLikePlatform,
+  normalizeWhitespace,
 } from './lib/email-utils.mjs';
 import {
   countMessagesMatching,
@@ -100,7 +101,7 @@ export async function scanDomain(gmail, domain, sampleSize) {
   const subjects = [];
   for (const { subject, from, bodyText } of fullMsgs) {
     sender ||= from;
-    subjects.push(subject.replace(/\s+/g, ' ').trim());
+    subjects.push(normalizeWhitespace(subject));
     text += ` ${subject} ${bodyText}`;
   }
   text = text.replace(/\s+/g, ' ');
@@ -147,7 +148,7 @@ export async function scanDomain(gmail, domain, sampleSize) {
     // fullMsgs.length, not ids.length — a message fetchFullMessages dropped after
     // retrying was not sampled, and counting it would overstate the evidence for scores.
     domain, total, sampled: fullMsgs.length, subjects, scores,
-    sender: sender.replace(/\s+/g, ' ').trim(),
+    sender: normalizeWhitespace(sender),
     orgs, isPlatform, localPartReach, localPartWins, suggestedQuery,
   };
 }

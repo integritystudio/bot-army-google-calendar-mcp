@@ -10,7 +10,7 @@
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, runIfMain } from './lib/cli-utils.mjs';
-import { extractDisplayName, extractDomain, looksLikePlatform } from './lib/email-utils.mjs';
+import { extractDisplayName, extractDomain, looksLikePlatform, normalizeWhitespace } from './lib/email-utils.mjs';
 import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import { listAllMessageIds, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 import { ORG_TAGS } from './config/org-tags.mjs';
@@ -87,8 +87,8 @@ async function main() {
       const names = labelIds.map((lid) => idToName.get(lid)).filter(Boolean);
       return {
         domain: extractDomain(from),
-        from: from.replace(/\s+/g, ' ').trim(),
-        subject: subject.replace(/\s+/g, ' ').trim(),
+        from: normalizeWhitespace(from),
+        subject: normalizeWhitespace(subject),
         orgLabels: names.filter((n) => n.startsWith(ORG_LABEL_PREFIX)),
       };
     });

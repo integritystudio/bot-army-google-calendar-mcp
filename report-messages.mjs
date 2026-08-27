@@ -19,6 +19,7 @@
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
 import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
+import { normalizeWhitespace } from './lib/email-utils.mjs';
 import {
   countMessagesMatching,
   listAllMessageIds,
@@ -42,7 +43,7 @@ const SYSTEM_LABEL_PREFIXES = [
 const isSystemLabel = (name) => SYSTEM_LABEL_PREFIXES.some((prefix) => name.startsWith(prefix));
 
 /** Collapse whitespace so one message stays one row in TSV. */
-const flatten = (value) => (value ?? '').replace(/\s+/g, ' ').trim();
+const flatten = normalizeWhitespace;
 
 /**
  * Column renderers. `width` is applied only by the list format — TSV never truncates,

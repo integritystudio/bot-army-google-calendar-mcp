@@ -24,7 +24,7 @@ npm run verify-tokens   # Verify auth status (calendar; uses ./credentials.json)
 npm run auth:gmail            # Creates tokens-gmail.json (default account: normal)
 npm run auth:gmail:personal   # per-account; sets ACCOUNT_MODE for you
 npm run auth:gmail:alyshia
-node verify-tokens.mjs        # Verify Gmail token status
+node switch-account.mjs       # Verify Gmail (and Calendar) token status per account
 ```
 
 **Development:**

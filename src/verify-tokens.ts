@@ -70,7 +70,7 @@ async function verifyAndRefreshTokens() {
     const tokenPath = tokenManager.getTokenPath();
 
     // Checks Calendar/MCP credentials only. The root .mjs Gmail scripts read a
-    // separate tokens-gmail.json — verify that side with `node verify-tokens.mjs`.
+    // separate tokens-gmail.json — verify that side with `node switch-account.mjs`.
     console.log(`📁 Token file: ${tokenPath}`);
     const parsed = await readTokenFile(tokenPath);
     if (!parsed) {

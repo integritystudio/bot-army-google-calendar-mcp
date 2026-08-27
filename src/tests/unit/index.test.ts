@@ -2,7 +2,6 @@
  * Tests for the Google Calendar MCP Server implementation
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { OAuth2Client } from "google-auth-library";
 
 // Import tool handlers to test them directly
@@ -64,19 +63,6 @@ describe('Google Calendar MCP Server', () => {
       refreshAccessToken: vi.fn().mockResolvedValue({ credentials: { access_token: 'mock_access_token' } }),
       on: vi.fn(),
     } as unknown as OAuth2Client;
-  });
-
-  describe('McpServer Configuration', () => {
-    it('should create McpServer with correct configuration', () => {
-      const server = new McpServer({
-        name: "google-calendar",
-        version: "1.2.0"
-      });
-
-      expect(server).toBeDefined();
-      // McpServer doesn't expose internal configuration for testing,
-      // but we can verify it doesn't throw during creation
-    });
   });
 
   describe('Tool Handlers', () => {

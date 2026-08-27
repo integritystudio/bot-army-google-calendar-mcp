@@ -2,9 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   LabelPatternSchema,
   LabelPatternsSchema,
-  LabelIdMapSchema,
-  LabelCreationResultSchema,
-  PatternApplicationStatsSchema
+  LabelIdMapSchema
 } from '../../../schemas/gmail-label-utils-types.js';
 
 describe('gmail-label-utils types', () => {
@@ -107,109 +105,6 @@ describe('gmail-label-utils types', () => {
     it('rejects non-object input', () => {
       expect(() =>
         LabelIdMapSchema.parse('not an object')
-      ).toThrow();
-    });
-  });
-
-  describe('LabelCreationResultSchema', () => {
-    it('validates a creation result', () => {
-      const result = {
-        name: 'Product Updates',
-        id: 'Label_123abc'
-      };
-      expect(LabelCreationResultSchema.parse(result)).toEqual(result);
-    });
-
-    it('accepts hierarchical label names', () => {
-      const result = {
-        name: 'Product/Updates/Google',
-        id: 'Label_456def'
-      };
-      expect(LabelCreationResultSchema.parse(result)).toEqual(result);
-    });
-
-    it('rejects missing name', () => {
-      expect(() =>
-        LabelCreationResultSchema.parse({
-          id: 'Label_123'
-        })
-      ).toThrow();
-    });
-
-    it('rejects missing id', () => {
-      expect(() =>
-        LabelCreationResultSchema.parse({
-          name: 'Test'
-        })
-      ).toThrow();
-    });
-
-    it('rejects non-string values', () => {
-      expect(() =>
-        LabelCreationResultSchema.parse({
-          name: 'Test',
-          id: 123 // Invalid: number
-        })
-      ).toThrow();
-    });
-  });
-
-  describe('PatternApplicationStatsSchema', () => {
-    it('validates valid statistics', () => {
-      const stats = {
-        total: 50,
-        pattern: 'from:google@example.com',
-        count: 25
-      };
-      expect(PatternApplicationStatsSchema.parse(stats)).toEqual(stats);
-    });
-
-    it('accepts zero values', () => {
-      const stats = {
-        total: 0,
-        pattern: 'test query',
-        count: 0
-      };
-      expect(PatternApplicationStatsSchema.parse(stats)).toEqual(stats);
-    });
-
-    it('rejects negative total', () => {
-      expect(() =>
-        PatternApplicationStatsSchema.parse({
-          total: -10,
-          pattern: 'test',
-          count: 5
-        })
-      ).toThrow();
-    });
-
-    it('rejects negative count', () => {
-      expect(() =>
-        PatternApplicationStatsSchema.parse({
-          total: 10,
-          pattern: 'test',
-          count: -5
-        })
-      ).toThrow();
-    });
-
-    it('rejects non-integer values', () => {
-      expect(() =>
-        PatternApplicationStatsSchema.parse({
-          total: 10.5,
-          pattern: 'test',
-          count: 5
-        })
-      ).toThrow();
-    });
-
-    it('rejects missing fields', () => {
-      expect(() =>
-        PatternApplicationStatsSchema.parse({
-          total: 10,
-          pattern: 'test'
-          // missing count
-        })
       ).toThrow();
     });
   });

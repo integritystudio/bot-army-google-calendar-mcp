@@ -107,17 +107,20 @@ class ClaudeMCPClient {
   }
 }
 
-describe('Claude + MCP Essential Tests', () => {
+// CLAUDE_API_KEY is not in doppler integrity-studio/dev, so this suite is skipped
+// under `npm run test:all` in this environment. Not a code failure — see
+// CLAUDE.md's "Known gap" note. skipIf reports "skipped" instead of failing beforeAll.
+describe.skipIf(!process.env.CLAUDE_API_KEY)('Claude + MCP Essential Tests', () => {
   let mcpClient: Client;
   let claudeClient: ClaudeMCPClient;
-  
+
   beforeAll(async () => {
     // Start MCP server
     const cleanEnv = Object.fromEntries(
       Object.entries(process.env).filter(([_, value]) => value !== undefined)
     ) as Record<string, string>;
     cleanEnv.NODE_ENV = 'test';
-    
+
     // Create MCP client
     mcpClient = new Client({
       name: "minimal-test-client",
@@ -125,23 +128,17 @@ describe('Claude + MCP Essential Tests', () => {
     }, {
       capabilities: {}
     });
-    
+
     // Connect to server
     const transport = new StdioClientTransport({
       command: 'node',
       args: ['build/index.js'],
       env: cleanEnv
     });
-    
+
     await mcpClient.connect(transport);
-    
-    // Initialize Claude client
-    const apiKey = process.env.CLAUDE_API_KEY;
-    if (!apiKey) {
-      throw new Error('CLAUDE_API_KEY not set');
-    }
-    
-    claudeClient = new ClaudeMCPClient(apiKey, mcpClient);
+
+    claudeClient = new ClaudeMCPClient(process.env.CLAUDE_API_KEY!, mcpClient);
     
     // Verify connection
     const tools = await mcpClient.listTools();

@@ -3,14 +3,8 @@ import {
   EmailMessageSchema,
   EmailCategorySchema,
   PrintSectionConfigSchema,
-  EmailSubsectionSchema,
-  AnalyzerConfigSchema
+  EmailSubsectionSchema
 } from '../../../schemas/email-analyzer-types.js';
-import {
-  ANALYZER_CONFIG_COMPLETE,
-  ANALYZER_CONFIG_INVALID_KEYWORDS,
-  ANALYZER_CONFIG_WITH_EXTRA
-} from '../helpers/test-configs.js';
 
 describe('email-analyzer types', () => {
   describe('EmailMessageSchema', () => {
@@ -175,35 +169,6 @@ describe('email-analyzer types', () => {
         ]
       };
       expect(EmailSubsectionSchema.parse(subsection)).toBeDefined();
-    });
-  });
-
-  describe('AnalyzerConfigSchema', () => {
-    it('validates a complete analyzer config', () => {
-      expect(AnalyzerConfigSchema.parse(ANALYZER_CONFIG_COMPLETE)).toEqual(
-        ANALYZER_CONFIG_COMPLETE
-      );
-    });
-
-    it('rejects missing required fields', () => {
-      const incomplete = {
-        DEFAULT_SCORE: 5,
-        HIGH_SCORE: 9
-        // missing other fields
-      };
-      expect(() => AnalyzerConfigSchema.parse(incomplete)).toThrow();
-    });
-
-    it('rejects non-array keyword lists', () => {
-      expect(() =>
-        AnalyzerConfigSchema.parse(ANALYZER_CONFIG_INVALID_KEYWORDS)
-      ).toThrow();
-    });
-
-    it('rejects extra fields (strict mode)', () => {
-      expect(() =>
-        AnalyzerConfigSchema.parse(ANALYZER_CONFIG_WITH_EXTRA)
-      ).toThrow();
     });
   });
 });

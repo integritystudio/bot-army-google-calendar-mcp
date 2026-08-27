@@ -178,23 +178,3 @@ export function createConflictEventArgs(
   });
 }
 
-export function createEventWithExtendedProperties(
-  overrides: Partial<calendar_v3.Schema$Event> = {}
-): calendar_v3.Schema$Event {
-  return {
-    id: 'event-with-props',
-    summary: 'Event with Extended Properties',
-    extendedProperties: {
-      private: {
-        appId: '12345',
-        customField: 'value1'
-      },
-      shared: {
-        projectId: 'proj-789',
-        category: 'meeting'
-      }
-    },
-    ...overrides
-  };
-}
-

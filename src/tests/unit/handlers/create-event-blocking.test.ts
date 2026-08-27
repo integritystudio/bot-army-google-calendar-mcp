@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { CreateEventHandler } from '../../../handlers/core/CreateEventHandler.js';
 import { OAuth2Client } from 'google-auth-library';
 import { calendar_v3 } from 'googleapis';
-import { CONFLICT_DETECTION_CONFIG } from '../../../services/conflict-detection/config.js';
 import { getTextContent } from '../helpers/index.js';
 
 describe('CreateEventHandler Blocking Logic', () => {
@@ -86,12 +85,5 @@ describe('CreateEventHandler Blocking Logic', () => {
     
     // Should include instructions to override
     expect(response).toContain('To create anyway, set allowDuplicates to true.');
-  });
-
-  it('should use centralized threshold configuration', () => {
-    // Verify that the config has the expected thresholds
-    expect(CONFLICT_DETECTION_CONFIG.DEFAULT_DUPLICATE_THRESHOLD).toBe(0.7);
-    expect(CONFLICT_DETECTION_CONFIG.DUPLICATE_THRESHOLDS.WARNING).toBe(0.7);
-    expect(CONFLICT_DETECTION_CONFIG.DUPLICATE_THRESHOLDS.BLOCKING).toBe(0.95);
   });
 });

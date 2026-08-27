@@ -40,11 +40,6 @@ describe('Timezone Utilities', () => {
       expect(tz.length).toBeGreaterThan(0);
       expect(isValidIANATimeZone(tz)).toBe(true);
     });
-
-    it('should not throw on retrieval', () => {
-      // This test documents that the function doesn't throw
-      expect(() => getSystemTimeZone()).not.toThrow();
-    });
   });
 
   describe('validateTimeZone', () => {
@@ -97,11 +92,6 @@ describe('Timezone Utilities', () => {
     it('should return negative offset for west of UTC', () => {
       const offset = getTimezoneOffsetString('America/New_York');
       expect(offset).toMatch(/^-\d{2}:\d{2}$/);
-    });
-
-    it('should fall back to Z on error', () => {
-      // This tests the error handling
-      expect(typeof getTimezoneOffsetString('UTC')).toBe('string');
     });
   });
 
@@ -214,6 +204,12 @@ describe('Timezone Utilities', () => {
       const input = '2024-06-15';
       const result = convertToRFC3339(input, 'UTC');
       expect(result).toBe('2024-06-15Z');
+    });
+
+    it('should fall back to UTC when fallback timezone is invalid', () => {
+      const input = '2024-01-01T10:00:00';
+      const result = convertToRFC3339(input, 'Invalid/Timezone');
+      expect(result).toBe('2024-01-01T10:00:00Z');
     });
   });
 

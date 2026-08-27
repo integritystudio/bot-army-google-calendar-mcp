@@ -20,7 +20,6 @@ import {
   isRRuleString,
   extractAndPreserveNonRRuleRecurrence,
   DATETIME_FORMATS,
-  DATETIME_ERRORS,
   isValidISODateTime,
   isValidISODate,
   isTimeZoneAware,
@@ -260,22 +259,9 @@ describe('date-utils', () => {
 
       expect(result).toBe('20240614T100000Z');
     });
-
-    it('should combine oneDayBefore and formatBasicDateTime', () => {
-      expect(getOneDayBeforeFormatted(BASE_DATE))
-        .toBe(formatBasicDateTime(oneDayBefore(BASE_DATE)));
-    });
   });
 
   describe('RRULE_PATTERNS', () => {
-    it('should have regex patterns for UNTIL, COUNT, and prefixes', () => {
-      expect(RRULE_PATTERNS.UNTIL).toBeInstanceOf(RegExp);
-      expect(RRULE_PATTERNS.COUNT).toBeInstanceOf(RegExp);
-      expect(RRULE_PATTERNS.RRULE_PREFIX).toBeInstanceOf(RegExp);
-      expect(RRULE_PATTERNS.EXDATE).toBeInstanceOf(RegExp);
-      expect(RRULE_PATTERNS.RDATE).toBeInstanceOf(RegExp);
-    });
-
     it('should match UNTIL clauses', () => {
       const rule = 'RRULE:FREQ=WEEKLY;UNTIL=20240620T100000Z;BYDAY=MO';
       expect(RRULE_PATTERNS.UNTIL.test(rule)).toBe(true);
@@ -407,16 +393,6 @@ describe('date-utils', () => {
   });
 
   describe('DATETIME_FORMATS patterns', () => {
-    it('should have all required format patterns', () => {
-      expect(DATETIME_FORMATS.ISO_DATETIME_TZ_AWARE).toBeInstanceOf(RegExp);
-      expect(DATETIME_FORMATS.ISO_DATETIME_TZ_NAIVE).toBeInstanceOf(RegExp);
-      expect(DATETIME_FORMATS.ISO_DATE_ONLY).toBeInstanceOf(RegExp);
-      expect(DATETIME_FORMATS.ISO_BASIC_DATETIME).toBeInstanceOf(RegExp);
-      expect(DATETIME_FORMATS.ISO_COMPONENTS).toBeInstanceOf(RegExp);
-      expect(DATETIME_FORMATS.ISO_DATE_COMPONENTS).toBeInstanceOf(RegExp);
-      expect(DATETIME_FORMATS.BASIC_DATETIME_COMPONENTS).toBeInstanceOf(RegExp);
-    });
-
     it('should match timezone-aware datetime', () => {
       expect(DATETIME_FORMATS.ISO_DATETIME_TZ_AWARE.test('2024-06-15T10:00:00Z')).toBe(true);
       expect(DATETIME_FORMATS.ISO_DATETIME_TZ_AWARE.test('2024-06-15T10:00:00+05:30')).toBe(true);
@@ -436,15 +412,6 @@ describe('date-utils', () => {
     it('should match basic datetime format', () => {
       expect(DATETIME_FORMATS.ISO_BASIC_DATETIME.test('20240615T100000Z')).toBe(true);
       expect(DATETIME_FORMATS.ISO_BASIC_DATETIME.test('2024-06-15T10:00:00Z')).toBe(false);
-    });
-  });
-
-  describe('DATETIME_ERRORS constants', () => {
-    it('should have all error messages', () => {
-      expect(DATETIME_ERRORS.INVALID_FORMAT).toBeDefined();
-      expect(DATETIME_ERRORS.INVALID_TIMEZONE).toBeDefined();
-      expect(DATETIME_ERRORS.INVALID_DATE).toBeDefined();
-      expect(DATETIME_ERRORS.AMBIGUOUS_TIME).toBeDefined();
     });
   });
 

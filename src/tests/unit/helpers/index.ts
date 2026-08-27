@@ -33,7 +33,6 @@ export {
   createUpdateEventArgsWithAttendees,
   createComplexUpdateEventArgs,
   createCreateEventArgs,
-  createConflictEventArgs,
-  createEventWithExtendedProperties
+  createConflictEventArgs
 } from './event-test-data.js';
 export { setupListEventsHandler } from './handler-setup.js';

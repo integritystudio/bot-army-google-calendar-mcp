@@ -2,20 +2,9 @@ import { Credentials } from 'google-auth-library';
 import { initializeOAuth2Client } from './auth/client.js';
 import { TokenManager } from './auth/tokenManager.js';
 import fs from 'fs/promises';
-import { isNodeError, toErrorMessage } from './auth/utils.js';
+import { isNodeError, toErrorMessage, isLegacyFlatShape } from './auth/utils.js';
 
 const AUTH_HINT = '💡 Run: npm run auth';
-
-/**
- * Same legacy shape TokenManager.loadMultiAccountTokens() migrates: tokens written
- * before multi-account support sit flat at the top level rather than under an
- * account key. Reported as one account instead of iterating the credential fields,
- * which would otherwise list "access_token"/"expiry_date" as if they were accounts.
- */
-function isLegacyFlatShape(parsed: object): parsed is Credentials {
-  const credentials = parsed as Credentials;
-  return Boolean(credentials.access_token || credentials.refresh_token);
-}
 
 function describeAccount(account: string, tokens: Credentials | undefined): void {
   console.log(`  • ${account}`);

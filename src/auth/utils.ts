@@ -1,5 +1,6 @@
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { Credentials } from 'google-auth-library';
 import { getSecureTokenPath as getSharedSecureTokenPath, getLegacyTokenPath as getSharedLegacyTokenPath, getAccountMode as getSharedAccountMode } from './paths.js';
 
 const PROJECT_ROOT = path.resolve(
@@ -36,6 +37,18 @@ export function getKeysFilePath(): string {
 
 export function isTestMode(): boolean {
   return getAccountMode() === 'test';
+}
+
+/**
+ * Tokens written before multi-account support sit flat at the top level rather
+ * than under an account key. TokenManager.loadMultiAccountTokens() migrates
+ * this shape on load; verify-tokens.ts uses this same check to report it as
+ * one "normal" account instead of iterating the credential fields as if they
+ * were account names.
+ */
+export function isLegacyFlatShape(parsed: unknown): parsed is Credentials {
+  const credentials = parsed as Credentials;
+  return Boolean(credentials?.access_token || credentials?.refresh_token);
 }
 
 export interface OAuthCredentials {

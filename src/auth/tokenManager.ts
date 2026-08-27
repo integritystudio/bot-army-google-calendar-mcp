@@ -1,6 +1,6 @@
 import { OAuth2Client, Credentials } from 'google-auth-library';
 import fs from 'fs/promises';
-import { getSecureTokenPath, getAccountMode, getLegacyTokenPath, isNodeError, toErrorMessage } from './utils.js';
+import { getSecureTokenPath, getAccountMode, getLegacyTokenPath, isNodeError, toErrorMessage, isLegacyFlatShape } from './utils.js';
 import { GaxiosError } from 'gaxios';
 import { mkdir } from 'fs/promises';
 import { dirname } from 'path';
@@ -77,9 +77,8 @@ export class TokenManager {
       return {};
     }
 
-    const credentials = parsed as Credentials;
-    if (credentials.access_token || credentials.refresh_token) {
-      const multiAccountTokens: MultiAccountTokens = { normal: credentials };
+    if (isLegacyFlatShape(parsed)) {
+      const multiAccountTokens: MultiAccountTokens = { normal: parsed };
       await this.saveMultiAccountTokens(multiAccountTokens);
       return multiAccountTokens;
     }

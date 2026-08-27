@@ -17,7 +17,7 @@
  *   node route-billing-mail.mjs --apply-only  # apply to unread mail only
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { parseCli, runIfMain } from './lib/cli-utils.mjs';
+import { parseCli, runIfMain, fail } from './lib/cli-utils.mjs';
 import { GMAIL_INBOX, LABEL_BILLING, LABEL_KEEP_IMPORTANT } from './lib/constants.mjs';
 import { ensureLabelExists, createGmailFilter } from './lib/gmail-filter-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
@@ -61,10 +61,7 @@ async function resolveBillingLabelIds(gmail, mode) {
     const labelCache = await buildLabelCache(gmail);
     const billingLabelId = labelCache.get(LABEL_BILLING);
     const keepImportantLabelId = labelCache.get(LABEL_KEEP_IMPORTANT);
-    if (!billingLabelId || !keepImportantLabelId) {
-      console.log('Required labels not found\n');
-      process.exit(1);
-    }
+    if (!billingLabelId || !keepImportantLabelId) fail('Required labels not found');
     return { billingLabelId, keepImportantLabelId };
   }
 
@@ -112,10 +109,7 @@ async function runBillingFilters(billingSubMode) {
   if (billingSubMode === 'update') {
     console.log('UPDATING BILLING FILTER - PROTECT URGENT ALERTS\n');
 
-    if (!keepImportantLabelId) {
-      console.log('Keep Important label not found.\n');
-      process.exit(1);
-    }
+    if (!keepImportantLabelId) fail('Keep Important label not found.');
 
     console.log('STEP 1: Creating urgent billing alert filter\n');
     try {

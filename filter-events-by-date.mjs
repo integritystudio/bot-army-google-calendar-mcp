@@ -11,7 +11,7 @@
  * Usage: node filter-events-by-date.mjs
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { runIfMain } from './lib/cli-utils.mjs';
+import { runIfMain, fail } from './lib/cli-utils.mjs';
 import { GMAIL_INBOX, LABEL_EVENTS, LABEL_KEEP_IMPORTANT, DEFAULT_MAX_RESULTS } from './lib/constants.mjs';
 import { classifyByEventDate } from './lib/event-classifier.mjs';
 import { listAllMessageIds } from './lib/gmail-message-utils.mjs';
@@ -32,10 +32,7 @@ async function filterEventsByDate() {
   const eventsLabelId = labelCache.get(LABEL_EVENTS);
   const keepImportantLabelId = labelCache.get(LABEL_KEEP_IMPORTANT);
 
-  if (!eventsLabelId) {
-    console.log('Events label not found\n');
-    process.exit(1);
-  }
+  if (!eventsLabelId) fail('Events label not found');
 
   const searchQuery = `is:unread (subject:${EVENT_KEYWORDS} OR from:${EVENT_SENDERS}) ${keepImportantLabelId ? `-label:"${LABEL_KEEP_IMPORTANT}"` : ''}`;
   const ids = await listAllMessageIds(gmail, searchQuery, { limit: DEFAULT_MAX_RESULTS });

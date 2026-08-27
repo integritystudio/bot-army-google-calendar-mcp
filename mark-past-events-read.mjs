@@ -11,7 +11,7 @@
  * the chunking, so a crash costs at most one chunk rather than every verdict so far.
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
-import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
+import { parseCli, exitWithUsage, runIfMain, fail } from './lib/cli-utils.mjs';
 import { buildLabelCache } from './lib/gmail-label-utils.mjs';
 import { classifyByEventDate } from './lib/event-classifier.mjs';
 import { listAllMessageIds } from './lib/gmail-message-utils.mjs';
@@ -34,10 +34,7 @@ async function main() {
   const gmail = await createGmailClient();
   const labelMap = await buildLabelCache(gmail);
   const labelId = labelMap.get(labelName);
-  if (!labelId) {
-    console.error(`Unknown label: ${labelName}`);
-    process.exit(1);
-  }
+  if (!labelId) fail(`Unknown label: ${labelName}`);
 
   const ids = await listAllMessageIds(gmail, { labelIds: [labelId, GMAIL_UNREAD] });
   console.log(`Unread "${labelName}" emails: ${ids.length}`);

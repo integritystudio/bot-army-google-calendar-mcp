@@ -9,7 +9,7 @@
  */
 import fs from 'fs/promises';
 import path from 'path';
-import { parseCli, runIfMain } from './lib/cli-utils.mjs';
+import { parseCli, runIfMain, fail } from './lib/cli-utils.mjs';
 import { readAccountTokens, writeAccountTokens, tokenStatus } from './lib/token-store.mjs';
 // The calendar side's canonical paths, imported rather than re-derived: this script used
 // to hardcode the directory and so ignored CALENDARMCP_TOKEN_PATH and XDG_CONFIG_HOME,
@@ -66,13 +66,12 @@ async function switchTo(accountName) {
   const hasGmail = accountName in gmailTokens;
 
   if (!hasCalendar && !hasGmail) {
-    console.error(`Account "${accountName}" not found.`);
-    console.error('Available:', [...new Set([
+    const available = [...new Set([
       ...Object.keys(calendarTokens),
       ...Object.keys(gmailTokens),
-    ])].join(', ') || '(none)');
-    console.error('\nTo add a new account: node switch-account.mjs --add ' + accountName);
-    process.exit(1);
+    ])].join(', ') || '(none)';
+    fail(`Account "${accountName}" not found.\nAvailable: ${available}\n\n`
+      + `To add a new account: node switch-account.mjs --add ${accountName}`);
   }
 
   await fs.mkdir(path.dirname(ACCOUNT_ENV_FILE), { recursive: true });
@@ -126,10 +125,7 @@ async function removeAccount(accountName) {
     removed = true;
   }
 
-  if (!removed) {
-    console.error(`Account "${accountName}" not found.`);
-    process.exit(1);
-  }
+  if (!removed) fail(`Account "${accountName}" not found.`);
 }
 
 // CLI routing

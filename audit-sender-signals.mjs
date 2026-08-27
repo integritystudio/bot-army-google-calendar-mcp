@@ -13,11 +13,10 @@ import { readFileSync } from 'node:fs';
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
 import {
-  extractDisplayName,
-  extractLocalPart,
   GENERIC_LOCAL_PARTS,
   looksLikePlatform,
   normalizeWhitespace,
+  groupByLocalPart,
 } from './lib/email-utils.mjs';
 import {
   countMessagesMatching,
@@ -66,19 +65,9 @@ const SIGNALS = {
  */
 export async function scanSenders(gmail, domain) {
   const ids = await listAllMessageIds(gmail, `from:${domain}`, { limit: HEADER_SAMPLE });
-  const byLocalPart = new Map();
   // fetchMessageHeaders retries; the hand-rolled fan-out this replaces did not, and a
   // dropped message is one fewer local part — which is what decides [PLATFORM].
-  for (const { from } of await fetchMessageHeaders(gmail, ids)) {
-    const lp = extractLocalPart(from);
-    if (!lp) continue;
-    const entry = byLocalPart.get(lp) ?? { names: new Set(), count: 0 };
-    entry.count++;
-    const dn = extractDisplayName(from);
-    if (dn) entry.names.add(dn);
-    byLocalPart.set(lp, entry);
-  }
-  return byLocalPart;
+  return groupByLocalPart(await fetchMessageHeaders(gmail, ids));
 }
 
 export async function scanDomain(gmail, domain, sampleSize) {
@@ -113,7 +102,7 @@ export async function scanDomain(gmail, domain, sampleSize) {
 
   const orgs = [...byLocalPart.entries()]
     .sort((a, b) => b[1].count - a[1].count)
-    .map(([lp, v]) => ({ localPart: lp, names: [...v.names], count: v.count }));
+    .map(([lp, v]) => ({ localPart: lp, names: [...v.names.keys()], count: v.count }));
   // Classify by distinct display names, not local parts: a platform can route many orgs
   // through one generic local part (zenoti.com's noreply@), and one org can use several
   // local parts (axios.com's austin@ / partners@).

@@ -13,11 +13,7 @@
  */
 import { createGmailClient } from './lib/gmail-client.mjs';
 import { parseCli, exitWithUsage, runIfMain } from './lib/cli-utils.mjs';
-import {
-  extractDisplayName,
-  extractLocalPart,
-  GENERIC_LOCAL_PARTS,
-} from './lib/email-utils.mjs';
+import { GENERIC_LOCAL_PARTS, groupByLocalPart } from './lib/email-utils.mjs';
 import { listAllMessageIds, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 
 /** Above this, a domain is too fragmented to tag per-org (substack.com is ~8,900). */
@@ -38,17 +34,7 @@ export async function extractPlatformOrgs(gmail, domain, { maxMessages = DEFAULT
   // the whole point here — a silently dropped message is a missing org, which is the
   // failure sampling already caused (3 of 20 on express.medallia.com).
   const headers = await fetchMessageHeaders(gmail, ids);
-
-  const byLocalPart = new Map();
-  for (const { from } of headers) {
-    const lp = extractLocalPart(from);
-    if (!lp) continue;
-    const entry = byLocalPart.get(lp) ?? { count: 0, names: new Map() };
-    entry.count++;
-    const dn = extractDisplayName(from);
-    if (dn) entry.names.set(dn, (entry.names.get(dn) ?? 0) + 1);
-    byLocalPart.set(lp, entry);
-  }
+  const byLocalPart = groupByLocalPart(headers);
 
   const orgs = [...byLocalPart.entries()]
     .map(([localPart, e]) => {

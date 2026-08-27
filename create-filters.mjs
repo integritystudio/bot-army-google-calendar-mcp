@@ -138,7 +138,7 @@ async function run() {
   const onlyPrefix = values.only ?? null;
   const dryRun = values['dry-run'];
   const prune = values.prune;
-  const gmail = createGmailClient();
+  const gmail = await createGmailClient();
 
   console.log(`CREATING CATEGORY FILTERS${dryRun ? ' (DRY RUN)' : ''}\n`);
   console.log(BANNER + '\n');

@@ -182,7 +182,7 @@ async function run() {
     stats: { type: 'boolean', default: false },
     total: { type: 'boolean', default: false },
   }, USAGE);
-  const gmail = createGmailClient();
+  const gmail = await createGmailClient();
   return values.stats ? showStats(gmail) : listUnreadEmails(gmail, { exactTotal: values.total });
 }
 

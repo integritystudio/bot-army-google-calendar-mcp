@@ -157,7 +157,7 @@ async function main() {
     : (inline ?? '').split(',').map((s) => s.trim()).filter(Boolean);
   if (domains.length === 0) exitWithUsage(usage);
 
-  const gmail = createGmailClient();
+  const gmail = await createGmailClient();
   const results = await mapWithConcurrency(
     domains,
     (d) => scanDomain(gmail, d, sampleSize).catch((e) => ({ domain: d, error: e.message })),

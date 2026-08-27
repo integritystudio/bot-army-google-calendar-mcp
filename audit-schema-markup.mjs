@@ -97,7 +97,7 @@ async function auditSchemaMarkup(gmail) {
 }
 async function run() {
   parseCli({}, USAGE);
-  return auditSchemaMarkup(createGmailClient());
+  return auditSchemaMarkup(await createGmailClient());
 }
 
 runIfMain(import.meta.url, run);

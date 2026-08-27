@@ -101,7 +101,7 @@ async function main() {
   const maxMessages = Number(values.max ?? DEFAULT_MAX_MESSAGES);
   const emit = values.emit;
   if (!domain) exitWithUsage(USAGE);
-  const gmail = createGmailClient();
+  const gmail = await createGmailClient();
   report(await extractPlatformOrgs(gmail, domain, { maxMessages }), { emit });
 }
 

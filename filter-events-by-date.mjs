@@ -23,7 +23,7 @@ const EVENT_KEYWORDS = '(event OR meeting OR conference OR workshop OR seminar O
 const EVENT_SENDERS = '(meetup OR eventbrite OR "international house" OR calendly OR calendar)';
 
 async function filterEventsByDate() {
-  const gmail = createGmailClient();
+  const gmail = await createGmailClient();
 
   console.log('FILTERING EVENTS BY DATE (WITH DATE-BASED ARCHIVE)\n');
   console.log(BANNER + '\n');

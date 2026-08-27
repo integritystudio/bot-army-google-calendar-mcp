@@ -225,7 +225,7 @@ async function main() {
     return;
   }
 
-  const gmail = createGmailClient();
+  const gmail = await createGmailClient();
   const { byId: nameById, byName: idByName, userLabelNames: userLabels } = await buildLabelIndex(gmail);
   const filters = await loadFilters(gmail, nameById);
 

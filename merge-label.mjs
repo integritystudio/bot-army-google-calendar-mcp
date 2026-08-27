@@ -105,7 +105,7 @@ async function main() {
   const dryRun = values['dry-run'];
   const deleteSource = values['delete-source'];
   if (!fromName || !intoName) exitWithUsage(USAGE);
-  const gmail = createGmailClient();
+  const gmail = await createGmailClient();
   const { merged, after } = await mergeLabel(gmail, fromName, intoName, { dryRun, deleteSource });
   if (!dryRun) {
     console.log(`\nMerged ${merged} messages into "${intoName}" (now ${after.into})`);

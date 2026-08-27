@@ -41,7 +41,7 @@ const IMPORTANT_FILTERS = [
 ];
 
 async function protectImportantItems() {
-  const gmail = createGmailClient();
+  const gmail = await createGmailClient();
 
   console.log('PROTECTING IMPORTANT ITEMS IN INBOX\n');
   console.log(BANNER + '\n');

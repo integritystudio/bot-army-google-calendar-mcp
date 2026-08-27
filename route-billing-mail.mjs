@@ -76,7 +76,7 @@ async function resolveBillingLabelIds(gmail, mode) {
 }
 
 async function runBillingFilters(billingSubMode) {
-  const gmail = createGmailClient();
+  const gmail = await createGmailClient();
 
   console.log(BANNER + '\n');
   const { billingLabelId, keepImportantLabelId } = await resolveBillingLabelIds(gmail, billingSubMode);

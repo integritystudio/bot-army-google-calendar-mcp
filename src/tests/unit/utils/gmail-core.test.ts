@@ -23,8 +23,9 @@ describe('buildLabelChange', () => {
   });
 
   it('combines multiple remove-flags in flag-declaration order', () => {
-    // create-filters.mjs relies on this exact order (archive before markAsRead) —
-    // it does not sort before comparing.
+    // Not load-bearing for filter-identity comparison (filterKey sorts before comparing),
+    // but create-filters.mjs's describeFilter() displays this order, so it's pinned as
+    // deliberate rather than an accident of LABEL_CHANGE_FLAGS's iteration order.
     expect(buildLabelChange({ archive: true, markAsRead: true }))
       .toEqual({ removeLabelIds: ['INBOX', 'UNREAD'] });
   });

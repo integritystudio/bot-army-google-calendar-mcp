@@ -62,10 +62,12 @@ export interface GmailLabelChangeFlags extends GmailLabelChange {
  * archive/mark-read -> label-change mapping independently, under different flag names
  * (markAsRead here, markRead there) — this is the one copy.
  *
- * Key order below is significant: create-filters.mjs's removalIdsFor() depends on
- * archive's INBOX removal coming before markAsRead's UNREAD removal (both flags set is
- * the common case there), and does not sort before comparing. See
- * src/tests/unit/utils/gmail-core.test.ts's "flag-declaration order" test.
+ * Key order below determines the order labels appear in the returned arrays (archive's
+ * INBOX removal before markAsRead's UNREAD removal, when both are set). Not functionally
+ * load-bearing today — lib/gmail-filter-utils.mjs's filterKey() sorts both arrays before
+ * comparing, so create-filters.mjs's filter-identity check is order-independent — but the
+ * order is pinned by test as the documented, deliberate output rather than an accident of
+ * iteration, since create-filters.mjs also uses it for display (describeFilter()).
  */
 type LabelChangeFlagName = 'archive' | 'markAsRead' | 'markAsSpam' | 'markAsTrash' | 'neverMarkAsSpam';
 

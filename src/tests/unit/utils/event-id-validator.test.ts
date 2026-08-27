@@ -36,18 +36,20 @@ describe('Event ID Validator', () => {
       expect(isValidEventId(maxId)).toBe(true);
     });
 
-    it('should reject IDs with invalid characters', () => {
-      expect(isValidEventId('event id')).toBe(false); // Space
-      expect(isValidEventId('event_id')).toBe(false); // Underscore
-      expect(isValidEventId('event.id')).toBe(false); // Period
-      expect(isValidEventId('event/id')).toBe(false); // Slash
-      expect(isValidEventId('event@id')).toBe(false); // At symbol
-      expect(isValidEventId('event#id')).toBe(false); // Hash
-      expect(isValidEventId('event$id')).toBe(false); // Dollar
-      expect(isValidEventId('event%id')).toBe(false); // Percent
-      expect(isValidEventId('event-id')).toBe(false); // Hyphen (not allowed in base32hex)
-      expect(isValidEventId('EventID')).toBe(false); // Uppercase (not allowed)
-      expect(isValidEventId('eventwxyz')).toBe(false); // Letters w,x,y,z not in base32hex
+    it.each([
+      ['event id', 'space'],
+      ['event_id', 'underscore'],
+      ['event.id', 'period'],
+      ['event/id', 'slash'],
+      ['event@id', 'at symbol'],
+      ['event#id', 'hash'],
+      ['event$id', 'dollar'],
+      ['event%id', 'percent'],
+      ['event-id', 'hyphen (not allowed in base32hex)'],
+      ['EventID', 'uppercase (not allowed)'],
+      ['eventwxyz', 'letters w,x,y,z not in base32hex'],
+    ])('should reject IDs with invalid characters: %s (%s)', (id) => {
+      expect(isValidEventId(id)).toBe(false);
     });
   });
 

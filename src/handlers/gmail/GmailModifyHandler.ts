@@ -2,13 +2,17 @@ import { BaseToolHandler } from "../core/BaseToolHandler.js";
 import { OAuth2Client } from "google-auth-library";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { formatErrorMessage } from "../core/errorFormatting.js";
-import { GMAIL_LABEL_INBOX, GMAIL_LABEL_UNREAD } from "./gmailUtils.js";
+import { buildLabelChange, GMAIL_LABEL_UNREAD } from "./gmailUtils.js";
 import { GmailModifyInput } from "../../tools/registry.js";
+import { GmailLabelChange } from "../../shared/gmail-core.js";
 
-const ACTION_LABELS: Record<string, { addLabelIds?: string[]; removeLabelIds?: string[] }> = {
-  markRead: { removeLabelIds: [GMAIL_LABEL_UNREAD] },
+// markRead/archive route through the shared archive/mark-read -> label-change mapping
+// (see shared/gmail-core.ts's LABEL_CHANGE_FLAGS). markUnread has no counterpart there —
+// it's not a filter-applicable action, since mail always arrives unread already.
+const ACTION_LABELS: Partial<Record<GmailModifyInput["action"], GmailLabelChange>> = {
+  markRead: buildLabelChange({ markAsRead: true }),
   markUnread: { addLabelIds: [GMAIL_LABEL_UNREAD] },
-  archive: { removeLabelIds: [GMAIL_LABEL_INBOX] },
+  archive: buildLabelChange({ archive: true }),
 };
 
 const ACTION_DESCRIPTIONS: Record<string, string> = {

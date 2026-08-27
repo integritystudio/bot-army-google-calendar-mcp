@@ -17,11 +17,12 @@ import {
   diffFilters,
   filterKey,
   chunkQueries,
+  buildLabelChange,
 } from './lib/gmail-filter-utils.mjs';
 import { searchAndModify } from './lib/gmail-batch-utils.mjs';
 import { withRetry } from './lib/gmail-retry.mjs';
 import { BANNER } from './lib/console-utils.mjs';
-import { GMAIL_INBOX, GMAIL_UNREAD, USER_ID } from './lib/constants.mjs';
+import { USER_ID } from './lib/constants.mjs';
 import { CATEGORIES } from './config/categories.mjs';
 
 // Gmail's per-filter query length limit is undocumented; 500 sits well inside
@@ -56,10 +57,7 @@ function planEntriesFor(category) {
 }
 
 function removalIdsFor(category, markRead) {
-  return [
-    ...(category.archive ? [GMAIL_INBOX] : []),
-    ...(markRead ? [GMAIL_UNREAD] : []),
-  ];
+  return buildLabelChange({ archive: category.archive, markAsRead: markRead }).removeLabelIds ?? [];
 }
 
 /**

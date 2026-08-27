@@ -15,6 +15,11 @@ export const GMAIL_USER_ID = 'me';
 export const GMAIL_BATCH_MODIFY_LIMIT = 1000;
 export const LABEL_CONFLICT_STATUS = 409;
 
+export const GMAIL_LABEL_INBOX = 'INBOX';
+export const GMAIL_LABEL_SPAM = 'SPAM';
+export const GMAIL_LABEL_TRASH = 'TRASH';
+export const GMAIL_LABEL_UNREAD = 'UNREAD';
+
 const LIST_PAGE_SIZE = 500;
 const MAX_RETRIES = 4;
 const RETRY_DELAY_MS = 3000;
@@ -36,6 +41,57 @@ export type MessageSelector = string | gmail_v1.Params$Resource$Users$Messages$L
 export interface GmailLabelChange {
   addLabelIds?: string[];
   removeLabelIds?: string[];
+}
+
+export interface GmailLabelChangeFlags extends GmailLabelChange {
+  archive?: boolean;
+  markAsRead?: boolean;
+  markAsSpam?: boolean;
+  markAsTrash?: boolean;
+  neverMarkAsSpam?: boolean;
+}
+
+/**
+ * Gmail has no "archive" or "mark as read" primitive — both the Filter action resource
+ * and messages.modify express every such action purely as a label change, accepting only
+ * addLabelIds/removeLabelIds (plus forward, on filters). A field the API does not
+ * recognise is dropped without error, so a filter carrying one is created and then does
+ * nothing.
+ *
+ * The MCP filter handlers (src/handlers/gmail) and create-filters.mjs each grew this same
+ * archive/mark-read -> label-change mapping independently, under different flag names
+ * (markAsRead here, markRead there) — this is the one copy.
+ */
+type LabelChangeFlagName = 'archive' | 'markAsRead' | 'markAsSpam' | 'markAsTrash' | 'neverMarkAsSpam';
+
+const LABEL_CHANGE_FLAGS: Record<LabelChangeFlagName, { add?: string; remove?: string }> = {
+  archive: { remove: GMAIL_LABEL_INBOX },
+  markAsRead: { remove: GMAIL_LABEL_UNREAD },
+  markAsSpam: { add: GMAIL_LABEL_SPAM },
+  markAsTrash: { add: GMAIL_LABEL_TRASH },
+  neverMarkAsSpam: { remove: GMAIL_LABEL_SPAM },
+};
+
+/**
+ * Fold the boolean convenience flags into explicit label IDs, preserving any
+ * addLabelIds/removeLabelIds the caller supplied directly.
+ */
+export function buildLabelChange(flags: GmailLabelChangeFlags): GmailLabelChange {
+  const addLabelIds = [...(flags.addLabelIds ?? [])];
+  const removeLabelIds = [...(flags.removeLabelIds ?? [])];
+
+  for (const [flag, { add, remove }] of Object.entries(LABEL_CHANGE_FLAGS) as Array<
+    [LabelChangeFlagName, { add?: string; remove?: string }]
+  >) {
+    if (!flags[flag]) continue;
+    if (add && !addLabelIds.includes(add)) addLabelIds.push(add);
+    if (remove && !removeLabelIds.includes(remove)) removeLabelIds.push(remove);
+  }
+
+  const change: GmailLabelChange = {};
+  if (addLabelIds.length) change.addLabelIds = addLabelIds;
+  if (removeLabelIds.length) change.removeLabelIds = removeLabelIds;
+  return change;
 }
 
 /** Gmail intermittently throws FAILED_PRECONDITION / 429 on rapid bulk operations. */

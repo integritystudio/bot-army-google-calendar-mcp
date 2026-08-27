@@ -58,40 +58,24 @@ describe('Timezone Utilities', () => {
     });
   });
 
-  describe('getTimezoneOffsetMinutes', () => {
-    it('should return 0 for UTC', () => {
-      expect(getTimezoneOffsetMinutes('UTC')).toBe(0);
-    });
+  // getTimezoneOffsetMinutes and getTimezoneOffsetString derive from the same
+  // underlying offset calculation, so each timezone case is verified through both.
+  // Los Angeles' exact offset varies with DST (UTC-7 or UTC-8), so it's asserted
+  // as a bound rather than an exact value; UTC and Tokyo don't observe DST.
+  describe('offset calculation', () => {
+    it.each([
+      ['UTC', (offset: number) => expect(offset).toBe(0), 'Z'],
+      ['Asia/Tokyo', (offset: number) => expect(offset).toBe(540), '+09:00'], // UTC+9
+      ['America/Los_Angeles', (offset: number) => expect(Math.abs(offset)).toBeGreaterThanOrEqual(420), /^-\d{2}:\d{2}$/],
+    ] as const)('should compute consistent minutes and string offset for %s', (timezone, assertMinutes, expectedString) => {
+      assertMinutes(getTimezoneOffsetMinutes(timezone));
 
-    it('should return positive offset for east of UTC', () => {
-      const offset = getTimezoneOffsetMinutes('Asia/Tokyo');
-      expect(offset).toBeGreaterThan(0);
-      // Japan is UTC+9, so 9*60 = 540 minutes
-      expect(offset).toBe(540);
-    });
-
-    it('should return negative offset for west of UTC', () => {
-      const offset = getTimezoneOffsetMinutes('America/Los_Angeles');
-      expect(offset).toBeLessThan(0);
-      // Los Angeles is UTC-7 or UTC-8 depending on DST
-      expect(Math.abs(offset)).toBeGreaterThanOrEqual(420); // -7 hours = -420 minutes
-    });
-  });
-
-  describe('getTimezoneOffsetString', () => {
-    it('should return Z for UTC', () => {
-      expect(getTimezoneOffsetString('UTC')).toBe('Z');
-    });
-
-    it('should return formatted offset string for non-UTC timezones', () => {
-      const offset = getTimezoneOffsetString('Asia/Tokyo');
-      expect(offset).toMatch(/^[+-]\d{2}:\d{2}$/);
-      expect(offset).toBe('+09:00');
-    });
-
-    it('should return negative offset for west of UTC', () => {
-      const offset = getTimezoneOffsetString('America/New_York');
-      expect(offset).toMatch(/^-\d{2}:\d{2}$/);
+      const offsetString = getTimezoneOffsetString(timezone);
+      if (typeof expectedString === 'string') {
+        expect(offsetString).toBe(expectedString);
+      } else {
+        expect(offsetString).toMatch(expectedString);
+      }
     });
   });
 

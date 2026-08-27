@@ -86,15 +86,6 @@ function resolveFields(requestedFields: string[], includeDefaults: boolean): All
     : validFields;
 }
 
-export function buildEventFieldMask(
-  requestedFields?: string[],
-  includeDefaults: boolean = true
-): string | undefined {
-  if (!requestedFields || requestedFields.length === 0) return undefined;
-  const fields = resolveFields(requestedFields, includeDefaults);
-  return `items(${fields.join(',')})`;
-}
-
 export function buildSingleEventFieldMask(
   requestedFields?: string[],
   includeDefaults: boolean = true

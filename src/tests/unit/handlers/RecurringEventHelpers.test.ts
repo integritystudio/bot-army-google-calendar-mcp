@@ -4,7 +4,6 @@ import { RecurringEventHelpers } from '../../../handlers/core/RecurringEventHelp
 import type { UpdateEventInput } from '../../../tools/registry.js';
 import {
   makeCalendarMock,
-  makeEvent,
   SYSTEM_FIELDS,
   createTestEventWithTZOffset,
   createCompleteTestEvent,
@@ -24,55 +23,6 @@ describe('RecurringEventHelpers', () => {
   beforeEach(() => {
     mockCalendar = makeCalendarMock();
     helpers = new RecurringEventHelpers(mockCalendar as unknown as calendar_v3.Calendar);
-  });
-
-  describe('detectEventType', () => {
-    function resolveWith(overrides: Partial<calendar_v3.Schema$Event>) {
-      mockCalendar.events.get.mockResolvedValue({ data: makeEvent(overrides) });
-    }
-
-    it('should detect recurring events', async () => {
-      resolveWith({
-        id: EVENT_ID,
-        summary: 'Weekly Meeting',
-        recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO']
-      });
-
-      const result = await helpers.detectEventType(EVENT_ID, CALENDAR_ID);
-      expect(result).toBe('recurring');
-      expect(mockCalendar.events.get).toHaveBeenCalledWith({
-        calendarId: CALENDAR_ID,
-        eventId: EVENT_ID
-      });
-    });
-
-    it('should detect single events', async () => {
-      resolveWith({
-        id: EVENT_ID,
-        summary: 'One-time Meeting'
-      });
-
-      const result = await helpers.detectEventType(EVENT_ID, CALENDAR_ID);
-      expect(result).toBe('single');
-    });
-
-    it('should detect single events with empty recurrence array', async () => {
-      resolveWith({
-        id: EVENT_ID,
-        summary: 'One-time Meeting',
-        recurrence: []
-      });
-
-      const result = await helpers.detectEventType(EVENT_ID, CALENDAR_ID);
-      expect(result).toBe('single');
-    });
-
-    it('should handle API errors', async () => {
-      mockCalendar.events.get.mockRejectedValue(new Error('Event not found'));
-
-      await expect(helpers.detectEventType('invalid123', CALENDAR_ID))
-        .rejects.toThrow('Event not found');
-    });
   });
 
   describe('formatInstanceId', () => {

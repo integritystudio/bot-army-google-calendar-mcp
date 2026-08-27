@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  buildEventFieldMask,
   buildSingleEventFieldMask,
   buildListFieldMask,
   validateFields,
@@ -29,44 +28,6 @@ describe('Field Mask Builder', () => {
     it('should accept all allowed fields', () => {
       const result = validateFields([...ALLOWED_EVENT_FIELDS]);
       expect(result).toEqual(ALLOWED_EVENT_FIELDS);
-    });
-  });
-
-  describe('buildEventFieldMask', () => {
-    it('should return undefined when no fields requested', () => {
-      expect(buildEventFieldMask()).toBeUndefined();
-      expect(buildEventFieldMask([])).toBeUndefined();
-    });
-
-    it('should build field mask with requested fields and defaults', () => {
-      const fields = ['description', 'colorId'];
-      const result = buildEventFieldMask(fields);
-      expect(result).toContain('items(');
-      expect(result).toContain('description');
-      expect(result).toContain('colorId');
-      // Should also include defaults
-      DEFAULT_EVENT_FIELDS.forEach(field => {
-        expect(result).toContain(field);
-      });
-    });
-
-    it('should build field mask without defaults when specified', () => {
-      const fields = ['description', 'colorId'];
-      const result = buildEventFieldMask(fields, false);
-      expect(result).toBe('items(description,colorId)');
-    });
-
-    it('should handle duplicate fields', () => {
-      const fields = ['description', 'description', 'id', 'summary'];
-      const result = buildEventFieldMask(fields);
-      // Should deduplicate
-      const fieldCount = (result?.match(/description/g) || []).length;
-      expect(fieldCount).toBe(1);
-    });
-
-    it('should throw for invalid fields', () => {
-      const fields = ['description', 'invalidfield'];
-      expect(() => buildEventFieldMask(fields)).toThrow('Invalid fields requested: invalidfield');
     });
   });
 

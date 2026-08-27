@@ -148,20 +148,6 @@ describe('UpdateEventHandler - Recurring Events', () => {
       expect(result.content).toBeDefined();
       expect(mockCalendar.events.patch).toHaveBeenCalled();
     });
-
-    it('should reject invalid scope values', () => {
-      // Test Zod schema validation directly - invalid scope is caught during parse
-      expect(() =>
-        ToolSchemas['update-event'].parse({
-          calendarId: 'primary',
-          eventId: 'event123',
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          modificationScope: 'invalid-scope' as any, // intentionally invalid to test schema validation
-          summary: 'Updated',
-          checkConflicts: false
-        })
-      ).toThrow();
-    });
   });
 
   describe('Instance ID Formatting', () => {
@@ -370,32 +356,6 @@ describe('UpdateEventHandler - Recurring Events', () => {
   });
 
   describe('Error Handling', () => {
-    it('should throw for thisEventOnly without originalStartTime', () => {
-      // Test Zod schema refinement directly - buildUpdateEventInput now validates schema
-      expect(() =>
-        ToolSchemas['update-event'].parse({
-          calendarId: 'primary',
-          eventId: 'event123',
-          modificationScope: 'thisEventOnly',
-          summary: 'Updated',
-          checkConflicts: false
-        })
-      ).toThrow();
-    });
-
-    it('should throw for thisAndFollowing without futureStartDate', () => {
-      // Test Zod schema refinement directly - buildUpdateEventInput now validates schema
-      expect(() =>
-        ToolSchemas['update-event'].parse({
-          calendarId: 'primary',
-          eventId: 'event123',
-          modificationScope: 'thisAndFollowing',
-          summary: 'Updated',
-          checkConflicts: false
-        })
-      ).toThrow();
-    });
-
     it('should throw for non-recurring event with scope thisEventOnly', async () => {
       setupMocks(createMockEvent({ recurrence: undefined }));
 

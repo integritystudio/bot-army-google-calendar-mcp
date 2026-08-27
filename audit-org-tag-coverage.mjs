@@ -15,8 +15,8 @@ import { buildLabelIndex } from './lib/gmail-label-utils.mjs';
 import { listAllMessageIds, fetchMessageHeaders } from './lib/gmail-message-utils.mjs';
 import { ORG_TAGS } from './config/org-tags.mjs';
 import { fromTokens } from './lib/gmail-query-tokens.mjs';
+import { DEFAULT_MAX } from './report-messages.mjs';
 
-const DEFAULT_MAX = 500;
 const ORG_LABEL_PREFIX = 'Organization';
 const MIN_REPORT_COUNT = 1;
 

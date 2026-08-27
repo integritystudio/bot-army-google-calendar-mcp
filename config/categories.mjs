@@ -153,7 +153,6 @@ export const CATEGORIES = [
       // e.usa.experian.com is marketing and routes to Product Updates/Credit Report;
       // bare experian.com already covers s.usa.experian.com as a subdomain
       { name: 'Experian', query: 'from:experian.com -from:e.usa.experian.com' },
-      { name: 'Equifax', query: 'from:(e.equifax.com OR equifax.com)' },
       { name: 'Credit Karma', query: 'from:(notifications.creditkarma.com OR mail.creditkarma.com)' },
       { name: 'Coinbase', query: 'from:mail.coinbase.com' },
       // mcmap.chase.com is Chase's marketing subdomain (preapproval/product-pitch mail);
@@ -353,7 +352,6 @@ export const CATEGORIES = [
       // Excludes the social/newsletter senders routed to Forums/LinkedIn Social and
       // Newsletters/LinkedIn — an unqualified from:linkedin.com labels those Job Search too
       { name: 'LinkedIn', query: 'from:linkedin.com -from:newsletters-noreply@linkedin.com -from:messages-noreply@linkedin.com -from:invitations@linkedin.com -from:groups-noreply@linkedin.com -from:notifications-noreply@linkedin.com -from:messaging-digest-noreply@linkedin.com' },
-      { name: 'Backstage', query: 'from:backstage.com' },
       { name: 'Virtual Vocations', query: 'from:(email.virtualvocations.com OR alerts.virtualvocations.com)' },
       { name: 'PostJobFree', query: 'from:postjobfree.com' },
       { name: 'Indeed', query: 'from:(indeed.com OR match.indeed.com OR indeedemail.com)' },
@@ -598,7 +596,6 @@ export const CATEGORIES = [
       { name: 'Meetup', query: 'from:(email.meetup.com OR meetup.com)' },
       { name: 'Austin Pets Alive', query: 'from:austinpetsalive.org' },
       { name: 'Austin Alchemist', query: 'from:theaustinalchemist.com' },
-      { name: 'Lumos Fitness', query: 'from:lumosfc.com' },
       { name: 'UT Austin Announcements', query: 'from:(econnect.utexas.edu OR austin.utexas.edu)' },
       { name: '10times', query: 'from:10times.com' },
       { name: 'Summit Series', query: 'from:summit.co' },

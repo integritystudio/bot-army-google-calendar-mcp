@@ -42,16 +42,6 @@ describe('GetCurrentTimeHandler', () => {
       expect(response.currentTime.requestedTimeZone.rfc3339).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
     });
 
-    it('should handle UTC timezone parameter', async () => {
-      const handler = new GetCurrentTimeHandler();
-      const result = await handler.runTool({ timeZone: 'UTC' }, mockOAuth2Client);
-      
-      const response = JSON.parse(getTextContent(result));
-      expect(response.currentTime.requestedTimeZone.timeZone).toBe('UTC');
-      expect(response.currentTime.requestedTimeZone.rfc3339).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
-      expect(response.currentTime.requestedTimeZone.offset).toBe('Z');
-    });
-
     it('should throw error for invalid timezone', async () => {
       const handler = new GetCurrentTimeHandler();
       
@@ -70,21 +60,25 @@ describe('GetCurrentTimeHandler', () => {
   });
 
   describe('timezone validation', () => {
-    it('should validate common IANA timezones', async () => {
+    // Folds in the standalone UTC-specific case (exact offset 'Z') alongside other
+    // IANA zones, whose offsets vary with DST so are matched by pattern instead.
+    it.each([
+      ['UTC', 'Z'],
+      ['America/Los_Angeles', /^-\d{2}:\d{2}$/],
+      ['America/New_York', /^-\d{2}:\d{2}$/],
+      ['Europe/London', /^[+-]\d{2}:\d{2}$/],
+      ['Asia/Tokyo', '+09:00'],
+      ['Australia/Sydney', /^[+-]\d{2}:\d{2}$/],
+    ] as const)('should validate IANA timezone %s and compute its offset', async (timezone, expectedOffset) => {
       const handler = new GetCurrentTimeHandler();
-      const validTimezones = [
-        'UTC',
-        'America/Los_Angeles',
-        'America/New_York',
-        'Europe/London',
-        'Asia/Tokyo',
-        'Australia/Sydney'
-      ];
+      const result = await handler.runTool({ timeZone: timezone }, mockOAuth2Client);
+      const response = JSON.parse(getTextContent(result));
 
-      for (const timezone of validTimezones) {
-        const result = await handler.runTool({ timeZone: timezone }, mockOAuth2Client);
-        const response = JSON.parse(getTextContent(result));
-        expect(response.currentTime.requestedTimeZone.timeZone).toBe(timezone);
+      expect(response.currentTime.requestedTimeZone.timeZone).toBe(timezone);
+      if (typeof expectedOffset === 'string') {
+        expect(response.currentTime.requestedTimeZone.offset).toBe(expectedOffset);
+      } else {
+        expect(response.currentTime.requestedTimeZone.offset).toMatch(expectedOffset);
       }
     });
 

@@ -1,4 +1,5 @@
 import { calendar_v3 } from 'googleapis';
+import { pickBy } from 'lodash-es';
 import {
   TIME_DURATIONS,
   formatBasicDateTime,
@@ -125,16 +126,10 @@ export class RecurringEventHelpers {
     const coreFields = buildCoreEvent(args, effectiveTimeZone || 'UTC');
     const optionalFields = buildOptionalEventFields(args);
 
-    const requestBody: calendar_v3.Schema$Event = {
-      ...coreFields,
-      ...optionalFields,
-    };
-
-    Object.keys(requestBody).forEach(key => {
-      if ((requestBody as any)[key] === undefined || (requestBody as any)[key] === null) {
-        delete (requestBody as any)[key];
-      }
-    });
+    const requestBody: calendar_v3.Schema$Event = pickBy(
+      { ...coreFields, ...optionalFields },
+      (value) => value != null
+    );
 
     if (effectiveTimeZone) {
       const { start, end } = applyTimezone(

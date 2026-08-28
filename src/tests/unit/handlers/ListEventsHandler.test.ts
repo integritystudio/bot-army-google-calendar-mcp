@@ -471,51 +471,14 @@ describe('ListEventsHandler - Timezone Handling', () => {
   });
 
   describe('convertToRFC3339 timezone interpretation', () => {
-    it('should correctly convert timezone-naive datetime to Los Angeles time', () => {
-      // Test the core issue: timezone-naive datetime should be interpreted in the target timezone
-      const datetime = '2025-01-01T10:00:00';
-      const timezone = 'America/Los_Angeles';
-
-      const result = convertToRFC3339(datetime, timezone);
-
-      // In January 2025, Los Angeles is UTC-8 (PST)
-      // 10:00 AM PST = 18:00 UTC
-      // The result should be '2025-01-01T18:00:00Z'
-      expect(result).toBe('2025-01-01T18:00:00Z');
-    });
-
-    it('should correctly convert timezone-naive datetime to New York time', () => {
-      const datetime = '2025-01-01T10:00:00';
-      const timezone = 'America/New_York';
-
-      const result = convertToRFC3339(datetime, timezone);
-
-      // In January 2025, New York is UTC-5 (EST)
-      // 10:00 AM EST = 15:00 UTC
-      expect(result).toBe('2025-01-01T15:00:00Z');
-    });
-
-    it('should correctly convert timezone-naive datetime to London time', () => {
-      const datetime = '2025-01-01T10:00:00';
-      const timezone = 'Europe/London';
-
-      const result = convertToRFC3339(datetime, timezone);
-
-      // In January 2025, London is UTC+0 (GMT)
-      // 10:00 AM GMT = 10:00 UTC
-      expect(result).toBe('2025-01-01T10:00:00Z');
-    });
-
-    it('should handle DST transitions correctly', () => {
-      // Test during DST period
-      const datetime = '2025-07-01T10:00:00';
-      const timezone = 'America/Los_Angeles';
-
-      const result = convertToRFC3339(datetime, timezone);
-
-      // In July 2025, Los Angeles is UTC-7 (PDT)
-      // 10:00 AM PDT = 17:00 UTC
-      expect(result).toBe('2025-07-01T17:00:00Z');
+    // Timezone-naive datetime should be interpreted in the target timezone.
+    it.each([
+      ['Los Angeles time (PST, UTC-8)', '2025-01-01T10:00:00', 'America/Los_Angeles', '2025-01-01T18:00:00Z'],
+      ['New York time (EST, UTC-5)', '2025-01-01T10:00:00', 'America/New_York', '2025-01-01T15:00:00Z'],
+      ['London time (GMT, UTC+0)', '2025-01-01T10:00:00', 'Europe/London', '2025-01-01T10:00:00Z'],
+      ['Los Angeles time during DST (PDT, UTC-7)', '2025-07-01T10:00:00', 'America/Los_Angeles', '2025-07-01T17:00:00Z']
+    ] as const)('should correctly convert timezone-naive datetime to %s', (_label, datetime, timezone, expected) => {
+      expect(convertToRFC3339(datetime, timezone)).toBe(expected);
     });
 
     it('should leave timezone-aware datetime unchanged', () => {

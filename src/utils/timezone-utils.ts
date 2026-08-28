@@ -4,20 +4,8 @@
  * Consolidates timezone logic from GetCurrentTimeHandler and handlers/utils/datetime.ts
  */
 
+import { fromZonedTime, getTimezoneOffset } from 'date-fns-tz';
 import { formatRFC3339 } from './date-utils.js';
-
-/**
- * Shared Intl.DateTimeFormat options for offset calculation.
- * Used by getTimezoneOffsetMinutes and convertLocalTimeToUTC.
- */
-const DATETIME_OFFSET_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-};
 
 /**
  * Check if a timezone string is a valid IANA timezone identifier.
@@ -66,25 +54,7 @@ export function validateTimeZone(timeZone: string): void {
  * @returns Offset in minutes (e.g., 330 for Asia/Kolkata, -420 for America/Los_Angeles)
  */
 export function getTimezoneOffsetMinutes(timeZone: string): number {
-  const date = new Date();
-
-  // Get the target timezone's local time string
-  const targetTimeString = new Intl.DateTimeFormat('sv-SE', {
-    ...DATETIME_OFFSET_FORMAT_OPTIONS,
-    timeZone: timeZone,
-  }).format(date);
-
-  // Get UTC time string
-  const utcTimeString = new Intl.DateTimeFormat('sv-SE', {
-    ...DATETIME_OFFSET_FORMAT_OPTIONS,
-    timeZone: 'UTC',
-  }).format(date);
-
-  // Parse both times and calculate difference
-  const targetTime = new Date(targetTimeString.replace(' ', 'T') + 'Z').getTime();
-  const utcTimeParsed = new Date(utcTimeString.replace(' ', 'T') + 'Z').getTime();
-
-  return (targetTime - utcTimeParsed) / (1000 * 60);
+  return getTimezoneOffset(timeZone) / (1000 * 60);
 }
 
 /**
@@ -96,7 +66,8 @@ export function getTimezoneOffsetString(timeZone: string): string {
   try {
     const offsetMinutes = getTimezoneOffsetMinutes(timeZone);
 
-    if (offsetMinutes === 0) {
+    // date-fns-tz returns NaN for an unrecognized IANA identifier rather than throwing.
+    if (Number.isNaN(offsetMinutes) || offsetMinutes === 0) {
       return 'Z';
     }
 
@@ -195,16 +166,14 @@ export function convertToRFC3339(datetime: string, fallbackTimezone: string): st
   } else {
     // Timezone-naive, interpret as local time in fallbackTimezone and convert to UTC
     try {
-      // Parse the datetime components
-      const match = datetime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/);
-      if (!match) {
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(datetime)) {
         throw new Error('Invalid datetime format');
       }
 
-      const [, year, month, day, hour, minute, second] = match.map(Number);
-
-      // Find what UTC time corresponds to the desired local time in the target timezone
-      const targetDate = convertLocalTimeToUTC(year, month - 1, day, hour, minute, second, fallbackTimezone);
+      // fromZonedTime interprets the wall-clock string as local time in fallbackTimezone
+      // and returns the equivalent UTC instant; it returns an Invalid Date (rather than
+      // throwing) for an unrecognized timezone, which toISOString() below turns into a throw.
+      const targetDate = fromZonedTime(datetime, fallbackTimezone);
 
       return targetDate.toISOString().replace(/\.000Z$/, 'Z');
     } catch (error) {
@@ -212,55 +181,6 @@ export function convertToRFC3339(datetime: string, fallbackTimezone: string): st
       return datetime + 'Z';
     }
   }
-}
-
-/**
- * Convert a local time in a specific timezone to UTC.
- * @param year Full year
- * @param month Month (0-11, where 0 is January)
- * @param day Day of month (1-31)
- * @param hour Hour (0-23)
- * @param minute Minute (0-59)
- * @param second Second (0-59)
- * @param timezone IANA timezone identifier
- * @returns Date object in UTC
- */
-function convertLocalTimeToUTC(
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute: number,
-  second: number,
-  timezone: string
-): Date {
-  // Create a date that we'll use to find the correct UTC time
-  // Start with the assumption that it's in UTC
-  let testDate = new Date(Date.UTC(year, month, day, hour, minute, second));
-
-  // Get what this UTC time looks like in the target timezone
-  const options: Intl.DateTimeFormatOptions = {
-    ...DATETIME_OFFSET_FORMAT_OPTIONS,
-    timeZone: timezone,
-    hour12: false,
-  };
-
-  // Format the test date in the target timezone
-  const formatter = new Intl.DateTimeFormat('sv-SE', options);
-  const formattedInTargetTZ = formatter.format(testDate);
-
-  // Parse the formatted result to see what time it shows
-  const [datePart, timePart] = formattedInTargetTZ.split(' ');
-  const [targetYear, targetMonth, targetDay] = datePart.split('-').map(Number);
-  const [targetHour, targetMinute, targetSecond] = timePart.split(':').map(Number);
-
-  // Calculate the difference between what we want and what we got
-  const wantedTime = new Date(year, month, day, hour, minute, second).getTime();
-  const actualTime = new Date(targetYear, targetMonth - 1, targetDay, targetHour, targetMinute, targetSecond).getTime();
-  const offsetMs = wantedTime - actualTime;
-
-  // Adjust the UTC time by the offset
-  return new Date(testDate.getTime() + offsetMs);
 }
 
 /**

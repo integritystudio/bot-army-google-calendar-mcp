@@ -72,6 +72,7 @@
     "automated-readability": "^2.0.1",
     "chrono-node": "^2.10.1",
     "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
     "esbuild": "^0.28.0",
     "google-auth-library": "^10.9.1",
     "googleapis": "^173.0.0",

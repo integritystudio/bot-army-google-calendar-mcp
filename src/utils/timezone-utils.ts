@@ -51,7 +51,8 @@ export function validateTimeZone(timeZone: string): void {
  * Calculate the timezone offset in minutes for a specific timezone.
  * Positive for timezones east of UTC, negative for west of UTC.
  * @param timeZone IANA timezone identifier
- * @returns Offset in minutes (e.g., 330 for Asia/Kolkata, -420 for America/Los_Angeles)
+ * @returns Offset in minutes (e.g., 330 for Asia/Kolkata, -420 for America/Los_Angeles),
+ *   or NaN if timeZone is not a recognized IANA identifier
  */
 export function getTimezoneOffsetMinutes(timeZone: string): number {
   return getTimezoneOffset(timeZone) / (1000 * 60);
@@ -175,7 +176,7 @@ export function convertToRFC3339(datetime: string, fallbackTimezone: string): st
       // throwing) for an unrecognized timezone, which toISOString() below turns into a throw.
       const targetDate = fromZonedTime(datetime, fallbackTimezone);
 
-      return targetDate.toISOString().replace(/\.000Z$/, 'Z');
+      return targetDate.toISOString().replace(/\.\d{3}Z$/, 'Z');
     } catch (error) {
       // Fallback: if timezone conversion fails, append Z for UTC
       return datetime + 'Z';

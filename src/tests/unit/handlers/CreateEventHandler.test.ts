@@ -198,79 +198,38 @@ describe('CreateEventHandler', () => {
   });
 
   describe('Guest Management Properties', () => {
-    it('should create event with transparency setting', async () => {
-      const mockCreatedEvent = makeEvent({
+    it.each([
+      {
+        description: 'transparency setting',
         summary: 'Focus Time',
-        transparency: 'transparent'
-      });
-
-      mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
-
-      const args = createCreateEventArgs('primary', {
-        summary: 'Focus Time',
-        transparency: 'transparent'
-      });
-
-      await handler.runTool(args, mockOAuth2Client);
-
-      expect(mockCalendar.events.insert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          requestBody: expect.objectContaining({
-            transparency: 'transparent'
-          })
-        })
-      );
-    });
-
-    it('should create event with visibility settings', async () => {
-      const mockCreatedEvent = makeEvent({
+        fields: { transparency: 'transparent' }
+      },
+      {
+        description: 'visibility settings',
         summary: 'Private Meeting',
-        visibility: 'private'
-      });
-
-      mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
-
-      const args = createCreateEventArgs('primary', {
-        summary: 'Private Meeting',
-        visibility: 'private'
-      });
-
-      await handler.runTool(args, mockOAuth2Client);
-
-      expect(mockCalendar.events.insert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          requestBody: expect.objectContaining({
-            visibility: 'private'
-          })
-        })
-      );
-    });
-
-    it('should create event with guest permissions', async () => {
-      const mockCreatedEvent = makeEvent({
-        summary: 'Team Meeting'
-      });
-
-      mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
-
-      const args = createCreateEventArgs('primary', {
+        fields: { visibility: 'private' }
+      },
+      {
+        description: 'guest permissions',
         summary: 'Team Meeting',
-        guestsCanInviteOthers: false,
-        guestsCanModify: true,
-        guestsCanSeeOtherGuests: false,
-        anyoneCanAddSelf: true
-      });
+        fields: {
+          guestsCanInviteOthers: false,
+          guestsCanModify: true,
+          guestsCanSeeOtherGuests: false,
+          anyoneCanAddSelf: true
+        }
+      }
+    ])('should create event with $description', async ({ summary, fields }) => {
+      const mockCreatedEvent = makeEvent({ summary, ...fields });
+      mockCalendar.events.insert.mockResolvedValue({ data: mockCreatedEvent });
+
+      const args = createCreateEventArgs('primary', { summary, ...fields });
 
       await handler.runTool(args, mockOAuth2Client);
 
       expect(mockCalendar.events.insert).toHaveBeenCalledWith(
         expect.objectContaining({
-          requestBody: expect.objectContaining({
-            guestsCanInviteOthers: false,
-            guestsCanModify: true,
-            guestsCanSeeOtherGuests: false,
-            anyoneCanAddSelf: true
-          })
+          requestBody: expect.objectContaining(fields)
         })
       );
     });
